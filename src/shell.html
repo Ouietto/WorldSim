@@ -1,0 +1,263 @@
+<title>Asabiya History Engine</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: atlas workbench. The map dominates; an encyclopedia column sits right; a timeline strip runs under the map. */
+:root{
+  --bg:#E6E9E4; --panel:#F4F5F1; --raise:#FFFFFF; --ink:#1B262E; --muted:#59656C; --line:#C8CFCA;
+  --chip:#DCE2DD; --accent:#A4412A; --accent-soft:rgba(164,65,42,.12); --good:#3E7A55; --warn:#A8731A; --link:#2F5F86;
+  --f-display:'IM Fell English',Georgia,'Times New Roman',serif;
+  --f-ui:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1417; --panel:#151C20; --raise:#1B2429; --ink:#DCE3E0; --muted:#8E9B9C; --line:#2A353A;
+  --chip:#212B30; --accent:#E2825F; --accent-soft:rgba(226,130,95,.16); --good:#6DB38A; --warn:#D9A54A; --link:#8DB8DA; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1417; --panel:#151C20; --raise:#1B2429; --ink:#DCE3E0; --muted:#8E9B9C; --line:#2A353A;
+  --chip:#212B30; --accent:#E2825F; --accent-soft:rgba(226,130,95,.16); --good:#6DB38A; --warn:#D9A54A; --link:#8DB8DA; color-scheme:dark}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:13px;line-height:1.45;overflow:hidden}
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px;box-sizing:border-box}
+button{font:inherit;color:inherit}
+.bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;min-width:0}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand .mark{font-family:var(--f-display);font-size:26px;line-height:1;letter-spacing:.01em}
+.brand .sub{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.clock{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--raise);border-radius:6px;padding:5px 10px;cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);min-width:78px}
+.btn:focus-visible,.seg button:focus-visible,.tabs button:focus-visible,.chip:focus-visible,input:focus-visible,.lnk:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--raise)}
+.seg button{border:0;background:none;padding:5px 9px;cursor:pointer;font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--chip);color:var(--ink)}
+.year{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:20px;font-weight:500;min-width:8.5ch}
+.year .era{font-size:12px;color:var(--muted);margin-left:4px}
+.stats{display:flex;gap:16px;margin-left:auto;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.stats b{color:var(--ink);font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:minmax(0,1fr) 118px;gap:8px;min-height:0}
+.mapwrap{grid-column:1;grid-row:1;position:relative;border-radius:8px;overflow:hidden;background:#1d3b4f;min-height:0;touch-action:none}
+#map{display:block;width:100%;height:100%;cursor:crosshair}
+.modes{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
+.modes button{pointer-events:auto;border:0;border-radius:4px;padding:4px 8px;font-size:11.5px;cursor:pointer;background:rgba(14,22,27,.62);color:#dfe6e3;backdrop-filter:blur(4px)}
+.modes button[aria-pressed="true"]{background:#f2f2ec;color:#14202a}
+.legend{position:absolute;left:10px;bottom:10px;background:rgba(14,22,27,.72);color:#dfe6e3;border-radius:6px;padding:7px 9px;font-size:11px;max-width:min(460px,80%);backdrop-filter:blur(4px)}
+.legend .ramp{height:8px;border-radius:2px;margin:5px 0 3px}
+.legend .row{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:10px;opacity:.85}
+.legend .keys{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px}
+.legend .keys span{display:inline-flex;align-items:center;gap:5px}
+.legend .keys i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.legend .kchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.legend .kchips button{border:1px solid rgba(255,255,255,.25);background:none;color:#dfe6e3;border-radius:999px;padding:2px 8px;font-size:10.5px;cursor:pointer}
+.legend .kchips button[aria-pressed="true"]{background:#f2f2ec;color:#14202a;border-color:#f2f2ec}
+.legend .kchips button small{opacity:.7;font-family:var(--f-mono);margin-left:4px}
+.toast{position:absolute;top:44px;left:50%;transform:translateX(-50%);max-width:min(560px,86%);background:rgba(250,246,236,.96);color:#1b262e;border-radius:6px;padding:7px 12px;font-size:13px;box-shadow:0 4px 18px rgba(0,0,0,.25);text-align:center}
+.toast .ty{font-family:var(--f-mono);font-size:11px;color:#7a5a2a;margin-right:6px}
+.toast .lnk{color:#2f5f86}
+.tip{position:absolute;pointer-events:none;background:rgba(14,22,27,.88);color:#eef2f0;border-radius:5px;padding:5px 8px;font-size:11.5px;white-space:nowrap;transform:translate(12px,12px)}
+.busy{position:absolute;inset:0;display:grid;place-items:center;color:#e8eeea;font-family:var(--f-display);font-size:22px;font-style:italic;background:rgba(18,32,42,.55);text-align:center;padding:20px}
+.timeline{grid-column:1;grid-row:2;background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:0;overflow:hidden}
+#chart{display:block;width:100%;height:100%}
+.side{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:0;min-width:0;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:1 0 auto;border:0;background:none;padding:10px 8px 9px;cursor:pointer;color:var(--muted);font-size:12.5px;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+.pane{flex:1;overflow-y:auto;min-height:0;padding:12px 14px 16px}
+.search{display:flex;gap:6px;margin-bottom:8px}
+.search input{flex:1;min-width:0;font:inherit;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--raise);color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.chip{border:1px solid var(--line);background:var(--raise);border-radius:999px;padding:2px 9px;font-size:11.5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;color:var(--muted)}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:var(--muted)}
+.chip i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.matches{display:flex;flex-wrap:wrap;gap:4px 10px;margin-bottom:10px;font-size:12px}
+.matches .k{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.entries{display:flex;flex-direction:column}
+.entry{display:grid;grid-template-columns:78px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid var(--line)}
+.entry:first-child{border-top:0}
+.entry .yr{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:1px;display:flex;gap:6px;align-items:flex-start;cursor:pointer}
+.entry .yr i{width:7px;height:7px;border-radius:50%;margin-top:4px;flex:none}
+.entry .txt{min-width:0}
+.entry .why{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.lnk{color:var(--link);text-decoration:none;cursor:pointer;border-bottom:1px solid transparent}
+.lnk:hover{border-bottom-color:currentColor}
+.empty{color:var(--muted);font-style:italic;font-family:var(--f-display);font-size:15px;padding:18px 0}
+.more{color:var(--muted);font-size:12px;padding:10px 0}
+h2.name{font-family:var(--f-display);font-weight:400;font-size:23px;line-height:1.15;margin:0 0 2px;text-wrap:balance}
+h3.sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;margin:16px 0 6px}
+.kind{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:600}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;margin:0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}
+.kv dd .lnk{font-family:var(--f-ui)}
+.sub2{color:var(--muted);font-size:12px;margin:2px 0 0}
+.bars{display:flex;flex-direction:column;gap:5px}
+.barrow{display:grid;grid-template-columns:132px minmax(0,1fr) 38px;gap:8px;align-items:center;font-size:12px}
+.barrow .track{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
+.barrow .fill{height:100%;background:var(--accent);border-radius:3px}
+.barrow .fill.t{background:var(--ink)}
+.barrow .fill.g{background:var(--good)}
+.barrow .v{font-family:var(--f-mono);font-size:11px;text-align:right;color:var(--muted)}
+.lex{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px}
+.lex span{color:var(--muted)}
+.lex b{font-family:var(--f-display);font-weight:400;font-size:15px;color:var(--ink)}
+.lineage{font-size:12px;color:var(--muted)}
+.note{color:var(--muted);font-size:12px;margin:6px 0 0}
+.verdict{background:var(--accent-soft);border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12.5px}
+.deeds{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.deeds li{display:grid;grid-template-columns:78px minmax(0,1fr);gap:8px;font-size:12.5px}
+.deeds li span{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding-top:1px}
+.backbar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.backbar .btn{padding:3px 9px;font-size:12px}
+.cards{display:flex;flex-direction:column}
+.card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}
+.card:first-child{border-top:0}
+.card:hover .cn{color:var(--accent)}
+.card .cn{font-family:var(--f-display);font-size:16px;line-height:1.2}
+.card .cs{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-align:right}
+.card .cd{grid-column:1/3;color:var(--muted);font-size:12px}
+.card .cbar{grid-column:1/3;height:4px;background:var(--chip);border-radius:2px;overflow:hidden;margin-top:3px}
+.card .cbar i{display:block;height:100%;background:var(--accent)}
+.score{display:flex;align-items:baseline;gap:10px}
+.score b{font-family:var(--f-display);font-size:40px;font-weight:400;line-height:1}
+.score span{color:var(--muted)}
+.table{width:100%;border-collapse:collapse;font-size:12px}
+.table th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;padding:4px 6px 4px 0;border-bottom:1px solid var(--line)}
+.table td{padding:5px 6px 5px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:top}
+.table td.n{font-family:var(--f-mono);font-size:11.5px;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.ok{color:var(--good)}.bad{color:var(--accent)}
+.mini{display:block;width:100%;height:auto;border-radius:6px;background:#1d3b4f;margin-top:8px;max-width:100%}
+.sparkc{display:block;width:100%;height:70px;margin-top:6px}
+.group{margin-bottom:14px}
+.group h3{margin-top:4px}
+.param{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:6px 0;border-top:1px solid var(--line)}
+.param:first-of-type{border-top:0}
+.param label{font-size:12.5px}
+.param output{font-family:var(--f-mono);font-size:11.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.param input[type=range]{grid-column:1/3;width:100%;accent-color:var(--accent)}
+.param .hint{grid-column:1/3;color:var(--muted);font-size:11.5px}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);margin-left:6px}
+.field{display:grid;gap:4px;margin:8px 0}
+.field label{font-size:12px;color:var(--muted)}
+.field input[type=text],.field input[type=number]{font:inherit;font-family:var(--f-mono);font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--raise);color:var(--ink);width:100%;box-sizing:border-box;min-width:0}
+.field input[type=file]{font-size:12px;max-width:100%;color:var(--muted)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;margin:8px 0}
+.check input{accent-color:var(--accent);margin-top:3px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.status{font-size:12px;color:var(--good);margin-top:8px;min-height:1.2em}
+.status.err{color:var(--accent)}
+details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-top:8px}
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{height:auto;min-height:100%}
+  .main{grid-template-columns:minmax(0,1fr);grid-template-rows:62vh 110px auto}
+  .side{grid-column:1;grid-row:3;max-height:none}
+  .pane{max-height:75vh}
+  .stats{margin-left:0;width:100%}
+  .barrow{grid-template-columns:110px minmax(0,1fr) 38px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.5.2</span></div>
+    <div class="clock">
+      <button id="play" class="btn primary" type="button" disabled>Play</button>
+      <div class="seg" id="speed" role="group" aria-label="Years per second"></div>
+      <div class="year" aria-live="off"><span id="yr">–</span><span class="era" id="era"></span></div>
+    </div>
+    <div class="stats" id="topstats"></div>
+  </header>
+  <main class="main">
+    <section class="mapwrap" id="mapwrap">
+      <canvas id="map" aria-label="World map"></canvas>
+      <div class="modes" id="modes"></div>
+      <div class="legend" id="legend"></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="toast" id="toast" hidden></div>
+      <div class="busy" id="busy">Loading Earth…</div>
+    </section>
+    <section class="timeline"><canvas id="chart" aria-label="Population, number of states and leading era over time"></canvas></section>
+    <aside class="side">
+      <nav class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-pane="chron">Chronicle</button>
+        <button role="tab" aria-selected="false" data-pane="figs">Figures</button>
+        <button role="tab" aria-selected="false" data-pane="plague">Plagues</button>
+        <button role="tab" aria-selected="false" data-pane="insp">Inspect</button>
+        <button role="tab" aria-selected="false" data-pane="check">Checks</button>
+        <button role="tab" aria-selected="false" data-pane="setup">Setup</button>
+      </nav>
+      <div class="pane" id="pane-chron">
+        <div class="search"><input type="search" id="q" placeholder="Search events, states, peoples, faiths, people" aria-label="Search the chronicle"></div>
+        <div class="matches" id="matches" hidden></div>
+        <div class="filters" id="filters"></div>
+        <div class="entries" id="entries"></div>
+      </div>
+      <div class="pane" id="pane-figs" hidden>
+        <div class="search"><input type="search" id="fq" placeholder="Search figures" aria-label="Search figures"></div>
+        <div class="filters" id="figfilters"></div>
+        <div class="cards" id="figlist"></div>
+      </div>
+      <div class="pane" id="pane-plague" hidden>
+        <div class="filters" id="plaguesort"></div>
+        <div class="cards" id="plaguelist"></div>
+      </div>
+      <div class="pane" id="pane-insp" hidden></div>
+      <div class="pane" id="pane-check" hidden></div>
+      <div class="pane" id="pane-setup" hidden>
+        <h3 class="sec" style="margin-top:0">World</h3>
+        <div class="seg" id="src" role="group" aria-label="World source">
+          <button type="button" data-v="earth" aria-pressed="true">Earth</button>
+          <button type="button" data-v="gen" aria-pressed="false">Generated</button>
+          <button type="button" data-v="import" aria-pressed="false">Imported</button>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="wseed">World seed (generated)</label><input type="text" id="wseed" value="atlas-7"></div>
+          <div class="field"><label for="hseed">History seed</label><input type="text" id="hseed" value="1"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="fitc" checked><span>Anchor Earth's climate to the observed climate zones. Off runs on the climate model alone.</span></label>
+        <label class="check"><input type="checkbox" id="shufn"><span>Shuffle sound families on Earth, so a Romance-sounding people might rise on the Yellow River.</span></label>
+        <label class="check"><input type="checkbox" id="followc"><span>Follow major events: pan the map to them as they happen.</span></label>
+        <label class="check"><input type="checkbox" id="hearthh" checked><span>Historical hearths on Earth: farming, bronze, horses and seafaring start where and when they did. Off places them at random.</span></label>
+        <div class="actions">
+          <button class="btn" id="btn-world" type="button">Build world</button>
+          <button class="btn" id="btn-rerun" type="button">Rerun history</button>
+          <button class="btn" id="btn-reroll" type="button">New history seed</button>
+        </div>
+        <div class="field"><label for="share-link">Share this history</label><div class="search" style="margin:0"><input type="text" id="share-link" readonly placeholder="Press Copy link"><button class="btn" id="btn-share" type="button">Copy link</button></div><div class="status" id="share-status"></div></div>
+        <p class="note">Each visit starts a new random history. The same world, history seed and rules always give the same history. Change only the history seed to see which outcomes are structural and which were luck.</p>
+        <div id="rules"></div>
+        <h3 class="sec">Import a world</h3>
+        <p class="note">A greyscale equirectangular heightmap, such as a Draggable World export. Set the elevation that pure black and pure white stand for. Draggable World's WCL export uses −11,000 and +9,000 m with sea level at mid-grey.</p>
+        <div class="field"><label for="f-height">Heightmap image</label><input type="file" id="f-height" accept="image/*"></div>
+        <div class="row2">
+          <div class="field"><label for="h-min">Black = metres</label><input type="number" id="h-min" value="-11000"></div>
+          <div class="field"><label for="h-max">White = metres</label><input type="number" id="h-max" value="9000"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="h-mid" checked><span>Sea level is mid-grey (Draggable World encoding), not a straight line between the two values.</span></label>
+        <div class="field"><label for="f-temp">Mean temperature image (optional)</label><input type="file" id="f-temp" accept="image/*"></div>
+        <div class="row2">
+          <div class="field"><label for="t-min">Black = °C</label><input type="number" id="t-min" value="-40"></div>
+          <div class="field"><label for="t-max">White = °C</label><input type="number" id="t-max" value="35"></div>
+        </div>
+        <div class="field"><label for="f-prec">Annual precipitation image (optional)</label><input type="file" id="f-prec" accept="image/*"></div>
+        <div class="row2">
+          <div class="field"><label for="p-min">Black = mm/yr</label><input type="number" id="p-min" value="0"></div>
+          <div class="field"><label for="p-max">White = mm/yr</label><input type="number" id="p-max" value="4000"></div>
+        </div>
+        <div class="actions"><button class="btn" id="btn-import" type="button">Build world from images</button></div>
+        <div class="status" id="imp-status"></div>
+        <p class="note">Earth elevation: ETOPO 2022 via Draggable World. Climate zones: Beck et al. (2018) Köppen-Geiger map, CC BY 4.0.</p>
+      </div>
+    </aside>
+  </main>
+</div>
