@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),assert=require('assert');
-const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','civic.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','civic.js','development.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
 eval(core+`
 WD=genWorld({seed:'frontier-atlas',landFrac:P.landFrac});newHistory('generated-scenario');S.year=0;S.animalOrigins=[];S.hearths.forEach(h=>h.done=true);
 // A synthetic developed-world scenario exercises coasts, drainage, winter
@@ -30,7 +30,7 @@ for(let y=0;y<250;y++){
   if(S.animalAccounts)assert(Math.abs(S.animalAccounts.error)<0.01,'generated animal ledger');
   for(const id of S.alive)for(const k of ['grain','health','bureau','preparedness','conquestLoad'])assert(Number.isFinite(S.pols[id][k])&&S.pols[id][k]>=0,'generated state '+k);
   for(const id of S.alive)for(const k of ['health','central','bureau','strain','payroll'])assert(S.pols[id][k]<=1,'generated bounded field '+k+' '+S.pols[id][k]);
-  if(y%25===0)for(const i of WD.landIdx){for(const k of ['food','pop','traction','pack','mounts','sickness','rangeStock','cityDamage','urbanViability','urbanNetwork','foodImports','cityWall','cityWallHealth','engineeringKnowledge','engineeringPractice','granaries','civicLabor','militaryEquipment','ruralInfluence','siegeProgress'])assert(Number.isFinite(S[k][i])&&S[k][i]>=0,'generated province '+k);for(const f of S.animals)assert(Number.isFinite(f[i])&&f[i]>=-1e-7,'generated animal stock');for(const d of S.pathogens)assert(d.recovered[i]+d.exposed[i]+d.infectious[i]<1.0001,'generated disease compartments')}
+  if(y%25===0)for(const i of WD.landIdx){for(const k of ['food','pop','traction','pack','mounts','sickness','rangeStock','cityDamage','urbanViability','urbanNetwork','foodImports','cityWall','cityWallHealth','engineeringKnowledge','engineeringPractice','granaries','civicLabor','militaryEquipment','ruralInfluence','siegeProgress','housing','urbanWater','urbanJobs','sanitation','localFoodImports'])assert(Number.isFinite(S[k][i])&&S[k][i]>=0,'generated province '+k);for(const f of S.animals)assert(Number.isFinite(f[i])&&f[i]>=-1e-7,'generated animal stock');for(const d of S.pathogens)assert(d.recovered[i]+d.exposed[i]+d.infectious[i]<1.0001,'generated disease compartments')}
 }
 assert(S.societyCounters.epidemicDeaths>0,'developed scenario exercises disease mortality');
 console.log('PASS: 250-year generated-world scenario with developed transport, coasts, river networks, disease and multiple governments; '+S.alive.length+' surviving polities; '+Math.round(S.societyCounters.epidemicDeaths)+' epidemic deaths');

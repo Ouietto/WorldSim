@@ -179,7 +179,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
 
 <div class="app">
   <header class="bar">
-    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.10</span></div>
+    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.11</span></div>
     <div class="clock">
       <button id="play" class="btn primary" type="button" disabled>Play</button>
       <div class="seg" id="speed" role="group" aria-label="Years per second"></div>
@@ -1544,9 +1544,8 @@ function* politicsG(){
     if(o.nw>0){const k=1/o.nw,nv=[o.n0*k,o.n1*k,o.n2*k,o.n3*k];o.ni=o.ni?o.ni.map((v,q)=>v*0.8+nv[q]*0.2):nv}o.forS=o.pop>0?o.forP/o.pop:0;
     o.recentShare=o.recentSum/Math.max(1,o.pop);o.corridor=o.corridorSum/Math.max(1,o.pop);o.responseDays=o.responseSum/Math.max(1,o.pop);o.supplyBurden=o.supplySum/Math.max(1,o.pop);o.network=o.netSum/o.cells;o.S=o.sS/o.cells;o.integ=o.ig/o.cells;if(o.mandate==null)o.mandate=1;o.press=o.K>0?o.pop/o.K:1;o.md=o.dS/o.cells;o.adm=o.ad/o.cells;o.nomF=o.nom/o.cells;
     if(pol[o.capital]!==id&&o.mc>=0){s.depot[o.capital]+=o.grain;o.grain=0;o.capital=o.mc;if(s.eth[o.mc]>=0&&!o.conqDyn)o.core=s.eth[o.mc]}
-    // nomads who come to rule farmland settle down
-    if(o.kind==='horde'&&o.farmN>=Math.max(3,o.cells*0.3)){const old=o.full;o.kind='state';o.conqDyn=true;o.settledY=y;o.origin=Object.assign({},o.origin,{settled:y});o.tier=tierOf(o);o.full=fullName(o);
-      if(o.cells>=8){chron('rise',`Masters now of settled farmland, the ${old} put down roots and rule as the ${o.full}.`,o.capital,[R_(o)]);spot(`Nomad conquerors settle as the ${o.full}`,o.capital,[R_(o)])}}
+    // Mixed pastoral/agrarian government develops through sustained practice
+    // in developmentYear(), rather than a fraction of farmland changing a label.
     o.tier=tierOf(o);o.full=fullName(o);
     if(o.cells>o.maxCells){o.maxCells=o.cells;o.peak=o.full}
     if(o.pop>o.maxPop)o.maxPop=o.pop;
@@ -1658,7 +1657,7 @@ function* politicsG(){
         else if(ri>=0&&s.rel[j]>=0&&s.rel[j]!==ri)fr=1;
         if(o){o.borderLoad+=(d<2?1:cl)/(1+barrier*2);if(q){const t=pols[q];o.nb.set(q,(o.nb.get(q)||0)+1);
             if(t.kind==='horde'||o.enemies.has(q))threat=1;
-            if(o.enemies.has(q)||(horde&&t.kind==='horde')){nc+=3*wt;if(r()*nc<3*wt)cand=j}
+            if(o.enemies.has(q)||(horde&&pastoralRival(o,t))){nc+=3*wt;if(r()*nc<3*wt)cand=j}
             else if(!horde&&opportunismScore(o,i,j)>0.03){const interest=wt*opportunismScore(o,i,j);nc+=interest;if(r()*nc<interest)cand=j}
             else if(horde&&t.kind==='state'){const interest=wt*raidAttraction(o,i,j);rn+=interest;if(r()*rn<interest)rcand=j}}
           else if(!horde||w.nomad[j]||w.desert[j]||pop[j]>=1){const interest=wt*settlementAppeal(i,j,o);nc+=interest;if(r()*nc<interest)cand=j}}}}
@@ -1764,7 +1763,7 @@ function mixPass(){
 function cityPass(){
   const s=S,w=WD;for(const id of s.alive)s.pols[id].cityPop=0;
   for(const i of w.landIdx){const p=s.pop[i],o=s.pol[i]?s.pols[s.pol[i]]:null;
-    s.urban[i]=Math.min(p*urbanShare(i,o),s.harvest[i]*0.25+s.foodImports[i])*Math.pow(1-s.cityDamage[i],2);
+    s.urban[i]=clamp(s.urban[i],0,p);
     if(o)o.cityPop+=s.urban[i];
     if(s.city[i]<0&&s.ruinedCity[i]>=0&&s.cityDamage[i]<0.35&&s.urban[i]>4000){const old=s.cities[s.ruinedCity[i]];old.abandoned=false;old.rebuiltYear=s.year;s.city[i]=s.ruinedCity[i];s.ruinedCity[i]=-1}
     if(s.city[i]<0&&s.urban[i]>4000&&s.organisation[i]>0.25){const L=langAt(i);s.city[i]=s.cities.length;s.cities.push({name:cityWord(L,s.r),cell:i,born:s.year,eth:s.eth[i],peak:s.urban[i]})}
@@ -1820,7 +1819,7 @@ function* stepG(){
   agroPass();animalPass();computeK();economyPass();growth();yield;migrate();seaHop();refugeePass();
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(s.year%10===5)poolPass();if(s.year%20===7)caravanPass();yield;
-  yield* politicsG();frontierYear();connectionYear();peoplesYear();urbanYear();
+  yield* politicsG();frontierYear();connectionYear();peoplesYear();urbanYear();developmentYear();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(s.year%5===0){yield;communityPass()}
   if(s.year%10===0){yield;buildTradeNetwork();recordStats();cityPass();yield;regionPass();yield;mixPass()}
@@ -2016,7 +2015,7 @@ function economyPass(){
       const delivered=spent*access;s.food[i]+=delivered;o.relief+=delivered;a.transportLoss+=spent-delivered;
     }
   }
-  tradeFood(a);
+  localUrbanFreight(a);tradeFood(a);
   for(const i of w.landIdx){
     const p=s.pop[i],need=s.need[i];s.nutrition[i]=need>0?clamp(s.food[i]/need,0,1):1;
     const eat=Math.min(s.food[i],need);s.food[i]-=eat;a.consumed+=eat;
@@ -2031,7 +2030,7 @@ function populationStep(i,p,K,g){
   const s=S,n=s.nutrition[i],family=clamp(s.maleShare[i]/0.25,0.2,1),births=p*(0.020+g*Math.max(0,1-p/Math.max(1,K)))*clamp(0.45+0.55*n,0,1)*family;
   const deaths=p*(0.020+0.16*Math.pow(1-n,1.5));
   const young=s.young[i],mature=young/18;s.young[i]=clamp(young+births-mature-young*deaths/Math.max(1,p),0,Math.max(0,p+births-deaths));
-  return Math.max(0,p+births-deaths);
+  const next=Math.max(0,p+births-deaths);s.urban[i]*=next/Math.max(1,p);return next;
 }
 function refreshForces(o){
   const c=o.capital,s=S,p=Math.max(1,o.pop),adult=clamp(1-(s.young[c]||0)/Math.max(1,s.pop[c]),0.35,0.8);
@@ -2214,9 +2213,10 @@ function institutionStep(o,c,y){
   const s=S,r=s.r;if(o.central==null)initInstitutions(o,null);
   const rec=recordSkill(c),office=skill(c,'office'),census=skill(c,'census'),school=skill(c,'school');
   o.comm=clamp(0.08+0.2*rec+0.18*skill(c,'post')*(0.2+0.8*s.mounts[c])+0.12*s.mounts[c]+0.12*s.roads[c]*s.infrastructure[c]+0.14*waterTransport(c)+0.12*skill(c,'canal')*s.infrastructure[c],0,1);
-  const targetStaff=o.pop*(0.001+0.004*rec+0.003*office+0.002*census),training=Math.max(0,targetStaff-o.staff)*0.025*o.payroll;
+  const pastoral=o.kind==='horde'?(o.pastoralPractice||0):0;
+  const targetStaff=o.pop*(0.001+0.004*rec+0.003*office+0.002*census+0.001*pastoral),training=Math.max(0,targetStaff-o.staff)*0.025*o.payroll;
   const trained=budgetPay(o,training*2)/2;o.staff=Math.max(0,o.staff+trained-o.staff*(0.012+0.03*(1-o.payroll)));
-  const targetB=(0.1+0.25*rec+0.2*office+0.15*census+0.15*school+0.15*s.law[c])*Math.min(1,o.staff/Math.max(1,targetStaff*0.65))*o.payroll;
+  const targetB=(0.1+0.25*rec+0.2*office+0.15*census+0.15*school+0.15*s.law[c]+0.06*pastoral)*Math.min(1,o.staff/Math.max(1,targetStaff*0.65))*o.payroll;
   o.bureau=clamp(o.bureau+0.012*(targetB-o.bureau),0,1);
   const security=clamp(0.3+0.35*o.health+0.35*o.payroll-o.hunger,0,1);
   const trustTarget=clamp(0.25+0.3*o.rights+0.25*security+0.2*o.mandate-0.2*o.ineq,0,1);o.trust=clamp(o.trust+0.018*(trustTarget-o.trust),0,1);
@@ -2409,7 +2409,7 @@ function territorialAttack(o,i,j,sea){
   const chance=clamp((Ua/(Ua+Ud)-0.12)*niche*legacy,0.01,0.88),win=s.r()<chance;
   armyLoss(o,i,force*(win?0.025:0.09),o.campaignAuxShare);if(q)armyLoss(s.pols[q],j,Math.min(s.pols[q].army*0.08,force*(win?0.06:0.02)));
   crisisEncounter(o,q?s.pols[q]:null,win,win?0.025:0.09);if(q)crisisEncounter(s.pols[q],o,!win,win?0.09:0.025);
-  recordVictory(o,win,win?0.025:0.09);if(!win)return;if(!besiegeCity(o,i,j,force))return;
+  recordVictory(o,win,win?0.025:0.09);if(!win)return;if(q&&pastoralBattleOutcome(o,s.pols[q],j))return;if(!besiegeCity(o,i,j,force))return;
   warnCommunities(j,o);
   conquestRecorded(o,j,q);
   o.occupation=Math.max(0,o.occupation-Math.max(100,s.pop[j]*0.015));budgetPay(o,Math.min(o.grain,s.pop[j]*0.01));
@@ -2628,6 +2628,7 @@ function initPoliticalDynamics(o,from){
   o.lastConflict=S.year;o.lastBorderChange=S.year;o.peaceYears=0;o.trainingPaid=0;o.auxiliaries=0;
   o.compacts=[];o.raidTargets=new Map();o.clanTerms=new Map();o.clanPops=new Map();o.lastClanExit=-1e9;
   initFrontierPolity(o,from);
+  initDevelopmentPolity(o,from);
   if(S.urban[o.capital]>2000&&!S.cityHome[o.capital])S.cityHome[o.capital]=o.id;
 }
 function conquestRecorded(o,j,previous){
@@ -2774,6 +2775,7 @@ function admitMigration(M,j,o){
 function compactStep(o){
   const s=S;o.auxiliaries=0;
   for(const t of o.compacts){
+    if(t.durable){settlementAgreementStep(o,t);continue}
     if(t.done)continue;if(s.pol[t.cell]!==o.id){t.done=true;continue}
     const n=Math.min(t.people,s.pop[t.cell]*0.6),due=t.promised,paid=budgetPay(o,due);s.food[t.cell]+=paid;
     const fulfillment=due>0?paid/due:1;t.loyalty=clamp(t.loyalty+0.04*(fulfillment-t.loyalty)-0.02*(1-s.nutrition[t.cell]),0,1);
@@ -3407,7 +3409,7 @@ function migrationNomadEncounter(M,j){
 // Contracts earmark existing troops; the employer never gets a second copy of
 // the same army. Temporary service keeps dependents in the recruitment base.
 function createMilitaryContract(state,horde,troops,years=8){
-  const s=S;if(state.kind!=='state'||horde.kind!=='horde'||state.enemies.has(horde.id)||!state.alive||!horde.alive)return null;
+  const s=S;if((state.kind!=='state'&&!(state.kind==='horde'&&horde.over===state.id&&horde.submission))||horde.kind!=='horde'||state.enemies.has(horde.id)||!state.alive||!horde.alive)return null;
   if(s.militaryContracts.some(t=>!t.done&&(t.state===state.id||t.horde===horde.id)))return null;
   const n=Math.min(troops,Math.max(0,horde.army-horde.loanedTroops)*0.3),due=n*0.8;if(n<100||state.grain<due*2)return null;
   const travel=Math.max(1,Math.ceil(angDist(state.capital,horde.capital)/0.15));
@@ -3537,7 +3539,7 @@ function diseaseMortality(k,i,n,o){
   const s=S,p=PATHOGENS[k];if(n<=0)return;
   if(p.animal){const hosts=diseaseHosts(k,i),ratio=clamp(n/Math.max(1,hosts),0,1);for(const a of s.animals)a[i]*=1-ratio;refreshAnimalAccess(i);o.animalDeaths+=n;s.societyCounters.livestockEpidemicDeaths+=n;return}
   n=Math.min(n,s.pop[i]*0.5);const prior=s.pop[i],ratio=n/Math.max(1,prior),id=s.pol[i],state=id?s.pols[id]:null;
-  s.pop[i]-=n;s.young[i]*=1-ratio;s.epidemicLoss[i]+=n;o.deaths+=n;s.societyCounters.epidemicDeaths+=n;
+  s.pop[i]-=n;s.young[i]*=1-ratio;s.urban[i]*=1-ratio;s.epidemicLoss[i]+=n;o.deaths+=n;s.societyCounters.epidemicDeaths+=n;
   s.organisation[i]*=1-ratio*0.12;s.infrastructure[i]*=1-ratio*0.08;
   if(state){const realm=n/Math.max(1,state.pop);state.staff*=1-realm;state.army*=1-realm;state.navy*=1-realm;
     state.shock=clamp(state.shock+realm*0.8,0,3);state.plagueD=(state.plagueD||0)+n;o.hit.add(id)}
@@ -3574,7 +3576,8 @@ function epidemicYear(){
         const habitat=pathogenHabitat(k,i),ill=d.infectious[i],latent=d.exposed[i],susceptible=Math.max(0,1-d.recovered[i]-ill-latent);
         if(k<4&&tick%6===0&&ill>0.01)healthPolicy(i,s.pol[i]?s.pols[s.pol[i]]:null,0.25);
         const density=clamp(Math.log2(2+hosts/w.area[i])/3,0.12,1.5),season=p.k==='respiratory'?0.85+0.25*Math.cos((tick/DISEASE_STEPS)*Math.PI*2):1;
-        const hygiene=p.k==='enteric'?1-0.25*s.infrastructure[i]:1;
+        const urbanCrowding=1+0.35*clamp(s.urban[i]/Math.max(100,s.housing[i]),0,2)*clamp(s.urban[i]/Math.max(1,s.pop[i])*4,0,1);
+        const hygiene=p.k==='enteric'?clamp((1-0.25*s.infrastructure[i]-0.3*s.sanitation[i])*urbanCrowding,0.4,1.7):p.k==='respiratory'?urbanCrowding:1;
         const transmission=p.beta*ill*susceptible*density*season*habitat*hygiene*(1-0.7*s.containment[i])*P.disease;
         const exposed=Math.min(susceptible,transmission),onset=latent*Math.min(1,DISEASE_DAYS/p.incubation),resolved=ill*Math.min(1,DISEASE_DAYS/p.duration);
         const hardship=1+0.9*(1-s.nutrition[i])+0.35*s.raidDamage[i],care=1-0.2*s.containment[i];
@@ -3831,6 +3834,7 @@ function sackSettlement(attacker,j,force,forced=false){
   const resistance=s.unrest[j]+wallStrength(j),chance=(0.015+0.065*aggression+0.045*resistance+0.04*(attacker.hunger||0))*(preserve?0.25:1);
   if(!forced&&s.r()>chance)return false;
   const severity=forced?0.9:clamp(0.15+0.25*aggression+force/Math.max(1,s.pop[j])*0.2,0.15,0.65);
+  s.housing[j]*=1-severity*0.6;s.urbanWater[j]*=1-severity*0.5;s.sanitation[j]*=1-severity*0.5;
   s.cityWallHealth[j]*=1-severity*0.5;s.granaries[j]*=1-severity*0.4;s.militaryEquipment[j]*=1-severity*0.5;
   s.cityDamage[j]=clamp(s.cityDamage[j]+severity,0,1);s.raidDamage[j]=clamp(s.raidDamage[j]+severity*0.4,0,1);
   s.food[j]*=1-severity*0.15;s.workshops[j]*=1-severity*0.55;s.infrastructure[j]*=1-severity*0.5;s.organisation[j]*=1-severity*0.25;
@@ -3863,12 +3867,9 @@ function urbanNetworkPass(){
   for(const i of WD.landIdx)s.urbanNetwork[i]=clamp(next[i],0,1);
 }
 function citySubsistence(i){
-  const s=S,w=WD,p=Math.max(1,s.pop[i]);let hinterland=s.harvest[i];
-  for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j])continue;
-    const a=s.pol[i]?s.pols[s.pol[i]]:null,b=s.pol[j]?s.pols[s.pol[j]]:null;if(a&&b&&a.enemies.has(b.id))continue;
-    const connected=(0.08+0.22*Math.min(transportSupport(i),transportSupport(j)))*(1-WD.rough[j]*0.7);hinterland+=Math.max(0,s.harvest[j]-s.need[j]*0.85)*connected;
-  }
-  const food=clamp((hinterland+s.foodImports[i]*0.6)/p,0,1.5),agriculture=s.farm[i]*farmSuit(i);
+  const s=S,w=WD,p=Math.max(1,s.pop[i]);
+  // Imported grain is counted only after an actual, finite delivery.
+  const food=clamp((s.harvest[i]+s.foodImports[i]*0.6)/p,0,1.5),agriculture=s.farm[i]*farmSuit(i);
   const imports=clamp(s.foodImports[i]/p*3,0,1),stocks=clamp(s.food[i]/p,0,0.5);
   const cold=clamp((-5-(w.T[i]-w.amp[i]*0.5))/25,0,1),buffer=0.5*skill(i,'storage')+imports*0.5;
   return clamp((0.4*food+0.3*agriculture+0.25*imports+0.1*s.urbanNetwork[i]+0.1*stocks)*(1-0.35*cold*(1-buffer))*(1-0.6*s.cityDamage[i]),0,1);
@@ -3915,7 +3916,7 @@ function acceptDebtProtector(client,patron){
   s.societyCounters.debtProtectorates++;chron('diplomacy',`The ${client.full} accepts the protection of the ${patron.full} in exchange for relief from its debts.`,client.capital,[R_(client),R_(patron)]);return true;
 }
 function urbanYear(){
-  const s=S;if(s.year%10===0)urbanNetworkPass();for(const l of s.creditLoans)serviceCivicLoan(l);
+  const s=S;if(s.year%10===0)urbanNetworkPass();urbanPopulationYear();for(const l of s.creditLoans)serviceCivicLoan(l);
   for(const id of [...s.alive]){const o=s.pols[id];if(o.kind!=='state')continue;const c=o.capital;
     o.creditTrust=o.creditTrust==null?0.7:o.creditTrust;o.creditTrust=clamp(o.creditTrust+0.002*(0.8-o.creditTrust),0,1);
     const viability=citySubsistence(c);s.urbanViability[c]=viability;o.viability=viability;
@@ -3941,6 +3942,7 @@ function initCivic(){
   s.cityWallHealth.fill(1);s.ruralPatron=new Int32Array(N);s.ruralYears=new Uint16Array(N);
   s.siegeOwner=new Int32Array(N);s.siegeYear=new Int32Array(N).fill(-100000);s.cityProjects=new Map();
   Object.assign(s.societyCounters,{ruralAgreements:0,ruralIncorporations:0,civicUnions:0,brokenCivicBargains:0,civicWorks:0,urbanResearch:0,confederationBreakups:0,scatteredClans:0,clansReceivedByCities:0,clansJoiningConfederations:0});
+  initDevelopment();
 }
 function civicSpend(i,o,due){
   const s=S,p=s.pop[i],room=Math.max(0,0.1-s.civicLabor[i])*p/3;
@@ -4111,7 +4113,7 @@ function civicYear(){
   const s=S;s.civicLabor.fill(0);
   for(const i of WD.landIdx){s.ruralInfluence[i]*=0.998;s.ruralSecurity[i]*=0.97;const o=s.pol[i]?s.pols[s.pol[i]]:null;
     if(s.ruralPatron[i]&&!s.pols[s.ruralPatron[i]]?.alive){s.ruralPatron[i]=0;s.ruralYears[i]=0}
-    civicWorksAt(i,o);
+    civicWorksAt(i,o);urbanConstruction(i,o);
   }
   if(s.year%5===0){shareEngineering();ruralAgreements()}
   for(const id of [...s.alive]){const o=s.pols[id];if(o.kind!=='state')continue;if(s.year%5===0)offerCivicProtection(o);civicUnionStep(o);if(o.alive){maintainCivicBargains(o);inventionPass(o)}}
@@ -4153,10 +4155,12 @@ function dissolveConfederation(o,reason='Succession disputes and failed rewards 
     // Several destinations may receive different contingents; the remaining
     // households stay as autonomous clans rather than disappearing with a flag.
     const base=s.pop[i];for(const target of destinations.slice(0,2)){
-      const moved=scatterClanHouseholds(i,target.cell,base*(0.08+s.r()*0.12));if(!moved)continue;
-      const host=target.host;host.pop+=moved;recipients.add(host.id);
+      const host=target.host,requested=base*(0.08+s.r()*0.12);
+      const agreement=host.kind==='state'?createSettlementAgreement(host,i,target.cell,requested,WD.sH[target.cell]*s.rangeStock[target.cell]>s.farm[target.cell]*farmSuit(target.cell)?'pastoral':'farm'):null;
+      const moved=host.kind==='state'?(agreement?.people||0):scatterClanHouseholds(i,target.cell,requested);if(!moved)continue;
+      if(host.kind==='horde')host.pop+=moved;else s.societyCounters.scatteredClans+=moved;recipients.add(host.id);
       if(host.kind==='horde'){host.army+=army*moved/Math.max(1,total);host.clanTerms.set(s.clan[i],{loyalty:0.5,joined:s.year});s.societyCounters.clansJoiningConfederations+=moved}
-      else{s.societyCounters.clansReceivedByCities+=moved;host.compacts.push({cell:target.cell,eth:s.eth[i],people:moved,promised:moved*0.045,since:s.year,loyalty:0.6,failures:0,broken:false,done:false})}
+      else s.societyCounters.clansReceivedByCities+=moved;
     }
   }
   o.army=o.staff=o.navy=0;o.alive=false;o.died=s.year;o.succ=[...recipients];o.departed=true;
@@ -4164,6 +4168,242 @@ function dissolveConfederation(o,reason='Succession disputes and failed rewards 
   for(const id of o.allies){const p=s.pols[id];if(p)p.allies=p.allies.filter(q=>q!==o.id)}
   s.alive=s.alive.filter(id=>id!==o.id);s.fallen.push(o);s.societyCounters.confederationBreakups++;
   chron('fall',`The ${o.full} breaks apart. ${reason} Some households seek new patrons or settlement near cities; others remain in autonomous clans.`,o.capital,[R_(o),...[...recipients].map(id=>R_(s.pols[id]))]);return true;
+}
+
+/* Settlement and political development are funded, reversible processes.
+   Rates are experimental; a pastoral economy is not a lower political stage. */
+const CITY_ROLES=['Market town','Port','Craft center','Administrative center','Ritual center','Frontier center'];
+function initDevelopment(){
+  const s=S;
+  for(const k of ['housing','urbanWater','urbanJobs','localFoodImports'])s[k]=new Float64Array(N);
+  s.sanitation=new Float32Array(N);s.cityRole=new Uint8Array(N);
+  s.settlementRequests=[];s.nextSettlementId=1;
+  Object.assign(s.societyCounters,{nomadSubmissions:0,nomadReleases:0,pastoralTransitions:0,settlementPetitions:0,negotiatedSettlers:0,frontierSettlers:0,redistributedSettlers:0,urbanArrivals:0,urbanDepartures:0,localGrainDeliveries:0});
+}
+function initDevelopmentPolity(o,from){
+  o.pastoralOrigin=o.kind==='horde'||!!from?.pastoralOrigin;
+  o.pastoralPractice=from?(from.pastoralPractice||0)*0.7:0;
+  o.hybridYears=from?(from.hybridYears||0)*0.5:0;o.agrarianRevenue=0;o.settlementProgress=0;
+  o.lastPetition=-100000;o.lastPastoralDefeat=-100000;o.submission=null;
+}
+function urbanWaterCapacity(i){
+  const w=WD,access=clamp(w.waterPotential[i]*0.7+w.Pr[i]/2500,0,1);
+  return (200+8500*access*access+suitableWaterworks(i)+S.urbanWater[i])*clamp(S.wm[i],0.3,1.1);
+}
+function suitableWaterworks(i){return S.waterworks[i]*12000*(0.2+0.8*WD.waterPotential[i])}
+function urbanActivities(i,o){
+  const s=S,p=s.pop[i],trade=Math.min(p*0.12,s.flow[i]*0.12),administration=o?(o.staff+o.army*0.15)*p/Math.max(1,o.pop):0;
+  const roles=[p*(0.012+0.055*s.organisation[i])+trade*0.5,
+    WD.coast[i]?trade*(0.5+0.5*s.sail[i]):0,
+    p*s.workshops[i]*0.06*(0.4+0.6*s.urbanNetwork[i]),administration,
+    s.rel[i]>=0?p*0.012*s.organisation[i]:0,
+    o?o.army*p/Math.max(1,o.pop)*0.12*civicThreat(i,o):0];
+  s.cityRole[i]=roles.indexOf(Math.max(...roles));
+  return roles.reduce((a,b)=>a+b,0);
+}
+function urbanTarget(i,o){
+  const s=S,p=s.pop[i],food=s.harvest[i]*0.25+s.foodImports[i];
+  s.urbanJobs[i]=urbanActivities(i,o);
+  return Math.max(0,Math.min(p*urbanShare(i,o),s.urbanJobs[i],food,urbanWaterCapacity(i))*(1-s.cityDamage[i]));
+}
+function urbanBuildSpend(i,o,due){
+  const privatePaid=civicSpend(i,null,due);if(!o||privatePaid>=due)return privatePaid;
+  const reserve=(o.fiscalDue||o.pop*0.02)*S.pop[i]/Math.max(1,o.pop)*1.25;
+  const discretionary=Math.max(0,publicAvailable(o,i)-reserve)*0.03;
+  return privatePaid+civicSpend(i,o,Math.min(due-privatePaid,discretionary));
+}
+function urbanConstruction(i,o){
+  const s=S,p=s.pop[i];if(p<100)return;
+  const target=urbanTarget(i,o),occupied=s.urban[i];
+  // Maintenance is paid before expansion. Empty buildings persist but decay.
+  const upkeep=s.housing[i]*0.002+s.urbanWater[i]*0.0015,maintained=urbanBuildSpend(i,o,upkeep)/Math.max(1,upkeep);
+  s.housing[i]*=1-0.004*(1-maintained)-0.001*s.raidDamage[i];s.urbanWater[i]*=1-0.006*(1-maintained);
+  const seats=Math.min(Math.max(0,target*1.1-s.housing[i]),Math.max(5,p*0.003)),cost=0.35+0.2*WD.rough[i];
+  if(seats>0){const paid=urbanBuildSpend(i,o,seats*cost);s.housing[i]+=paid/cost;s.engineeringPractice[i]+=paid*0.08}
+  const waterNeed=Math.max(0,Math.min(s.housing[i],s.urbanJobs[i])*1.1-urbanWaterCapacity(i));
+  if(waterNeed>0&&s.engineeringKnowledge[i]>0.1){const paid=urbanBuildSpend(i,o,Math.min(p*0.001,waterNeed*0.3));s.urbanWater[i]+=paid/0.3*(0.2+0.8*WD.waterPotential[i]);s.engineeringPractice[i]+=paid*0.1}
+  const crowd=occupied/Math.max(100,s.housing[i]),due=occupied*0.0015;
+  const paid=urbanBuildSpend(i,o,due),met=paid/Math.max(1,due);
+  s.sanitation[i]=clamp(s.sanitation[i]+0.025*(met*(0.2+0.5*s.infrastructure[i]+0.3*s.engineeringKnowledge[i])-s.sanitation[i])-0.005*Math.max(0,crowd-1),0,1);
+}
+function localUrbanFreight(accounts){
+  const s=S,w=WD;s.localFoodImports.fill(0);
+  // Each origin allocates one finite surplus among its neighboring buyers.
+  for(const i of w.landIdx){const surplus=Math.max(0,s.food[i]-s.need[i]*1.12);if(surplus<1)continue;
+    const buyers=[];let total=0;
+    for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j]||s.urban[j]<200)continue;
+      const a=s.pol[i]?s.pols[s.pol[i]]:null,b=s.pol[j]?s.pols[s.pol[j]]:null;if(a&&b&&(a.enemies.has(b.id)||b.enemies.has(a.id)))continue;
+      const access=Math.min(transportSupport(i),transportSupport(j)),road=Math.min(s.infrastructure[i],s.infrastructure[j]);
+      const loss=clamp(0.06+0.14*w.rough[j]+0.06*(1-access),0.02,0.4),demand=Math.max(0,s.need[j]*1.08-s.food[j]);
+      const capacity=Math.min(s.pop[i],s.pop[j])*(0.008+0.025*access+0.02*road)*civicTradeAccess(i,j)*epidemicTravelFactor(i,j);
+      const wanted=Math.min(demand/(1-loss),capacity);if(wanted>0){buyers.push({j,wanted,loss});total+=wanted}
+    }
+    const fraction=Math.min(1,surplus/Math.max(1,total));for(const b of buyers){const n=b.wanted*fraction,delivered=n*(1-b.loss);s.food[i]-=n;s.food[b.j]+=delivered;s.foodImports[b.j]+=delivered;s.localFoodImports[b.j]+=delivered;accounts.transportLoss+=n-delivered;s.societyCounters.localGrainDeliveries+=delivered;s.flow[i]+=n;s.flow[b.j]+=delivered}
+  }
+}
+function moveDevelopmentHouseholds(i,j,requested,options={}){
+  const s=S;if(i===j||!WD.land[j])return 0;const prior=s.pop[i],old=s.pop[j];
+  let n=Math.min(requested,prior*0.2,Math.max(0,s.K[j]-old)*0.35,s.food[i]/0.15);
+  const selected=options.eth,selectedShare=selected==null?1:s.eth[i]===selected?1-(s.eth2[i]>=0?s.mix[i]:0):s.eth2[i]===selected?s.mix[i]:0;
+  n=Math.min(n,prior*selectedShare);
+  if(options.ruralOnly)n=Math.min(n,Math.max(0,prior-s.urban[i]));if(n<10)return 0;
+  const ratio=n/prior,food=s.food[i]*ratio,young=s.young[i]*ratio,herd=takeHerd(i,ratio),history=diseaseHistory(i),minor=s.eth2[i]>=0?s.mix[i]:0;
+  const ancestryMinor=s.ancestry2[i]>=0?s.ancestryMix[i]:0,adult=Math.max(0,old-s.young[j]),newAdult=n-young;
+  s.maleShare[j]=(adult*s.maleShare[j]+newAdult*s.maleShare[i])/Math.max(1,adult+newAdult);
+  s.pop[i]-=n;s.young[i]-=young;s.food[i]-=food;s.pop[j]+=n;s.young[j]+=young;s.food[j]+=Math.max(0,food-n*0.06);putHerd(j,herd);
+  const groups=selected==null?[[s.eth[i],1-minor],[s.eth2[i],minor]]:[[selected,1]];
+  let before=old;for(const [eth,part] of groups)if(eth>=0&&part>0){if(before<1){s.eth[j]=eth;s.eth2[j]=-1;s.mix[j]=0}else mergeCulture(j,eth,n*part,before);before+=n*part}
+  if(selected!=null){s.pop[i]=prior;removeResidentCulture(i,selected,n);s.pop[i]=prior-n}
+  before=old;for(const [eth,part] of [[s.ancestry[i],1-ancestryMinor],[s.ancestry2[i],ancestryMinor]])if(eth>=0&&part>0){mergeAncestry(j,eth,n*part,before);before+=n*part}
+  if(!options.ruralOnly)s.urban[i]*=1-ratio;
+  if(options.urban)s.urban[j]+=n;
+  for(let k=0;k<TECH.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],s.tk[k][i]*Math.min(0.5,n/Math.max(1,s.pop[j])));
+  transferCrops(i,j);mixDiseaseHistory(j,history,n,old);s.newcomers[j]+=n;s.settleLag[j]=Math.max(1,s.settleLag[j]);
+  diseaseJourney(i,j,travelDays(i,j),n,'migration');
+  s.campMoves.push({from:i,to:j,eth:s.eth[i],pop:n,year:s.year,home:i,cause:options.cause||'urban opportunity'});
+  for(const [cell,delta] of [[i,-n],[j,n]]){const owner=s.pol[cell]?s.pols[s.pol[cell]]:null;if(owner)owner.pop=Math.max(0,owner.pop+delta)}
+  return n;
+}
+function urbanPopulationYear(){
+  const s=S,w=WD;
+  // Local rural/urban residence changes do not create population.
+  for(const i of w.landIdx){const p=s.pop[i],o=s.pol[i]?s.pols[s.pol[i]]:null,target=Math.min(s.housing[i],urbanTarget(i,o));s.urban[i]=clamp(s.urban[i],0,p);
+    const lack=clamp(1-s.nutrition[i]+s.cityDamage[i]+s.sickness[i],0,1);
+    if(s.urban[i]>target){const n=Math.min(s.urban[i],(s.urban[i]-target)*(0.06+0.2*lack));s.urban[i]-=n;s.societyCounters.urbanDepartures+=n}
+    else if(s.nutrition[i]>0.85&&s.cityDamage[i]<0.5){const n=Math.min(p-s.urban[i],target-s.urban[i],Math.max(2,s.urban[i]*0.035)*s.organisation[i]);s.urban[i]+=n;s.societyCounters.urbanArrivals+=n}
+  }
+  // Stage arrivals so a household moves at most once in this pass.
+  const moves=[],available=new Map();for(const j of w.landIdx){if(s.urban[j]<200||s.nutrition[j]<0.9||s.cityDamage[j]>0.4)continue;
+    const host=s.pol[j]?s.pols[s.pol[j]]:null,target=Math.min(s.housing[j],urbanTarget(j,host));let room=Math.max(0,target-s.urban[j]);if(room<10)continue;
+    for(let d=0;d<4&&room>=10;d++){const i=w.nb[j*4+d];if(i<0||!w.land[i]||s.pop[i]<500)continue;
+      const source=s.pol[i]?s.pols[s.pol[i]]:null;if(host&&source&&(host.enemies.has(source.id)||source.enemies.has(host.id)))continue;
+      if(host&&host.rights<0.25)continue;
+      const rural=available.has(i)?available.get(i):Math.max(0,s.pop[i]-s.urban[i]),pull=clamp(s.urbanJobs[j]/Math.max(100,s.urban[j])-1,0,1);
+      const n=Math.min(room,rural*0.008*P.migration*pull);if(n<10)continue;available.set(i,rural-n);moves.push({i,j,n});room-=n;
+    }
+  }
+  for(const m of moves)s.societyCounters.urbanArrivals+=moveDevelopmentHouseholds(m.i,m.j,m.n,{urban:true,ruralOnly:true});
+}
+function settlementRoute(from,to,host,limit=8){
+  const s=S,w=WD,queue=[[from,0]],seen=new Set([from]);
+  for(let at=0;at<queue.length&&at<160;at++){const [i,depth]=queue[at];if(i===to)return depth;if(depth>=limit)continue;
+    for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j]||seen.has(j)||w.rough[j]>0.85)continue;
+      const owner=s.pol[j]?s.pols[s.pol[j]]:null;if(owner&&owner.id!==host.id&&owner.kind==='state')continue;
+      if(owner&&host.enemies.has(owner.id))continue;seen.add(j);queue.push([j,depth+1]);}
+  }return -1;
+}
+function settlementCapacity(host,j,mode){
+  const s=S;if(!host?.alive||host.kind!=='state'||host.health<0.45||s.nutrition[j]<0.85)return 0;
+  if(s.pol[j]!==host.id&&!(s.pol[j]===0&&s.ruralPatron[j]===host.id&&s.ruralSecurity[j]>0.35))return 0;
+  const room=Math.max(0,s.K[j]*0.9-s.pop[j]),claims=clamp(1-s.pop[j]/Math.max(1,s.K[j])-s.eliteStake[j]*0.25,0,1);
+  if(mode==='urban')return Math.min(room,Math.max(0,Math.min(s.housing[j],urbanWaterCapacity(j),s.urbanJobs[j])-s.urban[j]));
+  const livelihood=mode==='pastoral'?WD.sH[j]*s.rangeStock[j]:s.farm[j]*farmSuit(j);
+  return room*claims*clamp(livelihood,0,1)*0.35;
+}
+function settlementFundingCell(host,j){
+  if(S.pol[j]===host.id)return j;
+  for(let d=0;d<4;d++){const i=WD.nb[j*4+d];if(i>=0&&S.pol[i]===host.id&&S.urban[i]>=500)return i}
+  return -1;
+}
+function createSettlementAgreement(host,i,j,requested,mode='pastoral',parent=null){
+  const s=S,route=settlementRoute(i,j,host);if(route<0||host.enemies.has(s.pol[i]))return null;
+  const funding=settlementFundingCell(host,j);if(funding<0)return null;
+  const capacity=settlementCapacity(host,j,mode),cost=0.35+route*0.08+(mode==='farm'?0.45:mode==='urban'?0.2:0);
+  const n=Math.min(requested,capacity,publicAvailable(host,funding)/Math.max(1,cost)*0.5);if(n<50)return null;
+  const grant=budgetAt(host,funding,n*cost);if(grant<n*cost*0.99){s.food[j]+=grant;return null}
+  const eth=parent?parent.eth:s.eth[i],moved=moveDevelopmentHouseholds(i,j,n,{urban:mode==='urban',eth,cause:'settlement agreement'});
+  if(moved<50){s.food[j]+=grant;return null}s.food[j]+=grant;
+  const t={id:s.nextSettlementId++,durable:true,host:host.id,cell:j,eth,people:moved,promised:moved*0.025,since:s.year,loyalty:0.65,failures:0,broken:false,done:false,mode,rights:host.rights,landRights:true,parent:parent?.id||0,patronCell:host.capital};
+  host.compacts.push(t);s.societyCounters.negotiatedSettlers+=moved;if(s.pol[j]!==host.id)s.societyCounters.frontierSettlers+=moved;
+  s.autonomy[j]=Math.max(s.autonomy[j],0.6);s.settleLag[j]=Math.max(s.settleLag[j],mode==='farm'?2:1);
+  const origin=s.pol[i]?s.pols[s.pol[i]]:null;if(origin&&origin!==host){const fraction=moved/Math.max(1,origin.pop+moved);origin.army*=1-fraction;origin.staff*=1-fraction}
+  chron('migration',`The ${host.full} receives ${fmtK(moved)} people under a ${mode==='urban'?'town':mode==='farm'?'farming':'pasture'} settlement agreement, promising provisions, protection and land rights.`,j,[R_(host),RE(s.eths[eth])]);
+  return t;
+}
+function requestClanSettlement(o,origin=o.capital){
+  const s=S;if(s.year-o.lastPetition<15||s.pop[origin]<500)return false;o.lastPetition=s.year;s.societyCounters.settlementPetitions++;
+  const candidates=[];ring(origin,3,j=>{if(!WD.land[j])return;const host=s.pol[j]?s.pols[s.pol[j]]:s.ruralPatron[j]?s.pols[s.ruralPatron[j]]:null;if(!host||host.kind!=='state'||host.enemies.has(o.id))return;
+    const mode=s.urban[j]>500&&s.housing[j]-s.urban[j]>300&&s.herd[origin]<0.4?'urban':WD.sH[j]*s.rangeStock[j]>s.farm[j]*farmSuit(j)?'pastoral':'farm';
+    const capacity=settlementCapacity(host,j,mode);if(capacity<100||settlementRoute(origin,j,host)<0)return;
+    candidates.push({host,j,mode,capacity,score:host.health+host.rights+host.trust+Math.min(1,capacity/3000)-angDist(origin,j)*10});
+  });candidates.sort((a,b)=>b.score-a.score);
+  for(const c of candidates)if(createSettlementAgreement(c.host,origin,c.j,Math.min(s.pop[origin]*0.15,c.capacity),c.mode))return true;
+  return false;
+}
+function settlementAgreementStep(o,t){
+  if(t.done)return;const s=S,owner=s.pol[t.cell];if(owner!==o.id&&!(owner===0&&s.ruralPatron[t.cell]===o.id)){t.done=true;return}
+  const culture=s.eth[t.cell]===t.eth?1-(s.eth2[t.cell]>=0?s.mix[t.cell]:0):s.eth2[t.cell]===t.eth?s.mix[t.cell]:0;
+  const n=Math.min(t.people,s.pop[t.cell]*culture);t.people=n;if(n<10){t.done=true;return}
+  const funding=settlementFundingCell(o,t.cell),supportedYears=s.year-t.since,need=supportedYears<8?t.promised:t.promised*0.2,paid=funding>=0?budgetAt(o,funding,need):0;s.food[t.cell]+=paid;
+  const protection=owner===o.id?o.health*o.payroll:s.ruralSecurity[t.cell],kept=o.rights>=t.rights-0.12&&protection>=0.3;
+  const fulfillment=clamp((need?paid/need:1)*0.4+(kept?0.4:0)+s.nutrition[t.cell]*0.2,0,1);
+  t.loyalty=clamp(t.loyalty+0.035*(fulfillment-t.loyalty),0,1);
+  o.auxiliaries+=n*0.025*t.loyalty*(t.mode==='urban'?0.5:1);
+  if(fulfillment<0.55){t.failures++;s.unrest[t.cell]=clamp(s.unrest[t.cell]+0.01,0,1)}else t.failures=Math.max(0,t.failures-2);
+  if(t.failures>=5&&!t.broken){t.broken=true;s.societyCounters.brokenCompacts++;o.shock+=0.08;chron('migration',`Settled communities in the ${o.full} protest failed provisions or land-rights promises.`,t.cell,[R_(o)])}
+  if(t.broken&&t.loyalty<0.25&&n>300&&s.activeMigs.length<20){
+    // Use the existing cohort machinery; only actual resident households leave.
+    const take=Math.min(n*0.5,s.pop[t.cell]*0.2),p=s.pop[t.cell],share=take/p,food=s.food[t.cell]*share,young=s.young[t.cell]*share,animals=takeHerd(t.cell,share),immunity=diseaseHistory(t.cell);
+    removeResidentCulture(t.cell,t.eth,take);s.pop[t.cell]-=take;s.young[t.cell]-=young;s.food[t.cell]-=food;s.urban[t.cell]*=1-share;
+    const a=s.r()*Math.PI*2,M=startMigration({eth:t.eth,pop:take,food,young,animals,cell:t.cell,dx:Math.cos(a),dy:Math.sin(a),kind:'people',cause:'broken settlement agreement'});M.immunity=immunity;t.people-=take;t.done=true;
+  }
+}
+function redistributeSettlers(o){
+  const s=S;if(o.kind!=='state'||o.cells<4||o.staff<o.pop*0.002||o.health<0.65||o.payroll<0.8||s.year%10)return;
+  const cells=(s.realmCells.get(o.id)||[]).filter(i=>s.pol[i]===o.id);
+  for(const t of [...o.compacts]){if(!t.durable||t.done||t.people<500||t.loyalty<0.65||s.year-t.since<10||s.year-(t.lastRedistribution||-100000)<20)continue;
+    const targets=cells.filter(j=>j!==t.cell&&publicAvailable(o,j)>250&&settlementCapacity(o,j,t.mode)>300&&settlementRoute(t.cell,j,o,6)>=0).sort((a,b)=>settlementCapacity(o,b,t.mode)-settlementCapacity(o,a,t.mode));
+    if(!targets.length)continue;const j=targets[0];
+    // Relocation is negotiated, and requires a materially better destination.
+    if(s.nutrition[j]<s.nutrition[t.cell]||s.r()>0.15*o.trust)continue;
+    const moved=createSettlementAgreement(o,t.cell,j,Math.min(t.people*0.2,1000),t.mode,t);if(moved){t.people=Math.max(0,t.people-moved.people);t.lastRedistribution=s.year;s.societyCounters.redistributedSettlers+=moved.people}
+  }
+}
+function pastoralRival(o,p){return p&&p.alive&&p.kind==='horde'&&o.over!==p.id&&p.over!==o.id&&!o.allies.includes(p.id)&&(o.truce.get(p.id)||-100000)<=S.year}
+function submitPastoralPolity(winner,loser){
+  const s=S;if(!pastoralRival(winner,loser)||loser.over||power(winner)<power(loser)*1.15)return false;
+  const seen=new Set();for(let ancestor=winner;ancestor?.over&&!seen.has(ancestor.id);ancestor=s.pols[ancestor.over]){seen.add(ancestor.id);if(ancestor.over===loser.id)return false}
+  const due=loser.pop*0.004,paid=budgetPay(winner,due);if(paid<due*0.9){s.food[loser.capital]+=paid;return false}s.food[loser.capital]+=paid;
+  loser.over=winner.id;loser.overY=s.year;winner.tribs++;loser.submission={since:s.year,loyalty:0.5,leader:winner.ruler.since};
+  for(const wid of [...s.activeWars]){const war=s.wars[wid];if(war.a.includes(winner.id)&&war.d.includes(loser.id)||war.d.includes(winner.id)&&war.a.includes(loser.id)){endWar(war);s.activeWars=s.activeWars.filter(id=>id!==wid)}}
+  loser.enemies.delete(winner.id);winner.enemies.delete(loser.id);
+  s.societyCounters.nomadSubmissions++;chron('diplomacy',`The ${loser.full} submits to the ${winner.full}, retaining its chiefs and pasture in return for tribute and military obligations.`,loser.capital,[R_(winner),R_(loser)]);return true;
+}
+function pastoralBattleOutcome(o,p,j){
+  const s=S;if(o.kind!=='horde'||!p||p.kind!=='horde'||!pastoralRival(o,p))return false;
+  p.lastPastoralDefeat=s.year;if(s.year-p.lastPetition>=15)requestClanSettlement(p,j);
+  const advantage=power(o)/Math.max(1,power(p));if(advantage<1.25||s.r()>0.45)return false;
+  if(p.coalition<0.4&&s.r()<0.4&&hordeMigration(p,'defeat by another confederation'))return true;
+  return s.r()<0.6?submitPastoralPolity(o,p):incorporateClans(o,p);
+}
+function pastoralAdministration(o){
+  const s=S;if(!o.pastoralOrigin)return;
+  if(o.submission){const lord=s.pols[o.over];const secure=lord?.alive&&lord.kind==='horde'&&lord.health>0.4;
+    const strength=secure?clamp(power(lord)/Math.max(1,power(o)),0,2):0;
+    o.submission.loyalty=clamp(o.submission.loyalty+0.025*((secure?0.2+lord.trust*0.4+strength*0.15:0)-o.submission.loyalty)-0.015*o.hunger,0,1);
+    if(secure&&lord.enemies.size&&o.submission.loyalty>0.45&&s.year%5===0&&!s.militaryContracts.some(t=>!t.done&&t.horde===o.id))createMilitaryContract(lord,o,o.army*0.15,5);
+    if(!secure||o.submission.loyalty<0.25&&s.r()<0.05){if(lord)lord.tribs=Math.max(0,lord.tribs-1);o.over=0;o.submission=null;s.societyCounters.nomadReleases++;chron('diplomacy',`The ${o.full} withdraws its submission as the overlord's protection and authority weaken.`,o.capital,[R_(o)])}
+  }
+  if(o.kind!=='horde')return;
+  const cells=(s.realmCells.get(o.id)||[]).filter(i=>s.pol[i]===o.id);let agrarian=0,all=0,specialists=0,towns=0,food=0,localConsent=0;
+  for(const i of cells){const revenue=s.levy[i],crops=s.farm[i]*farmSuit(i),pasture=s.herd[i]*WD.sH[i];all+=revenue;agrarian+=revenue*crops/Math.max(0.05,crops+pasture+0.05*(1-s.farm[i]));food+=s.pop[i]*s.nutrition[i];localConsent+=s.pop[i]*s.eliteLoyalty[i];
+    if(s.urban[i]>=1000){towns++;specialists+=s.urban[i]*(recordSkill(i)*0.6+s.organisation[i]*0.1)*(1-s.cityDamage[i])}}
+  o.agrarianRevenue=all>0?agrarian/all:0;
+  const demand=Math.max(0,o.clanTerms.size-1)+Math.min(8,o.tribs||0);
+  if(demand>0){const need=o.pop*0.0003*Math.min(4,demand),paid=civicSpend(o.capital,o,need),practice=paid/Math.max(1,need);o.pastoralPractice=clamp(o.pastoralPractice+0.008*practice-0.003*(1-practice),0,1);s.recordPractice[o.capital]+=paid*0.03}
+  const trained=o.staff>Math.max(30,o.pop*0.001)&&specialists>30;
+  const suitable=towns>0&&o.agrarianRevenue>0.35&&trained&&food/Math.max(1,o.pop)>0.9&&localConsent/Math.max(1,o.pop)>0.45&&o.payroll>0.75&&o.health>0.6;
+  const acceptance=clamp(o.coalition*0.5+o.rights*0.25+o.succession*0.25-o.coalitionFatigue*0.2,0,1);
+  o.hybridYears=clamp(o.hybridYears+(suitable?acceptance:-1.5),0,100);o.settlementProgress=o.hybridYears/40;
+  if(suitable&&acceptance>0.35){const due=o.pop*0.0005,paid=civicSpend(o.capital,o,due);o.hybridYears=Math.max(0,o.hybridYears-(1-paid/Math.max(1,due)));}
+  if(o.hybridYears>=40){const old=o.full;o.kind='state';o.conqDyn=true;o.settledY=s.year;o.hybridGovernment=true;o.origin=Object.assign({},o.origin,{settled:s.year});o.shock+=0.08;o.conquestLoad=clamp(o.conquestLoad+0.1,0,3);o.tier=tierOf(o);o.full=fullName(o);s.societyCounters.pastoralTransitions++;
+    chron('rise',`After sustained government of farming districts and towns, the ${old} establishes a mixed pastoral and agrarian administration as the ${o.full}.`,o.capital,[R_(o)],'Mobile communities retain their livelihoods. Officials, local cooperation, food and predictable revenue sustain the transition.');
+  }
+}
+function developmentYear(){
+  const s=S;for(const id of [...s.alive]){const o=s.pols[id];if(!o.alive)continue;pastoralAdministration(o);if(o.kind==='state')redistributeSettlers(o);
+    else if(s.year%5===0&&(s.year-o.lastPastoralDefeat<15||o.hunger>0.2||o.coalitionFatigue>0.6)&&s.r()<0.15)requestClanSettlement(o);
+  }
 }
 
 /* Pointer events are shared by touch, pen and mouse. Coordinates remain in CSS
@@ -4636,6 +4876,8 @@ function renderPage(){
       h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
       h+=`<h3 class="sec">Ecology</h3><div class="bars">${w.sF[i]>0.08?bar('Soil fertility',s.fert[i],1,'t'):''}${w.forest0[i]>0.05?bar('Forest standing',s.forest[i]/w.forest0[i],1,'t'):''}${s.salt[i]>0.02?bar('Salt in the soil',s.salt[i],1):''}${w.mal[i]>0.05?bar('Fever burden',w.mal[i]*(1-s.adapt[i]),1):''}${w.oncho[i]>0.05?bar('River blindness',w.oncho[i],1):''}${bar('Disease pool',s.dp[i],1,'t')}${w.sF[i]>0.1?bar('Hemmed in (circumscription)',s.circE[i],1,'t'):''}${s.car[i]>0.1?bar('Caravan traffic',s.car[i],1,'t'):''}</div>`;
       h+=`<h3 class="sec">City defenses and workshops</h3><dl class="kv"><dt>City defense strength</dt><dd>${Math.round(cityWallStrength(i)*100)} / 100</dd><dt>City wall condition</dt><dd>${Math.round(s.cityWallHealth[i]*100)}%</dd><dt>Engineering knowledge</dt><dd>${Math.round(s.engineeringKnowledge[i]*100)} / 100</dd><dt>Built granaries</dt><dd>${Math.round(s.granaries[i]*100)} / 100</dd><dt>Arms and tools available</dt><dd>${Math.round(armsAccess(i)*100)}%</dd><dt>Labor in civic projects</dt><dd>${Math.round(s.civicLabor[i]*100)}%</dd>${s.ruralPatron[i]&&s.pols[s.ruralPatron[i]]?`<dt>Rural protection agreement</dt><dd>${lp(s.pols[s.ruralPatron[i]])}, ${Math.round(s.ruralInfluence[i]*100)}% established</dd>`:''}</dl>`;
+      h+=`<h3 class="sec">Settlement and livelihoods</h3><dl class="kv"><dt>Town residents</dt><dd>${fmtN(s.urban[i])}</dd><dt>Main urban activity</dt><dd>${CITY_ROLES[s.cityRole[i]]}</dd><dt>Built housing</dt><dd>${fmtN(s.housing[i])} people</dd><dt>Water supply</dt><dd>${fmtN(urbanWaterCapacity(i))} people</dd><dt>Urban livelihoods</dt><dd>${fmtN(s.urbanJobs[i])} people</dd><dt>Sanitation</dt><dd>${Math.round(s.sanitation[i]*100)}%</dd><dt>Grain delivered from nearby farms</dt><dd>${fmtN(s.localFoodImports[i])} annual rations</dd></dl>`;
+      if(p){const agreements=p.compacts.filter(t=>t.durable&&!t.done&&t.cell===i);if(agreements.length)h+=`<h3 class="sec">Local settlement agreements</h3>${agreements.slice(0,6).map(t=>`<p class="note">${fmtN(t.people)} people · ${esc(t.mode==='farm'?'farming':t.mode==='urban'?'town residence':'pasture and service')} · since ${fy(t.since)} · confidence ${Math.round(t.loyalty*100)}%${t.broken?' · promises disputed':''}</p>`).join('')}`}
       h+=`<h3 class="sec">Known techniques</h3><div class="bars">${TECH.map((T,k)=>s.tk[k][i]>0.05?bar(T.n,s.tk[k][i],1,'t'):'').join('')||'<div class="note">Foraging only.</div>'}</div>`;
       h+=`<h3 class="sec">Transport and local power</h3><dl class="kv">${ANIMALS.map((a,k)=>`<dt>${a.n}</dt><dd>${fmtN(s.animals[k][i])}</dd>`).join('')}<dt>Available traction</dt><dd>${Math.round(s.traction[i]*100)} / 100</dd><dt>Pack transport</dt><dd>${Math.round(s.pack[i]*100)} / 100</dd><dt>Riding and remounts</dt><dd>${Math.round(s.mounts[i]*100)} / 100</dd><dt>Local civic identity</dt><dd>${Math.round(s.cityIdentity[i]*100)} / 100</dd><dt>Landholders' stake</dt><dd>${Math.round(s.eliteStake[i]*100)} / 100</dd><dt>Landholders' loyalty</dt><dd>${Math.round(s.eliteLoyalty[i]*100)} / 100</dd><dt>Coastal crop investment</dt><dd>${Math.round(s.orchards[i]*100)} / 100</dd><dt>Crop system</dt><dd>${cropSystem(i).kind<0?'No established crop package':CROPS[cropSystem(i).kind].n}</dd><dt>Local crop suitability</dt><dd>${Math.round(farmSuit(i)*100)} / 100</dd><dt>Terraces</dt><dd>${Math.round(s.terraces[i]*100)} / 100</dd><dt>Local waterworks</dt><dd>${Math.round(s.waterworks[i]*100)} / 100</dd><dt>Regional public stores</dt><dd>${fmtN(s.depot[i])} annual rations</dd><dt>Frontier insecurity</dt><dd>${Math.round(frontierRisk(i)*100)} / 100</dd><dt>Damage from raids</dt><dd>${Math.round(s.raidDamage[i]*100)} / 100</dd><dt>Wall condition</dt><dd>${Math.round(s.wallHealth[i]*100)} / 100</dd><dt>Open breaches</dt><dd>${Math.round(s.wallBreach[i]*100)} / 100</dd><dt>Resource recovery</dt><dd>${Math.round(s.rangeStock[i]*100)}%</dd><dt>City damage</dt><dd>${Math.round(s.cityDamage[i]*100)}%</dd><dt>Urban viability</dt><dd>${Math.round(citySubsistence(i)*100)}%</dd><dt>Adult male share</dt><dd>${Math.round(s.maleShare[i]*100)}%</dd></dl>`;
     }
@@ -4652,6 +4894,7 @@ function renderPage(){
       const tribs=s.alive.map(k=>s.pols[k]).filter(p=>p.over===id);
       h+=`<h3 class="sec">Realm</h3><dl class="kv"><dt>Provinces</dt><dd>${o.cells} (peak ${o.maxCells})</dd>${o.shape?`<dt>Extent at peak</dt><dd>${o.shape.ew.toLocaleString()} km east–west × ${o.shape.ns.toLocaleString()} km north–south</dd>`:''}${o.fortN?`<dt>Fortified provinces</dt><dd>${o.fortN}</dd>`:''}<dt>Population</dt><dd>${fmtN(o.pop)}</dd><dt>Capital</dt><dd>${city?esc(city.name):'–'}</dd><dt>Social complexity</dt><dd>${o.spc.toFixed(1)} / 10</dd>${o.cplx!=null&&o.kind==='state'?`<dt>Cost of government</dt><dd>${Math.round((o.burden||0)*100)}% of what it can tax${(o.burden||0)>1?' — more than it returns':''}</dd><dt>Treasury</dt><dd>${o.treas>0.5?'full':o.treas>0?'solvent':o.treas>-1?'in debt':'bankrupt'}</dd><dt>Inequality</dt><dd>${Math.round(o.ineq*100)} / 100</dd><dt>Farming</dt><dd>${(o.plN||0)>0.5*(o.cells-(o.wasteN||0))?'plough':'hoe'} agriculture</dd>${o.wasteN?`<dt>Claimed wasteland</dt><dd>${o.wasteN} provinces</dd>`:''}`:''}<dt>Era</dt><dd>${ERAS[eraOf(c)]}</dd><dt>Faith of the realm</dt><dd>${o.rel>=0?lr(s.rels[o.rel]):'folk religion'}</dd><dt>Core people</dt><dd>${s.eths[o.core]?le(s.eths[o.core]):'?'}</dd><dt>Land use</dt><dd>${(o.press*100).toFixed(0)}% of capacity</dd><dt>Asabiya</dt><dd>${o.S.toFixed(2)}</dd><dt>Elites vs positions</dt><dd>${(o.E/etOf(o)).toFixed(2)}×</dd><dt>Communication horizon</dt><dd>${o.h.toFixed(1)} travel days</dd><dt>Civil wars</dt><dd>${o.crises}</dd></dl>`;
       h+=`<h3 class="sec">Institutions and resources</h3><p class="note">${esc(o.gov)} government. Institutions need trained people, provisions and maintained connections.</p><div class="bars">${bar('Central authority',o.central,1,'t')}${bar('Administrative skill',o.bureau,1,'t')}${bar('Public trust',o.trust,1,'g')}${bar('Negotiated rights',o.rights,1,'t')}${bar('Succession continuity',o.succession,1,'t')}${bar('Service reliability',o.health,1,'g')}${bar('Accumulated strain',o.strain,1)}</div><dl class="kv"><dt>Public provisions</dt><dd>${(12*o.grain/Math.max(1,o.pop)).toFixed(1)} population-months</dd><dt>Annual collections</dt><dd>${fmtN(o.collected||0)} rations</dd><dt>Payroll funded</dt><dd>${Math.round(o.payroll*100)}%</dd><dt>Trained officials</dt><dd>${fmtN(o.staff)}</dd><dt>Available troops</dt><dd>${fmtN(o.army)}</dd><dt>Maintained ships</dt><dd>${Math.round(o.navy)}</dd><dt>Campaigns this year</dt><dd>${o.campaigns||0}</dd><dt>Durable reforms</dt><dd>${o.reforms.length}</dd></dl>`;
+      if(o.pastoralOrigin)h+=`<h3 class="sec">Pastoral government</h3><dl class="kv"><dt>Government</dt><dd>${o.hybridGovernment?'Mixed pastoral and agrarian':o.kind==='horde'?'Mobile confederation':'Territorial administration'}</dd><dt>Administrative practice</dt><dd>${Math.round(o.pastoralPractice*100)}%</dd>${o.kind==='horde'?`<dt>Revenue from farming districts</dt><dd>${Math.round(o.agrarianRevenue*100)}%</dd><dt>Mixed administration established</dt><dd>${Math.round(Math.min(1,o.settlementProgress)*100)}%</dd>`:''}${o.submission&&s.pols[o.over]?`<dt>Overlord</dt><dd>${lp(s.pols[o.over])}</dd><dt>Submission confidence</dt><dd>${Math.round(o.submission.loyalty*100)}%</dd>`:''}</dl>`;
       h+=`<h3 class="sec">Reach and continuity</h3><dl class="kv"><dt>Message round trip</dt><dd>${o.responseDays.toFixed(1)} days, weighted average</dd><dt>Connected water routes</dt><dd>${Math.round(o.corridor*100)} / 100</dd><dt>Military preparedness</dt><dd>${Math.round(o.preparedness*100)} / 100</dd><dt>Crisis experience</dt><dd>${Math.round(o.crisisMemory*100)} / 100</dd><dt>Years without conflict or expansion</dt><dd>${o.peaceYears}</dd><dt>Unintegrated recent conquests</dt><dd>${Math.round(o.recentShare*100)}% of population</dd><dt>Conquest obligations</dt><dd>${o.conquestLoad.toFixed(2)}</dd><dt>Settlement agreements</dt><dd>${o.compacts.length}</dd><dt>Civic debt outstanding</dt><dd>${fmtN(s.creditLoans.filter(l=>!l.done&&l.borrower===o.id).reduce((n,l)=>n+l.principal,0))} rations</dd><dt>Urban viability</dt><dd>${Math.round((o.viability||citySubsistence(c))*100)}%</dd><dt>Regional provisions</dt><dd>${fmtN(o.localStores)}</dd><dt>Conquest law</dt><dd>${esc(o.warLaw)}</dd><dt>Lethal collective reprisals</dt><dd>${o.collectiveReprisals?'Permitted':'Prohibited'}</dd><dt>Protection agreements</dt><dd>${o.protectionPacts.filter(p=>!p.broken).length}</dd><dt>Coalition momentum</dt><dd>${Math.round(o.momentum*100)} / 100</dd>${o.kind==='horde'?`<dt>Member clans</dt><dd>${o.clanTerms.size}</dd><dt>Raiding experience</dt><dd>${Math.round(o.raidSkill*100)} / 100</dd>`:''}</dl>`;
 
       h+=`<h3 class="sec">Civic development</h3><dl class="kv"><dt>Cities funding invention</dt><dd>${o.researchCities||0}</dd><dt>Current specialist funding</dt><dd>${fmtN(o.researchFunded||0)} rations</dd><dt>Local charter agreements</dt><dd>${(o.civicBargains||[]).filter(b=>s.pol[b.cell]===o.id).length}</dd>${o.civicUnion?`<dt>Negotiated integration</dt><dd>${Math.round(o.civicUnion.progress*100)}%, ${o.civicUnion.years} supported years</dd>`:''}${o.kind==='horde'?`<dt>Generational coalition strain</dt><dd>${Math.round(o.coalitionFatigue*100)}%</dd><dt>Breakup risk per five years</dt><dd>${((o.breakupRisk||0)*100).toFixed(1)}%</dd>`:''}</dl>`;

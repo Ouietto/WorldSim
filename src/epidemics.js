@@ -72,7 +72,7 @@ function diseaseMortality(k,i,n,o){
   const s=S,p=PATHOGENS[k];if(n<=0)return;
   if(p.animal){const hosts=diseaseHosts(k,i),ratio=clamp(n/Math.max(1,hosts),0,1);for(const a of s.animals)a[i]*=1-ratio;refreshAnimalAccess(i);o.animalDeaths+=n;s.societyCounters.livestockEpidemicDeaths+=n;return}
   n=Math.min(n,s.pop[i]*0.5);const prior=s.pop[i],ratio=n/Math.max(1,prior),id=s.pol[i],state=id?s.pols[id]:null;
-  s.pop[i]-=n;s.young[i]*=1-ratio;s.epidemicLoss[i]+=n;o.deaths+=n;s.societyCounters.epidemicDeaths+=n;
+  s.pop[i]-=n;s.young[i]*=1-ratio;s.urban[i]*=1-ratio;s.epidemicLoss[i]+=n;o.deaths+=n;s.societyCounters.epidemicDeaths+=n;
   s.organisation[i]*=1-ratio*0.12;s.infrastructure[i]*=1-ratio*0.08;
   if(state){const realm=n/Math.max(1,state.pop);state.staff*=1-realm;state.army*=1-realm;state.navy*=1-realm;
     state.shock=clamp(state.shock+realm*0.8,0,3);state.plagueD=(state.plagueD||0)+n;o.hit.add(id)}
@@ -109,7 +109,8 @@ function epidemicYear(){
         const habitat=pathogenHabitat(k,i),ill=d.infectious[i],latent=d.exposed[i],susceptible=Math.max(0,1-d.recovered[i]-ill-latent);
         if(k<4&&tick%6===0&&ill>0.01)healthPolicy(i,s.pol[i]?s.pols[s.pol[i]]:null,0.25);
         const density=clamp(Math.log2(2+hosts/w.area[i])/3,0.12,1.5),season=p.k==='respiratory'?0.85+0.25*Math.cos((tick/DISEASE_STEPS)*Math.PI*2):1;
-        const hygiene=p.k==='enteric'?1-0.25*s.infrastructure[i]:1;
+        const urbanCrowding=1+0.35*clamp(s.urban[i]/Math.max(100,s.housing[i]),0,2)*clamp(s.urban[i]/Math.max(1,s.pop[i])*4,0,1);
+        const hygiene=p.k==='enteric'?clamp((1-0.25*s.infrastructure[i]-0.3*s.sanitation[i])*urbanCrowding,0.4,1.7):p.k==='respiratory'?urbanCrowding:1;
         const transmission=p.beta*ill*susceptible*density*season*habitat*hygiene*(1-0.7*s.containment[i])*P.disease;
         const exposed=Math.min(susceptible,transmission),onset=latent*Math.min(1,DISEASE_DAYS/p.incubation),resolved=ill*Math.min(1,DISEASE_DAYS/p.duration);
         const hardship=1+0.9*(1-s.nutrition[i])+0.35*s.raidDamage[i],care=1-0.2*s.containment[i];

@@ -95,7 +95,7 @@ function economyPass(){
       const delivered=spent*access;s.food[i]+=delivered;o.relief+=delivered;a.transportLoss+=spent-delivered;
     }
   }
-  tradeFood(a);
+  localUrbanFreight(a);tradeFood(a);
   for(const i of w.landIdx){
     const p=s.pop[i],need=s.need[i];s.nutrition[i]=need>0?clamp(s.food[i]/need,0,1):1;
     const eat=Math.min(s.food[i],need);s.food[i]-=eat;a.consumed+=eat;
@@ -110,7 +110,7 @@ function populationStep(i,p,K,g){
   const s=S,n=s.nutrition[i],family=clamp(s.maleShare[i]/0.25,0.2,1),births=p*(0.020+g*Math.max(0,1-p/Math.max(1,K)))*clamp(0.45+0.55*n,0,1)*family;
   const deaths=p*(0.020+0.16*Math.pow(1-n,1.5));
   const young=s.young[i],mature=young/18;s.young[i]=clamp(young+births-mature-young*deaths/Math.max(1,p),0,Math.max(0,p+births-deaths));
-  return Math.max(0,p+births-deaths);
+  const next=Math.max(0,p+births-deaths);s.urban[i]*=next/Math.max(1,p);return next;
 }
 function refreshForces(o){
   const c=o.capital,s=S,p=Math.max(1,o.pop),adult=clamp(1-(s.young[c]||0)/Math.max(1,s.pop[c]),0.35,0.8);
@@ -293,9 +293,10 @@ function institutionStep(o,c,y){
   const s=S,r=s.r;if(o.central==null)initInstitutions(o,null);
   const rec=recordSkill(c),office=skill(c,'office'),census=skill(c,'census'),school=skill(c,'school');
   o.comm=clamp(0.08+0.2*rec+0.18*skill(c,'post')*(0.2+0.8*s.mounts[c])+0.12*s.mounts[c]+0.12*s.roads[c]*s.infrastructure[c]+0.14*waterTransport(c)+0.12*skill(c,'canal')*s.infrastructure[c],0,1);
-  const targetStaff=o.pop*(0.001+0.004*rec+0.003*office+0.002*census),training=Math.max(0,targetStaff-o.staff)*0.025*o.payroll;
+  const pastoral=o.kind==='horde'?(o.pastoralPractice||0):0;
+  const targetStaff=o.pop*(0.001+0.004*rec+0.003*office+0.002*census+0.001*pastoral),training=Math.max(0,targetStaff-o.staff)*0.025*o.payroll;
   const trained=budgetPay(o,training*2)/2;o.staff=Math.max(0,o.staff+trained-o.staff*(0.012+0.03*(1-o.payroll)));
-  const targetB=(0.1+0.25*rec+0.2*office+0.15*census+0.15*school+0.15*s.law[c])*Math.min(1,o.staff/Math.max(1,targetStaff*0.65))*o.payroll;
+  const targetB=(0.1+0.25*rec+0.2*office+0.15*census+0.15*school+0.15*s.law[c]+0.06*pastoral)*Math.min(1,o.staff/Math.max(1,targetStaff*0.65))*o.payroll;
   o.bureau=clamp(o.bureau+0.012*(targetB-o.bureau),0,1);
   const security=clamp(0.3+0.35*o.health+0.35*o.payroll-o.hunger,0,1);
   const trustTarget=clamp(0.25+0.3*o.rights+0.25*security+0.2*o.mandate-0.2*o.ineq,0,1);o.trust=clamp(o.trust+0.018*(trustTarget-o.trust),0,1);
@@ -488,7 +489,7 @@ function territorialAttack(o,i,j,sea){
   const chance=clamp((Ua/(Ua+Ud)-0.12)*niche*legacy,0.01,0.88),win=s.r()<chance;
   armyLoss(o,i,force*(win?0.025:0.09),o.campaignAuxShare);if(q)armyLoss(s.pols[q],j,Math.min(s.pols[q].army*0.08,force*(win?0.06:0.02)));
   crisisEncounter(o,q?s.pols[q]:null,win,win?0.025:0.09);if(q)crisisEncounter(s.pols[q],o,!win,win?0.09:0.025);
-  recordVictory(o,win,win?0.025:0.09);if(!win)return;if(!besiegeCity(o,i,j,force))return;
+  recordVictory(o,win,win?0.025:0.09);if(!win)return;if(q&&pastoralBattleOutcome(o,s.pols[q],j))return;if(!besiegeCity(o,i,j,force))return;
   warnCommunities(j,o);
   conquestRecorded(o,j,q);
   o.occupation=Math.max(0,o.occupation-Math.max(100,s.pop[j]*0.015));budgetPay(o,Math.min(o.grain,s.pop[j]*0.01));

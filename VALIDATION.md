@@ -1,4 +1,49 @@
-# Asabiya v0.10 validation — 2026-10-22
+# Asabiya v0.11 validation — 2026-10-22
+
+All nine focused/scenario suites pass locally, including the new development
+suite. The Pages workflow runs that suite. Every command-line and browser build
+loads `development.js`. Detailed output: `validation/v11-tests.log`.
+
+- Funded settlement moves actual people, children, food and herds. Travel consumes
+  explicit provisions, arrival retains cultural identity, and farming settlement
+  has establishment delays. Unfunded or inaccessible offers fail. A frontier
+  agreement does not annex its province. Durable bargains outlast 25 years;
+  broken provisioning and rights reduce confidence and can cause departure.
+- Capable governments redistribute an agreed minority cohort between funded
+  districts without creating people or moving unrelated majority residents.
+  Losing clans can petition reachable towns. Submission preserves chiefs and
+  territory, prevents automatic attacks on accepted subjects, and ends when an
+  overlord disappears. Funded foreign-service machinery handles contingents.
+- Farmland alone does not transform a confederation. Sustained revenue, towns,
+  specialists, officials and cooperation can produce mixed government over
+  decades; loss of urban support reverses progress. Existing livelihoods persist.
+- A census records residents without replacing them. Urbanization needs built
+  housing, takes time and conserves population; food/job loss causes departure.
+  Neighboring towns share finite actual deliveries while producers retain food.
+  Government collapse leaves urban residents and physical housing in place.
+- The 250-year developed generated-world scenario checks food/animal ledgers,
+  bounded disease compartments, public institutions and new urban stocks. The
+  final artificial-seed run records 46 surviving polities and 183 disease deaths;
+  these observations are not historical targets.
+- An early 500-year Earth run through 8500 BCE checks finite values and ledgers:
+  `validation/development-v11-seed7-early.jsonl`. It exercises construction and
+  early urban movement, rather than mature mixed governments. Later refinements
+  to discretionary construction funding are covered by the final scenario suites.
+- A controlled browser scenario verifies the real Largest interaction and
+  province inspector, including housing, water, urban livelihoods and a durable
+  settlement agreement. Desktop and 390 × 844 layouts render without horizontal
+  page overflow; the browser records no errors or warnings. The controlled
+  fixture is excluded from publication. Handset gestures were not retested on
+  physical hardware; the existing input suite passes.
+
+The consolidation investigation instruments unchanged v0.10 code, separately
+from these changes. Its seed-7 run reaches 2700 BCE (111 settled polities; largest 11 provinces);
+its observations and proposed fixes are in `CONSOLIDATION.md`.
+No multi-seed historical calibration or successful large-empire correction is
+claimed. General occupation, army mobilization, siege continuation and early
+rights rules remain pending approval.
+
+## Archived v0.10 validation — 2026-10-22
 
 All eight focused/scenario suites pass locally. The Pages workflow includes
 the civic suite and all command-line/browser loaders include `civic.js`.

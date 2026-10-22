@@ -38,6 +38,8 @@ jobs:
         run: node src/map-input.test.js
       - name: Check civic growth, invention and confederation breakup
         run: node src/civic.test.js
+      - name: Check settlement and urban development
+        run: node src/development.test.js
       - name: Check generated worlds
         run: node src/generated.test.js
       - name: Build static site

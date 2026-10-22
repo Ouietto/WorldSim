@@ -95,6 +95,7 @@ function sackSettlement(attacker,j,force,forced=false){
   const resistance=s.unrest[j]+wallStrength(j),chance=(0.015+0.065*aggression+0.045*resistance+0.04*(attacker.hunger||0))*(preserve?0.25:1);
   if(!forced&&s.r()>chance)return false;
   const severity=forced?0.9:clamp(0.15+0.25*aggression+force/Math.max(1,s.pop[j])*0.2,0.15,0.65);
+  s.housing[j]*=1-severity*0.6;s.urbanWater[j]*=1-severity*0.5;s.sanitation[j]*=1-severity*0.5;
   s.cityWallHealth[j]*=1-severity*0.5;s.granaries[j]*=1-severity*0.4;s.militaryEquipment[j]*=1-severity*0.5;
   s.cityDamage[j]=clamp(s.cityDamage[j]+severity,0,1);s.raidDamage[j]=clamp(s.raidDamage[j]+severity*0.4,0,1);
   s.food[j]*=1-severity*0.15;s.workshops[j]*=1-severity*0.55;s.infrastructure[j]*=1-severity*0.5;s.organisation[j]*=1-severity*0.25;

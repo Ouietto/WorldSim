@@ -4,6 +4,71 @@ This version connects settlement, warfare, administration, reform and collapse
 to shared resources. It is an exploratory historical model. Its rules are
 explicit hypotheses, rather than established universal laws of social change.
 
+## Pastoral submission, settlement and mixed government (v0.11)
+
+A victorious pastoral polity can negotiate submission while leaving local
+chiefs and territory in place, incorporate clans, or provoke an actual cohort
+retreat. Accepted submission prevents automatic attacks on that subject.
+Tribute uses existing shipments; wartime contingents use actual loaned troops,
+provisions and return journeys. Protection, relative strength and continuity
+influence allegiance. Subordination can end when the overlord weakens.
+
+Displaced or insecure clans can petition reachable settled governments.
+Acceptance needs spare livelihoods, food, suitable land or built urban capacity,
+a maintained host and actual public provisions. Grants and travel have costs;
+people, children, cultures, ancestry, immunity, herds and techniques move from
+existing communities. New farming settlements have establishment delays.
+Pastoral placement preserves access to pasture. Frontier agreements require
+prior credible protection and do not annex the province or the migrants' home.
+
+Durable settlement agreements track land rights, provisioning, protection and
+confidence beyond one generation. Broken agreements can cause protest and
+actual household departure. A capable government can negotiate smaller cohorts'
+relocation to funded, accessible districts with spare livelihoods. This requires
+local stores, administrators and service reliability, rather than a title.
+Minority settlers are moved as the agreed cultural cohort. Existing farmers and
+landholders reduce available settlement land. Coercive displacement remains a
+separate existing war-law mechanism.
+
+Managing multiple clans and subjects creates demand for administration. Actual
+funding and practice can support trained officials; conquest gives no automatic
+bureaucracy bonus. A mixed pastoral/agrarian administration needs sustained
+agricultural revenue, viable towns and specialists, trained officials, local
+cooperation, coalition acceptance and reliable provisions. Progress reverses
+when those conditions fail. Transition adds political adjustment costs and
+preserves mobile livelihoods; pastoral government can remain complex without
+becoming agrarian. There is no automatic farmland-fraction conversion or age
+reset that makes a coalition permanent.
+
+## Urban residents and built capacity (v0.11)
+
+Urban population represents actual residents rather than a target replaced at
+each census. Local rural-to-urban movement and nearby household migration follow
+employment, food, security, housing and water. Births and ordinary/disease deaths
+change urban residents alongside the resident population. Decline returns some
+residents to local rural livelihoods; migration moves actual households.
+
+Households fund construction and upkeep from surplus. Public contributions use
+discretionary local provisions after a payroll reserve. Built housing and water
+capacity grow with paid work and construction limits, persist after a change of
+government and deteriorate without maintenance. Natural water availability,
+drought, local waterworks and maintained urban infrastructure limit density.
+Sanitation and crowding modify enteric and respiratory transmission; investment
+does not grant disease immunity. Sacking damages urban physical stocks.
+
+Market, port, craft, administrative, ritual and frontier roles are readouts of
+actual modeled activities, not randomly awarded city bonuses. Supporting towns
+can specialize through connected markets. Local buyers compete for each farm
+province's finite surplus, retaining producer subsistence and a buffer. Only
+actual delivered grain contributes to imported urban provisioning; nearby cities
+cannot all claim the same hypothetical hinterland surplus. Long-distance trade
+still uses the maintained node/route network.
+
+Water, housing, employment and migrant identities remain province aggregates.
+Exact residential districts, property titles, individual job matching and a full
+household genealogy are not modeled. Transition and settlement rates are
+experimental and require historical calibration.
+
 ## Changes in 0.10
 
 Cities can fund protection agreements with adjacent farming communities before

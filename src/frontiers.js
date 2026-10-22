@@ -408,7 +408,7 @@ function migrationNomadEncounter(M,j){
 // Contracts earmark existing troops; the employer never gets a second copy of
 // the same army. Temporary service keeps dependents in the recruitment base.
 function createMilitaryContract(state,horde,troops,years=8){
-  const s=S;if(state.kind!=='state'||horde.kind!=='horde'||state.enemies.has(horde.id)||!state.alive||!horde.alive)return null;
+  const s=S;if((state.kind!=='state'&&!(state.kind==='horde'&&horde.over===state.id&&horde.submission))||horde.kind!=='horde'||state.enemies.has(horde.id)||!state.alive||!horde.alive)return null;
   if(s.militaryContracts.some(t=>!t.done&&(t.state===state.id||t.horde===horde.id)))return null;
   const n=Math.min(troops,Math.max(0,horde.army-horde.loanedTroops)*0.3),due=n*0.8;if(n<100||state.grain<due*2)return null;
   const travel=Math.max(1,Math.ceil(angDist(state.capital,horde.capital)/0.15));

@@ -1,8 +1,23 @@
-# Asabiya — history engine (v0.10)
+# Asabiya — history engine (v0.11)
 
 A browser simulation of peoples, states, faiths and technologies on a world map, from 9000 BCE onward. It blends cliodynamics (Turchin's asabiya and structural-demographic theory), World3-style carrying capacity, and ecological history. The default map is the real Earth.
 
-Version 0.10 adds gradual rural protection agreements and incorporation,
+Version 0.11 adds reversible submission between pastoral polities, settlement
+petitions and durable land/service agreements, funded placement near cities and
+negotiated redistribution within capable kingdoms. Mixed pastoral and agrarian
+government develops through sustained revenue, officials, towns and cooperation;
+controlling a fraction of farmland no longer changes the polity overnight.
+Urban residents now grow and move gradually, constrained by built housing,
+water supply, livelihoods and actual grain deliveries. Private and public
+investment maintain urban works; crowding and sanitation affect disease.
+Political collapse does not automatically erase the city.
+
+The separate [consolidation investigation](CONSOLIDATION.md) records why the
+previous release seldom formed large polities. Its proposed changes to
+occupation, recruitment, early political bargains and siege continuity await
+approval; this release does not retune those general expansion rules.
+
+Version 0.10 added gradual rural protection agreements and incorporation,
 negotiated civic unions, separate city defenses and built granaries, practical
 engineering, sieges and provisioned equipment. Supported secondary cities can
 fund invention; urban concentration helps specialists, subject to food,
@@ -87,6 +102,7 @@ Rebuild them after source edits when using that mode.
 | `peoples.js` | Regional identities, renewable seasonal grounds, camp movement, migration settlements and city destruction |
 | `urbanism.js` | Food-supported urban networks, civic credit, default and negotiated debt protection |
 | `civic.js` | Rural agreements, civic unions, city defenses, granaries, labor, equipment, sieges and confederation dispersal |
+| `development.js` | Household settlement agreements, pastoral submission and mixed government, urban construction, resident migration and finite local grain deliveries |
 | `map-input.js` | Shared touch, pen and mouse map gestures |
 | `ui.js` | Map rendering, encyclopedia pages, chronicle, charts, checks, setup |
 | `shell.html` | Page markup and CSS |
@@ -103,11 +119,13 @@ Edit files in `src/`, then run `python src/build.py` from the project root to re
 - `node interactions.test.js`: disease immunity and travel, funded response, defensive confederations, overseas founding, camp movement, migrant scatter, city destruction/refugees, credit/default and urban support.
 - `node map-input.test.js`: pinch anchoring, pan transitions, cancellation, tap selection, double tap and zoom limits.
 - `node civic.test.js`: funded city defenses and storage, labor costs, staged incorporation, negotiated union, secondary-city invention, sieges and conserved confederation scattering.
+- `node development.test.js`: settlement petitions and funding, identity-preserving relocation, durable bargains, reversible nomad submission, gradual mixed government, housing/food limits and competing urban hinterlands.
 - `node society.test.js`: conservation, settlement, warfare, refugees, inheritance, collapse, deterministic replay and a 220-year political scenario.
 - `node generated.test.js`: a 250-year developed-world scenario on generated terrain, including coasts and river routes.
 - `node verify.js 23 1500`: an Earth history with periodic finite-value, nonnegative-stock and food-ledger assertions.
 - `node test.js earth <seed> <endYear>`: one Earth run with a summary (set `SHOW=war` etc. to print chronicle entries).
 - `node batch.js 1,2,3 1500`: several seeds, one JSON line each with calibration metrics (first states by region, China/Mediterranean unity, technology dates, empire shapes, stateless regions). `ECO=0` sets the ecological-reach parameter.
+- `node consolidation-report.js 7 -2700 ec00351`: instrument the previous release at a fixed Git reference without changing its rules or random draws.
 - `node diag.js <seed> <year>`: instability components and top states every 500 years.
 - `node slice.js <year>`: timing of the per-year slices.
 - `node shapes.js <seed> <year>`: the largest empires' east-west vs north-south extent.

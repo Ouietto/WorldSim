@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),zlib=require('zlib'),assert=require('assert');
-const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','civic.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','civic.js','development.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
 const bytes=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/'+f,'utf8'),'base64')));
 const uiSource=fs.readFileSync(__dirname+'/ui.js','utf8');
 const inspectorSource=uiSource.slice(uiSource.indexOf('function renderPage(){'),uiSource.indexOf('function originText('));

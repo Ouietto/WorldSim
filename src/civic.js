@@ -6,6 +6,7 @@ function initCivic(){
   s.cityWallHealth.fill(1);s.ruralPatron=new Int32Array(N);s.ruralYears=new Uint16Array(N);
   s.siegeOwner=new Int32Array(N);s.siegeYear=new Int32Array(N).fill(-100000);s.cityProjects=new Map();
   Object.assign(s.societyCounters,{ruralAgreements:0,ruralIncorporations:0,civicUnions:0,brokenCivicBargains:0,civicWorks:0,urbanResearch:0,confederationBreakups:0,scatteredClans:0,clansReceivedByCities:0,clansJoiningConfederations:0});
+  initDevelopment();
 }
 function civicSpend(i,o,due){
   const s=S,p=s.pop[i],room=Math.max(0,0.1-s.civicLabor[i])*p/3;
@@ -176,7 +177,7 @@ function civicYear(){
   const s=S;s.civicLabor.fill(0);
   for(const i of WD.landIdx){s.ruralInfluence[i]*=0.998;s.ruralSecurity[i]*=0.97;const o=s.pol[i]?s.pols[s.pol[i]]:null;
     if(s.ruralPatron[i]&&!s.pols[s.ruralPatron[i]]?.alive){s.ruralPatron[i]=0;s.ruralYears[i]=0}
-    civicWorksAt(i,o);
+    civicWorksAt(i,o);urbanConstruction(i,o);
   }
   if(s.year%5===0){shareEngineering();ruralAgreements()}
   for(const id of [...s.alive]){const o=s.pols[id];if(o.kind!=='state')continue;if(s.year%5===0)offerCivicProtection(o);civicUnionStep(o);if(o.alive){maintainCivicBargains(o);inventionPass(o)}}
@@ -218,10 +219,12 @@ function dissolveConfederation(o,reason='Succession disputes and failed rewards 
     // Several destinations may receive different contingents; the remaining
     // households stay as autonomous clans rather than disappearing with a flag.
     const base=s.pop[i];for(const target of destinations.slice(0,2)){
-      const moved=scatterClanHouseholds(i,target.cell,base*(0.08+s.r()*0.12));if(!moved)continue;
-      const host=target.host;host.pop+=moved;recipients.add(host.id);
+      const host=target.host,requested=base*(0.08+s.r()*0.12);
+      const agreement=host.kind==='state'?createSettlementAgreement(host,i,target.cell,requested,WD.sH[target.cell]*s.rangeStock[target.cell]>s.farm[target.cell]*farmSuit(target.cell)?'pastoral':'farm'):null;
+      const moved=host.kind==='state'?(agreement?.people||0):scatterClanHouseholds(i,target.cell,requested);if(!moved)continue;
+      if(host.kind==='horde')host.pop+=moved;else s.societyCounters.scatteredClans+=moved;recipients.add(host.id);
       if(host.kind==='horde'){host.army+=army*moved/Math.max(1,total);host.clanTerms.set(s.clan[i],{loyalty:0.5,joined:s.year});s.societyCounters.clansJoiningConfederations+=moved}
-      else{s.societyCounters.clansReceivedByCities+=moved;host.compacts.push({cell:target.cell,eth:s.eth[i],people:moved,promised:moved*0.045,since:s.year,loyalty:0.6,failures:0,broken:false,done:false})}
+      else s.societyCounters.clansReceivedByCities+=moved;
     }
   }
   o.army=o.staff=o.navy=0;o.alive=false;o.died=s.year;o.succ=[...recipients];o.departed=true;

@@ -16,12 +16,9 @@ function urbanNetworkPass(){
   for(const i of WD.landIdx)s.urbanNetwork[i]=clamp(next[i],0,1);
 }
 function citySubsistence(i){
-  const s=S,w=WD,p=Math.max(1,s.pop[i]);let hinterland=s.harvest[i];
-  for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j])continue;
-    const a=s.pol[i]?s.pols[s.pol[i]]:null,b=s.pol[j]?s.pols[s.pol[j]]:null;if(a&&b&&a.enemies.has(b.id))continue;
-    const connected=(0.08+0.22*Math.min(transportSupport(i),transportSupport(j)))*(1-WD.rough[j]*0.7);hinterland+=Math.max(0,s.harvest[j]-s.need[j]*0.85)*connected;
-  }
-  const food=clamp((hinterland+s.foodImports[i]*0.6)/p,0,1.5),agriculture=s.farm[i]*farmSuit(i);
+  const s=S,w=WD,p=Math.max(1,s.pop[i]);
+  // Imported grain is counted only after an actual, finite delivery.
+  const food=clamp((s.harvest[i]+s.foodImports[i]*0.6)/p,0,1.5),agriculture=s.farm[i]*farmSuit(i);
   const imports=clamp(s.foodImports[i]/p*3,0,1),stocks=clamp(s.food[i]/p,0,0.5);
   const cold=clamp((-5-(w.T[i]-w.amp[i]*0.5))/25,0,1),buffer=0.5*skill(i,'storage')+imports*0.5;
   return clamp((0.4*food+0.3*agriculture+0.25*imports+0.1*s.urbanNetwork[i]+0.1*stocks)*(1-0.35*cold*(1-buffer))*(1-0.6*s.cityDamage[i]),0,1);
@@ -68,7 +65,7 @@ function acceptDebtProtector(client,patron){
   s.societyCounters.debtProtectorates++;chron('diplomacy',`The ${client.full} accepts the protection of the ${patron.full} in exchange for relief from its debts.`,client.capital,[R_(client),R_(patron)]);return true;
 }
 function urbanYear(){
-  const s=S;if(s.year%10===0)urbanNetworkPass();for(const l of s.creditLoans)serviceCivicLoan(l);
+  const s=S;if(s.year%10===0)urbanNetworkPass();urbanPopulationYear();for(const l of s.creditLoans)serviceCivicLoan(l);
   for(const id of [...s.alive]){const o=s.pols[id];if(o.kind!=='state')continue;const c=o.capital;
     o.creditTrust=o.creditTrust==null?0.7:o.creditTrust;o.creditTrust=clamp(o.creditTrust+0.002*(0.8-o.creditTrust),0,1);
     const viability=citySubsistence(c);s.urbanViability[c]=viability;o.viability=viability;

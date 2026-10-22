@@ -176,6 +176,7 @@ function initPoliticalDynamics(o,from){
   o.lastConflict=S.year;o.lastBorderChange=S.year;o.peaceYears=0;o.trainingPaid=0;o.auxiliaries=0;
   o.compacts=[];o.raidTargets=new Map();o.clanTerms=new Map();o.clanPops=new Map();o.lastClanExit=-1e9;
   initFrontierPolity(o,from);
+  initDevelopmentPolity(o,from);
   if(S.urban[o.capital]>2000&&!S.cityHome[o.capital])S.cityHome[o.capital]=o.id;
 }
 function conquestRecorded(o,j,previous){
@@ -322,6 +323,7 @@ function admitMigration(M,j,o){
 function compactStep(o){
   const s=S;o.auxiliaries=0;
   for(const t of o.compacts){
+    if(t.durable){settlementAgreementStep(o,t);continue}
     if(t.done)continue;if(s.pol[t.cell]!==o.id){t.done=true;continue}
     const n=Math.min(t.people,s.pop[t.cell]*0.6),due=t.promised,paid=budgetPay(o,due);s.food[t.cell]+=paid;
     const fulfillment=due>0?paid/due:1;t.loyalty=clamp(t.loyalty+0.04*(fulfillment-t.loyalty)-0.02*(1-s.nutrition[t.cell]),0,1);
