@@ -1,0 +1,618 @@
+{
+  "command": "node src/verify.js 23 1500",
+  "phase": "Development run with directed trade. Final habitat viability, canal maintenance, steppe-enclave and diagnostic corrections are covered by focused scenarios. Regional-first dates use the intermediate classification and are not historical calibration.",
+  "result": {
+    "seed": "23",
+    "year": 1500,
+    "seconds": 1313,
+    "pop": 303294881,
+    "states": 1407,
+    "first": {
+      "nchina": {
+        "y": -4470,
+        "pol": 60,
+        "name": "Kingdom of Gian"
+      },
+      "egypt": {
+        "y": -2530,
+        "pol": 860,
+        "name": "City-state of Shobomat"
+      },
+      "indus": {
+        "y": -870,
+        "pol": 1755,
+        "name": "Empire of Menira"
+      }
+    },
+    "tech": [
+      [
+        "farm",
+        -8999
+      ],
+      [
+        "herd",
+        -8999
+      ],
+      [
+        "irrig",
+        -7572
+      ],
+      [
+        "copper",
+        -4700
+      ],
+      [
+        "horse",
+        -3700
+      ],
+      [
+        "writing",
+        -5284
+      ],
+      [
+        "wheel",
+        -1557
+      ],
+      [
+        "iron",
+        -1362
+      ],
+      [
+        "coin",
+        -1582
+      ],
+      [
+        "law",
+        -5656
+      ],
+      [
+        "roads",
+        -4990
+      ],
+      [
+        "nav",
+        -895
+      ],
+      [
+        "caval",
+        1333
+      ],
+      [
+        "paper",
+        -4389
+      ],
+      [
+        "crops",
+        -4795
+      ],
+      [
+        "gun",
+        -439
+      ],
+      [
+        "ocean",
+        835
+      ],
+      [
+        "camel",
+        -1200
+      ],
+      [
+        "grain",
+        -8999
+      ],
+      [
+        "ard",
+        -4300
+      ],
+      [
+        "manure",
+        -556
+      ],
+      [
+        "kitesig",
+        837
+      ],
+      [
+        "windcart",
+        939
+      ],
+      [
+        "fungal",
+        927
+      ],
+      [
+        "ledger",
+        -639
+      ],
+      [
+        "tidemill",
+        -59
+      ],
+      [
+        "feverbark",
+        -3502
+      ],
+      [
+        "saltflush",
+        -4607
+      ],
+      [
+        "pigeon",
+        535
+      ],
+      [
+        "records",
+        -8995
+      ],
+      [
+        "storage",
+        -8965
+      ],
+      [
+        "census",
+        -5686
+      ],
+      [
+        "post",
+        -4909
+      ],
+      [
+        "office",
+        -5544
+      ],
+      [
+        "succession",
+        -5934
+      ],
+      [
+        "charter",
+        -5773
+      ],
+      [
+        "canal",
+        -4830
+      ],
+      [
+        "school",
+        -4642
+      ]
+    ],
+    "foodError": -0.0000011920928955078125,
+    "animalError": -8.195638656616211e-8,
+    "animalStocks": [
+      32703907,
+      0,
+      5405273,
+      4249861,
+      7,
+      1528127
+    ],
+    "cityStates": 234,
+    "meanPreparedness": 0.8196320013903353,
+    "tradeEdges": 31739,
+    "communities": 9115,
+    "meanHealth": 0.9746711629697428,
+    "reforms": 160,
+    "army": 1761448.050242864,
+    "migrations": 1166,
+    "coerciveMigrations": 250,
+    "nonStateBattles": 836,
+    "displacements": 30729003.237038847,
+    "settlements": 38,
+    "sponsoredSettlements": 850,
+    "failedSettlements": 10,
+    "animalBirths": 1466424149.0642822,
+    "animalDeaths": 1424232263.334537,
+    "domesticated": 855.3882415771484,
+    "confederations": 1381,
+    "clanDepartures": 137,
+    "eliteDefections": 78,
+    "admissions": 50,
+    "brokenCompacts": 1,
+    "successionFractures": 2363,
+    "leagues": 91
+  },
+  "checkpoints": [
+    {
+      "year": -8000,
+      "pop": 14834447,
+      "states": 0,
+      "migrating": 0,
+      "foodError": 1.5366822481155396e-8,
+      "animalError": 7.275957614183426e-12,
+      "animalStocks": [
+        12969,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cityStates": 0,
+      "meanPreparedness": 0,
+      "tradeEdges": 30091,
+      "communities": 49,
+      "meanHealth": 0,
+      "reforms": 0,
+      "army": 0,
+      "migrations": 0,
+      "coerciveMigrations": 0,
+      "nonStateBattles": 0,
+      "displacements": 0,
+      "settlements": 0,
+      "sponsoredSettlements": 0,
+      "failedSettlements": 0,
+      "animalBirths": 60905.48028718224,
+      "animalDeaths": 48205.98040412529,
+      "domesticated": 269.0951171875,
+      "confederations": 0,
+      "clanDepartures": 0,
+      "eliteDefections": 0,
+      "admissions": 0,
+      "brokenCompacts": 0,
+      "successionFractures": 0,
+      "leagues": 0
+    },
+    {
+      "year": -7000,
+      "pop": 19069314,
+      "states": 3,
+      "migrating": 0,
+      "foodError": -2.421438694000244e-8,
+      "animalError": 1.280568540096283e-9,
+      "animalStocks": [
+        734102,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cityStates": 0,
+      "meanPreparedness": 0,
+      "tradeEdges": 30096,
+      "communities": 15403,
+      "meanHealth": 0,
+      "reforms": 0,
+      "army": 0,
+      "migrations": 0,
+      "coerciveMigrations": 0,
+      "nonStateBattles": 6,
+      "displacements": 7703.322957377075,
+      "settlements": 0,
+      "sponsoredSettlements": 0,
+      "failedSettlements": 0,
+      "animalBirths": 6055905.026539925,
+      "animalDeaths": 5322072.332035803,
+      "domesticated": 269.0951171875,
+      "confederations": 2,
+      "clanDepartures": 0,
+      "eliteDefections": 0,
+      "admissions": 0,
+      "brokenCompacts": 0,
+      "successionFractures": 1,
+      "leagues": 0
+    },
+    {
+      "year": -6000,
+      "pop": 29996799,
+      "states": 52,
+      "migrating": 0,
+      "foodError": -4.0978193283081055e-8,
+      "animalError": 4.6566128730773926e-9,
+      "animalStocks": [
+        2391190,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cityStates": 2,
+      "meanPreparedness": 0.5029039132335671,
+      "tradeEdges": 29649,
+      "communities": 15458,
+      "meanHealth": 0.9465598451648117,
+      "reforms": 0,
+      "army": 658.7143011659762,
+      "migrations": 0,
+      "coerciveMigrations": 0,
+      "nonStateBattles": 40,
+      "displacements": 64530.543054500595,
+      "settlements": 0,
+      "sponsoredSettlements": 0,
+      "failedSettlements": 0,
+      "animalBirths": 34949200.803399235,
+      "animalDeaths": 32558300.02739844,
+      "domesticated": 289.0951171875,
+      "confederations": 22,
+      "clanDepartures": 1,
+      "eliteDefections": 0,
+      "admissions": 0,
+      "brokenCompacts": 0,
+      "successionFractures": 17,
+      "leagues": 0
+    },
+    {
+      "year": -5000,
+      "pop": 39829966,
+      "states": 204,
+      "migrating": 0,
+      "foodError": 1.1920928955078125e-7,
+      "animalError": 9.313225746154785e-10,
+      "animalStocks": [
+        3573505,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cityStates": 8,
+      "meanPreparedness": 0.5796292516893389,
+      "tradeEdges": 29973,
+      "communities": 15176,
+      "meanHealth": 0.9001172143656648,
+      "reforms": 3,
+      "army": 10520.784947595259,
+      "migrations": 2,
+      "coerciveMigrations": 1,
+      "nonStateBattles": 95,
+      "displacements": 138610.78696681623,
+      "settlements": 0,
+      "sponsoredSettlements": 0,
+      "failedSettlements": 0,
+      "animalBirths": 85451430.437973,
+      "animalDeaths": 81878214.8921665,
+      "domesticated": 289.0951171875,
+      "confederations": 91,
+      "clanDepartures": 10,
+      "eliteDefections": 0,
+      "admissions": 0,
+      "brokenCompacts": 0,
+      "successionFractures": 66,
+      "leagues": 1
+    },
+    {
+      "year": -4000,
+      "pop": 57320943,
+      "states": 384,
+      "migrating": 0,
+      "foodError": 1.5273690223693848e-7,
+      "animalError": 1.5832483768463135e-8,
+      "animalStocks": [
+        4559189,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cityStates": 20,
+      "meanPreparedness": 0.6805477213847696,
+      "tradeEdges": 30114,
+      "communities": 14911,
+      "meanHealth": 0.9617249603356628,
+      "reforms": 16,
+      "army": 80484.38297910242,
+      "migrations": 3,
+      "coerciveMigrations": 2,
+      "nonStateBattles": 169,
+      "displacements": 286653.8644956212,
+      "settlements": 0,
+      "sponsoredSettlements": 5,
+      "failedSettlements": 0,
+      "animalBirths": 154438532.59319434,
+      "animalDeaths": 149879675.74839985,
+      "domesticated": 289.0951171875,
+      "confederations": 187,
+      "clanDepartures": 22,
+      "eliteDefections": 0,
+      "admissions": 0,
+      "brokenCompacts": 0,
+      "successionFractures": 119,
+      "leagues": 2
+    },
+    {
+      "year": -3000,
+      "pop": 76205290,
+      "states": 609,
+      "migrating": 3,
+      "foodError": 0,
+      "animalError": 2.0489096641540527e-8,
+      "animalStocks": [
+        5073867,
+        19,
+        163212,
+        0,
+        0,
+        342
+      ],
+      "cityStates": 34,
+      "meanPreparedness": 0.7014661837076652,
+      "tradeEdges": 29660,
+      "communities": 14503,
+      "meanHealth": 0.9610667504876869,
+      "reforms": 17,
+      "army": 190282.32644652497,
+      "migrations": 19,
+      "coerciveMigrations": 7,
+      "nonStateBattles": 262,
+      "displacements": 749777.0030755377,
+      "settlements": 0,
+      "sponsoredSettlements": 34,
+      "failedSettlements": 0,
+      "animalBirths": 238374402.44120494,
+      "animalDeaths": 233141931.47209263,
+      "domesticated": 466.02123107910154,
+      "confederations": 326,
+      "clanDepartures": 35,
+      "eliteDefections": 0,
+      "admissions": 0,
+      "brokenCompacts": 0,
+      "successionFractures": 213,
+      "leagues": 6
+    },
+    {
+      "year": -2000,
+      "pop": 106353366,
+      "states": 764,
+      "migrating": 2,
+      "foodError": 1.6391277313232422e-7,
+      "animalError": -1.862645149230957e-8,
+      "animalStocks": [
+        6292334,
+        0,
+        583163,
+        2398,
+        0,
+        26281
+      ],
+      "cityStates": 63,
+      "meanPreparedness": 0.6856163836037547,
+      "tradeEdges": 28994,
+      "communities": 13587,
+      "meanHealth": 0.9665441804774457,
+      "reforms": 33,
+      "army": 267356.2727869896,
+      "migrations": 76,
+      "coerciveMigrations": 24,
+      "nonStateBattles": 370,
+      "displacements": 2381028.986612021,
+      "settlements": 2,
+      "sponsoredSettlements": 66,
+      "failedSettlements": 0,
+      "animalBirths": 346158371.7905529,
+      "animalDeaths": 339287411.05767983,
+      "domesticated": 835.3882415771484,
+      "confederations": 496,
+      "clanDepartures": 52,
+      "eliteDefections": 6,
+      "admissions": 1,
+      "brokenCompacts": 0,
+      "successionFractures": 375,
+      "leagues": 8
+    },
+    {
+      "year": -1000,
+      "pop": 149476021,
+      "states": 939,
+      "migrating": 8,
+      "foodError": -2.086162567138672e-7,
+      "animalError": -3.3527612686157227e-8,
+      "animalStocks": [
+        6756106,
+        0,
+        2706331,
+        865068,
+        21,
+        40578
+      ],
+      "cityStates": 119,
+      "meanPreparedness": 0.7140704249077999,
+      "tradeEdges": 29011,
+      "communities": 12643,
+      "meanHealth": 0.9704401302901157,
+      "reforms": 51,
+      "army": 502094.65053862904,
+      "migrations": 238,
+      "coerciveMigrations": 62,
+      "nonStateBattles": 497,
+      "displacements": 7547561.789708625,
+      "settlements": 10,
+      "sponsoredSettlements": 171,
+      "failedSettlements": 2,
+      "animalBirths": 494344168.31142586,
+      "animalDeaths": 484180874.0867489,
+      "domesticated": 855.3882415771484,
+      "confederations": 672,
+      "clanDepartures": 73,
+      "eliteDefections": 8,
+      "admissions": 11,
+      "brokenCompacts": 0,
+      "successionFractures": 674,
+      "leagues": 14
+    },
+    {
+      "year": 0,
+      "pop": 207643068,
+      "states": 1288,
+      "migrating": 4,
+      "foodError": -0.0000014901161193847656,
+      "animalError": -2.9802322387695312e-8,
+      "animalStocks": [
+        7432706,
+        0,
+        4034147,
+        2431450,
+        2,
+        60408
+      ],
+      "cityStates": 190,
+      "meanPreparedness": 0.7439054394954138,
+      "tradeEdges": 29662,
+      "communities": 11211,
+      "meanHealth": 0.9710931145076573,
+      "reforms": 88,
+      "army": 972112.791575938,
+      "migrations": 494,
+      "coerciveMigrations": 125,
+      "nonStateBattles": 649,
+      "displacements": 14079316.991777431,
+      "settlements": 20,
+      "sponsoredSettlements": 401,
+      "failedSettlements": 7,
+      "animalBirths": 708590239.3694125,
+      "animalDeaths": 695269759.259487,
+      "domesticated": 855.3882415771484,
+      "confederations": 966,
+      "clanDepartures": 103,
+      "eliteDefections": 27,
+      "admissions": 21,
+      "brokenCompacts": 0,
+      "successionFractures": 1172,
+      "leagues": 39
+    },
+    {
+      "year": 1000,
+      "pop": 266882437,
+      "states": 1447,
+      "migrating": 4,
+      "foodError": 5.662441253662109e-7,
+      "animalError": -7.450580596923828e-9,
+      "animalStocks": [
+        24093873,
+        0,
+        6698481,
+        3563631,
+        6,
+        1391418
+      ],
+      "cityStates": 200,
+      "meanPreparedness": 0.7856293530216307,
+      "tradeEdges": 31037,
+      "communities": 9764,
+      "meanHealth": 0.9692663686586032,
+      "reforms": 136,
+      "army": 1525340.6845969916,
+      "migrations": 917,
+      "coerciveMigrations": 215,
+      "nonStateBattles": 765,
+      "displacements": 24579795.30248662,
+      "settlements": 32,
+      "sponsoredSettlements": 657,
+      "failedSettlements": 9,
+      "animalBirths": 1103733010.889874,
+      "animalDeaths": 1069437709.3004282,
+      "domesticated": 855.3882415771484,
+      "confederations": 1262,
+      "clanDepartures": 131,
+      "eliteDefections": 54,
+      "admissions": 46,
+      "brokenCompacts": 1,
+      "successionFractures": 1911,
+      "leagues": 70
+    }
+  ]
+}

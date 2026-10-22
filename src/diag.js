@@ -1,10 +1,11 @@
 const fs=require('fs'),zlib=require('zlib');
-const core=['world.js','lang.js','hist.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
 const elev=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_elev.b64','utf8'),'base64'));
 const kg=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/koppen.b64','utf8'),'base64'));
+const climate=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_climate.b64','utf8'),'base64'));
 eval(core.replace('function civilWar(o,breakup){','function civilWar(o,breakup){CW.push([S.year,o.cells,breakup?1:0]);').replace('function collapse(o){','function collapse(o){CO.push([S.year,o.cells]);')+`
 var CW=[],CO=[];
-const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg));
+const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg),new Uint8Array(climate));
 WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
 newHistory(process.argv[2]||'3');const END=+(process.argv[3]||0);
 while(S.year<END){step();if(S.year%500===0){const al=S.alive.map(k=>S.pols[k]).filter(o=>o.kind==='state'&&o.cells>=30);

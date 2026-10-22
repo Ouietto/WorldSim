@@ -1,8 +1,37 @@
 # Asabiya history engine — build notes and plan
 
+## v0.7 (2026-10-21): transport and political continuity
+
+Implemented the two follow-up design discussions: real breeding animal stocks;
+communication, reply and supply routes; directional major rivers and natural
+frontiers; coastal agriculture and market incentives; city states and leagues;
+conquest obligations and successor fragmentation; funded preparedness and
+institutional memory; clan coalitions and conditional dissolution; adaptive
+raiding and migration; local elite bargains; migrant admission and compacts;
+capital/major/all/hidden city filters with independent names and decluttering.
+See MODEL.md for the rules and explicit simplifications. A v0.6 snapshot is
+saved under backups/. Historical calibration remains separate work.
+
+
 A standalone browser app that simulates peoples, states and their rise and fall on a world map. It is separate from Draggable World and takes Draggable World's heightmaps as input.
 
 Source is split into `world.js` (Earth data, climate, world), `lang.js` (sound families) and `hist.js` (history engine), plus `ui.js` and `shell.html`. `build.py` inlines everything, including the Earth and Köppen assets, into one page.
+
+## v0.6 (2026-10-21): material resources and political organization
+
+Implemented a shared food economy, costly and fallible settlement, finite armies
+and fleets, non-state warfare and coercive migrations, culture/ancestry separation,
+community organization, maintained bureaucracy, coalition politics, succession,
+conditional reform, provincial defections and inherited institutions after collapse.
+Default Earth uses numerical GPCC/GHCN-CAMS climatology with validated numeric
+imports. Climate Lab's numerical engine was not recovered or ported.
+
+`MODEL.md` documents the current rules and limitations; `src/CLIMATE.md` documents
+numerical data and provenance. Headless conservation, deterministic, scenario and
+long-run verification tools accompany the browser build. Earlier sections below
+are historical notes, and their planned features/calibration claims do not describe
+validation of the new system. Broader ensemble and historical calibration remains
+necessary before interpreting individual runs as historical evidence.
 
 ## v0.3 (2026-10-18): nomads, migrations, names, lineage, faith politics, climate epochs, culture
 - **Seeds**: each visit starts a random history seed. The URL hash `#seed-NNN` replays a seed, and Setup has a "Copy link" button.

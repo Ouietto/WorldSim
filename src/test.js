@@ -1,11 +1,12 @@
 const fs=require('fs'),zlib=require('zlib');
-const core=fs.readFileSync(__dirname+'/world.js','utf8')+fs.readFileSync(__dirname+'/lang.js','utf8')+fs.readFileSync(__dirname+'/hist.js','utf8');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
 const elev=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_elev.b64','utf8'),'base64'));
 const kg=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/koppen.b64','utf8'),'base64'));
+const climate=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_climate.b64','utf8'),'base64'));
 const mode=process.argv[2]||'earth',hs=process.argv[3]||'1',END=+(process.argv[4]||1800);
 eval(core+`
 let t0=Date.now();
-const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg));
+const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg),new Uint8Array(climate));
 WD=mode==='earth'?genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true}):genWorld({seed:mode,landFrac:P.landFrac});
 console.log('world ms',Date.now()-t0,'land',WD.landIdx.length,'links',WD.lt.length,'grade',WD.grade&&WD.grade.score.toFixed(3),WD.grade&&WD.grade.per.map((p,g)=>KG_GROUPS[g]+':'+(p.tot?(p.ok/p.tot).toFixed(2):'-')).join(' '),'fitChanged',WD.fitChanged);
 t0=Date.now();newHistory(hs);console.log('init ms',Date.now()-t0,'eths',S.eths.length);

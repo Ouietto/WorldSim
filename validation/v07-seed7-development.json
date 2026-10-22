@@ -1,0 +1,209 @@
+{
+  "command": "node src/verify.js 7 1500",
+  "phase": "Development history before the directed-trade upgrade and final habitat/diagnostic corrections. Regional-first dates use the intermediate classification and are not historical calibration.",
+  "result": {
+    "seed": "7",
+    "year": 1500,
+    "seconds": 1162,
+    "pop": 322451541,
+    "states": 1953,
+    "first": {
+      "nchina": {
+        "y": -3780,
+        "pol": 28,
+        "name": "Empire of Wushima"
+      },
+      "egypt": {
+        "y": -2440,
+        "pol": 770,
+        "name": "City-state of Wat"
+      },
+      "indus": {
+        "y": -940,
+        "pol": 592,
+        "name": "Empire of Chavonam"
+      }
+    },
+    "tech": [
+      [
+        "farm",
+        -8999
+      ],
+      [
+        "herd",
+        -8999
+      ],
+      [
+        "irrig",
+        -6795
+      ],
+      [
+        "copper",
+        -4700
+      ],
+      [
+        "horse",
+        -3700
+      ],
+      [
+        "writing",
+        -4303
+      ],
+      [
+        "wheel",
+        -1510
+      ],
+      [
+        "iron",
+        -1472
+      ],
+      [
+        "coin",
+        -1607
+      ],
+      [
+        "law",
+        -5364
+      ],
+      [
+        "roads",
+        -4728
+      ],
+      [
+        "nav",
+        -949
+      ],
+      [
+        "caval",
+        615
+      ],
+      [
+        "paper",
+        -3060
+      ],
+      [
+        "crops",
+        -4028
+      ],
+      [
+        "gun",
+        -606
+      ],
+      [
+        "ocean",
+        1105
+      ],
+      [
+        "camel",
+        -1200
+      ],
+      [
+        "grain",
+        -8999
+      ],
+      [
+        "ard",
+        -4300
+      ],
+      [
+        "plough",
+        1176
+      ],
+      [
+        "manure",
+        -1095
+      ],
+      [
+        "kitesig",
+        267
+      ],
+      [
+        "windcart",
+        912
+      ],
+      [
+        "fungal",
+        -592
+      ],
+      [
+        "ledger",
+        -4
+      ],
+      [
+        "tidemill",
+        -474
+      ],
+      [
+        "feverbark",
+        -2639
+      ],
+      [
+        "saltflush",
+        -3125
+      ],
+      [
+        "pigeon",
+        -186
+      ],
+      [
+        "records",
+        -8985
+      ],
+      [
+        "storage",
+        -8945
+      ],
+      [
+        "census",
+        -4893
+      ],
+      [
+        "post",
+        -4493
+      ],
+      [
+        "office",
+        -4287
+      ],
+      [
+        "succession",
+        -6277
+      ],
+      [
+        "charter",
+        -5895
+      ],
+      [
+        "canal",
+        -3814
+      ],
+      [
+        "school",
+        -3964
+      ]
+    ],
+    "foodError": -0.0000011920928955078125,
+    "tradeEdges": 31763,
+    "communities": 9122,
+    "meanHealth": 0.9643535888441318,
+    "reforms": 196,
+    "army": 1997917.3861060254,
+    "migrations": 429,
+    "coerciveMigrations": 139,
+    "nonStateBattles": 872,
+    "displacements": 14280170.93567535,
+    "settlements": 18,
+    "sponsoredSettlements": 1236,
+    "failedSettlements": 2,
+    "animalBirths": 1328607762.2106242,
+    "animalDeaths": 1299151552.1240761,
+    "domesticated": 840.4629669189454,
+    "confederations": 1506,
+    "clanDepartures": 153,
+    "eliteDefections": 50,
+    "admissions": 49,
+    "brokenCompacts": 0,
+    "successionFractures": 1669,
+    "leagues": 85
+  }
+}

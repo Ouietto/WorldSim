@@ -1,8 +1,9 @@
 const fs=require('fs'),zlib=require('zlib');
-const core=['world.js','lang.js','hist.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
 const elev=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_elev.b64','utf8'),'base64'));
 const kg=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/koppen.b64','utf8'),'base64'));
-eval(core+`const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg));
+const climate=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_climate.b64','utf8'),'base64'));
+eval(core+`const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg),new Uint8Array(climate));
 WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});if(process.env.ECO)P.eco=+process.env.ECO;newHistory(process.argv[2]||'1');
 while(S.year<+(process.argv[3]||1000))step();
 const w=WD;const sh=S.shapes.map(id=>S.pols[id]).filter(o=>o.shape).sort((a,b)=>b.shapeN-a.shapeN).slice(0,25);

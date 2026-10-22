@@ -1,0 +1,18 @@
+{
+  "label": "NOAA PSL 1981–2010 land climatology",
+  "sources": [
+    "GPCC Full Data Reanalysis V2020, monthly precipitation totals, 1 degree",
+    "GHCN-CAMS monthly 2 m temperature, 0.5 degree sampled at 1 degree"
+  ],
+  "urls": {
+    "gpcc": "https://psl.noaa.gov/thredds/dodsC/Datasets/gpcc/full_v2020/precip.mon.ltm.1x1.v2020.1981-2010.nc.ascii?precip[0:1:11][0:1:179][0:1:359]",
+    "ghcncams": "https://psl.noaa.gov/thredds/dodsC/Datasets/ghcncams/Derived/air.mon.ltm.1981-2010.nc.ascii?air[0:1:11][0:2:359][0:2:719]"
+  },
+  "sha256": {
+    "gpcc": "7b95b808ea3cfed9f6a71ed69f92843f7cfae1adcdc3388a040a492e408b0cda",
+    "ghcncams": "4425bd9a642b9a2e109b423968a032e229fc573f6a91ef2f47b3bf336612e531"
+  },
+  "period": "1981–2010",
+  "processing": "Temperature bilinearly sampled onto GPCC centres, masked land neighbours renormalized; day-weighted annual temperature; summed monthly precipitation; monthly max-minus-min temperature range.",
+  "limitations": "Modern spatial baseline, not a Holocene reconstruction. One-degree data smooth mountains and small islands. Missing cells retain the synthetic model. No Climate Lab model code was used."
+}

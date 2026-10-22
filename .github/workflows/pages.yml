@@ -1,0 +1,57 @@
+name: Build and deploy WorldSim
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: for file in src/*.js; do node --check "$file" || exit 1; done
+      - name: Check climate data
+        run: node src/climate.test.js
+      - name: Check society and conservation
+        run: node src/society.test.js
+      - name: Check political and transport dynamics
+        run: node src/dynamics.test.js
+      - name: Check generated worlds
+        run: node src/generated.test.js
+      - name: Build static site
+        run: python3 src/build.py --output-dir _site
+      - name: Upload site
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

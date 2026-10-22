@@ -20,7 +20,7 @@ const PDEF=[
 ['States','warRate','War frequency',0,3,0.05,1,'How often states declare war and press their attacks.'],
 ['States','asabR','Frontier cohesion',0.01,0.3,0.005,0.1,'Asabiya gained on frontiers with alien peoples or faiths.'],
 ['States','asabD','Interior decay',0.001,0.05,0.001,0.006,'Asabiya lost in safe interiors.'],
-['States','reach','Administrative reach',2,20,0.5,6,'Cells from the capital at which power falls to 37%, before technology.'],
+['States','reach','Administrative reach',2,20,0.5,6,'Travel-day scale for delivering orders and receiving replies, before institutions and communication tools.'],
 ['States','crisis','Instability sensitivity',0,3,0.05,1,'How easily structural pressure turns into civil war.'],
 ['States','allyRate','Alliances',0,3,0.05,1,'How readily states with shared interests ally.'],
 ['States','terrain','Terrain friction',0,3,0.05,1,'How much deserts, mountains and forests slow armies and administration.'],
@@ -95,10 +95,12 @@ function boxBlur(a,w,h,rx,ry,wrap){
 }
 
 /* ---------- Earth assets ---------- */
-function decodeEarth(elevBytes,kgBytes){
+let EARTH_CLIMATE=null;
+function decodeEarth(elevBytes,kgBytes,climateBytes){
   const d=new Int16Array(elevBytes.buffer,elevBytes.byteOffset,HW*HH),h=new Float32Array(HW*HH);
   for(let y=0;y<HH;y++){let acc=0;for(let x=0;x<HW;x++){acc+=d[y*HW+x];h[y*HW+x]=acc}}
-  return{height:h,kg:new Uint8Array(kgBytes.buffer,kgBytes.byteOffset,HW*HH)};
+  if(climateBytes)EARTH_CLIMATE=parseClimate(new TextDecoder().decode(climateBytes));
+  return{height:h,kg:new Uint8Array(kgBytes.buffer,kgBytes.byteOffset,HW*HH),climate:EARTH_CLIMATE};
 }
 const KG_CODES=['','Af','Am','As','Aw','BSh','BSk','BWh','BWk','Cfa','Cfb','Cfc','Csa','Csb','Csc','Cwa','Cwb','Cwc','Dfa','Dfb','Dfc','Dfd','Dsa','Dsb','Dsc','Dsd','Dwa','Dwb','Dwc','Dwd','EF','ET','Ocean'];
 const KG_GROUPS=['Tropical (A)','Desert (BW)','Steppe (BS)','Temperate (C)','Continental (D)','Polar (E)'];
@@ -106,6 +108,82 @@ function kgGroup(c){return c>=1&&c<=4?0:c===5||c===6?2:c===7||c===8?1:c>=9&&c<=1
 function simGroup(T,Pp,A){const Tw=T+A/2,Tc=T-A/2;if(Tw<10)return 5;const th=Math.max(0,20*T+140);if(Pp<th)return Pp<th/2?1:2;if(Tc>=18)return 0;if(Tc>0)return 3;return 4}
 
 /* ---------- climate ---------- */
+const CLIMATE_DAYS=[31,28,31,30,31,30,31,31,30,31,30,31];
+const VALIDATED_CLIMATES=new WeakSet();
+// Numeric climate exchange format; see CLIMATE.md. No colours or image legends
+// are interpreted as measurements. Grid coordinates are pixel CENTRES.
+function parseClimate(input){
+  if(input&&typeof input==='object'&&VALIDATED_CLIMATES.has(input))return input;
+  const d=typeof input==='string'?JSON.parse(input):input;
+  const fail=s=>{throw new Error('Climate data: '+s)};
+  if(!d||d.format!=='asabiya-climate-v1')fail('expected format asabiya-climate-v1.');
+  const g=d.grid||{},nx=g.width,ny=g.height;
+  if(!Number.isInteger(nx)||!Number.isInteger(ny)||nx<2||ny<2||nx*ny>2000000)fail('grid dimensions must be integers, with 4–2,000,000 cells.');
+  for(const k of ['lon0','lat0','dx','dy'])if(!Number.isFinite(g[k]))fail('grid '+k+' must be a finite number.');
+  if(g.dx<=0||g.dy===0||g.wrap!==true||Math.abs(nx*g.dx-360)>1e-6||Math.abs(ny*Math.abs(g.dy)-180)>1e-6)fail('use a global regular latitude/longitude grid covering 360 × 180 degrees, with positive dx and wrap: true.');
+  const expectedLat=g.dy<0?90+g.dy/2:-90+g.dy/2;
+  if(Math.abs(g.lat0-expectedLat)>1e-6)fail('lat0 must name the centre of the first row, not its outer edge.');
+  if(d.period!=='annual'&&d.period!=='monthly')fail('period must be annual or monthly (January through December).');
+  const monthly=d.period==='monthly',units=d.units||{},sn=nx*ny,steps=monthly?12:1;
+  if(units.temperature!=='degC'&&units.temperature!=='K')fail('temperature units must be degC or K.');
+  if(monthly?!['mm/month','mm/day'].includes(units.precipitation):units.precipitation!=='mm/year')fail(monthly?'monthly precipitation units must be mm/month or mm/day.':'annual precipitation units must be mm/year.');
+  const hasNoData=Object.prototype.hasOwnProperty.call(d,'noData');
+  if(hasNoData&&d.noData!==null&&!Number.isFinite(d.noData))fail('noData must be null or a finite number.');
+  const read=(name,count,lo,hi,convert)=>{
+    let a=d[name];if(a===undefined)return null;
+    if(monthly&&count===sn*12&&Array.isArray(a)&&a.length===12&&a.every(v=>Array.isArray(v)||ArrayBuffer.isView(v))){if(a.some(v=>v.length!==sn))fail(name+' has an incorrect monthly grid size.');a=a.flatMap(v=>Array.from(v))}
+    if(!(Array.isArray(a)||ArrayBuffer.isView(a))||a.length!==count)fail(name+' must contain exactly '+count+' row-major numbers.');
+    const out=new Float32Array(count);
+    for(let i=0;i<count;i++){
+      const v=a[i];if(hasNoData&&v===d.noData){out[i]=NaN;continue}
+      if(typeof v!=='number'||!Number.isFinite(v))fail(name+' contains a non-finite or non-numeric value at '+i+'.');
+      const z=convert?convert(v,i):v;if(z<lo||z>hi)fail(name+' is outside its accepted physical range at '+i+'.');out[i]=z;
+    }
+    return out;
+  };
+  const t=read('temperature',sn*steps,-110,70,v=>units.temperature==='K'?v-273.15:v);
+  const p=read('precipitation',sn*steps,0,monthly?15000:50000,(v,i)=>monthly&&units.precipitation==='mm/day'?v*CLIMATE_DAYS[Math.floor(i/sn)]:v);
+  if(!t||!p)fail('both temperature and precipitation arrays are required.');
+  const annualT=new Float32Array(sn),annualP=new Float32Array(sn);
+  let range=monthly?new Float32Array(sn):read('temperatureRange',sn,0,160);
+  let season=monthly?new Float32Array(sn):read('rainSeasonality',sn,0,1);
+  let dry=monthly?new Float32Array(sn):read('dryMonths',sn,0,12);
+  let growing=monthly?new Float32Array(sn):read('growingMonths',sn,0,12);
+  for(let i=0;i<sn;i++){
+    if(monthly){let st=0,sp=0,lo=Infinity,hi=-Infinity,dr=0,gs=0,valid=true;
+      for(let m=0;m<12;m++){const j=m*sn+i;if(!Number.isFinite(t[j])||!Number.isFinite(p[j])){valid=false;break}st+=t[j]*CLIMATE_DAYS[m];sp+=p[j];lo=Math.min(lo,t[j]);hi=Math.max(hi,t[j]);if(p[j]<30)dr++;if(t[j]>=6)gs++}
+      if(!valid){annualT[i]=annualP[i]=range[i]=season[i]=dry[i]=growing[i]=NaN;continue}
+      if(sp>50000)fail('monthly precipitation sums to more than 50,000 mm/year at '+i+'.');
+      let variation=0;for(let m=0;m<12;m++)variation+=Math.abs(p[m*sn+i]-sp/12);
+      annualT[i]=st/365;annualP[i]=sp;range[i]=hi-lo;season[i]=sp>0?variation/sp/(22/12):0;dry[i]=dr;growing[i]=gs;
+    }else{annualT[i]=t[i];annualP[i]=p[i];if(!Number.isFinite(t[i])||!Number.isFinite(p[i]))annualT[i]=annualP[i]=NaN}
+  }
+  const result={grid:Object.assign({},g),temperature:annualT,precipitation:annualP,temperatureRange:range,rainSeasonality:season,dryMonths:dry,growingMonths:growing,metadata:d.metadata||{},period:d.period};
+  VALIDATED_CLIMATES.add(result);return result;
+}
+function climateSampler(climate){
+  const g=climate.grid,nx=g.width,ny=g.height;
+  return function(lat,lon,field){
+    const a=climate[field];if(!a)return NaN;
+    const gx=((lon-g.lon0)/g.dx%nx+nx)%nx,gy=clamp((lat-g.lat0)/g.dy,0,ny-1),x0=Math.floor(gx),y0=Math.floor(gy),x1=(x0+1)%nx,y1=Math.min(y0+1,ny-1),fx=gx-x0,fy=gy-y0;
+    const ids=[y0*nx+x0,y0*nx+x1,y1*nx+x0,y1*nx+x1],ws=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy];
+    let sum=0,weight=0;for(let k=0;k<4;k++)if(Number.isFinite(a[ids[k]])){sum+=a[ids[k]]*ws[k];weight+=ws[k]}
+    return weight>1e-8?sum/weight:NaN;
+  };
+}
+function applyNumericClimate(C,input){
+  const climate=parseClimate(input),sample=climateSampler(climate);let used=0;
+  for(let y=0;y<HH;y++)for(let x=0;x<HW;x++){
+    const i=y*HW+x,lat=90-(y+0.5)*180/HH,lon=(x+0.5)*360/HW-180,t=sample(lat,lon,'temperature'),p=sample(lat,lon,'precipitation');
+    if(!Number.isFinite(t)||!Number.isFinite(p))continue;
+    C.tHi[i]=t;C.pHi[i]=p;const a=sample(lat,lon,'temperatureRange');if(Number.isFinite(a))C.aHi[i]=a;used++;
+  }
+  for(const key of ['rainSeasonality','dryMonths','growingMonths'])if(climate[key]){
+    C[key]=new Float32Array(N);for(let y=0;y<H;y++)for(let x=0;x<W;x++)C[key][y*W+x]=sample(90-(y+0.5)*180/H,(x+0.5)*360/W-180,key);
+  }
+  C.climateMeta=Object.assign({},climate.metadata,{numeric:true,inputPeriod:climate.period,coverage:used/(HW*HH)});
+  return C;
+}
 function genClimate(eHi){
   const n=HW*HH,tHi=new Float32Array(n),pHi=new Float32Array(n),aHi=new Float32Array(n),mZ=new Float32Array(n),oZ=new Float32Array(n),cZ=new Float32Array(n),mR=new Float32Array(n),mM=new Float32Array(n),oM=new Float32Array(n),baseRow=new Float32Array(HH);
   const latOf=y=>90-(y+0.5)/HH*180;
@@ -230,8 +308,12 @@ function genWorld(o){
   const rawT=new Float32Array(N),rawP=new Float32Array(N),rawA=new Float32Array(N);
   const agg=(src,dst)=>{for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){let s=0;for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++)s+=src[(cy*SC+dy)*HW+cx*SC+dx];dst[cy*W+cx]=s/(SC*SC)}};
   agg(C.tHi,rawT);agg(C.pHi,rawP);agg(C.aHi,rawA);
-  if(o.temp)C.tHi.set(o.temp);if(o.prec)C.pHi.set(o.prec);
-  if(o.kg&&o.fit){w.fitChanged=fitClimate(C.tHi,C.pHi,C.aHi,eHi,o.kg);w.fitted=true}
+  const numericClimate=o.climate||(o.earth?EARTH_CLIMATE:null);
+  if(numericClimate){applyNumericClimate(C,numericClimate);w.climateMeta=C.climateMeta;for(const key of ['rainSeasonality','dryMonths','growingMonths'])if(C[key])w[key]=C[key]}
+  if(o.temp&&!numericClimate)C.tHi.set(o.temp);if(o.prec&&!numericClimate)C.pHi.set(o.prec);
+  // Observations/imported numeric measurements must not be rewritten to pass
+  // a classification test. Köppen fitting remains available for model worlds.
+  if(o.kg&&o.fit&&!numericClimate){w.fitChanged=fitClimate(C.tHi,C.pHi,C.aHi,eHi,o.kg);w.fitted=true}
   w.tHi=C.tHi;w.pHi=C.pHi;w.aHi=C.aHi;
   const elev=new Float32Array(N),T=new Float32Array(N),Pr=new Float32Array(N),amp=new Float32Array(N),rough=new Float32Array(N),land=new Uint8Array(N);
   for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){
@@ -281,7 +363,7 @@ function genWorld(o){
   for(const i of landList){
     const t=T[i],p=Pr[i],tw=t+amp[i]/2;biome[i]=biomeOf(t,p);
     if(t<-9)continue;
-    const half=amp[i]/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
+    const half=amp[i]/2,estimatedGs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI),gs=w.growingMonths&&Number.isFinite(w.growingMonths[i])?w.growingMonths[i]:estimatedGs;
     w.gs=w.gs||new Float32Array(N);w.gs[i]=gs;
     const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
     // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
@@ -300,7 +382,8 @@ function genWorld(o){
   for(const i of landList){const b=biome[i],t=T[i],p=Pr[i],la=lat[i]*180/Math.PI;
     let c=2;if(b===7){c=8;desert[i]=1}else if(b===9)c=6;else if(b===1||b===2)c=6;else if(b===3)c=3;
     c+=Math.round(rough[i]*8);if(rv[i]>0.3)c=Math.max(1,c>>1);tcost[i]=Math.min(20,c);
-    tsetse[i]=(t>22&&p>900&&Math.abs(la)<14)?1:0;
+    const lo=(cxA[i]+0.5)/W*360-180;
+    tsetse[i]=(t>22&&p>900&&Math.abs(la)<20&&(!w.isEarth||lo>-18&&lo<52&&lm[i]===lm[cellAt(0,25)]))?1:0;
     if(p<520)monZone[i]=clamp((33-Math.abs(la))/8,0,1)*clamp((Math.abs(la)-9)/5,0,1)*(la>0?1:0.45)*clamp((520-p)/250,0,1)}
   Object.assign(w,{tcost,tsetse,monZone,desert});
   // weather interpolation
@@ -334,7 +417,7 @@ function genWorld(o){
         if(near)med.push(i)}}
     w.medCells=Int32Array.from(med);w.chinaCells=Int32Array.from(china);
   }
-  w.grade=gradeClimate(w,rawT,rawP,rawA);
+  w.grade=gradeClimate(w,numericClimate?T:rawT,numericClimate?Pr:rawP,numericClimate?amp:rawA);
   return w;
 }
 

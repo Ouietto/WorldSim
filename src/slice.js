@@ -1,8 +1,9 @@
 const fs=require('fs'),zlib=require('zlib');const {performance}=require('perf_hooks');
-const core=['world.js','lang.js','hist.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
 const elev=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_elev.b64','utf8'),'base64'));
 const kg=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/koppen.b64','utf8'),'base64'));
-eval(core+`const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg));
+const climate=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_climate.b64','utf8'),'base64'));
+eval(core+`const E=decodeEarth(new Uint8Array(elev),new Uint8Array(kg),new Uint8Array(climate));
 WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});newHistory('2');
 while(S.year<+(process.argv[2]||1000))step();
 const d=[],big={};const t0=performance.now();for(let y=0;y<100;y++){const g=stepG();for(let k=0;;k++){const t=performance.now();const r=g.next();const dt=performance.now()-t;d.push(dt);if(dt>18){const key=k+"@y%"+(S.year%20);big[key]=(big[key]||0)+1}if(r.done)break}}console.log(JSON.stringify(big));
