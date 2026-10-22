@@ -53,16 +53,16 @@ function economyPass(){
   s.realmCells=new Map();s.foodImports.fill(0);
   for(const id of s.alive){const o=s.pols[id];
     if(s.pol[o.capital]!==o.id){s.depot[o.capital]+=o.grain;o.grain=0}
-    o.collected=0;o.output=0;o.hunger=0;o.rents=0;o.relief=0;o.trade=0;o.campaigns=0;o.recruitable=0;const spoil=(o.grain||0)*(0.16-0.10*skill(o.capital,'storage'));o.grain=Math.max(0,(o.grain||0)-spoil);a.spoilage+=spoil}
+    o.collected=0;o.output=0;o.hunger=0;o.rents=0;o.relief=0;o.trade=0;o.campaigns=0;o.recruitable=0;const spoil=(o.grain||0)*(0.16-0.10*skill(o.capital,'storage')-0.025*s.granaries[o.capital]);o.grain=Math.max(0,(o.grain||0)-spoil);a.spoilage+=spoil}
   for(const i of w.landIdx){
     const p=s.pop[i],id=s.pol[i],o=id?s.pols[id]:null;s.levy[i]=0;s.harvest[i]=0;s.need[i]=p;s.flow[i]*=0.7;
     if(o){let cs=s.realmCells.get(id);if(!cs)s.realmCells.set(id,cs=[]);cs.push(i)}
-    const depotSpoil=s.depot[i]*(0.20-0.12*skill(i,'storage'));s.depot[i]-=depotSpoil;a.spoilage+=depotSpoil;
-    const spoil=s.food[i]*(0.28-0.19*skill(i,'storage'));s.food[i]-=spoil;a.spoilage+=spoil;
+    const depotSpoil=s.depot[i]*(0.20-0.12*skill(i,'storage')-0.03*s.granaries[i]);s.depot[i]-=depotSpoil;a.spoilage+=depotSpoil;
+    const spoil=s.food[i]*(0.28-0.19*skill(i,'storage')-0.025*s.granaries[i]);s.food[i]-=spoil;a.spoilage+=spoil;
     if(p<1){a.spoilage+=s.food[i];s.food[i]=0;s.nutrition[i]=1;continue}
     s.young[i]=clamp(s.young[i],0,p*0.65);
     const publicShare=o?((o.army||0)+(o.staff||0)+(o.navy||0)*20)/Math.max(1,o.pop):0;
-    const labour=clamp(((p-s.young[i])/p-publicShare-Math.min(0.12,s.urban[i]/p*0.2))/0.68,0.2,1.2)*(1-0.65*clamp(s.sickness[i],0,0.85));
+    const labour=clamp(((p-s.young[i])/p-publicShare-s.civicLabor[i]-Math.min(0.12,s.urban[i]/p*0.2))/0.68,0.2,1.2)*(1-0.65*clamp(s.sickness[i],0,0.85));
     const productivity=1.23+0.16*s.farm[i]+0.08*s.iron[i]+0.06*s.manure[i];
     let h=Math.min(s.K[i],p*productivity*labour)*(1-0.55*s.raidDamage[i]);
     if(s.settleLag[i]){const share=clamp(s.newcomers[i]/p,0,1);h*=1-share*(0.8-0.45/(s.settleLag[i]+0.5));s.settleLag[i]--;if(!s.settleLag[i])s.newcomers[i]=0}
@@ -99,7 +99,7 @@ function economyPass(){
   for(const i of w.landIdx){
     const p=s.pop[i],need=s.need[i];s.nutrition[i]=need>0?clamp(s.food[i]/need,0,1):1;
     const eat=Math.min(s.food[i],need);s.food[i]-=eat;a.consumed+=eat;
-    const cap=p*(0.55+1.8*skill(i,'storage')),excess=Math.max(0,s.food[i]-cap);s.food[i]-=excess;a.spoilage+=excess;
+    const cap=p*(0.55+1.8*skill(i,'storage')+1.2*s.granaries[i]),excess=Math.max(0,s.food[i]-cap);s.food[i]-=excess;a.spoilage+=excess;
     if(s.pol[i])s.pols[s.pol[i]].hunger+=p*(1-s.nutrition[i]);
   }
   for(const id of s.alive){const o=s.pols[id];o.hunger/=Math.max(1,o.pop);o.treas=clamp(o.grain/Math.max(1,o.fiscalDue||o.pop*0.02)-o.arrears/Math.max(1,o.collected),-2,3);refreshForces(o)}
@@ -126,11 +126,11 @@ function refreshForces(o){
 function fieldDefense(j,commit){
   const s=S,id=s.pol[j],o=id?s.pols[id]:null,p=s.pop[j];
   const mobility=1+2.2*pastoralMobility(j)*WD.rangeExposure[j]+s.defensePact[j]*s.organisation[j];
-  if(!o)return Math.pow(p*(0.015+0.035*s.organisation[j])+1,P.scaleExp)*(0.4+0.6*s.s[j])*milAt(j)*(1+WD.rough[j])*(1+1.5*wallStrength(j))*mobility;
+  if(!o)return Math.pow(p*(0.015+0.035*s.organisation[j])+1,P.scaleExp)*(0.4+0.6*s.s[j])*milAt(j)*(1+WD.rough[j])*(1+1.5*settlementDefense(j))*mobility;
   const stake=0.7+0.6*s.eliteStake[j]*s.eliteLoyalty[j]+s.cityIdentity[j]*0.3;
   const local=p*(0.008+0.018*s.integ[j])*(0.4+0.6*o.health)*stake,reserve=Math.min(o.defFree||0,(o.army||0)/Math.max(2,o.nb.size+1))*transportAccess(j,o);
   if(commit)o.defFree=Math.max(0,o.defFree-reserve);
-  return Math.pow(local+reserve+1,P.scaleExp)*(0.4+0.3*o.S+0.3*s.s[j])*milAt(j)*(1+1.6*WD.rough[j])*(1+2.5*wallStrength(j))*mobility*(0.55+0.3*o.preparedness+0.15*o.crisisMemory);
+  return Math.pow(local+reserve+1,P.scaleExp)*(0.4+0.3*o.S+0.3*s.s[j])*milAt(j)*(1+1.6*WD.rough[j])*(1+2.5*settlementDefense(j))*mobility*(0.55+0.3*o.preparedness+0.15*o.crisisMemory);
 }
 function campaignForce(o,i,sea){
   const share=Math.max(300,((o.army||0)+(o.foreignFree||0))/Math.max(2,o.nb.size+1));
@@ -139,6 +139,7 @@ function campaignForce(o,i,sea){
   if(force*ratio<100)return 0;
   const allocated=force*ratio,native=Math.min(o.armyFree||0,allocated),foreign=drawForeignTroops(o,i,allocated-native);
   o.armyFree-=native;o.campaignAuxShare=foreign/Math.max(1,native+foreign);budgetAt(o,i,cost*ratio);o.campaigns++;
+  S.martialPractice[i]+=(native+foreign)/Math.max(500,S.pop[i])*2;
   if(sea)o.navyFree=Math.max(0,o.navyFree-allocated/80);
   return allocated*transportAccess(i,o);
 }
@@ -244,7 +245,7 @@ function tradeFood(accounts){
     const safe=Math.min(pa?0.3+0.7*pa.health:0.5+s.organisation[a]*0.3,pb?0.3+0.7*pb.health:0.5+s.organisation[b]*0.3);
     if(e.via&&e.via.some(i=>{const o=s.pol[i]?s.pols[s.pol[i]]:null;return o&&(pa&&o.enemies.has(pa.id)||pb&&o.enemies.has(pb.id))}))continue;
     const cost=a===e.a?e.cost:(e.reverseCost==null?e.cost:e.reverseCost);
-    const loss=clamp(cost+(1-safe)*0.2,0.01,0.75),n=Math.min(source,demand/(1-loss),Math.max(0,e.capacity-(e.freightUsed||0))*safe*epidemicTravelFactor(a,b));
+    const loss=clamp(cost+(1-safe)*0.2,0.01,0.75),n=Math.min(source,demand/(1-loss),Math.max(0,e.capacity-(e.freightUsed||0))*safe*epidemicTravelFactor(a,b)*civicTradeAccess(a,b));
     if(n<=0)continue;e.privateUsed=(e.privateUsed||0)+n;s.food[a]-=n;s.food[b]+=n*(1-loss);s.foodImports[b]+=n*(1-loss)*(pb?0.98:1);accounts.transportLoss+=n*loss;s.flow[a]+=n;s.flow[b]+=n;
     // A small toll is physically taken out of the delivered consignment.
     if(pb){const toll=n*(1-loss)*0.02;s.food[b]-=toll;depositPublic(pb,b,toll);pb.trade+=toll;pb.collected+=toll}
@@ -306,6 +307,7 @@ function institutionStep(o,c,y){
   G.merchants.power=clamp((o.trade||0)/Math.max(1,o.collected)*3+0.15*s.node[c],0.05,0.6);G.merchants.loyalty=clamp(0.2+0.5*security+0.3*o.rights,0,1);
   G.clergy.power=clamp(0.1+0.3*(o.rel>=0?s.rels[o.rel].cent:0),0,0.5);G.clergy.loyalty=clamp(0.3+0.3*o.mandate+0.2*o.rights,0,1);
   o.coalition=Object.values(G).reduce((n,g)=>n+g.power*g.loyalty,0)/Math.max(0.01,Object.values(G).reduce((n,g)=>n+g.power,0));
+  if(o.kind==='horde')o.coalition=clamp(o.coalition*0.45+(o.clanCohesion??0.6)*0.55,0,1);
   // Connected territory creates a reason to standardize, rather than a named-region bonus.
   const networkDemand=clamp((o.network||0)*0.25+(o.corridor||0)*0.45+Math.min(1,o.cells/60)*0.15+o.comm*0.15,0,1);
   o.central=clamp(o.central+0.0015*(0.15+o.bureau*0.6+networkDemand*0.25-o.central)*o.payroll-0.001*(1-o.payroll)*o.nobles,0.08,0.95);
@@ -486,7 +488,7 @@ function territorialAttack(o,i,j,sea){
   const chance=clamp((Ua/(Ua+Ud)-0.12)*niche*legacy,0.01,0.88),win=s.r()<chance;
   armyLoss(o,i,force*(win?0.025:0.09),o.campaignAuxShare);if(q)armyLoss(s.pols[q],j,Math.min(s.pols[q].army*0.08,force*(win?0.06:0.02)));
   crisisEncounter(o,q?s.pols[q]:null,win,win?0.025:0.09);if(q)crisisEncounter(s.pols[q],o,!win,win?0.09:0.025);
-  recordVictory(o,win,win?0.025:0.09);if(!win)return;
+  recordVictory(o,win,win?0.025:0.09);if(!win)return;if(!besiegeCity(o,i,j,force))return;
   warnCommunities(j,o);
   conquestRecorded(o,j,q);
   o.occupation=Math.max(0,o.occupation-Math.max(100,s.pop[j]*0.015));budgetPay(o,Math.min(o.grain,s.pop[j]*0.01));

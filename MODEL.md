@@ -1,8 +1,78 @@
-# Asabiya 0.9 — connected cities, mobile peoples and epidemics
+# Asabiya 0.10 — civic growth, practical invention and coalition breakup
 
 This version connects settlement, warfare, administration, reform and collapse
 to shared resources. It is an exploratory historical model. Its rules are
 explicit hypotheses, rather than established universal laws of social change.
+
+## Changes in 0.10
+
+Cities can fund protection agreements with adjacent farming communities before
+acquiring jurisdiction. Influence grows over decades through recurring local
+provision and credible patrols. Troops, readiness, reserves, travel conditions
+and mobile opposition constrain protection; walls around a city offer only
+limited refuge. An incorporated community retains its residents, ancestry and
+substantial autonomy. Officials and further provisions are required. A single
+community cannot accrue several years of agreement from multiple neighboring
+cities during one pass. Influence is an abstract share within the coarse map
+cell, not a claim to survey individual farm boundaries.
+
+Allied cities may accept protection when their interests support it. Leagues
+and other dependencies can negotiate integration after sustained material
+support and institutional guarantees. Strong civic identity slows acceptance;
+rights, trustworthy government, proximity and administrative personnel matter.
+Peaceful union transfers existing people, officials, forces, stocks and credit
+obligations, preserving local identity and chartered autonomy. Broken promises
+increase unrest and reduce local cooperation. Friendly relations alone do not
+erase sovereignty; integration can stall or retreat.
+
+City wall extent, condition and engineering knowledge are separate from
+frontier fortifications. Local danger motivates construction, and paid works,
+repairs and attacks build experience. Designs spread through actual exchange
+or maintained local contact. Knowledge does not build free walls. Local
+materials, available labor and recurring provisions limit realization. City
+walls protect only a share of a province's population and do not block every
+movement through its countryside. Sustained paid sieges can reduce urban
+defenses; active siege pressure disrupts exchange. Granaries are a separate
+built stock that improves storage and reduces spoilage. Walls create no food
+or storage capacity. Civic works compete with harvest labor; public wages
+return to resident households while material inputs are consumed.
+
+Invention can be funded at supported cities throughout a polity, using each
+location's actual resources. Projects and practical experience remain local,
+including after a political border changes. Urban concentration gives a
+bounded collaboration bonus; nutrition, disease, workshops and connected
+exchange determine how much is realized. Recording, engineering, commerce
+and military practice affect relevant projects. Territorial-size gates are
+replaced by smaller accessible-population requirements and local practical
+conditions. Prerequisites and material bottlenecks remain. Metallurgical
+military advantages require working equipment produced and replaced from
+provisions, alongside finite troops and training. Guns and transport animals
+continue to require their own actual stocks. The equipment stock is a coarse
+local proxy, not an inventory of each soldier's weapons or a complete arms market.
+
+Confederation strain now responds more quickly across generations. Member-clan
+loyalty feeds overall political cohesion. Failed rewards, hunger, succession
+shocks and weak agreements raise breakup risk; delivered patronage, accepted
+succession, shared danger and success can sustain older coalitions. Age raises
+pressure without imposing a hundred-year expiration or automatically resetting
+the founding date. Settled conquest dynasties use the state model after their
+economic transition, rather than retaining permanent nomad status.
+
+When a confederation dissolves, its public reserves remain with real communities.
+Some actual households, children, provisions and herds move through bounded
+local land routes into receptive cities or neighboring confederations. Other
+households remain as autonomous clans. Acceptance depends on room, security
+and relations; dispersal does not grant territory to a recipient. Joining
+contingents transfer a share of existing troops, while the remaining command
+disbands. Movement is recorded on the peoples map and carries culture,
+ancestry, crop access and disease contact. New coalitions may form through the
+ordinary local formation mechanisms; they are distinct political organizations.
+
+The Largest control selects the current largest living polity, frames its
+inhabited territory across wrapped longitude, and opens its inspector. Motion
+is interruptible and respects reduced-motion preferences. An explicitly
+inspected confederation is visible even when the general display filter hides it.
+The deferred state, border and wall visual redesign remains deferred.
 
 ## Changes in 0.9
 

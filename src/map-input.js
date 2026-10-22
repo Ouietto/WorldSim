@@ -9,7 +9,7 @@ function installMapGestures(canvas,view,actions){
   const repaint=()=>{actions.clamp();actions.draw()};
   const zoom=(x,y,z)=>{const next=Math.max(1,Math.min(8,z)),f=next/view.z;view.ox=x-(x-view.ox)*f;view.oy=y-(y-view.oy)*f;view.z=next;repaint()};
   canvas.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();
+    if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();if(actions.interact)actions.interact();
     if(!pointers.size)gesture=false;pointers.set(e.pointerId,{...point(e),type:e.pointerType,start:point(e)});
     if(pointers.size>1){gesture=true;lastTap=null}canvas.setPointerCapture(e.pointerId);rebase();
   });
@@ -35,6 +35,16 @@ function installMapGestures(canvas,view,actions){
   canvas.addEventListener('pointerup',e=>finish(e,false));
   canvas.addEventListener('pointercancel',e=>finish(e,true));
   canvas.addEventListener('lostpointercapture',e=>finish(e,true));
-  canvas.addEventListener('wheel',e=>{e.preventDefault();const p=point(e);zoom(p.x,p.y,view.z*Math.exp(-e.deltaY*0.0015))},{passive:false});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();if(actions.interact)actions.interact();const p=point(e);zoom(p.x,p.y,view.z*Math.exp(-e.deltaY*0.0015))},{passive:false});
   return{zoom,active:()=>pointers.size};
+}
+// Fit the shortest wrapped longitude interval, including islands across the
+// date line. Uses CSS dimensions and leaves room for controls and a highlight.
+function fitMapCells(cells,world,dim,baseScale,padding=48){
+  if(!cells.length||dim.w<=0||dim.h<=0||baseScale<=0)return null;
+  const xs=[...new Set(cells.map(i=>world.cxA[i]))].sort((a,b)=>a-b);let gap=-1,start=xs[0],y0=Infinity,y1=-Infinity;
+  for(let k=0;k<xs.length;k++){const next=xs[(k+1)%xs.length]+(k===xs.length-1?W:0),distance=next-xs[k];if(distance>gap){gap=distance;start=next%W}}
+  for(const i of cells){y0=Math.min(y0,world.cyA[i]);y1=Math.max(y1,world.cyA[i])}
+  const span=W-gap+1,width=span*SC,height=(y1-y0+1)*SC,margin=Math.min(padding,dim.w*0.18,dim.h*0.18);
+  return{cx:(start+span/2)*SC,cy:(y0+y1+1)*SC/2,z:Math.max(1,Math.min(8,Math.min((dim.w-margin*2)/width,(dim.h-margin*2)/height)/baseScale))};
 }

@@ -188,7 +188,7 @@ function conquestRecorded(o,j,previous){
 }
 function crisisEncounter(o,target,won,severity){
   if(!o)return;const s=S,survival=clamp(1-severity,0,1);
-  o.lastConflict=s.year;o.crisisMemory=clamp(o.crisisMemory+0.035*survival,0,1);o.frontierIntel=clamp(o.frontierIntel+0.04*survival,0,1);
+  o.lastConflict=s.year;s.martialPractice[o.capital]+=Math.max(0.1,severity*20);o.crisisMemory=clamp(o.crisisMemory+0.035*survival,0,1);o.frontierIntel=clamp(o.frontierIntel+0.04*survival,0,1);
   if(o.kind==='horde')o.raidSkill=clamp(o.raidSkill+(won?0.025:0.012)*survival-severity*0.15,0,1);
   if(target){let t=o.raidTargets.get(target.id);if(!t){t={knowledge:0,failures:0,last:s.year};o.raidTargets.set(target.id,t)}
     t.knowledge=clamp(t.knowledge+0.07*survival,0,1);t.failures=won?Math.max(0,t.failures-1):Math.min(8,t.failures+1);t.last=s.year;
@@ -272,9 +272,9 @@ function confederationStep(o){
   const cells=s.realmCells.get(o.id)||polCells(o.id);let reward=0;
   for(const i of cells)if(s.pol[i]===o.id){const paid=budgetAt(o,i,Math.min(publicAvailable(o,i)*0.12,s.pop[i]*0.012));s.food[i]+=paid;reward+=paid}
   const fair=clamp(reward/Math.max(1,total*0.012),0,1);
-  const generations=clamp((s.year-o.born-35)/100,0,1.5),bargains=(1-o.succession*0.65)*(1-o.trust*0.25);
+  const generations=clamp((s.year-o.born-25)/60,0,2),bargains=(1-o.succession*0.65)*(1-o.trust*0.25);
   const fatigue=clamp(generations*bargains*(1-o.patronage*0.85)*(1-0.3*o.momentum)+o.strain*0.3,0,1);
-  o.coalitionFatigue=clamp(o.coalitionFatigue+0.12*(fatigue-o.coalitionFatigue),0,1);
+  o.coalitionFatigue=clamp(o.coalitionFatigue+0.25*(fatigue-o.coalitionFatigue),0,1);
   let external=0;for(const [id] of o.nb){const p=s.pols[id];if(p&&p.alive&&p.kind==='state')external=Math.max(external,clamp(power(p)/Math.max(1,power(o)),0,1))}
   let departing=-1,worst=1;
   for(const [clan,p] of o.clanPops){
@@ -284,7 +284,12 @@ function confederationStep(o){
     if(t.loyalty<worst&&p>2000){worst=t.loyalty;departing=clan}
   }
   for(const clan of o.clanTerms.keys())if(!o.clanPops.has(clan))o.clanTerms.delete(clan);
+  let loyal=0,weight=0;for(const [clan,t] of o.clanTerms){const n=o.clanPops.get(clan)||1;loyal+=n*t.loyalty;weight+=n}
+  o.clanCohesion=clamp((weight?loyal/weight:0.3)*(1-o.coalitionFatigue*0.35),0,1);
+  o.coalition=clamp(o.coalition*0.45+o.clanCohesion*0.55,0,1);
   if(departing>=0&&worst<0.32&&o.cells>=4&&s.year-o.lastClanExit>12&&s.r()<0.25)releaseClan(o,departing);
+  o.breakupRisk=confederationBreakupRisk(o,fair);
+  if(s.r()<o.breakupRisk)dissolveConfederation(o);
 }
 function releaseClan(o,clan){
   const s=S,cells=(s.realmCells.get(o.id)||polCells(o.id)).filter(i=>s.pol[i]===o.id&&s.clan[i]===clan&&i!==o.capital);if(!cells.length)return false;

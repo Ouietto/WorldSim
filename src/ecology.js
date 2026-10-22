@@ -53,7 +53,7 @@ function initEcology(){
   s.publicShipments=[];s.militaryContracts=[];s.migrationPressure=new Float32Array(N);
   Object.assign(s.societyCounters,{cropInvestment:0,freight:0,raidsBeyondBorder:0,devastations:0,shatteredStates:0,clanAccessions:0,opportunistCampaigns:0,reprisals:0,selectiveDeaths:0,forcedResettlers:0,wallBreaches:0,protectionTreaties:0,protectionPaid:0,brokenProtection:0,conquestDynasties:0,militaryContracts:0,returnedVeterans:0,migrationAccessions:0,migrationRetreats:0,migrantBreaches:0});
   for(const h of s.hearths)if(h.kind==='farm')h.cropIndex=h.crop?cropIndex(h):bestCrop(h.cell);
-  initEpidemics();initConnections();initPeoples();initUrbanism();
+  initEpidemics();initConnections();initPeoples();initUrbanism();initCivic();
 }
 function bestCrop(i){let best=0;for(let k=1;k<CROPS.length;k++)if(WD.cropSuit[k][i]>WD.cropSuit[best][i])best=k;return best}
 function seedCrop(i,k,value=1){
@@ -124,8 +124,8 @@ function agroPass(){
     for(let k=0;k<CROPS.length;k++)s.cropAccess[k][i]=clamp(s.cropAccess[k][i]+delta[k][i]*funded,0,1);
   }
 }
-function technicalReadiness(o,k){
-  const s=S,c=o.capital,t=TECH[k],p=s.recordPractice[c],craft=s.craftPractice[c];
+function technicalReadiness(o,k,c=o.capital){
+  const s=S,t=TECH[k],p=s.recordPractice[c],craft=s.craftPractice[c];
   if(t.k==='writing')return Math.min(1,p/100,Math.max(0,(s.urban[c]-1200)/4000));
   if(t.k==='wheel')return Math.min(1,craft/35,s.traction[c]+s.pack[c]);
   if(t.k==='iron')return Math.min(1,craft/120);
@@ -138,21 +138,43 @@ function technicalReadiness(o,k){
 }
 function inventionPass(o){
   if(o.kind!=='state')return;
-  const s=S,c=o.capital,eligible=[];
-  for(let k=6;k<TECH.length;k++){
-    const t=TECH[k],em=t.em;if(!em||s.tk[k][c]>=0.5||o.pop<em.pop*0.35||(em.cells&&o.cells<em.cells)||(em.coast&&!WD.coast[c]&&o.coastN<2)||(em.horse&&s.mounts[c]<0.5)||(em.heavy&&(o.hvN||0)<3))continue;
-    if(t.pre.some(p=>s.tk[p][c]<0.7))continue;
-    const readiness=technicalReadiness(o,k);if(readiness<0.999)continue;
-    eligible.push(k);
+  const s=S,sites=new Set([o.capital,...(s.realmCells.get(o.id)||[])]);o.researchFunded=0;o.researchCities=0;
+  for(const c of sites){if(s.pol[c]!==o.id||s.urban[c]<800||s.nutrition[c]<0.75||s.cityDamage[c]>0.6)continue;
+    const eligible=[],connections=researchConnections(c,o);
+    for(let k=6;k<TECH.length;k++){
+      const t=TECH[k],em=t.em;if(!em||s.tk[k][c]>=0.5||connections<em.pop*0.06||(em.coast&&!WD.coast[c])||(em.horse&&s.mounts[c]<0.5)||(em.heavy&&WD.heavy[c]<0.3))continue;
+      if(t.pre.some(p=>s.tk[p][c]<0.7)||technicalReadiness(o,k,c)<0.999)continue;
+      eligible.push(k);
+    }
+    if(!eligible.length)continue;
+    const due=Math.min(publicAvailable(o,c)*0.015,s.pop[c]*0.0015,s.urban[c]*0.012*s.nutrition[c]);
+    const paid=civicSpend(c,o,due),specialists=paid*(0.2+s.workshops[c])*(0.3+0.7*o.cult)*innovationEfficiency(c,o);
+    if(specialists<=0)continue;o.researchFunded+=paid;o.researchCities++;s.societyCounters.urbanResearch+=paid;
+    let projects=s.cityProjects.get(c);if(!projects)s.cityProjects.set(c,projects=new Float64Array(TECH.length));
+    for(const k of eligible){const t=TECH[k],em=t.em,need=1/em.b;
+      const gain=P.invent*specialists/eligible.length*(0.5+techFit(o,k))*researchExperience(c,t.k)/Math.max(1,Math.sqrt(em.pop/10000));
+      projects[k]+=gain;o.inventionProgress[k]+=gain;
+      if(projects[k]>=need){seedTech(s.tk[k],c,1,1);firstTech(k,c,o);projects[k]=0;o.inventionProgress[k]=0}
+    }
   }
-  if(!eligible.length)return;
-  // A fixed specialist budget is shared by projects. Fragmenting one society
-  // into many polities no longer grants a free full research budget to each.
-  const paid=budgetAt(o,c,Math.min(publicAvailable(o,c)*0.015,o.pop*0.0015));
-  const specialists=paid*(0.2+s.workshops[c])*(0.3+0.7*o.cult);
-  for(const k of eligible){
-    const t=TECH[k],em=t.em,need=1/em.b;
-    o.inventionProgress[k]+=specialists/eligible.length*(0.5+techFit(o,k))/Math.max(1,Math.sqrt(em.pop/10000));
-    if(o.inventionProgress[k]>=need){seedTech(s.tk[k],c,1,1);firstTech(k,c,o);o.inventionProgress[k]=0}
-  }
+}
+function researchConnections(i,o){
+  const s=S;let people=s.pop[i]+Math.max(0,o.pop-s.pop[i])*transportAccess(i,o)*0.12;
+  for(let d=0;d<4;d++){const j=WD.nb[i*4+d];if(j<0)continue;const p=s.pol[j]?s.pols[s.pol[j]]:null;
+    if(!p||!p.enemies.has(o.id))people+=s.pop[j]*(0.05+0.15*Math.min(s.node[i],s.node[j]));
+  }return people;
+}
+function innovationEfficiency(i,o){
+  const s=S,p=Math.max(1,s.pop[i]),urban=Math.min(p,s.urban[i]);
+  const concentration=clamp(urban/p*5,0,1)*clamp(Math.log1p(urban/800)/Math.log(21),0,1);
+  const contact=0.45+0.35*s.node[i]+0.2*s.urbanNetwork[i];
+  return (1+0.5*concentration)*contact*s.nutrition[i]*s.nutrition[i]*(1-0.75*s.sickness[i])*(0.4+0.6*o.health);
+}
+function researchExperience(i,k){
+  const s=S;let practice=s.craftPractice[i];
+  if(['writing','paper','law','records','census','office','school','succession','charter','ledger'].includes(k))practice=s.recordPractice[i];
+  else if(['roads','canal','storage','saltflush'].includes(k))practice=s.engineeringPractice[i];
+  else if(['caval','gun'].includes(k))practice=s.martialPractice[i]+s.craftPractice[i]*0.5;
+  else if(['coin','nav','ocean'].includes(k))practice=s.commercialPractice[i]*10+s.craftPractice[i]*0.25;
+  return 0.75+0.5*clamp(Math.log1p(practice)/9,0,1);
 }

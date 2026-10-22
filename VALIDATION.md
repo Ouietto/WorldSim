@@ -1,4 +1,51 @@
-# Asabiya v0.9 validation — 2026-10-22
+# Asabiya v0.10 validation — 2026-10-22
+
+All eight focused/scenario suites pass locally. The Pages workflow includes
+the civic suite and all command-line/browser loaders include `civic.js`.
+
+- Civic checks cover threat-driven construction, financial limits, engineering
+  learning and staged design diffusion without free structures. Unpaid walls
+  decay. Construction labor reduces harvests; walls alone add no food capacity,
+  while built granaries improve actual reserves. Metallurgical knowledge needs
+  provisioned equipment for its military advantage.
+- Rural agreements build influence before ownership changes. Incorporation
+  requires decades of credible protection, officials, funds and rights. People
+  and ancestry remain accounted for; unsupported influence cannot annex land.
+- Negotiated integration preserves civic identity, local autonomy, officials
+  and troops. Support is transferred from real reserves. Strong civic identity
+  prevents rapid passive absorption. Local invention can proceed in a funded
+  secondary city while an unfunded capital contributes nothing; hunger reduces
+  the density advantage and unfunded projects make no progress.
+- Sustained siege checks prevent repeated calls from breaching a city within
+  one year. Actual longer campaigns can overcome defenses. A combined 150-year
+  civic, political and military scenario checks the food ledger and new fields.
+- Confederation risk rises with generational strain and falls under supportive
+  conditions. A coalition can survive past one hundred years. Breakup preserves
+  people, children and herds, accounts for travel provisions, leaves autonomous
+  clans and sends distinct contingents to receptive cities and other coalitions.
+  These are conditional tests, not measured lifetime distributions.
+- The final 250-year developed generated-world run checks annual food/animal
+  accounting, finite civic stocks and bounded disease compartments. It records
+  50 surviving polities and 184 epidemic deaths for its artificial fixed seed;
+  those counts are observations, not historical targets.
+- The default Earth seed-7 run advances 301 years to 8700 BCE. Its report is
+  `validation/v10-seed7-early-history.log`; final food discrepancy is about
+  0.000000014 annual rations. It exercises early subsistence, storage and civic
+  investment rather than late empires or mature urban invention.
+- Map geometry tests cover tiny polities, broad empires, phone dimensions,
+  empty selections and territories crossing the date line. A local controlled
+  interface scenario verifies the actual Largest button, map focus, highlight
+  and inspector at 1280 × 900 and 390 × 844. The phone layout has no horizontal
+  overflow. The fixture is excluded from the published site. Console checks
+  find no errors. Physical handset input and reduced-motion OS settings have
+  not been manually tested in this release.
+
+Both standalone pages and the separately built Pages entry points are byte
+identical. The state/wall aesthetic redesign remains deferred. Lifespan,
+incorporation, invention and siege rates need multi-seed historical calibration;
+no complete v0.10 Earth history or calibrated first-city chronology is claimed.
+
+## Archived v0.9 validation — 2026-10-22
 
 All browser and command-line loaders include the new epidemic, connection,
 peoples, urbanism and map-input modules. Both standalone pages and a separately

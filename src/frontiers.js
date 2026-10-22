@@ -5,7 +5,7 @@ function initFrontierPolity(o,from){
   o.collectiveReprisals=from?from.collectiveReprisals:S.r()<0.08;
   o.lastAccession=-100000;o.lastOpportunism=-100000;o.occupationLosses=0;o.localStores=0;
   o.raidHistory=new Map();o.protectionPacts=[];o.installTarget=0;o.installUntil=-100000;
-  o.blockadePressure=0;o.lastMigration=-100000;o.patronage=0;o.coalitionFatigue=0;
+  o.blockadePressure=0;o.lastMigration=-100000;o.patronage=0;o.coalitionFatigue=0;o.clanCohesion=0.6;
   o.loanedTroops=0;o.foreignFree=0;o.campaignAuxShare=0;o.sharedThreat=0;o.threatMemory=new Map();o.knownPorts=new Set();o.creditTrust=0.7;o.creditDefault=-100000;
 }
 function publicAvailable(o,i){return Math.max(0,S.depot[i])+(i===o.capital?Math.max(0,o.grain):0)}
@@ -105,7 +105,7 @@ function frontierHoldable(o,i,j){
 function buildFrontierDefense(i,o){
   if(!o||o.kind!=='state'||frontierRisk(i)<0.08)return;
   const due=S.pop[i]*0.002,paid=budgetAt(o,i,due);if(due<=0)return;
-  S.fort[i]=clamp(S.fort[i]+0.015*(paid/due)*o.preparedness*(0.3+S.organisation[i])-0.004*(1-o.payroll),0,1);
+  S.fort[i]=clamp(S.fort[i]+0.015*(paid/due)*(0.7+0.3*S.engineeringKnowledge[i])*o.preparedness*(0.3+S.organisation[i])-0.004*(1-o.payroll),0,1);
 }
 function warnCommunities(j,attacker){
   const s=S;for(let d=0;d<4;d++){const i=WD.nb[j*4+d];if(i<0||!WD.land[i]||s.pol[i]===attacker.id)continue;
@@ -269,6 +269,7 @@ function tryWallBreach(o,from,j,force){
   const chance=clamp(weakness*0.18*(0.3+o.raidSkill+o.frontierIntel)+gunEffect(from)*0.12+Math.min(0.04,force/Math.max(1,s.pop[j])*0.015)-strength*0.08,0.002,0.35);
   if(s.r()>chance)return false;
   const cost=Math.min(publicAvailable(o,from),Math.max(10,force*0.04));if(cost<10)return false;budgetAt(o,from,cost);
+  s.engineeringPractice[from]+=cost*0.3;s.engineeringPractice[j]+=cost*0.1;
   s.wallBreach[j]=0.85;s.wallHealth[j]*=0.75;s.breachBy[j]=o.id;s.societyCounters.wallBreaches++;
   chron('war',`Scouts of the ${o.full} find and force a weak section of the frontier defenses, opening a route into the interior.`,j,[R_(o)],'Neglected repairs, weak patrols and local intelligence can expose a defended frontier.');return true;
 }

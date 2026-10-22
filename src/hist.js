@@ -467,6 +467,7 @@ const WHY_LABEL={pN:'rule stretched over lands unlike its own',pT:'a government 
 function topCauses(why){return Object.entries(why).filter(e=>e[1]>0.08).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>WHY_LABEL[e[0]])}
 function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===id)out.push(i);return out}
 function civilWar(o,breakup){
+  if(o.kind==='horde'&&breakup){dissolveConfederation(o,'A succession struggle breaks the common command into rival clans.');return}
   const s=S,w=WD,r=s.r,id=o.id,cells=polCells(id);
   if(cells.length<3)return;
   const dd=i=>(s.dist[i]===65535?9999:s.dist[i])*(1.2-s.integ[i])+s.cityIdentity[i]*40*(s.cityHome[i]!==o.id?1:0);
@@ -496,11 +497,12 @@ function civilWar(o,breakup){
     chron('war',`Civil war breaks the ${oldName}; ${nm} ${names.length>1?'break':'breaks'} away.`,o.capital,[['pol',o.id,oldName],...ids.map(k=>RB(s.pols[k])),RW(war)],why)}
 }
 function collapse(o){
+  if(o.kind==='horde'){dissolveConfederation(o,'Unpaid contingents and failing protection end the common command.');return}
   const s=S,w=WD;let lost=0;
   for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital){s.pol[i]=0;s.s[i]=0.3;lost++}
   if(o.maxCells>=20&&lost>=5)chron('fall',`The ${o.full} loses its grip; ${lost} provinces fall away into stateless hands.`,o.capital,[R_(o)],'Unpaid services and provincial defections had exhausted its administrative reach.');
 }
-function milAt(c){const s=S,w=WD,ts=s.mounts?s.mounts[c]:0;return 1+0.4*s.metal[c]+0.3*s.wheel[c]*Math.max(ts,s.traction?s.traction[c]:0)+0.5*s.iron[c]+ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5))+1.2*gunEffect(c)+0.2*s.admin[c]+0.3*s.camel[c]*w.desert[c]*ts}
+function milAt(c){const s=S,w=WD,ts=s.mounts?s.mounts[c]:0;return 1+0.4*s.metal[c]*armsAccess(c)+0.3*s.wheel[c]*Math.max(ts,s.traction?s.traction[c]:0)+0.5*s.iron[c]*armsAccess(c)+ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5))+1.2*gunEffect(c)+0.2*s.admin[c]+0.3*s.camel[c]*w.desert[c]*ts}
 function cerealEff(i){return S.grain[i]*(1-0.75*WD.leach[i])*(1-0.65*WD.trop[i])}
 function strength(o){return Math.max(1,Math.max(0,(o.army||0)-(o.loanedTroops||0)+(o.foreignFree||0))*(0.4+0.6*(o.payroll==null?1:o.payroll)))}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
@@ -581,7 +583,7 @@ function diplomacy(){
       if(power(o)>1.3*power(p)&&(p.raided||0)>3&&r()<0.15){p.over=id;o.tribs++;if(p.cells>=25)chron('diplomacy',`Worn down by raids, the ${p.full} agrees to pay tribute to the ${o.full}.`,p.capital,[R_(p),R_(o)])}}}
     o.raided=0;
     const y=s.year;if(o.over&&!o.overY)o.overY=y;if(!o.over)o.overY=0;
-    if(o.over&&o.kind==='state'&&!o.league){const ov=pols[o.over];if(ov&&ov.alive&&ov.kind==='state'&&y-o.overY>40&&ov.bureau>0.25&&ov.health>0.65&&ov.staff>o.pop*0.002&&ov.grain>o.pop*0.04&&power(ov)>3*power(o)&&r()<0.01*(hasLegacy(ov,o.capital)?2:1)){const n=o.cells,old=o.full;budgetPay(ov,o.pop*0.03);inheritConquest(ov,o);for(const c of polCells(o.id)){conquestRecorded(ov,c,o.id);s.pol[c]=ov.id;s.integ[c]=Math.max(s.integ[c]*0.6,0.3);s.dist[c]=Math.min(65534,(s.dist[o.capital]<65535?s.dist[o.capital]:0)+s.dist[c]+4)}ov.tribs=Math.max(0,ov.tribs-1);o.over=0;if(n>=10)chron('diplomacy',`The ${ov.full} absorbs its long-time vassal, the ${old}.`,o.capital,[R_(ov),['pol',o.id,old]]);continue}}
+    // Civic dependencies negotiate integration through civicUnionStep().
     if(o.over){const ov=pols[o.over];if(!ov||!ov.alive||power(o)>power(ov)){if(ov&&ov.alive&&o.cells>=25)chron('diplomacy',`The ${o.full} stops paying tribute to the ${ov.full}.`,o.capital,[R_(o),R_(ov)]);if(ov)ov.tribs=Math.max(0,ov.tribs-1);o.over=0}}
   }
 }
@@ -765,6 +767,7 @@ function* politicsG(){
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
     statecraft(o,c,y);
+    if(!o.alive)continue;
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s.admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-o.integ)*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,(o.pop*(0.0006+0.0015*o.central)+o.cells*20)/Math.max(1,o.staff+o.pop*o.nobles*0.001)-1)*0.2:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+o.shock;
@@ -775,7 +778,7 @@ function* politicsG(){
       else if(o.cells>=3&&r()<o.civilRisk){civilWar(o);o.lastCrisis=y}
       else if(o.cells>=2&&o.health<0.18&&o.strain>0.55&&r()<0.02){collapse(o);o.lastCrisis=y}
     }
-    if(o.kind==='horde'&&o.cells<=2&&y-o.born>30&&o.hunger>0.25&&o.coalition<0.4&&r()<0.03){for(const i of polCells(id)){pol[i]=0}continue}
+    if(o.kind==='horde'&&o.cells<=2&&y-o.born>30&&o.hunger>0.25&&o.coalition<0.4&&r()<0.03){dissolveConfederation(o,'The remaining clans can no longer sustain their common leadership.');continue}
     culture(o);
     if(y%5===0){
       if(o.p5&&o.pop<0.8*o.p5&&o.wet<-0.3)o.mandate=Math.max(0,o.mandate-0.25);
@@ -798,7 +801,7 @@ function* politicsG(){
       chron('rise',`The ${o.full} rises under ${rulerName(o)}.`,c,[R_(o)])}
     if(!o.fE&&o.cells>=100){o.fE=1;const f=figFor(o,Rn,'ruler');deed(f,`Ruled the ${o.full} at ${o.cells} provinces`,[R_(o)]);
       chron('rise',`The ${o.base} realm grows to ${o.cells} provinces under ${rulerName(o)}.`,c,[R_(o),RF(f)]);spot(`The ${o.full} reaches ${o.cells} provinces`,c,[R_(o)])}
-    inventionPass(o);
+    // Local urban projects are funded before the annual harvest in civicYear().
     // faith
     const cr=s.rel[c];
     if(cr>=0&&cr!==o.rel&&r()<0.04){o.rel=cr;const Rl=s.rels[cr];if(!Rl.states.includes(id))Rl.states.push(id);
@@ -995,13 +998,13 @@ function recordStats(){
   let np=0,nh=0,big=null;for(const id of s.alive){const o=s.pols[id];if(o.cells>=2||o.tier==='City-state'){if(o.kind==='horde')nh++;else np++}if(!big||o.cells>big.cells)big=o;if(o.cells>=3)o.hist.push(s.year,o.cells)}
   let pe=0;for(const e of s.eths)if(e.alive)pe++;
   let lead=0;for(let k=ERAS.length-1;k>=0;k--)if(eraPop[k]>tp*0.03){lead=k;break}
-  s.stats.push({y:s.year,pop:tp,np,nh,big:big?big.full:'',bc:big?big.cells:0,pe,lead,gT:s.gT+epochTemp(),orb:s.orbM,society:societyMetrics(),eraPop:Array.from(eraPop,v=>v/(tp||1))});
+  s.stats.push({y:s.year,pop:tp,np,nh,big:big?big.full:'',bc:big?big.cells:0,bigId:big?big.id:0,pe,lead,gT:s.gT+epochTemp(),orb:s.orbM,society:societyMetrics(),eraPop:Array.from(eraPop,v=>v/(tp||1))});
 }
 function step(){for(const _ of stepG());}
 // one simulated year, split into slices so the page can stay responsive between them
 function* stepG(){
   const s=S;s.year++;
-  climateStep();weather();hearthCheck();
+  climateStep();weather();hearthCheck();civicYear();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if(s.r()<0.0012*P.volcano)volcano();
   agroPass();animalPass();computeK();economyPass();growth();yield;migrate();seaHop();refugeePass();

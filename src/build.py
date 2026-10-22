@@ -14,7 +14,7 @@ def main():
     args = parser.parse_args()
     read = lambda name: (source / name).read_text(encoding="utf-8")
     core = "\n".join(read(name) for name in (
-        "world.js", "lang.js", "hist.js", "society.js", "dynamics.js", "ecology.js", "frontiers.js", "epidemics.js", "connections.js", "peoples.js", "urbanism.js", "map-input.js",
+        "world.js", "lang.js", "hist.js", "society.js", "dynamics.js", "ecology.js", "frontiers.js", "epidemics.js", "connections.js", "peoples.js", "urbanism.js", "civic.js", "map-input.js",
     ))
     assets = "\n".join(
         f'const {name}="{read(filename).strip()}";'

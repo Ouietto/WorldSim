@@ -36,6 +36,8 @@ jobs:
         run: node src/interactions.test.js
       - name: Check touch and mouse map gestures
         run: node src/map-input.test.js
+      - name: Check civic growth, invention and confederation breakup
+        run: node src/civic.test.js
       - name: Check generated worlds
         run: node src/generated.test.js
       - name: Build static site

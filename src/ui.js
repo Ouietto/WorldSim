@@ -66,7 +66,7 @@ function blocs(){
   for(const id of s.alive){const o=s.pols[id];if(o.over&&col.has(o.over)){const [c]=col.get(o.over);col.set(id,[c.map(v=>v*0.6+255*0.4),150])}}
   return col;
 }
-function polityOnMap(o){return !o||o.kind!=='horde'||!['political','alliances'].includes(ui.mode)||ui.visibleNomads.has(o.id)}
+function polityOnMap(o){return !o||o.kind!=='horde'||!['political','alliances'].includes(ui.mode)||ui.visibleNomads.has(o.id)||ui.page?.t==='pol'&&ui.page.id===o.id}
 function refreshNomadVisibility(){
   if(ui.nomadHistory!==S){ui.nomadHistory=S;ui.nomadLastSeen=new Map()}
   ui.visibleNomads=confederationVisibility(ui.nomads,ui.nomadLastSeen);
@@ -253,7 +253,24 @@ function drawMap(){
     each(cx*SC,cy*SC,(sx,sy)=>ctx.strokeRect(sx,sy,SC*k,SC*k))}
 }
 function screenToCell(sx,sy){const k=ui.bs*ui.z;let mx=(sx-ui.ox)/k;mx=((mx%HW)+HW)%HW;const my=(sy-ui.oy)/k;if(my<0||my>=HH)return-1;return Math.floor(my/SC)*W+Math.floor(mx/SC)}
-function centerOn(i){if(i==null||i<0)return;const k=ui.bs*ui.z;ui.ox=mapDim.w/2-(WD.cxA[i]+0.5)*SC*k;ui.oy=mapDim.h/2-(WD.cyA[i]+0.5)*SC*k;clampView();drawMap()}
+function centerOn(i){if(i==null||i<0)return;ui.camera=null;const k=ui.bs*ui.z;ui.ox=mapDim.w/2-(WD.cxA[i]+0.5)*SC*k;ui.oy=mapDim.h/2-(WD.cyA[i]+0.5)*SC*k;clampView();drawMap()}
+function focusPolity(id){
+  const o=S?.pols[id];if(!o?.alive)return;
+  let cells=WD.landIdx.filter(i=>S.pol[i]===id&&S.pop[i]>=100);if(!cells.length)cells=[o.capital];
+  const target=fitMapCells(Array.from(cells),WD,mapDim,ui.bs);if(!target)return;
+  ui.mode='political';$('map-view').value='political';$('nomad-tools').hidden=false;drawLegend();
+  openPage('pol',id);ui.ringCell=o.capital;ui.ringT=performance.now()+1800;
+  const cx=(mapDim.w/2-ui.ox)/(ui.bs*ui.z),cy=(mapDim.h/2-ui.oy)/(ui.bs*ui.z);
+  target.cx=cx+((target.cx-cx+HW*1.5)%HW-HW/2);
+  ui.camera={from:{cx,cy,z:ui.z},to:target,start:performance.now(),duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:650};
+  moveCamera(performance.now());ui.dirty=true;
+}
+function moveCamera(t){
+  const c=ui.camera;if(!c)return;const progress=c.duration?clamp((t-c.start)/c.duration,0,1):1,f=progress*progress*(3-2*progress);
+  ui.z=Math.exp(Math.log(c.from.z)+(Math.log(c.to.z)-Math.log(c.from.z))*f);
+  const x=c.from.cx+(c.to.cx-c.from.cx)*f,y=c.from.cy+(c.to.cy-c.from.cy)*f;
+  ui.ox=mapDim.w/2-x*ui.bs*ui.z;ui.oy=mapDim.h/2-y*ui.bs*ui.z;clampView();drawMap();if(progress>=1)ui.camera=null;
+}
 
 /* ---------- legend ---------- */
 function drawLegend(){
@@ -339,8 +356,12 @@ function updateTop(){
   const s=S,st=s.stats[s.stats.length-1];
   $('yr').textContent=s.year<=0?(1-s.year).toLocaleString('en-US'):String(s.year);$('era').textContent=s.year<=0?'BCE':'CE';
   if(!st)return;
-  $('topstats').innerHTML=`<span>Population <b>${fmtN(st.pop)}</b></span><span>States <b>${st.np}</b></span><span>Hordes <b>${st.nh||0}</b></span><span>Leading era <b>${ERAS[st.lead||0]}</b></span><span>Largest <b>${esc(st.big||'none')}</b>${st.bc?` (${st.bc})`:''}</span>`;
+  const largest=S.alive.map(id=>S.pols[id]).filter(o=>o.alive).reduce((a,b)=>!a||b.cells>a.cells?b:a,null);
+  const button=$('largest-focus'),focused=button&&document.activeElement===button;
+  const markup=`<span>Population <b>${fmtN(st.pop)}</b></span><span>States <b>${st.np}</b></span><span>Hordes <b>${st.nh||0}</b></span><span>Leading era <b>${ERAS[st.lead||0]}</b></span><span>Largest ${largest?`<button class="stat-focus" id="largest-focus" data-pol="${largest.id}" type="button" title="Show ${esc(largest.full)} on the map"><b>${esc(largest.full)}</b> (${largest.cells})</button>`:'<b>none</b>'}</span>`;
+  if(ui.topMarkup!==markup){$('topstats').innerHTML=markup;ui.topMarkup=markup;if(focused)$('largest-focus')?.focus({preventScroll:true})}
 }
+$('topstats').addEventListener('click',e=>{const b=e.target.closest('[data-pol]');if(b)focusPolity(+b.dataset.pol)});
 
 /* ---------- links and pages ---------- */
 function linkify(txt,refs){
@@ -393,6 +414,7 @@ function renderPage(){
       h+=`<dl class="kv" style="margin-top:10px"><dt>State</dt><dd>${p?lp(p):'none'}</dd><dt>People</dt><dd>${e?le(e):'none'}</dd><dt>Faith</dt><dd>${R?lr(R):e?'folk religion':'–'}</dd><dt>Population</dt><dd>${fmtN(s.pop[i])} / ${fmtN(s.K[i])}</dd><dt>Household provisions</dt><dd>${(12*s.food[i]/Math.max(1,s.pop[i])).toFixed(1)} months</dd><dt>Harvest shortfall</dt><dd>${Math.round((1-s.nutrition[i])*100)}%</dd><dt>Communal organization</dt><dd>${Math.round(s.organisation[i]*100)} / 100</dd>${s.settleLag[i]?`<dt>Settlement establishment</dt><dd>${s.settleLag[i]} harvests remaining</dd>`:''}${city?`<dt>City</dt><dd>${esc(city.name)}${p&&p.capital===i?' (capital)':''}, since ${fy(city.born)}</dd>`:''}</dl>`;
       h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
       h+=`<h3 class="sec">Ecology</h3><div class="bars">${w.sF[i]>0.08?bar('Soil fertility',s.fert[i],1,'t'):''}${w.forest0[i]>0.05?bar('Forest standing',s.forest[i]/w.forest0[i],1,'t'):''}${s.salt[i]>0.02?bar('Salt in the soil',s.salt[i],1):''}${w.mal[i]>0.05?bar('Fever burden',w.mal[i]*(1-s.adapt[i]),1):''}${w.oncho[i]>0.05?bar('River blindness',w.oncho[i],1):''}${bar('Disease pool',s.dp[i],1,'t')}${w.sF[i]>0.1?bar('Hemmed in (circumscription)',s.circE[i],1,'t'):''}${s.car[i]>0.1?bar('Caravan traffic',s.car[i],1,'t'):''}</div>`;
+      h+=`<h3 class="sec">City defenses and workshops</h3><dl class="kv"><dt>City defense strength</dt><dd>${Math.round(cityWallStrength(i)*100)} / 100</dd><dt>City wall condition</dt><dd>${Math.round(s.cityWallHealth[i]*100)}%</dd><dt>Engineering knowledge</dt><dd>${Math.round(s.engineeringKnowledge[i]*100)} / 100</dd><dt>Built granaries</dt><dd>${Math.round(s.granaries[i]*100)} / 100</dd><dt>Arms and tools available</dt><dd>${Math.round(armsAccess(i)*100)}%</dd><dt>Labor in civic projects</dt><dd>${Math.round(s.civicLabor[i]*100)}%</dd>${s.ruralPatron[i]&&s.pols[s.ruralPatron[i]]?`<dt>Rural protection agreement</dt><dd>${lp(s.pols[s.ruralPatron[i]])}, ${Math.round(s.ruralInfluence[i]*100)}% established</dd>`:''}</dl>`;
       h+=`<h3 class="sec">Known techniques</h3><div class="bars">${TECH.map((T,k)=>s.tk[k][i]>0.05?bar(T.n,s.tk[k][i],1,'t'):'').join('')||'<div class="note">Foraging only.</div>'}</div>`;
       h+=`<h3 class="sec">Transport and local power</h3><dl class="kv">${ANIMALS.map((a,k)=>`<dt>${a.n}</dt><dd>${fmtN(s.animals[k][i])}</dd>`).join('')}<dt>Available traction</dt><dd>${Math.round(s.traction[i]*100)} / 100</dd><dt>Pack transport</dt><dd>${Math.round(s.pack[i]*100)} / 100</dd><dt>Riding and remounts</dt><dd>${Math.round(s.mounts[i]*100)} / 100</dd><dt>Local civic identity</dt><dd>${Math.round(s.cityIdentity[i]*100)} / 100</dd><dt>Landholders' stake</dt><dd>${Math.round(s.eliteStake[i]*100)} / 100</dd><dt>Landholders' loyalty</dt><dd>${Math.round(s.eliteLoyalty[i]*100)} / 100</dd><dt>Coastal crop investment</dt><dd>${Math.round(s.orchards[i]*100)} / 100</dd><dt>Crop system</dt><dd>${cropSystem(i).kind<0?'No established crop package':CROPS[cropSystem(i).kind].n}</dd><dt>Local crop suitability</dt><dd>${Math.round(farmSuit(i)*100)} / 100</dd><dt>Terraces</dt><dd>${Math.round(s.terraces[i]*100)} / 100</dd><dt>Local waterworks</dt><dd>${Math.round(s.waterworks[i]*100)} / 100</dd><dt>Regional public stores</dt><dd>${fmtN(s.depot[i])} annual rations</dd><dt>Frontier insecurity</dt><dd>${Math.round(frontierRisk(i)*100)} / 100</dd><dt>Damage from raids</dt><dd>${Math.round(s.raidDamage[i]*100)} / 100</dd><dt>Wall condition</dt><dd>${Math.round(s.wallHealth[i]*100)} / 100</dd><dt>Open breaches</dt><dd>${Math.round(s.wallBreach[i]*100)} / 100</dd><dt>Resource recovery</dt><dd>${Math.round(s.rangeStock[i]*100)}%</dd><dt>City damage</dt><dd>${Math.round(s.cityDamage[i]*100)}%</dd><dt>Urban viability</dt><dd>${Math.round(citySubsistence(i)*100)}%</dd><dt>Adult male share</dt><dd>${Math.round(s.maleShare[i]*100)}%</dd></dl>`;
     }
@@ -411,6 +433,7 @@ function renderPage(){
       h+=`<h3 class="sec">Institutions and resources</h3><p class="note">${esc(o.gov)} government. Institutions need trained people, provisions and maintained connections.</p><div class="bars">${bar('Central authority',o.central,1,'t')}${bar('Administrative skill',o.bureau,1,'t')}${bar('Public trust',o.trust,1,'g')}${bar('Negotiated rights',o.rights,1,'t')}${bar('Succession continuity',o.succession,1,'t')}${bar('Service reliability',o.health,1,'g')}${bar('Accumulated strain',o.strain,1)}</div><dl class="kv"><dt>Public provisions</dt><dd>${(12*o.grain/Math.max(1,o.pop)).toFixed(1)} population-months</dd><dt>Annual collections</dt><dd>${fmtN(o.collected||0)} rations</dd><dt>Payroll funded</dt><dd>${Math.round(o.payroll*100)}%</dd><dt>Trained officials</dt><dd>${fmtN(o.staff)}</dd><dt>Available troops</dt><dd>${fmtN(o.army)}</dd><dt>Maintained ships</dt><dd>${Math.round(o.navy)}</dd><dt>Campaigns this year</dt><dd>${o.campaigns||0}</dd><dt>Durable reforms</dt><dd>${o.reforms.length}</dd></dl>`;
       h+=`<h3 class="sec">Reach and continuity</h3><dl class="kv"><dt>Message round trip</dt><dd>${o.responseDays.toFixed(1)} days, weighted average</dd><dt>Connected water routes</dt><dd>${Math.round(o.corridor*100)} / 100</dd><dt>Military preparedness</dt><dd>${Math.round(o.preparedness*100)} / 100</dd><dt>Crisis experience</dt><dd>${Math.round(o.crisisMemory*100)} / 100</dd><dt>Years without conflict or expansion</dt><dd>${o.peaceYears}</dd><dt>Unintegrated recent conquests</dt><dd>${Math.round(o.recentShare*100)}% of population</dd><dt>Conquest obligations</dt><dd>${o.conquestLoad.toFixed(2)}</dd><dt>Settlement agreements</dt><dd>${o.compacts.length}</dd><dt>Civic debt outstanding</dt><dd>${fmtN(s.creditLoans.filter(l=>!l.done&&l.borrower===o.id).reduce((n,l)=>n+l.principal,0))} rations</dd><dt>Urban viability</dt><dd>${Math.round((o.viability||citySubsistence(c))*100)}%</dd><dt>Regional provisions</dt><dd>${fmtN(o.localStores)}</dd><dt>Conquest law</dt><dd>${esc(o.warLaw)}</dd><dt>Lethal collective reprisals</dt><dd>${o.collectiveReprisals?'Permitted':'Prohibited'}</dd><dt>Protection agreements</dt><dd>${o.protectionPacts.filter(p=>!p.broken).length}</dd><dt>Coalition momentum</dt><dd>${Math.round(o.momentum*100)} / 100</dd>${o.kind==='horde'?`<dt>Member clans</dt><dd>${o.clanTerms.size}</dd><dt>Raiding experience</dt><dd>${Math.round(o.raidSkill*100)} / 100</dd>`:''}</dl>`;
 
+      h+=`<h3 class="sec">Civic development</h3><dl class="kv"><dt>Cities funding invention</dt><dd>${o.researchCities||0}</dd><dt>Current specialist funding</dt><dd>${fmtN(o.researchFunded||0)} rations</dd><dt>Local charter agreements</dt><dd>${(o.civicBargains||[]).filter(b=>s.pol[b.cell]===o.id).length}</dd>${o.civicUnion?`<dt>Negotiated integration</dt><dd>${Math.round(o.civicUnion.progress*100)}%, ${o.civicUnion.years} supported years</dd>`:''}${o.kind==='horde'?`<dt>Generational coalition strain</dt><dd>${Math.round(o.coalitionFatigue*100)}%</dd><dt>Breakup risk per five years</dt><dd>${((o.breakupRisk||0)*100).toFixed(1)}%</dd>`:''}</dl>`;
       h+=`<h3 class="sec">Political supporters</h3><div class="bars">${Object.entries(o.groups).map(([name,g])=>bar(cap(name)+' support',g.loyalty,1,'t')).join('')}</div>`;
       h+=`<h3 class="sec">Relations</h3><dl class="kv"><dt>Allies</dt><dd>${allies.length?allies.map(lp).join(', '):'none'}</dd><dt>At war with</dt><dd>${en.length?en.map(lp).join(', '):'no one'}</dd>${wars.length?`<dt>Wars</dt><dd>${wars.map(lw).join(', ')}</dd>`:''}${o.over&&s.pols[o.over]?`<dt>Pays tribute to</dt><dd>${lp(s.pols[o.over])}</dd>`:''}${tribs.length?`<dt>Tributaries</dt><dd>${tribs.map(lp).join(', ')}</dd>`:''}</dl>`;
       if(o.why){const W2=o.why;
@@ -674,7 +697,7 @@ $('map-view').addEventListener('change',e=>{ui.mode=e.target.value;$('nomad-tool
 $('nomad-filter').addEventListener('change',e=>{ui.nomads=e.target.value;drawLegend();ui.dirty=true});
 
 document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,button'))return;if(e.code==='Space'){e.preventDefault();setRunning(!ui.running)}});
-installMapGestures(mapCv,ui,{clamp:clampView,draw:drawMap,
+installMapGestures(mapCv,ui,{clamp:clampView,draw:drawMap,interact:()=>{ui.camera=null},
   hover:({x:sx,y:sy})=>{
   const i=screenToCell(sx,sy),tip=$('tip');
   if(i<0||!S||!WD.land[i]){tip.hidden=true;return}
@@ -696,7 +719,7 @@ function busy(on,txt){const b=$('busy');b.hidden=!on;if(txt)b.textContent=txt}
 function startHistory(){
   P.hearthMode=$('hearthh').checked?'historical':'random';P.shuffleNames=$('shufn').checked;
   try{history.replaceState(null,'','#seed-'+($('hseed').value||'1').replace(/[^A-Za-z0-9]/g,''))}catch(e){}
-  newHistory($('hseed').value||'1');
+  newHistory($('hseed').value||'1');ui.camera=null;
   ui.page=null;ui.stack=[];ui.lastChronKey='';ui.lastSpotObj=null;$('toast').hidden=true;ui.pausedAtEnd=false;ui.dirty=true;ui.ready=true;$('play').disabled=false;
   showPane(ui.pane);updateTop();drawChart();drawLegend();
   const h0=S.hearths.find(h=>h.kind==='farm');if(h0)centerOn(h0.cell);
@@ -745,6 +768,7 @@ $('btn-import').addEventListener('click',async()=>{
 let lastT=performance.now(),accY=0;
 function frame(t){
   const dt=Math.min(0.1,(t-lastT)/1000);lastT=t;
+  if(ui.camera)moveCamera(t);
   if(ui.running&&S){
     const sp=SPEEDS[ui.speed][0],t0=performance.now();
     // run the year in slices, keeping each frame short so the map and panels stay responsive

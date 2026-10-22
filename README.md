@@ -1,8 +1,18 @@
-# Asabiya — history engine (v0.9)
+# Asabiya — history engine (v0.10)
 
 A browser simulation of peoples, states, faiths and technologies on a world map, from 9000 BCE onward. It blends cliodynamics (Turchin's asabiya and structural-demographic theory), World3-style carrying capacity, and ecological history. The default map is the real Earth.
 
-Version 0.9 adds connected urban growth, food-denominated civic loans and
+Version 0.10 adds gradual rural protection agreements and incorporation,
+negotiated civic unions, separate city defenses and built granaries, practical
+engineering, sieges and provisioned equipment. Supported secondary cities can
+fund invention; urban concentration helps specialists, subject to food,
+materials, contact and accumulated practice. Click **Largest** to zoom to and
+inspect the current largest polity. Confederations accumulate stronger
+generational strain and can break apart into autonomous clans, urban settlers
+and households joining other coalitions. Sustained patronage and accepted
+institutions can prolong survival; there is no hard hundred-year expiry.
+
+Version 0.9 added connected urban growth, food-denominated civic loans and
 default, funded overseas civic foundations, defensive frontier confederations,
 regional peoples, seasonal camp movements, scattered migrant settlements and
 city destruction with population flight. Epidemics have separate disease-family
@@ -76,6 +86,7 @@ Rebuild them after source edits when using that mode.
 | `connections.js` | Defensive confederations, funded maritime expeditions, daughter cities and trading enclaves |
 | `peoples.js` | Regional identities, renewable seasonal grounds, camp movement, migration settlements and city destruction |
 | `urbanism.js` | Food-supported urban networks, civic credit, default and negotiated debt protection |
+| `civic.js` | Rural agreements, civic unions, city defenses, granaries, labor, equipment, sieges and confederation dispersal |
 | `map-input.js` | Shared touch, pen and mouse map gestures |
 | `ui.js` | Map rendering, encyclopedia pages, chronicle, charts, checks, setup |
 | `shell.html` | Page markup and CSS |
@@ -91,6 +102,7 @@ Edit files in `src/`, then run `python src/build.py` from the project root to re
 - `node frontiers.test.js`: crop access, highland and plateau farming, technical bottlenecks, local supply, wall upkeep and breaches, migration routing and cascades, actual foreign contingents, tribute, coercion and display filters.
 - `node interactions.test.js`: disease immunity and travel, funded response, defensive confederations, overseas founding, camp movement, migrant scatter, city destruction/refugees, credit/default and urban support.
 - `node map-input.test.js`: pinch anchoring, pan transitions, cancellation, tap selection, double tap and zoom limits.
+- `node civic.test.js`: funded city defenses and storage, labor costs, staged incorporation, negotiated union, secondary-city invention, sieges and conserved confederation scattering.
 - `node society.test.js`: conservation, settlement, warfare, refugees, inheritance, collapse, deterministic replay and a 220-year political scenario.
 - `node generated.test.js`: a 250-year developed-world scenario on generated terrain, including coasts and river routes.
 - `node verify.js 23 1500`: an Earth history with periodic finite-value, nonnegative-stock and food-ledger assertions.
