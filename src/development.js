@@ -151,9 +151,12 @@ function createSettlementAgreement(host,i,j,requested,mode='pastoral',parent=nul
 function requestClanSettlement(o,origin=o.capital){
   const s=S;if(s.year-o.lastPetition<15||s.pop[origin]<500)return false;o.lastPetition=s.year;s.societyCounters.settlementPetitions++;
   const candidates=[];ring(origin,3,j=>{if(!WD.land[j])return;const host=s.pol[j]?s.pols[s.pol[j]]:s.ruralPatron[j]?s.pols[s.ruralPatron[j]]:null;if(!host||host.kind!=='state'||host.enemies.has(o.id))return;
-    const mode=s.urban[j]>500&&s.housing[j]-s.urban[j]>300&&s.herd[origin]<0.4?'urban':WD.sH[j]*s.rangeStock[j]>s.farm[j]*farmSuit(j)?'pastoral':'farm';
-    const capacity=settlementCapacity(host,j,mode);if(capacity<100||settlementRoute(origin,j,host)<0)return;
-    candidates.push({host,j,mode,capacity,score:host.health+host.rights+host.trust+Math.min(1,capacity/3000)-angDist(origin,j)*10});
+    if(settlementRoute(origin,j,host)<0)return;
+    for(const mode of ['urban','pastoral','farm']){if(mode==='urban'&&s.urban[j]<500)continue;
+      const capacity=settlementCapacity(host,j,mode);if(capacity<100)continue;
+      const livelihood=mode==='urban'?0.4+s.organisation[j]*0.3:mode==='pastoral'?(0.3+0.7*s.herd[origin])*WD.sH[j]*s.rangeStock[j]:(0.3+0.7*s.farm[origin])*farmSuit(j);
+      candidates.push({host,j,mode,capacity,score:host.health+host.rights+host.trust+Math.min(1,capacity/3000)*0.6+livelihood*0.4-angDist(origin,j)*10});
+    }
   });candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates)if(createSettlementAgreement(c.host,origin,c.j,Math.min(s.pop[origin]*0.15,c.capacity),c.mode))return true;
   return false;
