@@ -3,7 +3,7 @@
 const W=400,H=200,N=W*H,SC=4,HW=W*SC,HH=H*SC,AGW=40,AGH=20;
 const PDEF=[
 ['World','landFrac','Land share',0.2,0.5,0.01,0.33,'Share of the surface above sea level (generated worlds).',1],
-['World','bands','Founding peoples',3,40,1,16,'Unrelated language families at the start (generated worlds).',1],
+['World','bands','Founding peoples',3,24,1,10,'Unrelated language families at the start (generated worlds).',1],
 ['World','hearths','Farming hearths',1,8,1,4,'Places where crops are first domesticated (random hearths).',1],
 ['World','startYear','Start year',-12000,-4000,500,-9000,'Year the simulation begins.',1],
 ['Climate','climVar','Weather variability',0,2,0.05,1,'Size of year-to-year rainfall swings.'],
@@ -418,7 +418,6 @@ function genWorld(o){
     w.medCells=Int32Array.from(med);w.chinaCells=Int32Array.from(china);
   }
   w.grade=gradeClimate(w,numericClimate?T:rawT,numericClimate?Pr:rawP,numericClimate?amp:rawA);
-  if(typeof prepareAgroEcology==='function')prepareAgroEcology(w);
   return w;
 }
 

@@ -85,7 +85,7 @@ function animalPass(){
     let total=0;for(const f of s.animals)total+=f[i];a.start+=total;if(total<=0)continue;
     const scrub=w.desert[i]?w.area[i]*0.12*(0.2+Math.min(1,w.Pr[i]/250))*s.animals[4][i]/Math.max(1,total):0;
     const capacity=Math.max(1,s.pop[i]*(0.1+0.3*s.farm[i])+w.area[i]*w.sH[i]*0.5*(1-0.7*s.forest[i])+scrub);
-    const crowd=Math.max(0,total/(capacity*pastureCondition(i))-1),shock=Math.max(0,0.65-pastureCondition(i));
+    const crowd=Math.max(0,total/capacity-1),shock=Math.max(0,0.55-s.wm[i]);
     for(let k=0;k<ANIMALS.length;k++){const n=s.animals[k][i];if(n<=0)continue;
       const suit=animalSuitability(k,i),birth=n*ANIMALS[k].rate*5*suit*s.animalFeed[i]*(0.3+0.7*s.herd[i])*Math.max(0,1-total/capacity);
       const loss=Math.min(n+birth,n*5*(0.012+0.075*(1-suit)+0.06*(1-s.animalFeed[i])+0.08*shock+0.04*Math.min(3,crowd)));
@@ -167,7 +167,7 @@ function routeDistances(){
 function settlementAppeal(i,j,o){
   const s=S,w=WD,market=w.coast[j]?s.sail[i]*(0.25+0.75*s.node[i])*(0.3+w.coastalCrop[j]):0;
   const yieldValue=clamp(s.K[j]/Math.max(1000,s.pop[j]+2000),0,3),access=o?transportAccess(i,o):1;
-  return clamp((0.35+yieldValue*0.25+market)*access*(1-0.8*frontierRisk(j))/(1+w.rough[j]+s.forest[j]*0.5),0.02,2.5);
+  return clamp((0.35+yieldValue*0.25+market)*access/(1+w.rough[j]+s.forest[j]*0.5),0.05,2.5);
 }
 function initPoliticalDynamics(o,from){
   o.preparedness=from?from.preparedness*0.85:0.3;o.crisisMemory=from?from.crisisMemory*0.8:0.25;
@@ -175,8 +175,6 @@ function initPoliticalDynamics(o,from){
   o.conquestLoad=0;o.recentShare=0;o.responseDays=0;o.supplyBurden=0;o.corridor=0;o.borderLoad=0;o.cityCount=0;
   o.lastConflict=S.year;o.lastBorderChange=S.year;o.peaceYears=0;o.trainingPaid=0;o.auxiliaries=0;
   o.compacts=[];o.raidTargets=new Map();o.clanTerms=new Map();o.clanPops=new Map();o.lastClanExit=-1e9;
-  initFrontierPolity(o,from);
-  initDevelopmentPolity(o,from);
   if(S.urban[o.capital]>2000&&!S.cityHome[o.capital])S.cityHome[o.capital]=o.id;
 }
 function conquestRecorded(o,j,previous){
@@ -189,7 +187,7 @@ function conquestRecorded(o,j,previous){
 }
 function crisisEncounter(o,target,won,severity){
   if(!o)return;const s=S,survival=clamp(1-severity,0,1);
-  o.lastConflict=s.year;s.martialPractice[o.capital]+=Math.max(0.1,severity*20);o.crisisMemory=clamp(o.crisisMemory+0.035*survival,0,1);o.frontierIntel=clamp(o.frontierIntel+0.04*survival,0,1);
+  o.lastConflict=s.year;o.crisisMemory=clamp(o.crisisMemory+0.035*survival,0,1);o.frontierIntel=clamp(o.frontierIntel+0.04*survival,0,1);
   if(o.kind==='horde')o.raidSkill=clamp(o.raidSkill+(won?0.025:0.012)*survival-severity*0.15,0,1);
   if(target){let t=o.raidTargets.get(target.id);if(!t){t={knowledge:0,failures:0,last:s.year};o.raidTargets.set(target.id,t)}
     t.knowledge=clamp(t.knowledge+0.07*survival,0,1);t.failures=won?Math.max(0,t.failures-1):Math.min(8,t.failures+1);t.last=s.year;
@@ -221,7 +219,7 @@ function successionExposure(o,oldRuler){
   let risk=unresolved*(1-0.75*o.succession)*(1-0.45*o.bureau)*(1-0.35*o.trust);
   if(o.kind==='horde'){
     let n=0,loyal=0;for(const t of o.clanTerms.values()){loyal+=t.loyalty;n++}
-    risk+=0.3*(1-(n?loyal/n:o.coalition))*(1-0.7*o.succession)+0.24*o.coalitionFatigue*(1-0.8*o.patronage);
+    risk+=0.3*(1-(n?loyal/n:o.coalition))*(1-0.7*o.succession);
   }
   return clamp(risk,0,0.85);
 }
@@ -262,35 +260,28 @@ function switchEliteAllegiance(attacker,j){
 function nomadOpportunity(i){
   const s=S,w=WD;let prize=0,threat=0;
   ring(i,3,j=>{const id=s.pol[j],o=id?s.pols[id]:null;if(o&&o.kind==='state'){prize=Math.max(prize,clamp(o.pop/300000,0,1));threat=Math.max(threat,o.enemies.size?0.5:0.2)}});
-  return clamp(0.15+prize*0.6+threat+(s.frontierAlarm?s.frontierAlarm[i]*0.7:0)+Math.max(0,s.anom[i])*0.25+s.raiding[i]*0.35,0.1,1.5);
+  return clamp(0.15+prize*0.6+threat+Math.max(0,s.anom[i])*0.25+s.raiding[i]*0.35,0.1,1.5);
 }
 function settledStateHabitat(i){
-  const s=S,w=WD;return !(w.rangeExposure[i]>0.4&&frontierRisk(i)>0.18)||s.urban[i]>10000&&s.farm[i]*farmSuit(i)>0.12&&(w.rv[i]>0.35||s.node[i]>0.7)&&frontierRisk(i)<0.5;
+  const s=S,w=WD;return !w.nomad[i]||s.urban[i]>10000&&s.farm[i]*w.sF[i]>0.18&&(w.rv[i]>0.35||s.node[i]>0.7);
 }
 function confederationStep(o){
   const s=S;if(s.year%5!==0)return;
   let total=0;for(const p of o.clanPops.values())total+=p;
-  const cells=s.realmCells.get(o.id)||polCells(o.id);let reward=0;
-  for(const i of cells)if(s.pol[i]===o.id){const paid=budgetAt(o,i,Math.min(publicAvailable(o,i)*0.12,s.pop[i]*0.012));s.food[i]+=paid;reward+=paid}
-  const fair=clamp(reward/Math.max(1,total*0.012),0,1);
-  const generations=clamp((s.year-o.born-25)/60,0,2),bargains=(1-o.succession*0.65)*(1-o.trust*0.25);
-  const fatigue=clamp(generations*bargains*(1-o.patronage*0.85)*(1-0.3*o.momentum)+o.strain*0.3,0,1);
-  o.coalitionFatigue=clamp(o.coalitionFatigue+0.25*(fatigue-o.coalitionFatigue),0,1);
+  const reward=budgetPay(o,Math.min(o.grain*0.12,total*0.012)),fair=clamp(reward/Math.max(1,total*0.012),0,1);
+  const cells=s.realmCells.get(o.id)||[],pop=cells.reduce((n,i)=>n+(s.pol[i]===o.id?s.pop[i]:0),0);
+  for(const i of cells)if(s.pol[i]===o.id)s.food[i]+=reward*s.pop[i]/Math.max(1,pop);
+  if(pop<=0){s.food[o.capital]+=reward;return}
   let external=0;for(const [id] of o.nb){const p=s.pols[id];if(p&&p.alive&&p.kind==='state')external=Math.max(external,clamp(power(p)/Math.max(1,power(o)),0,1))}
   let departing=-1,worst=1;
   for(const [clan,p] of o.clanPops){
     let t=o.clanTerms.get(clan);if(!t){t={loyalty:0.6,joined:s.year};o.clanTerms.set(clan,t)}
-    const target=clamp(0.1+0.22*o.ruler.char+0.24*fair+0.15*external+0.16*o.succession+0.15*o.trust+0.14*(o.momentum||0)+0.18*(o.sharedThreat||0)-0.35*o.hunger-0.18*o.strain-0.35*o.coalitionFatigue+o.patronage*0.12,0,1);
+    const target=clamp(0.1+0.22*o.ruler.char+0.24*fair+0.15*external+0.16*o.succession+0.15*o.trust-0.35*o.hunger-0.18*o.strain,0,1);
     t.loyalty=clamp(t.loyalty+0.12*(target-t.loyalty)-0.06*o.shock,0,1);
     if(t.loyalty<worst&&p>2000){worst=t.loyalty;departing=clan}
   }
   for(const clan of o.clanTerms.keys())if(!o.clanPops.has(clan))o.clanTerms.delete(clan);
-  let loyal=0,weight=0;for(const [clan,t] of o.clanTerms){const n=o.clanPops.get(clan)||1;loyal+=n*t.loyalty;weight+=n}
-  o.clanCohesion=clamp((weight?loyal/weight:0.3)*(1-o.coalitionFatigue*0.35),0,1);
-  o.coalition=clamp(o.coalition*0.45+o.clanCohesion*0.55,0,1);
   if(departing>=0&&worst<0.32&&o.cells>=4&&s.year-o.lastClanExit>12&&s.r()<0.25)releaseClan(o,departing);
-  o.breakupRisk=confederationBreakupRisk(o,fair);
-  if(s.r()<o.breakupRisk)dissolveConfederation(o);
 }
 function releaseClan(o,clan){
   const s=S,cells=(s.realmCells.get(o.id)||polCells(o.id)).filter(i=>s.pol[i]===o.id&&s.clan[i]===clan&&i!==o.capital);if(!cells.length)return false;
@@ -306,9 +297,19 @@ function raidAttraction(o,i,j){
   return value*(1+(known?known.knowledge*0.3:0))/(1+borderBarrier(i,j)+resistance*0.6+(known?known.failures*0.5:0));
 }
 function chooseMigrationVector(o){
-  const path=migrationRoute(o,o.capital,Math.max(100,o.pop*0.045));o.plannedRoute=path;
-  if(path.length){const first=path[0];return [dxWrap(o.capital,first),WD.cyA[first]-WD.cyA[o.capital]]}
-  const angle=S.r()*Math.PI*2;return [Math.cos(angle),Math.sin(angle)];
+  const s=S,w=WD,start=o.capital,seen=new Set([start]),queue=[[start,0]];let at=0,best=-1,score=0;
+  // Explore pasture corridors, not a global list of omniscient target capitals.
+  while(at<queue.length&&at<700){const [i,distance]=queue[at++];if(distance>=90)continue;
+    for(let k=0;k<4;k++){const j=w.nb[i*4+k];if(j<0||!w.land[j]||seen.has(j))continue;seen.add(j);
+      const target=s.pol[j]?s.pols[s.pol[j]]:null;
+      if(target&&target!==o&&target.kind==='state'){
+        const v=raidAttraction(o,i,j)*Math.log2(2+s.pop[j]/5000)/(1+distance*0.025);if(v>score){score=v;best=j}
+      }
+      if(w.nomad[j]||w.sH[j]>0.35||w.desert[j]&&s.pack[start]>0.3)queue.push([j,distance+1]);
+    }
+  }
+  if(best>=0)return [dxWrap(start,best),w.cyA[best]-w.cyA[start]];
+  const angle=s.r()*Math.PI*2;return [Math.cos(angle),Math.sin(angle)];
 }
 function admissionChance(M,j,o){
   const s=S,room=Math.max(0,s.K[j]*0.95-s.pop[j]),need=M.pop*0.25;
@@ -323,7 +324,6 @@ function admitMigration(M,j,o){
 function compactStep(o){
   const s=S;o.auxiliaries=0;
   for(const t of o.compacts){
-    if(t.durable){settlementAgreementStep(o,t);continue}
     if(t.done)continue;if(s.pol[t.cell]!==o.id){t.done=true;continue}
     const n=Math.min(t.people,s.pop[t.cell]*0.6),due=t.promised,paid=budgetPay(o,due);s.food[t.cell]+=paid;
     const fulfillment=due>0?paid/due:1;t.loyalty=clamp(t.loyalty+0.04*(fulfillment-t.loyalty)-0.02*(1-s.nutrition[t.cell]),0,1);
@@ -350,7 +350,7 @@ function leagueDiplomacy(o,p){
   }
 }
 function scaleMigration(M,factor){M.pop*=factor;M.young*=factor;for(const g of M.groups)g.pop*=factor}
-function turnMigration(M){M.route=[];const angle=(S.r()<0.5?-1:1)*(0.8+S.r()*0.8),x=M.dx,y=M.dy;M.dx=x*Math.cos(angle)-y*Math.sin(angle);M.dy=x*Math.sin(angle)+y*Math.cos(angle)}
+function turnMigration(M){const angle=(S.r()<0.5?-1:1)*(0.8+S.r()*0.8),x=M.dx,y=M.dy;M.dx=x*Math.cos(angle)-y*Math.sin(angle);M.dy=x*Math.sin(angle)+y*Math.cos(angle)}
 function recruitMigration(M,j){
   const s=S,id=s.pol[j];if(M.kind==='people'||M.steps%5||s.pop[j]<2000||id&&id!==M.pol)return;
   if(s.r()>0.12+0.18*M.experience)return;
