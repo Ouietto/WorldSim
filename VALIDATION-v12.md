@@ -111,6 +111,18 @@ must match the final loaded modules, independently of the initial snapshot.
 Replay the final model with `node src/consolidation-report.js 23 1` and no
 snapshot override. The first-pass table above is not its outcome.
 
+The revised loaded-module digest on this Windows checkout is
+`8ec260e80ec3bde7f1773808f6d2d3eefdc79f6ceb51afacc5a51c404a8241f3`.
+With line endings normalized to LF, the model digest is
+`65ce9011392c2746dd753753f09bf2ad6b7efeeb44a42fe75053b92e68d076f2`,
+matching the model embedded in the standalone pages. Source is committed in
+`0a2713956bbc9d88a81c2f230dc150ed6dce8fa8`.
+
+GitHub Actions run `39748833563` passes all ten suites and deploys this code.
+Both public entry points match the local build: 1,991,234 bytes, SHA-256
+`af9c3504b51d343a4e146e14ffdec48eac5ede78039931c927e9922c967ad769`.
+The live browser also loads v0.12 without errors or warnings.
+
 The reporter consumes no extra random draws. It checks food accounting and
 finite, nonnegative material and institutional fields every 50 years, records
 regional audits and prints snapshots every 500 years plus the endpoint. Each
@@ -133,3 +145,32 @@ geographic sets, including Nile Egypt, North China and wider China.
 Two seeds can expose regressions and demonstrate possibilities. They cannot
 establish a reliable frequency of unification, validate historical dates or
 justify forcing China or Egypt to unify by a programmed deadline.
+
+## Remaining military constraint
+
+An exploratory controlled probe gives an attacker 20,000 standing soldiers,
+80,000 residents, high preparedness, engineering knowledge of 0.8 and ample
+public provisions against a 20,000-resident target with 1,000 soldiers. Twelve
+random streams each receive up to ten campaign opportunities in three defense
+conditions. Forces shrink through actual casualties; neither side receives
+replacement troops during a campaign. This isolates military rules rather than
+running ten complete years of the social and agricultural model. Its exceptional
+initial military stocks are deliberate test inputs, not claimed historical norms.
+
+| Target defenses | Captures in 12 campaigns |
+|---|---:|
+| No frontier or city wall | 12 |
+| Maintained frontier wall | 1 |
+| Maintained city wall | 2 |
+
+In the city-wall condition, 67 of 69 siege checks fail to complete capture.
+The existing frontier-wall gate requires a successful scout breach before a
+field engagement, including for settled armies. Existing city siege progress
+requires repeated successful field attacks and decays after interrupted support.
+These rules remain strong candidates for the next consolidation bottleneck;
+this small probe does not establish their full effect on regional history.
+The separately proposed siege redesign has not been implemented here.
+
+Reproduce with `node validation/campaign-probe.js`; observed output is in
+`validation/campaign-probe-v12.json`. This probe loads the same current modules
+and uses the focused test fixture, without modifying the history replay.
