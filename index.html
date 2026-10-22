@@ -3199,6 +3199,7 @@ function coerciveOccupation(i,o){
   }
 }
 function shatterGovernment(o,cell,reason){
+  if(o.kind==='horde'){dissolveConfederation(o,reason||'The loss of its common command scatters the coalition.');return}
   const s=S;if(!o.alive)return;endForeignServiceOf(o);
   const cells=polCells(o.id);for(const i of cells){s.pol[i]=0;s.autonomy[i]=0.9;s.integ[i]*=0.4;s.food[i]+=s.depot[i];s.depot[i]=0}
   s.food[o.capital]+=o.grain;o.grain=0;o.army=o.staff=o.navy=0;o.alive=false;o.died=s.year;o.succ=[];
