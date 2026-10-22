@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),assert=require('assert');
-const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','civic.js','development.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','civic.js','development.js','consolidation.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
 eval(core+`
 WD=genWorld({seed:'frontier-atlas',landFrac:P.landFrac});newHistory('generated-scenario');S.year=0;S.animalOrigins=[];S.hearths.forEach(h=>h.done=true);
 // A synthetic developed-world scenario exercises coasts, drainage, winter

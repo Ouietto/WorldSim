@@ -408,11 +408,12 @@ function migrationNomadEncounter(M,j){
 // Contracts earmark existing troops; the employer never gets a second copy of
 // the same army. Temporary service keeps dependents in the recruitment base.
 function createMilitaryContract(state,horde,troops,years=8){
-  const s=S;if((state.kind!=='state'&&!(state.kind==='horde'&&horde.over===state.id&&horde.submission))||horde.kind!=='horde'||state.enemies.has(horde.id)||!state.alive||!horde.alive)return null;
+  const s=S,settled=horde.kind==='state'&&state.kind==='state'&&(horde.over===state.id||state.allies.includes(horde.id))&&horde.trust>0.4;
+  if((state.kind!=='state'&&!(state.kind==='horde'&&horde.over===state.id&&horde.submission))||horde.kind!=='horde'&&!settled||state.enemies.has(horde.id)||!state.alive||!horde.alive)return null;
   if(s.militaryContracts.some(t=>!t.done&&(t.state===state.id||t.horde===horde.id)))return null;
   const n=Math.min(troops,Math.max(0,horde.army-horde.loanedTroops)*0.3),due=n*0.8;if(n<100||state.grain<due*2)return null;
   const travel=Math.max(1,Math.ceil(angDist(state.capital,horde.capital)/0.15));
-  const t={state:state.id,horde:horde.id,home:horde.capital,troops:n,free:0,pay:due,since:s.year,arrives:s.year+travel,end:s.year+travel+years,failures:0,served:0,tech:new Float32Array(TECH.length),equipment:0,done:false,lastPaid:s.year};
+  const t={state:state.id,horde:horde.id,kind:settled?'settled':'nomad',home:horde.capital,troops:n,free:0,pay:due,since:s.year,arrives:s.year+travel,end:s.year+travel+years,failures:0,served:0,tech:new Float32Array(TECH.length),equipment:0,done:false,lastPaid:s.year};
   tributeShipment(state,horde,due);s.militaryContracts.push(t);horde.loanedTroops+=n;
   horde.armyFree=Math.max(0,horde.armyFree-n*0.55);horde.defFree=Math.max(0,horde.defFree-n*0.45);
   if(!state.allies.includes(horde.id))state.allies.push(horde.id);if(!horde.allies.includes(state.id))horde.allies.push(state.id);
@@ -442,7 +443,7 @@ function endForeignServiceOf(o){for(const t of S.militaryContracts)if(!t.done&&(
 function militaryContractsYear(){
   const s=S;for(const id of s.alive){const o=s.pols[id];o.foreignFree=0;o.loanedTroops=0;o.campaignAuxShare=0}
   for(const t of s.militaryContracts){if(t.done)continue;const a=s.pols[t.state],h=s.pols[t.horde];
-    if(!a||!a.alive||!h||!h.alive||h.kind!=='horde'||a.enemies.has(h.id)||s.year>=t.end||t.failures>=2){returnVeterans(t);continue}
+    if(!a||!a.alive||!h||!h.alive||h.kind!=='horde'&&!(t.kind==='settled'&&(h.over===a.id||a.allies.includes(h.id)))||a.enemies.has(h.id)||s.year>=t.end||t.failures>=2){returnVeterans(t);continue}
     t.troops=Math.min(t.troops,h.army*0.5);
     if(t.lastPaid<s.year){const paid=tributeShipment(a,h,t.pay);t.lastPaid=s.year;if(paid<t.pay*0.8)t.failures++;else t.failures=Math.max(0,t.failures-1)}
     h.loanedTroops+=t.troops;t.free=s.year>=t.arrives&&t.failures===0?t.troops*0.55:0;a.foreignFree+=t.free;

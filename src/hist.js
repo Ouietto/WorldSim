@@ -396,7 +396,7 @@ const FLOOR={chief:5e3,king:6e4,emp:6e5};
 function tierOf(o){const n=o.cells-(o.wasteN||0),p=o.pop;
   if(o.kind==='horde')return n<6||p<2e4?'Clans':n<25||p<2e5?'Horde':'Confederation';
   const nom=o.nomF>0.5;
-  if(n<=4&&(o.cityCount>0||S.urban[o.capital]>2500))return 'City-state';
+  if(n<=4&&(o.cityCount>0||S.urban[o.capital]>2500||o.origin?.type==='local civic'&&S.urban[o.capital]>=500))return 'City-state';
   // a narrow, crowded river kingdom is still a kingdom: size in people counts, not only in land
   if(p<FLOOR.king*P.floor||(n<4&&p<4*FLOOR.king*P.floor))return'Chiefdom';
   if(n<20||(!nom&&(o.bureau||0)<0.2)||p<FLOOR.emp*P.floor)return nom?'Khanate':'Kingdom';
@@ -514,7 +514,8 @@ function raid(o,i,j){territorialRaid(o,i,j)}
 function decisive(o,d,war){
   const s=S,r=s.r;const kin=s.eths[d.core]&&s.eths[o.core]&&s.eths[d.core].fam===s.eths[o.core].fam;
   const idn=s.uni[d.capital]>0.3&&hasLegacy(o,d.capital);
-  const annex=o.bureau>0.2&&o.health>0.6&&o.staff>200&&d.cells<o.cells*0.7&&r()<0.35+0.3*(idn?1:0);
+  const remaining=polCells(d.id),administration=remaining.reduce((n,i)=>n+Math.max(8,s.pop[i]*0.0006),0),occupation=remaining.reduce((n,i)=>n+occupationNeed(o,o.capital,i),0);
+  const annex=o.bureau>0.2&&o.health>0.6&&o.staff>200&&o.staff>o.pop*0.001+administration&&o.occupation>=occupation&&d.cells<o.cells*0.7&&r()<0.35+0.3*(idn?1:0);
   const n=d.cells,old=d.full;
   if(annex){inheritConquest(o,d);for(const i of polCells(d.id)){conquestRecorded(o,i,d.id);s.pol[i]=o.id;s.integ[i]=Math.min(s.integ[i],kin?0.4:0.12);s.dist[i]=Math.min(65534,(s.dist[d.capital]<65535?s.dist[d.capital]:4)+s.dist[i])}
     o.conq+=n;o.ruler.conq+=n;d.lastBy=o.id;
@@ -871,11 +872,12 @@ function* politicsG(){
     }else{
       sv+=fr?asR*0.6*sv*(1-sv):(0.3-sv)*0.02;s.s[i]=clamp(sv,0.02,1);
       if(pi>=1){const dens=pi/w.area[i],agr=s.farm[i]*farmSuit(i),past=s.herd[i]*Math.max(w.sH[i],w.desert[i]*s.camel[i]*0.6);
-        if((agr>0.25||(s.node[i]>0.65&&s.urban[i]>4000))&&dens>3.5&&settledStateHabitat(i)&&s.organisation[i]>0.32&&s.food[i]>pi*0.08&&localPop(i)>=FLOOR.chief*3*P.floor/(0.2+0.8*transportSupport(i))){
+        const localTown=localFoundationReady(i);
+        if(localTown||(agr>0.25||(s.node[i]>0.65&&s.urban[i]>4000))&&dens>3.5&&settledStateHabitat(i)&&s.organisation[i]>0.32&&s.food[i]>pi*0.08&&localPop(i)>=FLOOR.chief*3*P.floor/(0.2+0.8*transportSupport(i))){
           if(r()<P.formRate*0.0012*(0.2+1.6*P.circ*s.circE[i])*(0.4+s.s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s.metal[i]+s.admin[i]+s.horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s.circE[i]-0.5))*(0.4+0.6*s.organisation[i])*(0.45+0.55*cerealEff(i))){
-            const id=newPolity(i,null);s.organisation[i]=Math.max(s.organisation[i],0.4);
+            const id=newPolity(i,null);s.organisation[i]=Math.max(s.organisation[i],0.4);if(localTown){s.pols[id].origin.type='local civic';s.societyCounters.localTownFoundations++}
             for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&!pol[j]&&s.eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s.dist[j]=2}}}}
-        else if(past>0.3&&dens>0.5&&(w.nomad[i]||w.desert[i])&&s.organisation[i]>0.15){
+        else if(past>0.3&&dens>0.5&&(w.nomad[i]||w.desert[i])&&s.organisation[i]>0.15&&pastoralFormationReady(i)){
           if(r()<P.nomad*0.0006*(0.4+s.s[i])*(0.3+s.mounts[i]+s.pack[i])*nomadOpportunity(i)){
             const id=newPolity(i,null,{kind:'horde'});s.societyCounters.confederations++;
             for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&!pol[j]&&(w.nomad[j]||w.desert[j])&&pop[j]>=1&&r()<0.6){pol[j]=id;s.dist[j]=2}}}}
@@ -956,7 +958,7 @@ function cityPass(){
     s.urban[i]=clamp(s.urban[i],0,p);
     if(o)o.cityPop+=s.urban[i];
     if(s.city[i]<0&&s.ruinedCity[i]>=0&&s.cityDamage[i]<0.35&&s.urban[i]>4000){const old=s.cities[s.ruinedCity[i]];old.abandoned=false;old.rebuiltYear=s.year;s.city[i]=s.ruinedCity[i];s.ruinedCity[i]=-1}
-    if(s.city[i]<0&&s.urban[i]>4000&&s.organisation[i]>0.25){const L=langAt(i);s.city[i]=s.cities.length;s.cities.push({name:cityWord(L,s.r),cell:i,born:s.year,eth:s.eth[i],peak:s.urban[i]})}
+    if(s.city[i]<0&&s.urban[i]>(o?.origin?.type==='local civic'&&o.capital===i?800:4000)&&s.organisation[i]>0.25){const L=langAt(i);s.city[i]=s.cities.length;s.cities.push({name:cityWord(L,s.r),cell:i,born:s.year,eth:s.eth[i],peak:s.urban[i]})}
     if(s.city[i]>=0){const c=s.cities[s.city[i]];c.pop=s.urban[i];c.peak=Math.max(c.peak,c.pop)}
   }
 }
@@ -1009,7 +1011,7 @@ function* stepG(){
   agroPass();animalPass();computeK();economyPass();growth();yield;migrate();seaHop();refugeePass();
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(s.year%10===5)poolPass();if(s.year%20===7)caravanPass();yield;
-  yield* politicsG();frontierYear();connectionYear();peoplesYear();urbanYear();developmentYear();
+  yield* politicsG();advanceCampaigns();frontierYear();connectionYear();peoplesYear();urbanYear();developmentYear();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(s.year%5===0){yield;communityPass()}
   if(s.year%10===0){yield;buildTradeNetwork();recordStats();cityPass();yield;regionPass();yield;mixPass()}

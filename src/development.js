@@ -7,12 +7,14 @@ function initDevelopment(){
   s.sanitation=new Float32Array(N);s.cityRole=new Uint8Array(N);
   s.settlementRequests=[];s.nextSettlementId=1;
   Object.assign(s.societyCounters,{nomadSubmissions:0,nomadReleases:0,pastoralTransitions:0,settlementPetitions:0,negotiatedSettlers:0,frontierSettlers:0,redistributedSettlers:0,urbanArrivals:0,urbanDepartures:0,localGrainDeliveries:0});
+  initConsolidation();
 }
 function initDevelopmentPolity(o,from){
   o.pastoralOrigin=o.kind==='horde'||!!from?.pastoralOrigin;
   o.pastoralPractice=from?(from.pastoralPractice||0)*0.7:0;
   o.hybridYears=from?(from.hybridYears||0)*0.5:0;o.agrarianRevenue=0;o.settlementProgress=0;
   o.lastPetition=-100000;o.lastPastoralDefeat=-100000;o.submission=null;
+  initConsolidationPolity(o,from);
 }
 function urbanWaterCapacity(i){
   const w=WD,access=clamp(w.waterPotential[i]*0.7+w.Pr[i]/2500,0,1);
@@ -21,7 +23,8 @@ function urbanWaterCapacity(i){
 function suitableWaterworks(i){return S.waterworks[i]*12000*(0.2+0.8*WD.waterPotential[i])}
 function urbanActivities(i,o){
   const s=S,p=s.pop[i],trade=Math.min(p*0.12,s.flow[i]*0.12),administration=o?(o.staff+o.army*0.15)*p/Math.max(1,o.pop):0;
-  const roles=[p*(0.012+0.055*s.organisation[i])+trade*0.5,
+  const surplus=Math.max(0,s.harvest[i]-s.need[i]*0.9),processing=Math.min(p*0.045,surplus*0.12);
+  const roles=[p*(0.012+0.055*s.organisation[i])+processing+trade*0.5,
     WD.coast[i]?trade*(0.5+0.5*s.sail[i]):0,
     p*s.workshops[i]*0.06*(0.4+0.6*s.urbanNetwork[i]),administration,
     s.rel[i]>=0?p*0.012*s.organisation[i]:0,
@@ -98,7 +101,7 @@ function urbanPopulationYear(){
   for(const i of w.landIdx){const p=s.pop[i],o=s.pol[i]?s.pols[s.pol[i]]:null,target=Math.min(s.housing[i],urbanTarget(i,o));s.urban[i]=clamp(s.urban[i],0,p);
     const lack=clamp(1-s.nutrition[i]+s.cityDamage[i]+s.sickness[i],0,1);
     if(s.urban[i]>target){const n=Math.min(s.urban[i],(s.urban[i]-target)*(0.06+0.2*lack));s.urban[i]-=n;s.societyCounters.urbanDepartures+=n}
-    else if(s.nutrition[i]>0.85&&s.cityDamage[i]<0.5){const n=Math.min(p-s.urban[i],target-s.urban[i],Math.max(2,s.urban[i]*0.035)*s.organisation[i]);s.urban[i]+=n;s.societyCounters.urbanArrivals+=n}
+    else if(s.nutrition[i]>0.85&&s.cityDamage[i]<0.5){const n=Math.min((p-s.urban[i])*0.015,target-s.urban[i],(p*0.0008+s.urban[i]*0.025)*s.organisation[i]);s.urban[i]+=n;s.societyCounters.urbanArrivals+=n}
   }
   // Stage arrivals so a household moves at most once in this pass.
   const moves=[],available=new Map();for(const j of w.landIdx){if(s.urban[j]<200||s.nutrition[j]<0.9||s.cityDamage[j]>0.4)continue;

@@ -1,0 +1,58 @@
+'use strict';
+const fs=require('fs'),zlib=require('zlib'),assert=require('assert');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','civic.js','development.js','consolidation.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
+const bytes=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/'+f,'utf8'),'base64')));
+eval(core+`
+const earth=decodeEarth(bytes('earth_elev.b64'),bytes('koppen.b64'),bytes('earth_climate.b64'));
+const world=genWorld({seed:'Earth',earth:true,height:earth.height,kg:earth.kg,fit:true});WD=world;
+const a=cellAt(32,44),b=a+1,c=a+2,d=a+W,e=b+W,f=c+W,cells=[a,b,c,d,e,f];
+function fixture(){
+  WD=world;newHistory('civic');S.year=0;P.invent=P.allyRate=P.disease=1;S.hearths.forEach(h=>h.done=true);S.animalOrigins=[];
+  WD=Object.assign({},world,{landIdx:Int32Array.from(cells),coastIdx:new Int32Array(0),land:new Uint8Array(N),rangeExposure:new Float32Array(N),rough:new Float32Array(N),coast:new Uint8Array(N),rv:new Float32Array(N),nomad:new Uint8Array(N),tcost:new Float32Array(N).fill(1),nb:new Int32Array(N*4).fill(-1)});
+  S.pop.fill(0);S.food.fill(0);S.pol.fill(0);S.young.fill(0);S.eth.fill(0);S.eth2.fill(-1);S.ancestry.fill(0);S.rel.fill(-1);S.forest.fill(0);S.urban.fill(0);S.node.fill(0);S.flow.fill(0);S.s.fill(0.7);S.cities=[];S.city.fill(-1);S.tradeEdges=[];
+  for(const i of cells){WD.land[i]=1;S.pop[i]=10000;S.young[i]=3000;S.K[i]=100000;S.food[i]=20000;S.harvest[i]=14000;S.need[i]=10000;S.nutrition[i]=1;S.wm[i]=1;S.farm[i]=1;seedLocalCrops(i);S.cropAdapt[bestCrop(i)][i]=1;S.organisation[i]=0.7;S.infrastructure[i]=0.7;S.integ[i]=0.8;
+    const ns=[i-1,i+1,i-W,i+W].filter(j=>cells.includes(j)&&Math.abs(WD.cxA[j]-WD.cxA[i])+Math.abs(WD.cyA[j]-WD.cyA[i])===1);ns.forEach((j,k)=>WD.nb[i*4+k]=j)}
+}
+function pol(i,kind='state'){const o=S.pols[newPolity(i,null,{kind})];o.pop=S.pop[i];o.cells=1;o.health=o.payroll=1;o.h=20;o.rights=o.trust=0.8;o.preparedness=1;o.staff=500;o.army=3000;S.realmCells.set(o.id,[i]);return o}
+function close(x,y,label){assert(Math.abs(x-y)<Math.max(0.01,Math.abs(y)*1e-6),label+': '+x+' / '+y)}
+function people(){return cells.reduce((n,i)=>n+S.pop[i],0)}
+function animals(){return S.animals.reduce((n,h)=>n+cells.reduce((v,i)=>v+h[i],0),0)}
+
+fixture();const conqueror=pol(a),council=pol(b);conqueror.occupation=0;conqueror.grain=30000;const officials=conqueror.staff+council.staff,troops=conqueror.army+council.army,population=people();
+assert(!frontierHoldable(conqueror,a,b)&&delegationPossible(conqueror,a,b),'a supplied small state can seek local submission without spare direct-occupation capacity');
+assert(establishDelegation(conqueror,a,b,council.id));S.pol[b]=conqueror.id;conqueror.pop+=S.pop[b];conqueror.cells++;S.realmCells.set(conqueror.id,[a,b]);
+close(conqueror.staff+council.staff+S.localStaff[b],officials,'local officials are transferred, not created');close(conqueror.army+council.army+S.localGuard[b],troops,'local guards remain actual troops');close(people(),population,'delegated conquest changes jurisdiction, not population');assert(S.autonomy[b]>=0.75&&S.delegationOrigin[b]===council.id,'councils retain identity and autonomy');
+economyPass();assert(Math.abs(S.accounts.error)<0.01,'local and central payroll and training preserve the food ledger');assert(S.localPayroll[b]>0,'retained local administration has actual payroll');
+S.year=100;conqueror.bureau=0.6;conqueror.health=conqueror.payroll=1;conqueror.staff=1000;S.delegationTrust[b]=0.9;S.localPayroll[b]=1;S.depot[b]=10000;S.unrest[b]=0;
+const beforeIntegration=conqueror.army+S.localGuard[b];delegationYear();assert.equal(S.delegationOwner[b],0,'reliable funded provincial government can integrate over time');close(conqueror.army,beforeIntegration,'integration transfers the surviving garrison once');assert.equal(S.localGuardFree[b],0,'an integrated garrison cannot remain available as a second local army');
+fixture();const invader=pol(a),pastoral=pol(b,'horde');invader.occupation=0;invader.grain=50000;assert(!delegationPossible(invader,a,b),'delegation does not bypass pastoral frontier resistance');
+fixture();const unpaid=pol(a),neighbor=pol(b);unpaid.grain=0;assert(!delegationPossible(unpaid,a,b),'delegated government still needs dispatch provisions');
+
+fixture();const directAdmin=pol(a);directAdmin.pop=40000;directAdmin.staff=0;directAdmin.grain=10000;institutionStep(directAdmin,a,0);const directTraining=directAdmin.staff;
+fixture();const delegatedAdmin=pol(a);delegatedAdmin.pop=40000;delegatedAdmin.delegatedPop=30000;delegatedAdmin.staff=0;delegatedAdmin.grain=10000;institutionStep(delegatedAdmin,a,0);assert(delegatedAdmin.staff>0&&delegatedAdmin.staff<directTraining,'retained local government needs central liaison staff without duplicating full direct administration');
+
+fixture();const mobilizer=pol(a);mobilizer.army=100;mobilizer.armyFree=55;mobilizer.grain=10000;mobilizer.campaign={from:a,to:b,start:0};const stocks=foodStocks(),residents=people();
+musterSeasonal(mobilizer);assert(mobilizer.mustered>100&&S.militaryLabor[a]>0,'seasonal soldiers require real adult households and farm labor');close(foodStocks(),stocks,'muster wages transfer existing public provisions to households');close(people(),residents,'a muster is an occupation change, not new population');
+const mustered=mobilizer.mustered; musterSeasonal(mobilizer);close(mobilizer.mustered,mustered,'a cohort cannot be mustered repeatedly in one year');
+territorialAttack(mobilizer,a,d,false);assert.equal(mobilizer.campaignAllocatedYear,-100000,'a random border opportunity cannot consume the army committed to another objective');
+const force=campaignForce(mobilizer,a,false);assert(force>100&&force<=55+mustered,'an objective can concentrate available finite troops');assert.equal(campaignForce(mobilizer,a,false),0,'committed troops cannot fight a second campaign that year');const beforeLoss=people();campaignCasualties(mobilizer,a,force*0.1);assert(people()<beforeLoss&&S.societyCounters.levyCasualties>0,'levy casualties remove actual residents');
+fixture();economyPass();const normalHarvest=S.harvest[a];fixture();S.militaryLabor[a]=0.02;economyPass();assert(S.harvest[a]<normalHarvest,'military service reduces the current harvest');
+fixture();const garrison=pol(a);garrison.army=garrison.defFree=0;garrison.grain=10000;const firstDefense=fieldDefense(a,true);for(let n=0;n<8;n++)fieldDefense(a,true);assert(fieldDefense(a,true)<firstDefense,'local militia is not replicated for every attack');assert(S.defenseLaborDebt[a]>0,'emergency defense has a following agricultural cost');
+
+fixture();const oral=pol(a);oral.rights=0.4;oral.grain=100000;oral.coalition=0.7;for(let year=0;year<150;year++){S.year=year;customaryInstitutions(oral);institutionStep(oral,a,year);oral.payroll=oral.health=1;oral.hunger=0;oral.grain=100000}assert(oral.rights>0.4&&skill(a,'charter')===0,'credible customary obligations survive before written charters');
+fixture();const farmerTown=pol(a);S.urban[a]=500;farmerTown.grain=50000;farmerTown.rights=0.5;S.r=()=>0.99;
+for(let year=5;year<=200;year+=5){S.year=year;S.civicLabor.fill(0);ruralAgreements();S.ruralInfluence[b]*=Math.pow(0.998,5)}assert(S.ruralPatron[b]===farmerTown.id&&S.ruralInfluence[b]>0.5,'funded small towns can establish actual rural protection bargains');
+fixture();WD.coast[a]=1;S.urban[a]=700;S.organisation[a]=0.6;assert(localFoundationReady(a),'a viable local market town need not already be a 4000-person city');const localTown=pol(a);localTown.origin.type='local civic';assert.equal(tierOf(localTown),'City-state','a new small civic center is recognized as a city-state');S.herd[a]=1;S.mounts[a]=0.8;assert(!pastoralFormationReady(a),'a settled urban community on pastoral terrain is not automatically a nomad polity');S.urban[a]=0;assert(!localFoundationReady(a),'the local town path needs actual supported residents');
+
+fixture();const employer=pol(a),ally=pol(b);employer.allies=[ally.id];ally.allies=[employer.id];employer.grain=30000;const alliedPeople=people(),alliedArmy=employer.army+ally.army;
+const contingent=createMilitaryContract(employer,ally,900,5);assert(contingent&&contingent.kind==='settled','an allied settled government can agree to paid military service');militaryContractsYear();assert(ally.armyFree<ally.army*0.55,'loaned soldiers are withheld from the allied home army');close(employer.army+ally.army,alliedArmy,'the employer does not gain duplicate standing soldiers');close(people(),alliedPeople,'contracts do not create residents');S.year=2;militaryContractsYear();assert(drawForeignTroops(employer,a,1000)>0,'a supplied contingent becomes available after its journey');employer.allies=[];ally.allies=[];militaryContractsYear();assert(contingent.done&&ally.loanedTroops===0,'withdrawal from the alliance ends settled foreign service');
+
+fixture();S.pop[a]=80000;S.young[a]=24000;S.food[a]=100000;S.pop[b]=S.young[b]=S.food[b]=0;const veterans=pol(a);veterans.pop=80000;veterans.army=8000;veterans.armyFree=4400;veterans.staff=5000;veterans.central=0.5;veterans.bureau=0.25;veterans.occupation=10000;veterans.grain=100000;S.animals[0][a]=15000;S.animals[2][a]=4000;refreshAnimalAccess(a);
+veterans.defFree=veterans.army*0.45;const beforeSettlement=people(),beforeSoldiers=veterans.army;const families=foundServiceSettlement(veterans,a,b,1000);assert(families>0,'a capable supplied state can establish a military household settlement');close(people(),beforeSettlement,'military settlement transfers households');close(veterans.army+S.serviceTroops[b],beforeSoldiers,'veterans leave the field army before becoming local service troops');assert(veterans.armyFree+veterans.defFree<=veterans.army,'settled veterans cannot also remain in home reserves');assert(S.settleLag[b]>0&&S.serviceEstates[b]>0,'land grants and missed establishment harvests are explicit');
+const noblePower=veterans.nobles;S.r=()=>0.99;veterans.rights=0.6;veterans.bureau=0.1;for(let year=1;year<=90;year++){S.year=year;serviceSettlementYear()}assert(S.hereditaryEstates[b]>0.2&&veterans.nobles>noblePower,'lasting service estates can produce hereditary landed influence');
+S.year=100;S.pol[c]=veterans.id;S.pop[c]=5000;S.young[c]=1500;S.integ[c]=0.8;S.taken[c]=-100;S.K[c]=2000;
+const landPeople=people();assert.equal(foundServiceSettlement(veterans,a,c,1000),0,'military grants need spare viable land even inside an owned province');close(people(),landPeople,'an impossible land grant moves nobody');S.K[c]=100000;
+const ownedFood=foodStocks(),ownedArmy=veterans.army+cells.reduce((n,i)=>n+S.serviceTroops[i],0),ownedPeople=people();const ownedFamilies=foundServiceSettlement(veterans,a,c,1000);
+assert(ownedFamilies>=120,'veterans can settle a populated rural district already held by the state');close(people(),ownedPeople,'rural military placement moves real households');close(veterans.army+cells.reduce((n,i)=>n+S.serviceTroops[i],0),ownedArmy,'populated frontier grants conserve soldiers');close(ownedFood-foodStocks(),ownedFamilies*0.17,'travel and establishment consume funded supplies without creating food');close(S.integ[c],0.8,'an internal land grant preserves host integration');assert.equal(S.taken[c],-100,'an internal land grant does not reconquer its host district');
+console.log('PASS: delegated local government and payroll, finite funded seasonal campaigns and casualties, agricultural costs, customary rights and rural bargains, native town formation, actual military household settlement and hereditary landed interests');
+`);

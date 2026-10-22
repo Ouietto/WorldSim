@@ -1,4 +1,4 @@
-# Consolidation investigation — proposed changes awaiting approval
+# Consolidation investigation — baseline and v0.12 corrections
 
 This investigation observes v0.10 at commit `ec00351`, with default parameters
 and Earth history seed 7, from 9001 BCE through 2700 BCE. It was started from a
@@ -126,6 +126,9 @@ of exposed pastoral land. Check intermediate checkpoints as well as an end
 date. Increased consolidation should arise under favorable material and
 institutional conditions, not a compulsory date or a guaranteed world empire.
 
-These four general corrections are not implemented in v0.11. Its authorized
-nomad settlement, submission and city-development changes can affect future
-histories indirectly; this old-source baseline remains available for comparison.
+The first three corrections are implemented in v0.12 following approval. The
+separate persistent-siege proposal remains deferred. Military household
+settlements and local town foundations were also authorized and implemented;
+[MODEL.md](MODEL.md) documents their costs and limits. The old-source baseline
+remains available for comparison. Validation of individual mechanisms does not
+establish historical dates or the distribution of successful empires.

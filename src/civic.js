@@ -73,17 +73,17 @@ function shareEngineering(){
   for(const i of WD.landIdx)s.engineeringKnowledge[i]=clamp(s.engineeringKnowledge[i]+delta[i],0,1);
 }
 function ruralProtection(o,i,j){
-  const s=S,travel=routeCost(i,j,o,false),reach=Math.exp(-travel/Math.max(1,o.h));
+  const s=S,travel=routeCost(i,j,o,false),reach=Math.exp(-travel/Math.max(3,o.h*1.5+3+s.infrastructure[i]*5));
   const reserves=clamp(publicAvailable(o,i)/Math.max(50,s.pop[i]*0.04),0,1);
   const troops=clamp(Math.max(0,o.army-(o.loanedTroops||0))/Math.max(200,o.pop*0.015+o.cells*40),0,1);
-  const patrol=o.preparedness*o.payroll*troops*reserves;
+  const patrol=o.preparedness*o.payroll*troops*reserves,cooperation=s.organisation[i]*o.trust*o.payroll*reserves;
   // City walls offer a nearby refuge, not a shield over the entire countryside.
-  return clamp(reach*(0.1+0.65*patrol+0.12*cityWallStrength(i)+0.13*wallStrength(j))*(1-frontierRisk(j)*0.8)*(1-WD.rangeExposure[j]*pastoralMobility(j)*0.65),0,1);
+  return clamp(reach*(0.1+0.5*patrol+0.3*cooperation+0.15*s.ruralInfluence[j]+0.08*cityWallStrength(i)+0.13*wallStrength(j))*(1-frontierRisk(j)*0.8)*(1-WD.rangeExposure[j]*pastoralMobility(j)*0.65),0,1);
 }
 function incorporateHinterland(o,i,j){
-  const s=S;if(s.pol[j]||s.urban[j]>1200||s.ruralPatron[j]!==o.id||s.ruralInfluence[j]<0.85||s.ruralYears[j]<50||ruralProtection(o,i,j)<0.4)return false;
-  const personnelNeed=(o.cells+1)*20+(o.pop+s.pop[j])*0.001;
-  if(o.staff<personnelNeed||publicAvailable(o,i)<s.pop[j]*0.03||o.rights<0.45||o.health<0.65)return false;
+  const s=S;if(s.pol[j]||s.urban[j]>1200||s.ruralPatron[j]!==o.id||s.ruralInfluence[j]<0.8||s.ruralYears[j]<50||ruralProtection(o,i,j)<0.3)return false;
+  const personnelNeed=(o.cells+1)*6+(o.pop+s.pop[j])*0.0006;
+  if(o.staff<personnelNeed||Math.max(0,o.army-(o.loanedTroops||0))<Math.max(40,o.pop*0.0015)||publicAvailable(o,i)<s.pop[j]*0.015||o.rights<0.4||o.health<0.65)return false;
   const paid=civicSpend(i,o,s.pop[j]*0.02);if(paid<s.pop[j]*0.019)return false;
   conquestRecorded(o,j,0);s.pol[j]=o.id;s.integ[j]=0.45;s.autonomy[j]=0.75;
   s.dist[j]=Math.min(65534,s.dist[i]+Math.round(routeCost(i,j,o,false)*2));
@@ -93,16 +93,16 @@ function incorporateHinterland(o,i,j){
   chron('diplomacy',`Rural communities accept the protection and jurisdiction of the ${o.full}, retaining local land rights and leaders.`,j,[R_(o)],'Decades of provision and protection precede incorporation; residents, cultures and ancestry stay in place.');return true;
 }
 function ruralAgreements(){
-  const s=S,visited=new Set();for(const i of WD.landIdx){if(s.urban[i]<1500)continue;const o=s.pol[i]?s.pols[s.pol[i]]:null;if(!o?.alive||o.kind!=='state'||o.health<0.5||o.rights<0.35)continue;
+  const s=S,visited=new Set();for(const i of WD.landIdx){if(s.urban[i]<300||s.organisation[i]<0.35)continue;const o=s.pol[i]?s.pols[s.pol[i]]:null;if(!o?.alive||o.kind!=='state'||o.health<0.5||o.rights<0.3||o.staff<12)continue;
     for(let d=0;d<4;d++){const j=WD.nb[i*4+d];if(j<0||visited.has(j)||!WD.land[j]||s.pol[j]||s.pop[j]<200||s.urban[j]>1200||s.farm[j]*farmSuit(j)<0.1)continue;
-      const security=ruralProtection(o,i,j);if(security<0.35)continue;
+      const security=ruralProtection(o,i,j);if(security<0.2)continue;
       const prior=s.ruralPatron[j],incumbent=s.ruralInfluence[j];
       if(prior&&prior!==o.id&&security<s.ruralSecurity[j]+0.12)continue;
-      const due=20+s.pop[j]*0.003,paid=civicSpend(i,o,due);if(paid<due*0.9)continue;visited.add(j);
-      if(prior!==o.id){s.ruralPatron[j]=o.id;s.ruralInfluence[j]=incumbent*0.2;s.ruralYears[j]=0;s.societyCounters.ruralAgreements++}
+      const due=3+s.pop[j]*0.0005,paid=civicSpend(i,o,due);if(paid<due*0.9)continue;visited.add(j);
+      if(prior!==o.id){s.ruralPatron[j]=o.id;s.ruralInfluence[j]=incumbent*0.2;s.ruralYears[j]=0;s.societyCounters.ruralAgreements++;s.societyCounters.customaryAgreements++}
       s.ruralSecurity[j]=security;s.ruralYears[j]=Math.min(65535,s.ruralYears[j]+5);
       const appeal=(0.25+0.75*o.trust)*(0.4+0.6*security)*(1-0.5*s.defensePact[j]*s.organisation[j]);
-      s.ruralInfluence[j]=clamp(s.ruralInfluence[j]+0.055*appeal,0,1);
+      s.ruralInfluence[j]=clamp(s.ruralInfluence[j]+0.08*appeal,0,1);
       if(P.allyRate>0&&s.r()<Math.min(0.6,0.1*P.allyRate))incorporateHinterland(o,i,j);
     }
   }
@@ -110,10 +110,10 @@ function ruralAgreements(){
 function civicUnionTerms(client,patron){
   if(!client?.alive||!patron?.alive||client.kind!=='state'||patron.kind!=='state'||client.enemies.has(patron.id)||client.cells>8)return false;
   const near=angDist(client.capital,patron.capital)<0.1||client.nb.has(patron.id);
-  return near&&patron.rights>=0.55&&patron.trust>=0.6&&patron.health>=0.65&&patron.payroll>=0.8&&client.trust>=0.4;
+  return near&&patron.rights>=0.45&&patron.trust>=0.6&&patron.health>=0.65&&patron.payroll>=0.8&&client.trust>=0.4;
 }
 function integrateCivicPolity(client,patron){
-  const s=S,u=client.civicUnion;if(!u||u.progress<1||u.years<80||!civicUnionTerms(client,patron)||patron.staff<(patron.pop+client.pop)*0.003+(patron.cells+client.cells)*25)return false;
+  const s=S,u=client.civicUnion;if(!u||u.progress<1||u.years<80||!civicUnionTerms(client,patron)||patron.staff<(patron.pop+client.pop)*0.0013+(patron.cells+client.cells)*10)return false;
   if(publicAvailable(patron,patron.capital)<client.pop*0.06)return false;
   const cost=budgetAt(patron,patron.capital,client.pop*0.04);s.food[client.capital]+=cost;
   endForeignServiceOf(client);depositPublic(patron,client.capital,client.grain);client.grain=0;
@@ -174,7 +174,7 @@ function besiegeCity(o,from,j,force){
 }
 function civicTradeAccess(i,j){return (S.siegeOwner[i]&&S.year-S.siegeYear[i]<=1||S.siegeOwner[j]&&S.year-S.siegeYear[j]<=1)?0.35:1}
 function civicYear(){
-  const s=S;s.civicLabor.fill(0);
+  const s=S;s.civicLabor.fill(0);consolidationYear();
   for(const i of WD.landIdx){s.ruralInfluence[i]*=0.998;s.ruralSecurity[i]*=0.97;const o=s.pol[i]?s.pols[s.pol[i]]:null;
     if(s.ruralPatron[i]&&!s.pols[s.ruralPatron[i]]?.alive){s.ruralPatron[i]=0;s.ruralYears[i]=0}
     civicWorksAt(i,o);urbanConstruction(i,o);

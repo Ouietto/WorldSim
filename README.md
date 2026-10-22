@@ -1,8 +1,19 @@
-# Asabiya — history engine (v0.11)
+# Asabiya — history engine (v0.12)
 
 A browser simulation of peoples, states, faiths and technologies on a world map, from 9000 BCE onward. It blends cliodynamics (Turchin's asabiya and structural-demographic theory), World3-style carrying capacity, and ecological history. The default map is the real Earth.
 
-Version 0.11 adds reversible submission between pastoral polities, settlement
+Version 0.12 lets settled victors retain local councils, officials and garrisons
+under funded governing bargains. Direct administration takes additional staff,
+integration and time. Paid seasonal musters and allied/subject contingents can
+concentrate on a supplied campaign; those soldiers come from actual households
+and lose farm labor. Customary obligations support early political agreements
+before written charters. Military household settlements move existing veterans,
+families, animals and provisions; service grants can become hereditary estates.
+Local farming and market towns can form city-states before reaching 4,000 urban
+residents, while mobile confederations require an actual pastoral economy and
+transport animals. Towns retain housing, water, food and security constraints.
+
+Version 0.11 added reversible submission between pastoral polities, settlement
 petitions and durable land/service agreements, funded placement near cities and
 negotiated redistribution within capable kingdoms. Mixed pastoral and agrarian
 government develops through sustained revenue, officials, towns and cooperation;
@@ -12,10 +23,11 @@ water supply, livelihoods and actual grain deliveries. Private and public
 investment maintain urban works; crowding and sanitation affect disease.
 Political collapse does not automatically erase the city.
 
-The separate [consolidation investigation](CONSOLIDATION.md) records why the
-previous release seldom formed large polities. Its proposed changes to
-occupation, recruitment, early political bargains and siege continuity await
-approval; this release does not retune those general expansion rules.
+The [consolidation investigation](CONSOLIDATION.md) records the earlier
+bottlenecks and the first three corrections implemented here. A separate
+redesign of persistent sieges remains deferred. These mechanisms permit larger
+states under favorable conditions; they do not prescribe regional empires or
+guarantee a date of unification.
 
 Version 0.10 added gradual rural protection agreements and incorporation,
 negotiated civic unions, separate city defenses and built granaries, practical
@@ -103,6 +115,7 @@ Rebuild them after source edits when using that mode.
 | `urbanism.js` | Food-supported urban networks, civic credit, default and negotiated debt protection |
 | `civic.js` | Rural agreements, civic unions, city defenses, granaries, labor, equipment, sieges and confederation dispersal |
 | `development.js` | Household settlement agreements, pastoral submission and mixed government, urban construction, resident migration and finite local grain deliveries |
+| `consolidation.js` | Retained local government, customary obligations, finite seasonal campaigns, military household settlement and hereditary service estates |
 | `map-input.js` | Shared touch, pen and mouse map gestures |
 | `ui.js` | Map rendering, encyclopedia pages, chronicle, charts, checks, setup |
 | `shell.html` | Page markup and CSS |
@@ -120,12 +133,14 @@ Edit files in `src/`, then run `python src/build.py` from the project root to re
 - `node map-input.test.js`: pinch anchoring, pan transitions, cancellation, tap selection, double tap and zoom limits.
 - `node civic.test.js`: funded city defenses and storage, labor costs, staged incorporation, negotiated union, secondary-city invention, sieges and conserved confederation scattering.
 - `node development.test.js`: settlement petitions and funding, identity-preserving relocation, durable bargains, reversible nomad submission, gradual mixed government, housing/food limits and competing urban hinterlands.
+- `node consolidation.test.js`: funded delegated government, actual officials and troops, finite campaigns and casualties, farm labor costs, oral political agreements, local town foundations, veteran households and hereditary service grants.
 - `node society.test.js`: conservation, settlement, warfare, refugees, inheritance, collapse, deterministic replay and a 220-year political scenario.
 - `node generated.test.js`: a 250-year developed-world scenario on generated terrain, including coasts and river routes.
 - `node verify.js 23 1500`: an Earth history with periodic finite-value, nonnegative-stock and food-ledger assertions.
 - `node test.js earth <seed> <endYear>`: one Earth run with a summary (set `SHOW=war` etc. to print chronicle entries).
 - `node batch.js 1,2,3 1500`: several seeds, one JSON line each with calibration metrics (first states by region, China/Mediterranean unity, technology dates, empire shapes, stateless regions). `ECO=0` sets the ecological-reach parameter.
 - `node consolidation-report.js 7 -2700 ec00351`: instrument the previous release at a fixed Git reference without changing its rules or random draws.
+- `node consolidation-report.js 7 1`: run the current Earth model through 1 CE, recording regional concentration, government quality, origins of Mediterranean foundations, resource assertions and a source hash.
 - `node diag.js <seed> <year>`: instability components and top states every 500 years.
 - `node slice.js <year>`: timing of the per-year slices.
 - `node shapes.js <seed> <year>`: the largest empires' east-west vs north-south extent.

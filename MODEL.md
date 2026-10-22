@@ -1,8 +1,63 @@
-# Asabiya 0.10 — civic growth, practical invention and coalition breakup
+# Asabiya 0.12 — local government, mobilization and settlement
 
 This version connects settlement, warfare, administration, reform and collapse
 to shared resources. It is an exploratory historical model. Its rules are
 explicit hypotheses, rather than established universal laws of social change.
+
+## Consolidation and military households (v0.12)
+
+Victory over a settled neighbor can preserve its local officials, garrison,
+land rights and council. Officials and troops transfer from the defeated
+government rather than appearing as new personnel. Local tax collection and
+payroll use the province's actual stores. The conqueror still needs liaison
+staff, dispatch provisions, an accessible route and credible frontier defense.
+Delegated districts require central liaison staff at one fifth of the normal
+population-based staffing demand, alongside their separately paid local offices.
+They do not require a duplicate full central administration.
+Delegation preserves high autonomy. Sustained reliable government can support
+paid integration; failed protection and unpaid officials can prompt withdrawal.
+It does not bypass exposed mobile frontiers or permit free whole-realm annexation.
+
+A state can maintain one campaign objective for several years and concentrate
+its finite available field army. Seasonal musters draw eligible adult residents
+from reachable cooperating districts, require local pay and reduce that year's
+farm labor. Battle losses remove actual residents from their source cohorts.
+Local defensive militia also require provisions, cannot be reused indefinitely
+against repeated attacks and reduce the following harvest. Allied and subject
+contingents use the existing paid foreign-service contracts, withholding those
+troops from their home army. Existing siege rules remain in place.
+
+Customary rights and succession expectations develop through reliable services,
+trust and kept political obligations before formal charters. Written procedures
+still offer further capacity and continuity. Farming catchments can accept
+protection from small supported towns, then jurisdiction after decades of funded
+cooperation. Neither proximity nor a town wall grants ownership automatically.
+
+Funded military settlement demobilizes part of the standing army and moves real
+households, children, animals and provisions to a viable frontier. The treasury
+pays actual travel and establishment supplies. Grants can use spare rural land
+inside an existing held frontier district without resetting its jurisdiction or
+integration. Existing landholders reduce the available room; food, rights and
+accessible protection are still required. An external settlement retains the
+stricter frontier capacity checks and inhabited land requires a rural agreement.
+The settlement faces the normal
+establishment harvest delay and can receive finite early shipments. Resident
+service troops replace field soldiers; service estates gradually develop local
+stakes. After a generation, weak central administration and protected elite
+rights can support hereditary control, increasing noble power and retaining
+more revenue locally. Land grants do not guarantee perpetual loyalty or expansion.
+
+## Local town foundations (v0.12)
+
+Local agricultural surplus supports processing and market livelihoods. Actual
+rural residents can move gradually into maintained housing with adequate food,
+water and employment. A supported market town of at least 500 urban residents
+can become a local civic polity when communal organization, farming, population,
+transport and security are sufficient. This is a generic mechanism with no
+Mediterranean location bonus. Founding remains stochastic. Terrain classified
+as pasture no longer suffices to form a mobile confederation: pastoral production
+must dominate crops, urban residence must be low, and riding or pack animals
+must be available. Existing crop access and frontier resistance still apply.
 
 ## Pastoral submission, settlement and mixed government (v0.11)
 
