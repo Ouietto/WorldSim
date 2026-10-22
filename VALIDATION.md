@@ -1,4 +1,58 @@
-# Asabiya v0.7 validation — 2026-10-21
+# Asabiya v0.8 validation — 2026-10-22
+
+The current release adds `ecology.js` and `frontiers.js` to every browser and
+command-line loader. The Pages workflow includes the new frontier suite.
+
+- JavaScript syntax, numerical climate checks, society conservation and
+  deterministic replay, transport/politics, and the generated-world suite pass.
+- `frontiers.test.js` checks crop access and staged diffusion, viable Andean
+  highland crops, terrace and dry-plateau water benefits, practical technology
+  bottlenecks and actual firearm stocks.
+- Public freight cannot spend a remote capital's reserves through uncontrolled
+  transit. Public/private route capacity, transport losses, local wall upkeep,
+  deterioration, repairs and breaches are exercised against actual resources.
+- Scouted movement routes avoid an intact wall and prefer a usable gap.
+  Planning cannot open a breach or spend supplies. Joining clans and retreating
+  coalitions transfer actual people and herds; a strong opponent can resist.
+- Foreign-service tests reserve existing warriors, remove overseas casualties
+  from their home base, return bounded experience and partial knowledge, and
+  transfer equipment from real stocks. Clan incorporation ends an outstanding
+  contract without duplicating its contingent.
+- Tribute is a shipment, with delayed arrival; repeated missed payments can
+  break protection. Expulsion preserves surviving refugees and their herds.
+  Selective adult mortality changes sex composition while preserving child
+  cohorts. Funded coercion/contact can shift a cultural majority within sixty
+  simulated years while keeping ancestry separate.
+- An aging confederation gains less strain with delivered patronage; age alone
+  does not dissolve it. Display filters preserve ownership and random state,
+  and test proximity plus ten years of visibility grace.
+- An 80-year integrated scenario combines actual military contracts, war,
+  migrating cohorts and annual food accounting. The existing developed
+  mixed-frontier scenario runs 300 years twice with deterministic results.
+- The developed generated-world scenario passes 250 years of food/animal
+  accounting and bounded government fields. It ends with 63 surviving
+  polities for its fixed seed; this count is a software observation, not a
+  historical target.
+- A development Earth history for seed 7 advances 1,101 years to 7900 BCE with
+  finite stocks and a final food discrepancy of about 0.00000006 annual
+  rations. Its report is `validation/v08-seed7-early-history.log`. It exercises
+  early subsistence, record keeping, irrigation and succession; it does not
+  validate late empires or technology dates. A preceding longer attempt found
+  floating-point overshoot in aggregated payroll funding; payroll is now
+  clamped to its defined 0–1 range and the generated suite checks that bound.
+- The local browser advances over a thousand years without console errors.
+  Map view, confederation visibility, city filtering and names controls work.
+  Both standalone entry points and a separately built Pages folder are checked
+  for identical bytes.
+
+Remaining calibration work includes multi-seed first-state distributions in
+Iran, the Andes and the Pampas; steppe occupation rates; confederation duration;
+the frequency and direction of migration cascades; and advanced technology
+chronology. Conditional scenario checks establish that these mechanisms can
+operate, not that their default frequencies reproduce history. No complete
+v0.8 Earth history to 1500 CE is claimed here.
+
+## Archived v0.7 validation — 2026-10-21
 
 The deliverables are identical `index.html` and `asabiya.html` pages, rebuilt
 from `src/` using `python src/build.py`. Rules and explicit simplifications are

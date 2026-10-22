@@ -418,6 +418,7 @@ function genWorld(o){
     w.medCells=Int32Array.from(med);w.chinaCells=Int32Array.from(china);
   }
   w.grade=gradeClimate(w,numericClimate?T:rawT,numericClimate?Pr:rawP,numericClimate?amp:rawA);
+  if(typeof prepareAgroEcology==='function')prepareAgroEcology(w);
   return w;
 }
 

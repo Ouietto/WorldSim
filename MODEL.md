@@ -1,9 +1,134 @@
-# Asabiya 0.7 — transport, local power and political continuity
+# Asabiya 0.8 — livelihoods, exposed frontiers and mobile coalitions
 
 This version connects settlement, warfare, administration, reform and collapse
 to shared resources. It is an exploratory historical model. Its rules are
 explicit hypotheses, rather than established universal laws of social change.
 
+## Changes in 0.8
+
+### Crops, highlands and dry plateaus
+
+Farming knowledge and access to a crop package are separate. Six broad packages
+have thermal, moisture, altitude and storage properties. Hearths supply local
+crops; staged contact, trade, settlers and migrants carry them elsewhere.
+Adaptation takes time and provisions. Rotation remains a separate technique.
+Potential farmland alone cannot supply an absent crop.
+
+Coarse mountainous cells retain a share of usable valley ground. Highland
+tubers and quinoa have different tolerances from lowland crops. Locally funded
+terraces, runoff works, storage and porter or llama transport support highland
+intensification. Local catchments can support dry plateau farming without a
+major river. Coastal fishing supplies another subsistence base. These rules
+make Andean and Iranian environments more viable without spawning named states
+or suppressing Pampas agriculture by decree. Valleys, aquifers, irrigation and
+crop varieties remain simplified; there is no reconstructed qanat network.
+
+Workshop activity, record practice and practical chemical experience constrain
+advanced inventions. Projects share a paid specialist-work budget within a
+polity. Knowledge of gunpowder provides no military bonus without actual
+weapons produced and maintained from local resources. Technology chronology
+needs further calibration; these thresholds are scenario parameters.
+
+### Local reserves and exposed frontiers
+
+Provincial taxes enter local depots; capital stores are held separately.
+Garrisons, payroll, relief, wall upkeep and frontier campaigns draw on reserves
+where they operate. Public consignments share trade-edge capacity with private
+food traffic and suffer losses; uncontrolled intermediate territory blocks
+government freight. Tributary and protection payments travel as shipments.
+Captured stores stay at their physical location, including after capital
+relocation. This is annual staged freight, rather than a complete transport
+market or a daily supply simulation.
+
+Open pasture can be fertile and still be dangerous to settle. Mobile resistance
+depends on actual people, herds, riding animals, organization, experience and
+provisioning. Forest, ruggedness, rivers, funded defenses and trained forces
+modify exposure. Both autonomous pastoral communities and confederations can
+resist occupation. There is no ethnic toughness constant or universal ban on
+pre-gunpowder states. Forested Russia, open steppe and river enclaves therefore
+face different conditions. Seasonal pasture and harsh winter shocks affect
+herd survival; severe drought can destroy the means of military expansion.
+
+Raids can reach beyond the immediate border along limited accessible routes,
+seize local stores, disrupt harvests and damage infrastructure. Repeated loss
+of a weak government's administrative center can release its provinces
+without annexing them or erasing their inhabitants. Wealth, local political
+divisions, ambition and spare occupation capacity can also motivate an
+opportunistic state intervention. Threatened neighbors can strengthen their
+defense arrangements.
+
+### Walls, redirection and migration cascades
+
+Walls require local annual maintenance. Poor repairs, weak patrols and scouting
+can expose a breach. An opened gap reduces the barrier for subsequent movement
+until repaired. A route planner does not create a breach: an actual funded
+campaign or moving group must force it.
+
+Mobile coalitions scout a bounded network of connected pasture and crossings.
+Route costs include forage, supplies, terrain, rivers, opposing forces, walls
+and pressure from other movements. Intact defenses can redirect a movement
+around their ends; an existing gap can become the cheapest passage. The
+algorithm has no preferred compass direction and cannot cross an impassable
+wall merely because its goal lies beyond it. Scouting remains a coarse proxy
+for geographic knowledge rather than a detailed information network.
+
+Encountered nomads can fight, contribute actual households and herds, or
+withdraw in a new migration. Pressure decays; retreat has a cooldown and the
+number of active parties is bounded. Success and practical experience can
+attract more participants. Neither a cascade nor a successful invasion is
+guaranteed. Food shortages, casualties, grazing, command and resisting
+coalitions constrain the process. Territory, population movement and cultural
+change remain distinct.
+
+### Protection, foreign service and coalition renewal
+
+A centralized government with a history of raids can promise regular
+provisions to a confederation. Actual shipments support the pact. Arrears or a
+large shift in power can produce renewed war. A victorious confederation can
+install a conquest dynasty only when forces, reserves, weak incumbent
+institutions and cooperation from local intermediaries permit it.
+
+States at war can engage warriors from nearby or allied confederations. A
+contract earmarks existing troops, removes them from the provider's available
+forces, has travel time, and needs recurring payment. Losses remove people
+from the original recruitment base. Returning veterans retain bounded tactical
+experience and knowledge of techniques actually encountered. They can carry
+equipment removed from the employer's stocks. Partial knowledge is not full
+adoption. Dependents remain at home during temporary service; individual
+soldier journeys and military households are not simulated.
+
+Confederations accumulate strain as personal bargains span generations.
+Reward disputes, succession, member-clan loyalty and command capacity matter.
+Actual provisions received from settled patrons can support their renewal.
+This makes long survival harder under weak bargains without an automatic
+hundred-year expiration. Patronage is no guarantee of loyalty or permanence.
+
+### Coercion and demographic consequences
+
+Conquest laws can permit expulsion; rarer collective-reprisal policies can
+allow selective adult-male mortality after severe resistance. These actions
+need occupation capacity and provisions and cause economic damage, distrust,
+defense mobilization, displacement and demographic losses. Refugee cohorts
+carry real people, food and herds. Sponsored replacement settlers must come
+from actual neighboring populations. Sustained funded coercion and contact
+can shift a local cultural majority over one or two generations; this is
+distinct from killing or instant ancestry replacement.
+
+Provincial culture and ancestry use separate two-component summaries. Their
+joint household distribution is not known, so selective removal of ancestry
+is approximate. Adult sex composition is an aggregate share with gradual
+recovery, recruitment consequences and a fertility penalty after extreme
+imbalance; there are no full age-by-sex cohorts. These simplifications limit
+what the model can claim about any particular historical displacement.
+
+### Map presentation
+
+Map layers use one dropdown. In States and Alliances, confederations can be
+shown, hidden, or shown when near substantial settled communities, at war
+with a state, or in contact through trade. Qualifying coalitions appear as a
+whole, with ten years of visibility grace. Fills, borders, labels and direct
+polity selection follow the filter. Cities and names remain independent.
+Changing visibility never changes ownership, random draws or simulation rules.
 
 ## Changes in 0.7
 

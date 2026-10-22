@@ -30,6 +30,8 @@ jobs:
         run: node src/society.test.js
       - name: Check political and transport dynamics
         run: node src/dynamics.test.js
+      - name: Check frontiers and migration cascades
+        run: node src/frontiers.test.js
       - name: Check generated worlds
         run: node src/generated.test.js
       - name: Build static site

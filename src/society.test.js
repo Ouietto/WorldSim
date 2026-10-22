@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),zlib=require('zlib'),assert=require('assert');
-const core=['world.js','lang.js','hist.js','society.js','dynamics.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
 const bytes=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/'+f,'utf8'),'base64')));
 const uiSource=fs.readFileSync(__dirname+'/ui.js','utf8');
 const inspectorSource=uiSource.slice(uiSource.indexOf('function renderPage(){'),uiSource.indexOf('function originText('));
@@ -15,7 +15,7 @@ function fixture(){
   WD=world;newHistory('fixture');WD=Object.assign({},world,{landIdx:Int32Array.from([a,b,c,d]),coastIdx:new Int32Array(0),land:new Uint8Array(N)});for(const i of WD.landIdx)WD.land[i]=1;
   S.pop.fill(0);S.food.fill(0);S.young.fill(0);S.pol.fill(0);S.urban.fill(0);S.node.fill(0);S.flow.fill(0);S.settleLag.fill(0);
   S.eth.fill(0);S.ancestry.fill(0);S.eth2.fill(-1);S.rel.fill(-1);S.activeMigs=[];S.press.clear();S.tradeEdges=[];
-  for(const i of WD.landIdx){S.pop[i]=10000;S.young[i]=3200;S.K[i]=20000;S.food[i]=10000;S.farm[i]=1;S.grain[i]=1;S.organisation[i]=0.5;S.s[i]=0.6;S.nutrition[i]=1;S.integ[i]=0.8;S.infrastructure[i]=0.5}
+  for(const i of WD.landIdx){S.pop[i]=10000;S.young[i]=3200;S.K[i]=20000;S.food[i]=10000;S.farm[i]=1;seedLocalCrops(i);S.cropAdapt[bestCrop(i)][i]=1;S.grain[i]=1;S.organisation[i]=0.5;S.s[i]=0.6;S.nutrition[i]=1;S.integ[i]=0.8;S.infrastructure[i]=0.5}
 }
 function polity(cell,from){const id=newPolity(cell,from);const o=S.pols[id];o.pop=S.pop[cell];o.cells=1;return o}
 function close(x,y,msg){assert(Math.abs(x-y)<Math.max(1e-5,Math.abs(y)*1e-7),msg+' '+x+' / '+y)}

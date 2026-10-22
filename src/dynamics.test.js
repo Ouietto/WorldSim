@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),zlib=require('zlib'),assert=require('assert');
-const core=['world.js','lang.js','hist.js','society.js','dynamics.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
 const bytes=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/'+f,'utf8'),'base64')));
 const citySource=fs.readFileSync(__dirname+'/ui.js','utf8').split('function cityMapItems(){')[1].split('function drawMap(){')[0];
 eval(core+`
@@ -14,7 +14,7 @@ function fixture(){
     riverHead:new Int32Array(N).fill(-1),riverNext:new Int32Array(N).fill(-1),rough:new Float32Array(N),coast:new Uint8Array(N),nomad:new Uint8Array(N),sF:Float32Array.from(world.sF),land:new Uint8Array(N)});
   for(const i of WD.landIdx)WD.land[i]=1;
   S.pop.fill(0);S.food.fill(0);S.pol.fill(0);S.young.fill(0);S.eth.fill(0);S.ancestry.fill(0);S.rel.fill(-1);S.urban.fill(0);S.node.fill(0);S.city.fill(-1);S.cities=[];S.tradeEdges=[];S.forest.fill(0);S.organisation.fill(0.5);
-  for(const i of WD.landIdx){S.pop[i]=10000;S.young[i]=3000;S.K[i]=100000;S.food[i]=20000;S.farm[i]=1;S.herd[i]=1;S.nutrition[i]=1;S.integ[i]=0.8;S.infrastructure[i]=0.6;WD.rv[i]=0;WD.riverNav[i]=0;WD.down[i]=-1;S.sail[i]=0;S.roads[i]=0}
+  for(const i of WD.landIdx){S.pop[i]=10000;S.young[i]=3000;S.K[i]=100000;S.food[i]=20000;S.farm[i]=1;seedLocalCrops(i);S.cropAdapt[bestCrop(i)][i]=1;S.herd[i]=1;S.nutrition[i]=1;S.integ[i]=0.8;S.infrastructure[i]=0.6;WD.rv[i]=0;WD.riverNav[i]=0;WD.down[i]=-1;S.sail[i]=0;S.roads[i]=0}
 }
 function polity(i,kind){const id=newPolity(i,null,{kind:kind||'state'}),o=S.pols[id];o.pop=S.pop[i];o.health=1;o.payroll=1;o.h=10;return o}
 function totalAnimals(){let n=0;for(const f of S.animals)for(const i of WD.landIdx)n+=f[i];for(const id of S.activeMigs)for(const v of S.migs[id].animals)n+=v;for(const p of S.press.values())for(const v of p.animals||[])n+=v;return n}
@@ -60,7 +60,7 @@ const exporter=polity(a),transit=polity(b),importer=polity(c);exporter.enemies.s
 S.tradeEdges=[{a,b:c,cost:0.01,capacity:500,via:[b,c]}];S.food[a]=20000;S.food[c]=1000;S.need[a]=S.need[c]=10000;
 const beforeTransit=S.food[c];tradeFood({transportLoss:0});assert.equal(S.food[c],beforeTransit,'hostile intermediate territory blocks a trade shortcut');
 
-fixture();WD.nomad[b]=1;WD.sF[b]=0.22;WD.rv[b]=0.8;assert(!settledStateHabitat(b),'ordinary pasture does not support a sedentary fiscal state');S.urban[b]=15000;assert(settledStateHabitat(b),'a dense agricultural river enclave can form a state within the steppe');
+fixture();WD.rangeExposure=Float32Array.from(world.rangeExposure);WD.rangeExposure[b]=0.8;S.frontierDanger[b]=0.4;S.threatFrom[b]=a;WD.nomad[b]=1;WD.sF[b]=0.22;WD.rv[b]=0.8;assert(!settledStateHabitat(b),'ordinary pasture does not support a sedentary fiscal state');S.urban[b]=15000;assert(settledStateHabitat(b),'a dense agricultural river enclave can form a state within the steppe');
 fixture();const frontier=polity(a);frontier.pop=40000;frontier.occupation=3000;frontier.grain=10000;frontier.central=0.5;frontier.bureau=0.3;S.pop[b]=0;
 assert(!frontierReady(frontier,a,b),'small states without transport have an expensive frontier');
 S.animals[0][a]=4000;S.animals[2][a]=2000;refreshAnimalAccess(a);
