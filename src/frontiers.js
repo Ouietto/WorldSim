@@ -6,7 +6,7 @@ function initFrontierPolity(o,from){
   o.lastAccession=-100000;o.lastOpportunism=-100000;o.occupationLosses=0;o.localStores=0;
   o.raidHistory=new Map();o.protectionPacts=[];o.installTarget=0;o.installUntil=-100000;
   o.blockadePressure=0;o.lastMigration=-100000;o.patronage=0;o.coalitionFatigue=0;
-  o.loanedTroops=0;o.foreignFree=0;o.campaignAuxShare=0;
+  o.loanedTroops=0;o.foreignFree=0;o.campaignAuxShare=0;o.sharedThreat=0;o.threatMemory=new Map();o.knownPorts=new Set();o.creditTrust=0.7;o.creditDefault=-100000;
 }
 function publicAvailable(o,i){return Math.max(0,S.depot[i])+(i===o.capital?Math.max(0,o.grain):0)}
 function budgetAt(o,i,due){
@@ -30,7 +30,7 @@ function regionalFreight(accounts){
     }
   }
   s.publicShipments=s.publicShipments.filter(t=>t.food>0);
-  for(const e of s.tradeEdges)e.freightUsed=0;
+  for(const e of s.tradeEdges){e.freightUsed=0;e.privateUsed=0}
   // Four staged consignments per year. Each stage uses pre-transfer stocks;
   // public and private freight compete for the same edge's annual capacity.
   for(let season=0;season<4;season++){
@@ -120,7 +120,8 @@ function opportunismScore(o,i,j){
   const organization=s.organisation[j],developing=clamp((organization-0.15)*2.2,0,1)*(1-0.5*s.defensePact[j]);
   const reward=clamp((s.food[j]+s.depot[j])/Math.max(1,s.pop[j]*0.7),0,1)+clamp(s.urban[j]/8000,0,1)*0.4;
   const advantage=clamp(power(o)/Math.max(1,fieldDefense(j,false))-1,0,3)/3;
-  const motive=0.2+o.ruler.aggr*0.5+Math.max(0,o.E/etOf(o)-1)*0.12;
+  const fiscal=target&&s.year-(target.creditDefault??-100000)<30?0.3*(1-target.health):0;
+  const motive=0.2+o.ruler.aggr*0.5+Math.max(0,o.E/etOf(o)-1)*0.12+fiscal;
   return clamp(developing*reward*advantage*motive*(0.3+0.7*o.frontierIntel)/(1+occupationNeed(o,i,j)/Math.max(1,o.occupation)),0,1);
 }
 function opportunisticCampaign(o,i,j){
@@ -198,12 +199,12 @@ function coerciveOccupation(i,o){
     if(n>0)mergeCulture(i,o.core,n,Math.max(1,s.pop[i]-n));
   }
 }
-function shatterGovernment(o,cell){
+function shatterGovernment(o,cell,reason){
   const s=S;if(!o.alive)return;endForeignServiceOf(o);
   const cells=polCells(o.id);for(const i of cells){s.pol[i]=0;s.autonomy[i]=0.9;s.integ[i]*=0.4;s.food[i]+=s.depot[i];s.depot[i]=0}
   s.food[o.capital]+=o.grain;o.grain=0;o.army=o.staff=o.navy=0;o.alive=false;o.died=s.year;o.succ=[];
   if(!s.fallen.includes(o))s.fallen.push(o);s.alive=s.alive.filter(id=>id!==o.id);s.societyCounters.shatteredStates++;
-  chron('fall',`Raiding and the loss of its administrative center shatter the ${o.full}; surviving communities govern themselves.`,cell,[R_(o)],'Destruction of central government is distinct from annexation or the disappearance of its people.');
+  chron('fall',reason||`Raiding and the loss of its administrative center shatter the ${o.full}; surviving communities govern themselves.`,cell,[R_(o)],'Destruction of central government is distinct from annexation or the disappearance of its people.');
 }
 function raidDamageAt(o,origin,j,force){
   const s=S,target=s.pol[j]?s.pols[s.pol[j]]:null;
@@ -211,7 +212,7 @@ function raidDamageAt(o,origin,j,force){
   const stock=target?budgetAt(target,j,publicAvailable(target,j)*0.15):0;
   depositPublic(o,origin,stock);s.raidDamage[j]=clamp(s.raidDamage[j]+0.04+Math.min(0.12,force/Math.max(1,s.pop[j])),0,1);
   s.infrastructure[j]*=0.96;s.workshops[j]*=0.95;s.defensePact[j]=clamp(s.defensePact[j]+0.08,0,1);
-  s.wallHealth[j]*=0.97;
+  s.wallHealth[j]*=0.97;sackSettlement(o,j,force);
   if(target){let h=target.raidHistory.get(o.id);if(!h){h={raids:0,last:s.year,paidYears:0,breaches:0};target.raidHistory.set(o.id,h)}h.raids++;h.last=s.year}
   s.societyCounters.devastations++;
   if(target&&j===target.capital&&target.health<0.3&&target.payroll<0.5&&s.raidDamage[j]>0.45&&s.r()<0.12)shatterGovernment(target,j);

@@ -46,11 +46,11 @@ function taxCapacity(i,o){
   return (0.045+0.10*o.central+0.035*o.bureau)*(0.45+0.55*ag)*appropriation*compliance*
     transportAccess(i,o)*(0.4+0.6*s.integ[i])*(1-0.55*s.autonomy[i])*(1-0.35*o.nobles*s.eliteStake[i]);
 }
-function foodStocks(){let n=governmentFood();for(const i of WD.landIdx)n+=S.food[i];for(const id of S.alive)n+=S.pols[id].grain||0;return n}
+function foodStocks(){let n=governmentFood();for(const i of WD.landIdx)n+=S.food[i];for(const id of S.alive)n+=S.pols[id].grain||0;for(const e of S.expeditions||[])if(!e.done)n+=e.food;return n}
 function budgetPay(o,due){const n=Math.min(Math.max(0,o.grain),Math.max(0,due));o.grain-=n;return n}
 function economyPass(){
   const s=S,w=WD,a={start:foodStocks(),harvest:0,spoilage:0,consumed:0,fodder:0,transportLoss:0,end:0};
-  s.realmCells=new Map();
+  s.realmCells=new Map();s.foodImports.fill(0);
   for(const id of s.alive){const o=s.pols[id];
     if(s.pol[o.capital]!==o.id){s.depot[o.capital]+=o.grain;o.grain=0}
     o.collected=0;o.output=0;o.hunger=0;o.rents=0;o.relief=0;o.trade=0;o.campaigns=0;o.recruitable=0;const spoil=(o.grain||0)*(0.16-0.10*skill(o.capital,'storage'));o.grain=Math.max(0,(o.grain||0)-spoil);a.spoilage+=spoil}
@@ -62,7 +62,7 @@ function economyPass(){
     if(p<1){a.spoilage+=s.food[i];s.food[i]=0;s.nutrition[i]=1;continue}
     s.young[i]=clamp(s.young[i],0,p*0.65);
     const publicShare=o?((o.army||0)+(o.staff||0)+(o.navy||0)*20)/Math.max(1,o.pop):0;
-    const labour=clamp(((p-s.young[i])/p-publicShare)/0.68,0.2,1.2);
+    const labour=clamp(((p-s.young[i])/p-publicShare-Math.min(0.12,s.urban[i]/p*0.2))/0.68,0.2,1.2)*(1-0.65*clamp(s.sickness[i],0,0.85));
     const productivity=1.23+0.16*s.farm[i]+0.08*s.iron[i]+0.06*s.manure[i];
     let h=Math.min(s.K[i],p*productivity*labour)*(1-0.55*s.raidDamage[i]);
     if(s.settleLag[i]){const share=clamp(s.newcomers[i]/p,0,1);h*=1-share*(0.8-0.45/(s.settleLag[i]+0.5));s.settleLag[i]--;if(!s.settleLag[i])s.newcomers[i]=0}
@@ -164,12 +164,13 @@ function foundSettlement(i,j,requested,sponsor){
   const provisions=empty?0.85+clearing:0.2,stock=s.food[i]+(sponsor?publicAvailable(sponsor,i)*0.15:0);
   let n=Math.min(requested,s.pop[i]*0.2,stock/(provisions+0.15+journey));if(empty&&n<30)return 0;if(n<1)return 0;
   const cost=n*(provisions+0.15+journey),homePaid=Math.min(s.food[i],cost);s.food[i]-=homePaid;if(sponsor)budgetAt(sponsor,i,cost-homePaid);
-  const before=s.pop[j],age=s.young[i]*n/s.pop[i],animals=takeHerd(i,n/s.pop[i]);s.young[i]-=age;s.young[j]+=age;s.pop[i]-=n;s.pop[j]+=n;s.food[j]+=n*provisions;putHerd(j,animals);
+  diseaseJourney(i,j,travelDays(i,j,!!(w.coast[i]&&w.coast[j])),n,'migration');
+  const priorImmunity=diseaseHistory(i);const before=s.pop[j],age=s.young[i]*n/s.pop[i],animals=takeHerd(i,n/s.pop[i]);s.young[i]-=age;s.young[j]+=age;s.pop[i]-=n;s.pop[j]+=n;s.food[j]+=n*provisions;putHerd(j,animals);
   if(empty)s.societyCounters.settlements++;if(sponsor)s.societyCounters.sponsoredSettlements++;
   if(empty){s.eth[j]=s.eth[i];s.ancestry[j]=s.ancestry[i];s.eth2[j]=-1;s.rel[j]=s.rel[i];s.s[j]=s.s[i];s.adapt[j]=s.adapt[i];s.organisation[j]=s.organisation[i]*0.45;s.infrastructure[j]=0;s.settleLag[j]=1+Math.floor(clearing*2);s.colonyHome[j]=i}
   else{mergeCulture(j,s.eth[i],n,before);mergeAncestry(j,s.ancestry[i],n,before)}
   s.newcomers[j]+=n;if(!empty&&n>before*0.02)s.settleLag[j]=Math.max(1,s.settleLag[j]);
-  transferCrops(i,j);
+  transferCrops(i,j);mixDiseaseHistory(j,priorImmunity,n,before);if(sponsor)recordFrontierPressure(sponsor,j,0.12);
   for(let k=0;k<s.tk.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],s.tk[k][i]*0.8);
   if(sponsor){conquestRecorded(sponsor,j,s.pol[j]);s.pol[j]=sponsor.id;s.integ[j]=0.2;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+Math.round(routeCost(i,j,sponsor,false)*2));sponsor.occupation=Math.max(0,sponsor.occupation-500)}
   return n;
@@ -243,8 +244,8 @@ function tradeFood(accounts){
     const safe=Math.min(pa?0.3+0.7*pa.health:0.5+s.organisation[a]*0.3,pb?0.3+0.7*pb.health:0.5+s.organisation[b]*0.3);
     if(e.via&&e.via.some(i=>{const o=s.pol[i]?s.pols[s.pol[i]]:null;return o&&(pa&&o.enemies.has(pa.id)||pb&&o.enemies.has(pb.id))}))continue;
     const cost=a===e.a?e.cost:(e.reverseCost==null?e.cost:e.reverseCost);
-    const loss=clamp(cost+(1-safe)*0.2,0.01,0.75),n=Math.min(source,demand/(1-loss),Math.max(0,e.capacity-(e.freightUsed||0))*safe);
-    if(n<=0)continue;s.food[a]-=n;s.food[b]+=n*(1-loss);accounts.transportLoss+=n*loss;s.flow[a]+=n;s.flow[b]+=n;
+    const loss=clamp(cost+(1-safe)*0.2,0.01,0.75),n=Math.min(source,demand/(1-loss),Math.max(0,e.capacity-(e.freightUsed||0))*safe*epidemicTravelFactor(a,b));
+    if(n<=0)continue;e.privateUsed=(e.privateUsed||0)+n;s.food[a]-=n;s.food[b]+=n*(1-loss);s.foodImports[b]+=n*(1-loss)*(pb?0.98:1);accounts.transportLoss+=n*loss;s.flow[a]+=n;s.flow[b]+=n;
     // A small toll is physically taken out of the delivered consignment.
     if(pb){const toll=n*(1-loss)*0.02;s.food[b]-=toll;depositPublic(pb,b,toll);pb.trade+=toll;pb.collected+=toll}
   }
@@ -378,12 +379,13 @@ function refugeePressure(e,amount,cell,byPol,fromMig,food,young,animals,ancestry
   let p=s.press.get(e);if(!p){p={p:0,food:0,young:0,animals:emptyHerd(),y:s.year,cell,by:byPol,mig:fromMig};s.press.set(e,p)}
   if(!p.animals)p.animals=emptyHerd();if(animals)addHerd(p.animals,animals);
   if(ancestry!=null)p.ancestry=ancestry;
+  const history=diseaseHistory(cell);p.immunity=history.map((v,k)=>((p.immunity?.[k]||0)*p.p+v*amount)/Math.max(1,p.p+amount));
   p.p+=amount;p.food+=food||0;p.young+=young||0;p.cell=cell;p.y=s.year;if(byPol)p.by=byPol;if(fromMig!=null)p.mig=fromMig;
   const threshold=clamp(localPop(cell)*0.15,4000,80000);
   if(p.p>=threshold&&s.activeMigs.length<20&&s.r()<0.25*P.wander){
     s.press.delete(e);const a=s.r()*Math.PI*2;
     const M=startMigration({eth:e,pop:p.p,cell,dx:Math.cos(a),dy:Math.sin(a),kind:'people',food:p.food,young:p.young,animals:p.animals});
-    M.food=p.food;M.young=p.young;if(p.ancestry!=null){M.ancestry=p.ancestry;M.groups[0].ancestry=p.ancestry}
+    M.food=p.food;M.young=p.young;M.immunity=p.immunity;if(p.ancestry!=null){M.ancestry=p.ancestry;M.groups[0].ancestry=p.ancestry}
   }
 }
 function refugeePass(){
@@ -392,15 +394,15 @@ function refugeePass(){
     // Displaced people remain in the demographic ledger while awaiting movement.
     const eat=Math.min(p.food,p.p*0.7);p.food-=eat;p.p*=1-0.015-0.06*(1-eat/Math.max(1,p.p*0.7));p.young=Math.min(p.young,p.p*0.6);
     if(p.p<100||s.year-p.y>12){
-      const old=s.pop[p.cell];s.pop[p.cell]+=p.p;s.food[p.cell]+=p.food;mergeCulture(p.cell,eth,p.p,old);s.young[p.cell]+=p.young;putHerd(p.cell,p.animals);s.press.delete(eth);
+      const old=s.pop[p.cell];s.pop[p.cell]+=p.p;s.food[p.cell]+=p.food;mergeCulture(p.cell,eth,p.p,old);mergeAncestry(p.cell,p.ancestry??eth,p.p,old);mixDiseaseHistory(p.cell,p.immunity,p.p,old);s.young[p.cell]+=p.young;putHerd(p.cell,p.animals);s.press.delete(eth);
     }
   }
 }
 function displacedPeople(j,frac,byPol){
   const s=S,n=s.pop[j]*clamp(frac,0,0.85);if(n<1)return 0;
   s.societyCounters.displacements+=n;
-  const ratio=n/s.pop[j],food=s.food[j]*ratio,young=s.young[j]*ratio,animals=takeHerd(j,ratio);s.pop[j]-=n;s.food[j]-=food;s.young[j]-=young;
-  refugeePressure(s.eth[j],n,j,byPol,null,food,young,animals);return n;
+  const ratio=n/s.pop[j],food=s.food[j]*ratio,young=s.young[j]*ratio,animals=takeHerd(j,ratio),minority=s.eth2[j]>=0?s.mix[j]:0;s.pop[j]-=n;s.food[j]-=food;s.young[j]-=young;
+  for(const [eth,share] of [[s.eth[j],1-minority],[s.eth2[j],minority]])if(eth>=0&&share>0)refugeePressure(eth,n*share,j,byPol,null,food*share,young*share,animals.map(v=>v*share),s.ancestry[j]);return n;
 }
 function migrationCampaign(M){
   const s=S,w=WD,r=s.r;if(M.done)return;
@@ -431,10 +433,10 @@ function migrationCampaign(M){
     const force=M.pop*(M.kind==='people'?0.035:0.09),Ua=Math.pow(force+1,P.scaleExp)*M.S*M.mil*(0.8+0.4*M.experience),Ud=fieldDefense(j,true)*(1+borderBarrier(origin,j));
     won=r()<clamp(Ua/(Ua+Ud),0.02,0.9);scaleMigration(M,won?0.98:0.94);M.experience=clamp(M.experience+(won?0.025:0.008),0,1);
     if(q){const defender=s.pols[q];crisisEncounter(defender,null,!won,won?0.1:0.03);armyLoss(defender,j,Math.min(defender.army*0.1,force*(won?0.06:0.02)))}
-    if(won){s.pop[j]*=0.98;displacedPeople(j,M.kind==='people'?0.12:0.35,0);if(q){s.pols[q].shock+=0.08;if(!M.broke.includes(q))M.broke.push(q)}M.won=M.won||new Set();M.won.add(j)}
+    if(won){if(M.herd>0.4&&M.kind!=='people')sackSettlement({id:M.pol,kind:'horde',full:M.name,ruler:{aggr:0.4+M.experience*0.4},migration:M},j,force);s.pop[j]*=0.98;displacedPeople(j,M.kind==='people'?0.12:0.35,0);if(q){s.pols[q].shock+=0.08;if(!M.broke.includes(q))M.broke.push(q)}M.won=M.won||new Set();M.won.add(j)}
   }
   if(!won){M.fails++;if(q)M.blocked.set(q,(M.blocked.get(q)||0)+1);turnMigration(M);if(M.fails>10&&M.food<M.pop*0.1)settleMigration(M,origin,null);return}
-  M.cell=j;M.steps++;M.path.push(j);if(M.route&&M.route[0]===j)M.route.shift();s.migrationPressure[j]=clamp(s.migrationPressure[j]+M.pop/Math.max(10000,s.K[j])*0.2,0,2);
+  diseaseJourney(origin,j,travelDays(origin,j),Math.min(M.pop,600),'migration');M.cell=j;M.steps++;M.path.push(j);scatterMigration(M,j);if(M.route&&M.route[0]===j)M.route.shift();s.migrationPressure[j]=clamp(s.migrationPressure[j]+M.pop/Math.max(10000,s.K[j])*0.2,0,2);
   // Provisions seized or purchased in transit are removed from local stocks.
   const forage=Math.min(s.food[j]*0.15,M.pop*0.15);s.food[j]-=forage;M.food+=forage;
   recruitMigration(M,j);
@@ -451,7 +453,7 @@ function settleMigration(M,j,t){
     const c=cells[k],old=s.pop[c],n=M.pop*weights[k]/total,empty=old<1;
     s.pop[c]+=n;s.food[c]+=(M.food||0)*weights[k]/total;s.young[c]+=(M.young||M.pop*0.3)*weights[k]/total;
     if(empty){s.eth[c]=M.eth;s.ancestry[c]=M.ancestry==null?M.eth:M.ancestry;s.eth2[c]=-1;s.rel[c]=M.rel;s.infrastructure[c]=0;s.organisation[c]=0.15}
-    depositMigrationGroups(c,M,n,old);
+    depositMigrationGroups(c,M,n,old);mixDiseaseHistory(c,M.immunity,n,old);
     putHerd(c,M.animals.map(v=>v*weights[k]/total));if(M.crops)for(let f=0;f<CROPS.length;f++)s.cropAccess[f][c]=Math.max(s.cropAccess[f][c],M.crops[f]*0.8);
     s.settleLag[c]=empty?2:1;s.newcomers[c]+=n;for(let f=0;f<s.tk.length;f++)s.tk[f][c]=Math.max(s.tk[f][c],M.techs[f]*0.8);
     if(M.won&&M.won.has(c))s.pol[c]=0;
@@ -473,7 +475,7 @@ function territorialAttack(o,i,j,sea){
     else if((w.nomad[j]||w.desert[j])&&dd(i)<o.h&&budgetPay(o,100)>=100){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+w.tcost[j])}
     return;
   }
-  const force=campaignForce(o,i,sea);if(!force)return;
+  const force=campaignForce(o,i,sea);if(!force)return;recordFrontierPressure(o,j,0.2);diseaseJourney(i,j,travelDays(i,j,sea),Math.min(force,500),'army');
   if(wallStrength(j)>0.3&&!tryWallBreach(o,i,j,force)){o.blockadePressure=clamp(o.blockadePressure+0.08,0,1);return;}
   if(q&&s.r()<eliteDefectionChance(o,j)){switchEliteAllegiance(o,j);return}
   let Ua=Math.pow(force+1,P.scaleExp)*(0.4+0.3*o.S+0.3*s.s[i])*milAt(i)*(0.65+0.35*o.preparedness),Ud=fieldDefense(j,true)*(sea?1:1+borderBarrier(i,j));
@@ -500,7 +502,7 @@ function territorialAttack(o,i,j,sea){
 }
 function territorialRaid(o,i,j){
   const s=S,target=s.pol[j]?s.pols[s.pol[j]]:null;if(target&&(target.over===o.id||protectedByTreaty(target,o)))return;
-  const force=campaignForce(o,i,false);if(!force)return;
+  const force=campaignForce(o,i,false);if(!force)return;recordFrontierPressure(o,j,0.12);diseaseJourney(i,j,travelDays(i,j),Math.min(force,400),'army');
   if(wallStrength(j)>0.3&&!tryWallBreach(o,i,j,force)){o.failedRaids=(o.failedRaids||0)+1;o.blockadePressure=clamp(o.blockadePressure+0.08,0,1);return;}
   const attack=Math.pow(force+1,P.scaleExp)*milAt(i)*(0.8+0.4*o.raidSkill),def=fieldDefense(j,true)*(1+borderBarrier(i,j));
   if(s.r()>attack/(attack+def)){armyLoss(o,i,force*0.04,o.campaignAuxShare);crisisEncounter(o,target,false,0.04);recordVictory(o,false,0.04);if(target)crisisEncounter(target,o,true,0.02);o.failedRaids=(o.failedRaids||0)+1;return}
@@ -521,6 +523,6 @@ function socialObservations(){
 }
 function societyMetrics(){
   const s=S,states=s.alive.map(id=>s.pols[id]).filter(o=>o.kind==='state');
-  const animalStocks=ANIMALS.map((a,k)=>{let n=0;for(const i of WD.landIdx)n+=s.animals[k][i];for(const id of s.activeMigs)n+=s.migs[id].animals[k];for(const p of s.press.values())n+=(p.animals||[])[k]||0;return Math.round(n)});
+  const animalStocks=ANIMALS.map((a,k)=>{let n=0;for(const i of WD.landIdx)n+=s.animals[k][i];for(const id of s.activeMigs)n+=s.migs[id].animals[k];for(const p of s.press.values())n+=(p.animals||[])[k]||0;for(const e of s.expeditions)if(!e.done)n+=e.animals[k];return Math.round(n)});
   return {kingdoms:states.filter(o=>o.tier==='Kingdom').length,empires:states.filter(o=>o.tier==='Empire').length,regionalStores:WD.landIdx.reduce((n,i)=>n+s.depot[i],0),foodError:s.accounts?s.accounts.error:0,animalError:s.animalAccounts?s.animalAccounts.error:0,animalStocks,cityStates:states.filter(o=>o.tier==='City-state').length,meanPreparedness:states.reduce((n,o)=>n+o.preparedness,0)/Math.max(1,states.length),tradeEdges:s.tradeEdges.length,communities:WD.landIdx.reduce((n,i)=>n+(s.organisation[i]>0.4&&!s.pol[i]?1:0),0),meanHealth:states.reduce((n,o)=>n+o.health,0)/Math.max(1,states.length),reforms:states.reduce((n,o)=>n+o.reforms.length,0),army:states.reduce((n,o)=>n+o.army,0),migrations:s.migs.length,coerciveMigrations:s.migs.filter(m=>m.kind==='warband'||m.kind==='horde').length,...s.societyCounters};
 }

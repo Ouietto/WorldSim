@@ -261,7 +261,7 @@ function switchEliteAllegiance(attacker,j){
 function nomadOpportunity(i){
   const s=S,w=WD;let prize=0,threat=0;
   ring(i,3,j=>{const id=s.pol[j],o=id?s.pols[id]:null;if(o&&o.kind==='state'){prize=Math.max(prize,clamp(o.pop/300000,0,1));threat=Math.max(threat,o.enemies.size?0.5:0.2)}});
-  return clamp(0.15+prize*0.6+threat+Math.max(0,s.anom[i])*0.25+s.raiding[i]*0.35,0.1,1.5);
+  return clamp(0.15+prize*0.6+threat+(s.frontierAlarm?s.frontierAlarm[i]*0.7:0)+Math.max(0,s.anom[i])*0.25+s.raiding[i]*0.35,0.1,1.5);
 }
 function settledStateHabitat(i){
   const s=S,w=WD;return !(w.rangeExposure[i]>0.4&&frontierRisk(i)>0.18)||s.urban[i]>10000&&s.farm[i]*farmSuit(i)>0.12&&(w.rv[i]>0.35||s.node[i]>0.7)&&frontierRisk(i)<0.5;
@@ -279,7 +279,7 @@ function confederationStep(o){
   let departing=-1,worst=1;
   for(const [clan,p] of o.clanPops){
     let t=o.clanTerms.get(clan);if(!t){t={loyalty:0.6,joined:s.year};o.clanTerms.set(clan,t)}
-    const target=clamp(0.1+0.22*o.ruler.char+0.24*fair+0.15*external+0.16*o.succession+0.15*o.trust+0.14*(o.momentum||0)-0.35*o.hunger-0.18*o.strain-0.35*o.coalitionFatigue+o.patronage*0.12,0,1);
+    const target=clamp(0.1+0.22*o.ruler.char+0.24*fair+0.15*external+0.16*o.succession+0.15*o.trust+0.14*(o.momentum||0)+0.18*(o.sharedThreat||0)-0.35*o.hunger-0.18*o.strain-0.35*o.coalitionFatigue+o.patronage*0.12,0,1);
     t.loyalty=clamp(t.loyalty+0.12*(target-t.loyalty)-0.06*o.shock,0,1);
     if(t.loyalty<worst&&p>2000){worst=t.loyalty;departing=clan}
   }

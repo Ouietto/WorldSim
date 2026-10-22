@@ -1,4 +1,52 @@
-# Asabiya v0.8 validation — 2026-10-22
+# Asabiya v0.9 validation — 2026-10-22
+
+All browser and command-line loaders include the new epidemic, connection,
+peoples, urbanism and map-input modules. Both standalone pages and a separately
+built Pages folder have identical SHA-256 hashes. The workflow runs all seven
+focused/scenario suites before publishing.
+
+- JavaScript syntax, numerical climate, society conservation and deterministic
+  replay, political/transport dynamics, and frontier checks pass.
+- `interactions.test.js` exercises independent disease-family immunity,
+  delayed journeys, travel-group size, vector habitat, actual livestock losses,
+  funded containment and illness-related labor loss. It checks bounded disease
+  compartments when immigrants bring immunity.
+- Defensive confederations need shared local threat, food and herds; assembly
+  preserves population and animals. Maritime foundations consume real people,
+  provisions, officials and fleet capacity, face voyage mortality and cannot
+  annex neighboring territory merely by landing.
+- Seasonal movement conserves population and herds and permits return to
+  recovered ground. One contingent can settle out of a mixed migrating coalition
+  while others continue. Regional identity change preserves ancestry.
+- Forced city destruction preserves survivors as residents or refugee cohorts,
+  allows a viable government to relocate and prevents immediate rebuilding.
+  Civic lending transfers physical reserves; repeated arrears cause default,
+  while negotiated debt protection requires an actual solvent patron.
+- Connected cities improve nearby urban viability. Cold, unsupported settlements
+  remain less viable. Exports do not count as food imports. A 100-year combined
+  scenario checks the annual food ledger and finite new state fields.
+- The 250-year developed generated-world scenario explicitly seeds an epidemic
+  and checks food/animal accounting, bounded institutions and disease fractions.
+  The final local run records 66 surviving polities and 183 epidemic deaths;
+  these are software observations for one artificial scenario, not targets.
+- A default Earth history for seed 7 advances 301 years to 8700 BCE with finite
+  values and a final food discrepancy of about 0.000000016 annual rations.
+  The report is `validation/v09-seed7-early-history.log`. This run caught a
+  missing seasonal-climate value reaching pasture recovery; the fallback is now
+  explicit and has a focused regression check.
+- `map-input.test.js` exercises the actual gesture controller with synthetic
+  pointer events: two-finger midpoint anchoring, remaining-finger pan, cancel,
+  tap, double tap and zoom limits. Browser checks cover loading, play/pause,
+  map options, console errors and a 390 × 844 phone-sized viewport without
+  horizontal overflow. No physical handset pinch test is claimed.
+
+The new mechanisms and numeric parameters remain exploratory. These checks do
+not establish historical frequencies, regional first-city dates, confederation
+lifetimes, colonial acceptance rates or pandemic mortality. No complete v0.9
+Earth history to 1500 CE or multi-seed historical calibration is claimed.
+State, border and wall aesthetic changes remain deferred.
+
+## Archived v0.8 validation — 2026-10-22
 
 The current release adds `ecology.js` and `frontiers.js` to every browser and
 command-line loader. The Pages workflow includes the new frontier suite.

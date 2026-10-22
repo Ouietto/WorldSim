@@ -53,6 +53,7 @@ function initEcology(){
   s.publicShipments=[];s.militaryContracts=[];s.migrationPressure=new Float32Array(N);
   Object.assign(s.societyCounters,{cropInvestment:0,freight:0,raidsBeyondBorder:0,devastations:0,shatteredStates:0,clanAccessions:0,opportunistCampaigns:0,reprisals:0,selectiveDeaths:0,forcedResettlers:0,wallBreaches:0,protectionTreaties:0,protectionPaid:0,brokenProtection:0,conquestDynasties:0,militaryContracts:0,returnedVeterans:0,migrationAccessions:0,migrationRetreats:0,migrantBreaches:0});
   for(const h of s.hearths)if(h.kind==='farm')h.cropIndex=h.crop?cropIndex(h):bestCrop(h.cell);
+  initEpidemics();initConnections();initPeoples();initUrbanism();
 }
 function bestCrop(i){let best=0;for(let k=1;k<CROPS.length;k++)if(WD.cropSuit[k][i]>WD.cropSuit[best][i])best=k;return best}
 function seedCrop(i,k,value=1){
@@ -78,7 +79,7 @@ function cropSystem(i){
 function farmSuit(i){return S.cropAccess?cropSystem(i).value:WD.sF[i]}
 function foodStorability(i){const c=cropSystem(i);return c.kind<0?0.2:CROPS[c.kind].store+(1-CROPS[c.kind].store)*skill(i,'storage')*0.55}
 function pastureCondition(i){
-  const w=WD,s=S,season=w.rainSeasonality?Math.max(0,w.rainSeasonality[i]):0;
+  const w=WD,s=S,season=w.rainSeasonality&&Number.isFinite(w.rainSeasonality[i])?Math.max(0,w.rainSeasonality[i]):0.3;
   const winter=clamp((w.amp[i]-18)/24,0,1)*clamp((0.85-s.wm[i])/0.65,0,1);
   return clamp(s.wm[i]*(1-season*0.18)-winter*0.5,0.1,1.45);
 }
@@ -98,7 +99,7 @@ function agroPass(){
     s.waterworks[i]=clamp(s.waterworks[i]*(1-0.003*(1-org))+effort*1.8*w.waterPotential[i]*need,0,1);
     const urban=clamp(s.urban[i]/p,0,0.4),market=clamp(s.node[i]+s.flow[i]/p,0,1);
     s.workshops[i]=clamp(s.workshops[i]*0.998+effort*(0.1+urban*4+market),0,1);
-    s.craftPractice[i]+=s.workshops[i]*s.nutrition[i]*(0.2+0.8*s.metal[i]);
+    s.craftPractice[i]+=s.workshops[i]*s.nutrition[i]*(0.2+0.8*s.metal[i])*(1-0.6*clamp(s.sickness[i],0,1));
     s.recordPractice[i]+=recordSkill(i)*(0.15+urban*2+market*0.3)*s.nutrition[i];
     if(s.paper[i]>0.5&&s.iron[i]>0.5)s.chemicalPractice[i]+=s.workshops[i]*s.paper[i]*s.nutrition[i];
     if(s.gun[i]>0.7){const due=Math.min(s.food[i]*0.01,p*0.002*s.workshops[i]);s.food[i]-=due;s.firearms[i]+=due*0.05*s.gun[i]}

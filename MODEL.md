@@ -1,8 +1,106 @@
-# Asabiya 0.8 — livelihoods, exposed frontiers and mobile coalitions
+# Asabiya 0.9 — connected cities, mobile peoples and epidemics
 
 This version connects settlement, warfare, administration, reform and collapse
 to shared resources. It is an exploratory historical model. Its rules are
 explicit hypotheses, rather than established universal laws of social change.
+
+## Changes in 0.9
+
+### Viable urban networks and civic credit
+
+An urban population depends on actual harvests, arriving food, local crop
+suitability, accessible hinterlands, storage and recurring administration.
+Cold-season costs and damaged infrastructure reduce viability. Existing urban
+centers encourage connected specialization through used trade routes or
+maintained nodes; nearby centers also compete for food and workers. These
+effects are staged, rather than spreading instantly across a continent.
+Exports and general route traffic do not count as incoming food. There is no
+Siberian ban or Mediterranean city bonus: supported ports, river settlements
+and later transport can sustain urban life in otherwise difficult locations.
+
+Civic loans transfer existing household surplus or a neighboring government's
+reserves. External provisions travel as public consignments. Principal is a
+claim, not another food stock. Repeated missed payments lower credit trust and
+increase political vulnerability. Stronger neighbors may intervene, or a
+government may exchange relief for protection. Default alone neither annexes
+nor dissolves a city. Prolonged failure of food supply, collections and services
+can dissolve an unsupported government while its inhabitants remain.
+Rates and repayment terms are scenario parameters. This is a food-denominated
+proxy, not a legal reconstruction of ancient credit or a monetary banking model.
+
+### Frontier assembly and maritime foundations
+
+Actual state incursions spread local threat information among connected
+pastoral communities. Shared danger can encourage a defensive confederation
+or accession to an existing one, provided people, provisions, herds and
+leadership can support it. Alliances and protection agreements can discourage
+assembly against a patron. Threat memory fades; a state nearby alone does not
+guarantee a large confederation.
+
+Long-lived coastal city states can fund maritime practice and merchant fleets.
+Land pressure, exclusion, political insecurity and commercial opportunity
+encourage expeditions. Ships, food, emigrants, livestock, officials and escorts
+come from actual source stocks. Sites must be accessible and suitable for
+known crops or local water. Voyages take time and face mortality or rejection.
+Accepted settlers can establish independent daughter polities, dependencies or
+enclaves within an existing host. Nearby communities gain contact and incentives
+to coordinate; they do not automatically become states. Maritime colonization
+does not grant the adjacent hinterland for free. Naval logistics and indigenous
+agreements remain coarse aggregate rules.
+
+### Regional peoples, movement and ruined cities
+
+Initial macro naming families have smaller regional branches. Connected
+communities can develop distinct identities after long isolation without
+rewriting ancestry. Non-state foragers and pastoralists deplete and revisit
+renewable seasonal grounds, moving portions of their actual households and
+herds. Migrating coalitions can leave individual contingents at different
+locations while others continue. The peoples map shows resident minorities,
+recent camp traces and settlements left along a migration route.
+
+Nomadic victories and raids can damage cities, kill inhabitants and drive
+survivors into accounted refugee cohorts. Motives and intended dynastic rule
+affect the probability of destruction. Ruins retain their former city identity;
+repair needs sustained provisions and organization. A functional government can
+relocate its capital, while an already failing government may shatter.
+There is no automatic destruction of every conquered city. Culture and ancestry
+still have only two resident components per province, and refugee pools remain
+aggregated by cultural affiliation rather than individual households.
+
+### Epidemics and institutional strain
+
+Five stylized pathogen families replace a universal immunity score. Four
+affect people; one removes actual working livestock. Family-specific exposed,
+infectious and recovered fractions advance in 24 shorter steps inside a year.
+Incubation, infectious duration, waning immunity, crowding, nutrition and
+environmental suitability matter. Parameter values describe experimental
+scenarios, not measured historical pathogens or reconstructed pandemic dates.
+
+Used trade routes, caravans, local contact, armies, settlers and migrations
+create delayed infection contacts. Infection survival falls with journey
+length, although sizeable groups can sustain a transmission chain. Clearing
+forest can increase spillover opportunities; suitable climate still constrains
+vector transmission. A previously unexposed population can suffer repeated
+introductions from several families without a scripted regional death event.
+Large connected populations both sustain transmission and replenish susceptible
+cohorts. Containment depends on trust, organization, public services and actual
+provisions, and reduces exchange. Illness lowers labor; deaths remove real
+people, officials, troops or animals. Revenue loss and succession shocks feed
+the existing political model rather than an automatic collapse switch.
+
+Journeys carry expected infection doses, not individually simulated patients.
+Seasonality, host species and within-city contacts are simplified. Incoming
+residents mix immunity, but mobile cohorts do not run their own full epidemic
+compartments. Birth replacement is approximated by annual immunity dilution.
+These rules need multi-seed epidemiological and political calibration.
+
+### Map input
+
+Touch, pen and mouse share pointer handling. Two fingers pinch around their
+moving midpoint; lifting one finger continues panning without a jump. Cancelled
+contacts do not select provinces. Double tap provides an additional touch zoom
+gesture. This release changes input behavior and peoples information overlays;
+the deferred state, border and wall aesthetic redesign remains deferred.
 
 ## Changes in 0.8
 
@@ -327,8 +425,9 @@ network. The transmission of more specialized skills is more dependent on
 nodes, contact, maintained routes and actual exchange. This avoids making the
 spread of farming depend on already-existing cities or states.
 
-This remains a food-equivalent economy. It does not separately simulate prices,
-credit contracts, ore deposits or inventories of every traded commodity.
+This remains a food-equivalent economy. Apart from the civic-loan proxy above,
+it does not separately simulate prices, general commercial credit, ore deposits
+or inventories of every traded commodity.
 River routes are simplified, and passing through several exchange links is
 resolved within an annual step rather than as individual caravans and ships.
 

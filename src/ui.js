@@ -117,6 +117,12 @@ function buildComp(){
   ctx.globalAlpha=1;ctx.drawImage(baseCv,0,0);
   buildOverlay();ctx.imageSmoothingEnabled=true;ctx.drawImage(ovCv,0,0,HW,HH);
   const m=ui.mode;
+  // Stable sub-cell marks show actual minority shares without changing the
+  // simulation random stream or replacing every province's dominant identity.
+  if(m==='peoples')for(const i of w.landIdx){const minority=s.eth2[i];if(minority<0||s.mix[i]<0.04||s.pop[i]<100)continue;
+    ctx.fillStyle='rgb('+s.eths[minority].rgb.join(',')+')';const count=Math.round(s.mix[i]*16),offset=(Math.imul(i+1,1103515245)>>>0)%16;
+    for(let n=0;n<count;n++){const slot=(offset+n*7)%16;ctx.fillRect(w.cxA[i]*SC+(slot%4)*SC/4,w.cyA[i]*SC+Math.floor(slot/4)*SC/4,SC/4,SC/4)}
+  }
   if(m==='political'||m==='alliances'||m==='peoples'||m==='religion'){
     const key=m==='peoples'?s.eth:m==='religion'?s.rel:Int32Array.from(s.pol,id=>id&&polityOnMap(s.pols[id])?id:0),polMode=m==='political'||m==='alliances';
     let selP=0;if(ui.page){if(polMode&&ui.page.t==='pol')selP=ui.page.id;else if(m==='peoples'&&ui.page.t==='eth')selP=ui.page.id;else if(m==='religion'&&ui.page.t==='rel')selP=ui.page.id;else if(ui.page.t==='cell')selP=key[ui.page.id]}
@@ -153,15 +159,15 @@ function cityMapItems(){
   if(ui.cities==='hidden')return [];
   const s=S,w=WD,regional=new Map(),items=[],seen=new Set();
   const region=i=>Math.floor(w.cyA[i]/12)*Math.ceil(W/12)+Math.floor(w.cxA[i]/12);
-  for(const c of s.cities){const p=s.urban[c.cell]||0,k=region(c.cell);regional.set(k,Math.max(regional.get(k)||0,p))}
+  for(const c of s.cities){if(c.abandoned)continue;const p=s.urban[c.cell]||0,k=region(c.cell);regional.set(k,Math.max(regional.get(k)||0,p))}
   for(const c of s.cities){
-    const i=c.cell,o=s.pol[i]?s.pols[s.pol[i]]:null,capital=!!(o&&o.kind==='state'&&o.capital===i),p=s.urban[i]||0;
+    if(c.abandoned)continue;const i=c.cell,o=s.pol[i]?s.pols[s.pol[i]]:null,capital=!!(o&&o.kind==='state'&&o.capital===i),p=s.urban[i]||0;
     if(o&&o.kind==='horde'&&['political','alliances'].includes(ui.mode)&&!polityOnMap(o))continue;
     if(!capital&&(p<500||ui.cities==='capitals'))continue;
     if(!capital&&ui.cities==='major'&&p<Math.max(4000,(regional.get(region(i))||0)*0.35))continue;
     items.push({cell:i,name:c.name,pop:p,capital});seen.add(i);
   }
-  for(const id of s.alive){const o=s.pols[id];if(o.kind==='state'&&!seen.has(o.capital))items.push({cell:o.capital,name:o.base,pop:s.urban[o.capital]||0,capital:true})}
+  for(const id of s.alive){const o=s.pols[id];if(o.kind==='state'&&!seen.has(o.capital)&&!(s.cityDamage[o.capital]>0.8&&s.urban[o.capital]<500))items.push({cell:o.capital,name:o.base,pop:s.urban[o.capital]||0,capital:true})}
   const selected=ui.page&&ui.page.t==='pol'?ui.page.id:0;
   return items.sort((a,b)=>(s.pol[b.cell]===selected?1:0)-(s.pol[a.cell]===selected?1:0)||Number(b.capital)-Number(a.capital)||b.pop-a.pop);
 }
@@ -194,6 +200,17 @@ function drawMap(){
         ctx.stroke();
         if(!M.done){const ex=sx0+(px-pts[0][0])*k_,ey=sy0+(pts[pts.length-1][1]-pts[0][1])*k_;ctx.fillStyle='rgba(255,196,90,.95)';ctx.beginPath();ctx.arc(ex,ey,4.5,0,7);ctx.fill();ctx.strokeStyle='#3a2614';ctx.lineWidth=1;ctx.setLineDash([]);ctx.stroke()}})}
     ctx.setLineDash([])}
+  if(m==='peoples'&&(ui.z>1.4||ui.page?.t==='eth')){
+    const selected=ui.page?.t==='eth'?ui.page.id:-1;
+    ctx.lineWidth=1;ctx.setLineDash([2,3]);
+    for(const move of s.campMoves){if(s.year-move.year>3||selected>=0&&move.eth!==selected)continue;
+      const [x,y]=cellXY(move.from),[tx,ty]=cellXY(move.to);if(Math.abs(tx-x)>HW/2)continue;
+      ctx.strokeStyle='rgba('+s.eths[move.eth].rgb.join(',')+',.8)';each(x,y,(sx,sy)=>{ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+(tx-x)*k,sy+(ty-y)*k);ctx.stroke()});
+    }ctx.setLineDash([]);
+    for(const M of s.migs)for(const group of M.settled||[]){if(s.year-group.year>25||selected>=0&&group.eth!==selected)continue;
+      const [x,y]=cellXY(group.cell);ctx.fillStyle='rgb('+s.eths[group.eth].rgb.join(',')+')';each(x,y,(sx,sy)=>{ctx.beginPath();ctx.arc(sx,sy,2.2,0,Math.PI*2);ctx.fill()});
+    }
+  }
   if(ui.ringCell>=0&&performance.now()<ui.ringT){const [mx,my]=cellXY(ui.ringCell),ph=(ui.ringT-performance.now())/4000;
     each(mx,my,(sx,sy)=>{ctx.strokeStyle=`rgba(255,240,200,${0.4+0.6*ph})`;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(sx,sy,10+18*(1-ph)*((performance.now()/600)%1+0.2),0,7);ctx.stroke()})}
   // City filters affect display only. Regional urban population, rather than
@@ -257,7 +274,7 @@ function drawLegend(){
     case'loyalty':h=rampBox('Province loyalty','newly conquered','fully integrated')+'<p style="margin:6px 0 0;opacity:.85">'+'How integrated each province is into its state. Newly conquered and foreign provinces start low; roads, writing, law, shared people, faith and identity raise it. Rebellions start where it is lowest.</p>';break;
     case'mixing':h='Places where two peoples live side by side. Brighter means a more even mix; long, even mixing can give birth to a new people.';break;
     case'alliances':h='States in the same alliance share a colour; dashed lines link allied capitals. Faded states stand alone; pale states pay tribute to the bloc whose tint they carry. Red borders are war fronts.';break;
-    case'peoples':h='Each colour is a people. Related peoples share a hue family.';break;
+    case'peoples':h='Each colour is a people; related peoples share a hue family. Small marks show resident minorities. Amber trails follow migrations; at closer zoom, coloured traces show recent camp movements and dots mark communities left along migration routes.';break;
     case'religion':h='Each colour is an organised faith. Grey areas follow their people’s own folk religion.';break;
     case'knowledge':{
       let share='';if(S&&S.stats.length){}
@@ -279,7 +296,7 @@ function drawLegend(){
   }
   el.innerHTML=h;
 }
-function worldPop(){if(!S)return 0;let t=0;for(const i of WD.landIdx)t+=S.pop[i];return t}
+function worldPop(){if(!S)return 0;let t=0;for(const i of WD.landIdx)t+=S.pop[i];for(const id of S.activeMigs)t+=S.migs[id].pop;for(const p of S.press.values())t+=p.p;for(const e of S.expeditions||[])if(!e.done)t+=e.pop;return t}
 function techShare(k){let t=0;const f=S.tk[k];for(const i of WD.landIdx)if(f[i]>0.5)t+=S.pop[i];return t}
 $('legend').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.k){const k=b.dataset.k;ui.know.has(k)?ui.know.delete(k):ui.know.add(k)}
@@ -377,7 +394,7 @@ function renderPage(){
       h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
       h+=`<h3 class="sec">Ecology</h3><div class="bars">${w.sF[i]>0.08?bar('Soil fertility',s.fert[i],1,'t'):''}${w.forest0[i]>0.05?bar('Forest standing',s.forest[i]/w.forest0[i],1,'t'):''}${s.salt[i]>0.02?bar('Salt in the soil',s.salt[i],1):''}${w.mal[i]>0.05?bar('Fever burden',w.mal[i]*(1-s.adapt[i]),1):''}${w.oncho[i]>0.05?bar('River blindness',w.oncho[i],1):''}${bar('Disease pool',s.dp[i],1,'t')}${w.sF[i]>0.1?bar('Hemmed in (circumscription)',s.circE[i],1,'t'):''}${s.car[i]>0.1?bar('Caravan traffic',s.car[i],1,'t'):''}</div>`;
       h+=`<h3 class="sec">Known techniques</h3><div class="bars">${TECH.map((T,k)=>s.tk[k][i]>0.05?bar(T.n,s.tk[k][i],1,'t'):'').join('')||'<div class="note">Foraging only.</div>'}</div>`;
-      h+=`<h3 class="sec">Transport and local power</h3><dl class="kv">${ANIMALS.map((a,k)=>`<dt>${a.n}</dt><dd>${fmtN(s.animals[k][i])}</dd>`).join('')}<dt>Available traction</dt><dd>${Math.round(s.traction[i]*100)} / 100</dd><dt>Pack transport</dt><dd>${Math.round(s.pack[i]*100)} / 100</dd><dt>Riding and remounts</dt><dd>${Math.round(s.mounts[i]*100)} / 100</dd><dt>Local civic identity</dt><dd>${Math.round(s.cityIdentity[i]*100)} / 100</dd><dt>Landholders' stake</dt><dd>${Math.round(s.eliteStake[i]*100)} / 100</dd><dt>Landholders' loyalty</dt><dd>${Math.round(s.eliteLoyalty[i]*100)} / 100</dd><dt>Coastal crop investment</dt><dd>${Math.round(s.orchards[i]*100)} / 100</dd><dt>Crop system</dt><dd>${cropSystem(i).kind<0?'No established crop package':CROPS[cropSystem(i).kind].n}</dd><dt>Local crop suitability</dt><dd>${Math.round(farmSuit(i)*100)} / 100</dd><dt>Terraces</dt><dd>${Math.round(s.terraces[i]*100)} / 100</dd><dt>Local waterworks</dt><dd>${Math.round(s.waterworks[i]*100)} / 100</dd><dt>Regional public stores</dt><dd>${fmtN(s.depot[i])} annual rations</dd><dt>Frontier insecurity</dt><dd>${Math.round(frontierRisk(i)*100)} / 100</dd><dt>Damage from raids</dt><dd>${Math.round(s.raidDamage[i]*100)} / 100</dd><dt>Wall condition</dt><dd>${Math.round(s.wallHealth[i]*100)} / 100</dd><dt>Open breaches</dt><dd>${Math.round(s.wallBreach[i]*100)} / 100</dd><dt>Adult male share</dt><dd>${Math.round(s.maleShare[i]*100)}%</dd></dl>`;
+      h+=`<h3 class="sec">Transport and local power</h3><dl class="kv">${ANIMALS.map((a,k)=>`<dt>${a.n}</dt><dd>${fmtN(s.animals[k][i])}</dd>`).join('')}<dt>Available traction</dt><dd>${Math.round(s.traction[i]*100)} / 100</dd><dt>Pack transport</dt><dd>${Math.round(s.pack[i]*100)} / 100</dd><dt>Riding and remounts</dt><dd>${Math.round(s.mounts[i]*100)} / 100</dd><dt>Local civic identity</dt><dd>${Math.round(s.cityIdentity[i]*100)} / 100</dd><dt>Landholders' stake</dt><dd>${Math.round(s.eliteStake[i]*100)} / 100</dd><dt>Landholders' loyalty</dt><dd>${Math.round(s.eliteLoyalty[i]*100)} / 100</dd><dt>Coastal crop investment</dt><dd>${Math.round(s.orchards[i]*100)} / 100</dd><dt>Crop system</dt><dd>${cropSystem(i).kind<0?'No established crop package':CROPS[cropSystem(i).kind].n}</dd><dt>Local crop suitability</dt><dd>${Math.round(farmSuit(i)*100)} / 100</dd><dt>Terraces</dt><dd>${Math.round(s.terraces[i]*100)} / 100</dd><dt>Local waterworks</dt><dd>${Math.round(s.waterworks[i]*100)} / 100</dd><dt>Regional public stores</dt><dd>${fmtN(s.depot[i])} annual rations</dd><dt>Frontier insecurity</dt><dd>${Math.round(frontierRisk(i)*100)} / 100</dd><dt>Damage from raids</dt><dd>${Math.round(s.raidDamage[i]*100)} / 100</dd><dt>Wall condition</dt><dd>${Math.round(s.wallHealth[i]*100)} / 100</dd><dt>Open breaches</dt><dd>${Math.round(s.wallBreach[i]*100)} / 100</dd><dt>Resource recovery</dt><dd>${Math.round(s.rangeStock[i]*100)}%</dd><dt>City damage</dt><dd>${Math.round(s.cityDamage[i]*100)}%</dd><dt>Urban viability</dt><dd>${Math.round(citySubsistence(i)*100)}%</dd><dt>Adult male share</dt><dd>${Math.round(s.maleShare[i]*100)}%</dd></dl>`;
     }
   }else if(t==='pol'){
     const o=s.pols[id],R=o.ruler,c=o.capital,city=s.city[c]>=0?s.cities[s.city[c]]:null;
@@ -392,7 +409,7 @@ function renderPage(){
       const tribs=s.alive.map(k=>s.pols[k]).filter(p=>p.over===id);
       h+=`<h3 class="sec">Realm</h3><dl class="kv"><dt>Provinces</dt><dd>${o.cells} (peak ${o.maxCells})</dd>${o.shape?`<dt>Extent at peak</dt><dd>${o.shape.ew.toLocaleString()} km east–west × ${o.shape.ns.toLocaleString()} km north–south</dd>`:''}${o.fortN?`<dt>Fortified provinces</dt><dd>${o.fortN}</dd>`:''}<dt>Population</dt><dd>${fmtN(o.pop)}</dd><dt>Capital</dt><dd>${city?esc(city.name):'–'}</dd><dt>Social complexity</dt><dd>${o.spc.toFixed(1)} / 10</dd>${o.cplx!=null&&o.kind==='state'?`<dt>Cost of government</dt><dd>${Math.round((o.burden||0)*100)}% of what it can tax${(o.burden||0)>1?' — more than it returns':''}</dd><dt>Treasury</dt><dd>${o.treas>0.5?'full':o.treas>0?'solvent':o.treas>-1?'in debt':'bankrupt'}</dd><dt>Inequality</dt><dd>${Math.round(o.ineq*100)} / 100</dd><dt>Farming</dt><dd>${(o.plN||0)>0.5*(o.cells-(o.wasteN||0))?'plough':'hoe'} agriculture</dd>${o.wasteN?`<dt>Claimed wasteland</dt><dd>${o.wasteN} provinces</dd>`:''}`:''}<dt>Era</dt><dd>${ERAS[eraOf(c)]}</dd><dt>Faith of the realm</dt><dd>${o.rel>=0?lr(s.rels[o.rel]):'folk religion'}</dd><dt>Core people</dt><dd>${s.eths[o.core]?le(s.eths[o.core]):'?'}</dd><dt>Land use</dt><dd>${(o.press*100).toFixed(0)}% of capacity</dd><dt>Asabiya</dt><dd>${o.S.toFixed(2)}</dd><dt>Elites vs positions</dt><dd>${(o.E/etOf(o)).toFixed(2)}×</dd><dt>Communication horizon</dt><dd>${o.h.toFixed(1)} travel days</dd><dt>Civil wars</dt><dd>${o.crises}</dd></dl>`;
       h+=`<h3 class="sec">Institutions and resources</h3><p class="note">${esc(o.gov)} government. Institutions need trained people, provisions and maintained connections.</p><div class="bars">${bar('Central authority',o.central,1,'t')}${bar('Administrative skill',o.bureau,1,'t')}${bar('Public trust',o.trust,1,'g')}${bar('Negotiated rights',o.rights,1,'t')}${bar('Succession continuity',o.succession,1,'t')}${bar('Service reliability',o.health,1,'g')}${bar('Accumulated strain',o.strain,1)}</div><dl class="kv"><dt>Public provisions</dt><dd>${(12*o.grain/Math.max(1,o.pop)).toFixed(1)} population-months</dd><dt>Annual collections</dt><dd>${fmtN(o.collected||0)} rations</dd><dt>Payroll funded</dt><dd>${Math.round(o.payroll*100)}%</dd><dt>Trained officials</dt><dd>${fmtN(o.staff)}</dd><dt>Available troops</dt><dd>${fmtN(o.army)}</dd><dt>Maintained ships</dt><dd>${Math.round(o.navy)}</dd><dt>Campaigns this year</dt><dd>${o.campaigns||0}</dd><dt>Durable reforms</dt><dd>${o.reforms.length}</dd></dl>`;
-      h+=`<h3 class="sec">Reach and continuity</h3><dl class="kv"><dt>Message round trip</dt><dd>${o.responseDays.toFixed(1)} days, weighted average</dd><dt>Connected water routes</dt><dd>${Math.round(o.corridor*100)} / 100</dd><dt>Military preparedness</dt><dd>${Math.round(o.preparedness*100)} / 100</dd><dt>Crisis experience</dt><dd>${Math.round(o.crisisMemory*100)} / 100</dd><dt>Years without conflict or expansion</dt><dd>${o.peaceYears}</dd><dt>Unintegrated recent conquests</dt><dd>${Math.round(o.recentShare*100)}% of population</dd><dt>Conquest obligations</dt><dd>${o.conquestLoad.toFixed(2)}</dd><dt>Settlement agreements</dt><dd>${o.compacts.length}</dd><dt>Regional provisions</dt><dd>${fmtN(o.localStores)}</dd><dt>Conquest law</dt><dd>${esc(o.warLaw)}</dd><dt>Lethal collective reprisals</dt><dd>${o.collectiveReprisals?'Permitted':'Prohibited'}</dd><dt>Protection agreements</dt><dd>${o.protectionPacts.filter(p=>!p.broken).length}</dd><dt>Coalition momentum</dt><dd>${Math.round(o.momentum*100)} / 100</dd>${o.kind==='horde'?`<dt>Member clans</dt><dd>${o.clanTerms.size}</dd><dt>Raiding experience</dt><dd>${Math.round(o.raidSkill*100)} / 100</dd>`:''}</dl>`;
+      h+=`<h3 class="sec">Reach and continuity</h3><dl class="kv"><dt>Message round trip</dt><dd>${o.responseDays.toFixed(1)} days, weighted average</dd><dt>Connected water routes</dt><dd>${Math.round(o.corridor*100)} / 100</dd><dt>Military preparedness</dt><dd>${Math.round(o.preparedness*100)} / 100</dd><dt>Crisis experience</dt><dd>${Math.round(o.crisisMemory*100)} / 100</dd><dt>Years without conflict or expansion</dt><dd>${o.peaceYears}</dd><dt>Unintegrated recent conquests</dt><dd>${Math.round(o.recentShare*100)}% of population</dd><dt>Conquest obligations</dt><dd>${o.conquestLoad.toFixed(2)}</dd><dt>Settlement agreements</dt><dd>${o.compacts.length}</dd><dt>Civic debt outstanding</dt><dd>${fmtN(s.creditLoans.filter(l=>!l.done&&l.borrower===o.id).reduce((n,l)=>n+l.principal,0))} rations</dd><dt>Urban viability</dt><dd>${Math.round((o.viability||citySubsistence(c))*100)}%</dd><dt>Regional provisions</dt><dd>${fmtN(o.localStores)}</dd><dt>Conquest law</dt><dd>${esc(o.warLaw)}</dd><dt>Lethal collective reprisals</dt><dd>${o.collectiveReprisals?'Permitted':'Prohibited'}</dd><dt>Protection agreements</dt><dd>${o.protectionPacts.filter(p=>!p.broken).length}</dd><dt>Coalition momentum</dt><dd>${Math.round(o.momentum*100)} / 100</dd>${o.kind==='horde'?`<dt>Member clans</dt><dd>${o.clanTerms.size}</dd><dt>Raiding experience</dt><dd>${Math.round(o.raidSkill*100)} / 100</dd>`:''}</dl>`;
 
       h+=`<h3 class="sec">Political supporters</h3><div class="bars">${Object.entries(o.groups).map(([name,g])=>bar(cap(name)+' support',g.loyalty,1,'t')).join('')}</div>`;
       h+=`<h3 class="sec">Relations</h3><dl class="kv"><dt>Allies</dt><dd>${allies.length?allies.map(lp).join(', '):'none'}</dd><dt>At war with</dt><dd>${en.length?en.map(lp).join(', '):'no one'}</dd>${wars.length?`<dt>Wars</dt><dd>${wars.map(lw).join(', ')}</dd>`:''}${o.over&&s.pols[o.over]?`<dt>Pays tribute to</dt><dd>${lp(s.pols[o.over])}</dd>`:''}${tribs.length?`<dt>Tributaries</dt><dd>${tribs.map(lp).join(', ')}</dd>`:''}</dl>`;
@@ -440,7 +457,7 @@ function renderPage(){
   }else if(t==='plague'){
     const o=s.outbreaks[id],e=s.eth[o.origin]>=0?s.eths[s.eth[o.origin]]:null;
     h+=`<div class="kind">Epidemic${o.virgin?' · virgin soil':''}</div><h2 class="name">The ${esc(o.name)}</h2><p class="sub2">${fy(o.year)}${o.done?` – ${fy(o.end)}`:' · still spreading'}</p>`;
-    h+=`<dl class="kv" style="margin-top:10px"><dt>Deaths</dt><dd>${fmtN(o.deaths)}</dd><dt>Provinces reached</dt><dd>${o.cells}</dd><dt>Virulence</dt><dd>${(o.vir*100).toFixed(0)}% a year among the unexposed</dd>${o.virgin&&o.from>=0?`<dt>Brought by</dt><dd>${le(s.eths[o.from])}</dd>`:''}</dl>`;
+    h+=`<dl class="kv" style="margin-top:10px"><dt>Deaths</dt><dd>${fmtN(o.deaths)}</dd><dt>Provinces reached</dt><dd>${o.cells}</dd><dt>Disease family</dt><dd>${o.pathogen==null?'Legacy outbreak':PATHOGENS[o.pathogen].n}</dd><dt>Livestock deaths</dt><dd>${fmtN(o.animalDeaths||0)}</dd><dt>Case severity</dt><dd>${(o.vir*100).toFixed(0)}% of resolved infections before hardship and care modifiers</dd>${o.virgin&&o.from>=0?`<dt>Brought by</dt><dd>${le(s.eths[o.from])}</dd>`:''}</dl>`;
     h+=`<h3 class="sec">Spread</h3><canvas class="mini" id="plaguemap" width="${W*2}" height="${H*2}"></canvas><p class="note">Darker red reached later. The ring marks where it began.</p>`;
     const hit=(Array.isArray(o.hit)?o.hit:[...o.hit]).map(k=>s.pols[k]).filter(p=>p&&p.maxCells>=8).sort((a,b)=>b.maxCells-a.maxCells);
     if(hit.length)h+=`<h3 class="sec">States struck</h3><p style="margin:0">${hit.slice(0,16).map(lp).join(', ')}</p>`;
@@ -448,7 +465,7 @@ function renderPage(){
     const M=s.migs[id],e=s.eths[M.eth];
     h+=`<div class="kind">${M.kind==='horde'?'Nomad migration':'Migration'}${M.done?'':' · on the move'}</div><h2 class="name">The ${esc(M.name)}</h2><p class="sub2">${fy(M.start)}${M.done?` – ${fy(M.end)}`:''} · ${le(e)}</p>`;
     h+=`<p style="margin:8px 0 0">${linkify(M.startTxt||'',[RM(M),RE(e)])}</p>`;
-    h+=`<dl class="kv" style="margin-top:10px"><dt>People</dt><dd>${fmtN(M.pop)}${M.done?'':' now'}</dd><dt>Distance</dt><dd>${M.path.length} provinces crossed</dd><dt>Groups in the coalition</dt><dd>${M.groups.length}</dd><dt>Transport animals</dt><dd>${fmtN(M.animals.reduce((n,v)=>n+v,0))}</dd><dt>Experience</dt><dd>${Math.round(M.experience*100)} / 100</dd>${M.prev>=0?`<dt>Set in motion by</dt><dd>${lm_(s.migs[M.prev])}</dd>`:''}${M.broke.length?`<dt>Broke into</dt><dd>${M.broke.map(k=>s.pols[k]).filter(Boolean).map(lp).join(', ')}</dd>`:''}${M.done?`<dt>Outcome</dt><dd style="text-align:left;font-family:var(--f-ui)">${M.settledPol&&s.pols[M.settledPol]?`Founded the ${lp(s.pols[M.settledPol])}`:esc(cap(M.result))}</dd>`:''}</dl>`;
+    h+=`<dl class="kv" style="margin-top:10px"><dt>People</dt><dd>${fmtN(M.pop)}${M.done?'':' now'}</dd><dt>Distance</dt><dd>${M.path.length} provinces crossed</dd><dt>Settlers left along the route</dt><dd>${fmtN((M.settled||[]).reduce((n,g)=>n+g.pop,0))}</dd><dt>Groups in the coalition</dt><dd>${M.groups.length}</dd><dt>Transport animals</dt><dd>${fmtN(M.animals.reduce((n,v)=>n+v,0))}</dd><dt>Experience</dt><dd>${Math.round(M.experience*100)} / 100</dd>${M.prev>=0?`<dt>Set in motion by</dt><dd>${lm_(s.migs[M.prev])}</dd>`:''}${M.broke.length?`<dt>Broke into</dt><dd>${M.broke.map(k=>s.pols[k]).filter(Boolean).map(lp).join(', ')}</dd>`:''}${M.done?`<dt>Outcome</dt><dd style="text-align:left;font-family:var(--f-ui)">${M.settledPol&&s.pols[M.settledPol]?`Founded the ${lp(s.pols[M.settledPol])}`:esc(cap(M.result))}</dd>`:''}</dl>`;
     const next=s.migs.filter(x=>x.prev===M.id);if(next.length)h+=`<h3 class="sec">Peoples it set moving</h3><p style="margin:0">${next.map(lm_).join(', ')}</p>`;
     h+=`<h3 class="sec">Route</h3><canvas class="mini" id="migmap" width="${W*2}" height="${H*2}"></canvas>`;
     h+=`<h3 class="sec">Chronicle</h3>`+chronList(chronFor(x=>refHas(x,'mig',id)));
@@ -657,27 +674,22 @@ $('map-view').addEventListener('change',e=>{ui.mode=e.target.value;$('nomad-tool
 $('nomad-filter').addEventListener('change',e=>{ui.nomads=e.target.value;drawLegend();ui.dirty=true});
 
 document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,button'))return;if(e.code==='Space'){e.preventDefault();setRunning(!ui.running)}});
-let drag=null;
-mapCv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ox:ui.ox,oy:ui.oy,moved:false};mapCv.setPointerCapture(e.pointerId)});
-mapCv.addEventListener('pointermove',e=>{
-  const r=mapCv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
-  if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;if(drag.moved){ui.ox=drag.ox+dx;ui.oy=drag.oy+dy;clampView();drawMap()}return}
+installMapGestures(mapCv,ui,{clamp:clampView,draw:drawMap,
+  hover:({x:sx,y:sy})=>{
   const i=screenToCell(sx,sy),tip=$('tip');
   if(i<0||!S||!WD.land[i]){tip.hidden=true;return}
   const p=S.pol[i]&&polityOnMap(S.pols[S.pol[i]])?S.pols[S.pol[i]]:null,e2=S.eth[i]>=0?S.eths[S.eth[i]]:null,R=S.rel[i]>=0?S.rels[S.rel[i]]:null;
   const e3=S.eth2[i]>=0?S.eths[S.eth2[i]]:null;
   tip.textContent=[p&&p.full,e2?e2.name+(e3?' and '+e3.name:''):'Unpeopled',R&&R.name,fmtN(S.pop[i])].filter(Boolean).join(' · ');tip.style.left=sx+'px';tip.style.top=sy+'px';tip.hidden=false;
-});
-mapCv.addEventListener('pointerleave',()=>{$('tip').hidden=true});
-mapCv.addEventListener('pointerup',e=>{if(drag&&!drag.moved&&S){const r=mapCv.getBoundingClientRect();const i=screenToCell(e.clientX-r.left,e.clientY-r.top);
+  },tap:({x,y})=>{if(!S)return;const i=screenToCell(x,y);
   if(i>=0){const m=ui.mode;
     if(WD.land[i]&&(m==='political'||m==='alliances')&&S.pol[i]&&polityOnMap(S.pols[S.pol[i]]))openPage('pol',S.pol[i]);
     else if(WD.land[i]&&m==='peoples'&&S.eth[i]>=0)openPage('eth',S.eth[i]);
     else if(WD.land[i]&&m==='religion'&&S.rel[i]>=0)openPage('rel',S.rel[i]);
-    else openPage('cell',i)}}drag=null});
+    else openPage('cell',i)}}
+});
+mapCv.addEventListener('pointerleave',()=>{$('tip').hidden=true});
 mapCv.addEventListener('dblclick',e=>{const r=mapCv.getBoundingClientRect();const i=screenToCell(e.clientX-r.left,e.clientY-r.top);if(i>=0)openPage('cell',i)});
-mapCv.addEventListener('wheel',e=>{e.preventDefault();const r=mapCv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
-  const z2=clamp(ui.z*Math.exp(-e.deltaY*0.0015),1,8),f=z2/ui.z;ui.ox=sx-(sx-ui.ox)*f;ui.oy=sy-(sy-ui.oy)*f;ui.z=z2;clampView();drawMap()},{passive:false});
 
 /* ---------- world building ---------- */
 function busy(on,txt){const b=$('busy');b.hidden=!on;if(txt)b.textContent=txt}

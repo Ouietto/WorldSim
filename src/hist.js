@@ -211,10 +211,11 @@ function computeK(){
     const wm=s.wm[i],mz=w.monZone[i],Pn=w.Pr[i]*wm+orb*mz*420,ar=w.area[i],rv=w.rv[i];
     const ag=s.cropAccess?farmSuit(i):w.sF[i];
     const npp=Math.min(3000/(1+Math.exp(1.315-0.119*(T+w.amp[i]*0.15))),3000*(1-Math.exp(-0.000664*Pn)));
-    const Kf=ar*0.1*npp/1000*(1+0.5*w.coast[i]+0.4*rv)+ar*0.12*w.coast[i]*(0.5+0.5*s.sail[i]);
+    const range=s.rangeStock?0.4+0.6*s.rangeStock[i]:1;
+    const Kf=(ar*0.1*npp/1000*(1+0.5*w.coast[i]+0.4*rv)+ar*0.12*w.coast[i]*(0.5+0.5*s.sail[i]))*range;
     const dry=clamp(wm,0.3,1.6);
     let sh=w.sH[i];if(mz>0)sh=Math.max(sh,orb*mz*0.7);if(w.desert[i])sh=Math.max(sh,0.25*s.camel[i]);
-    const Kh=ar*1.6*sh*s.herd[i]*Math.min(1.3,s.cropAccess?pastureCondition(i):dry)*(1+0.2*s.horse[i])*(1-s.rp[i]);
+    const Kh=ar*1.6*sh*s.herd[i]*Math.min(1.3,s.cropAccess?pastureCondition(i):dry)*(1+0.2*s.horse[i])*(1-s.rp[i])*range;
     const irr=s.irrig[i]*rv;
     const season=w.rainSeasonality&&Number.isFinite(w.rainSeasonality[i])?w.rainSeasonality[i]:0.3;
     const wf=(1+(Math.min(dry,1.25)-1)*(1-0.75*irr))*(1-0.12*season*(1-0.8*irr));
@@ -254,15 +255,7 @@ function growth(){
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){householdMigration()}
-function virginSoil(tgt,src){
-  const s=S,r=s.r;
-  const gap=s.dp[src]-s.dp[tgt];
-  if(gap>0.2&&!s.infect[tgt]&&s.pop[tgt]>1000&&r()<0.35*gap){
-    const e=s.eths[s.eth[src]];
-    const o={id:s.outbreaks.length,name:`${e?cap(e.lang.lex.sea)+' ':''}${pick(r,PLAGUE)}`,origin:tgt,year:s.year,deaths:0,vir:0.12+0.25*gap+r()*0.08,cells:1,active:1,done:false,spread:[[0,tgt]],hit:new Set(),virgin:true,from:s.eth[src],dp:s.dp[src]};
-    s.outbreaks.push(o);s.infect[tgt]=3;s.ob[tgt]=o.id;s.inf.push(tgt);
-  }
-}
+function virginSoil(tgt,src){diseaseJourney(src,tgt,travelDays(src,tgt,true),60,'sea')}
 function seaHop(){
   const s=S,w=WD,r=s.r,C=w.coastIdx;if(!C.length)return;
   const ex=C.length*0.004*P.seafaring;let tries=Math.floor(ex)+(r()<ex%1?1:0);
@@ -282,9 +275,10 @@ function seaHop(){
       const lm=w.lm[tgt];
       if(!s.lmFound[lm]){s.lmFound[lm]=1;if(w.lmSize[lm]>=4){const e=s.eths[s.eth[i]];chron('migration',`Seafarers of the ${e.name} reach an unpeopled ${w.lmSize[lm]>60?'land':'island'}.`,tgt,[RE(e)])}}
     }else if(s.eth[tgt]!==s.eth[i]){
-      transferCrops(i,tgt,0.35);for(const f of s.tk)f[tgt]=Math.max(f[tgt],f[i]*0.5);
+      transferCrops(i,tgt,0.1);for(const k of [0,1,2,3,7,19,20,32,33])s.tk[k][tgt]+=Math.max(0,s.tk[k][i]-s.tk[k][tgt])*0.015;
+      diseaseJourney(i,tgt,travelDays(i,tgt,true),Math.min(80,s.pop[i]*0.001),'sea');const owner=s.pol[i]?s.pols[s.pol[i]]:null;if(owner)owner.knownPorts.add(tgt);colonyContact(tgt,owner);
       if(s.ocean[i]>0.5&&w.lm[tgt]!==w.lm[i]){
-        virginSoil(tgt,i);cropExchange(i,tgt);mixIn(tgt,s.eth[i],0.05);
+        cropExchange(i,tgt);mixIn(tgt,s.eth[i],0.05);
         const e1=s.eths[s.eth[i]],e2=s.eths[s.eth[tgt]],key=e1.fam+':'+e2.fam;
         if(!s.contacts)s.contacts=new Set();
         if(e1.fam!==e2.fam&&!s.contacts.has(key)&&w.lmSize[w.lm[tgt]]>200){s.contacts.add(key);chron('migration',`Ocean-going ships of the ${e1.name} make landfall among the ${e2.name}, across the open ocean.`,tgt,[RE(e1),RE(e2)]);spot(`Ships of the ${e1.name} reach the ${e2.name} across the ocean`,tgt,[RE(e1),RE(e2)])}
@@ -386,39 +380,7 @@ function cropFor(T,Pp,rv){
   return['maize and beans','turkeys and dogs',1];
 }
 const PLAGUE=['fever','pox','sweat','plague','flux','ague'];
-function disease(){
-  const s=S,w=WD,r=s.r,L=w.landIdx,dz=P.disease;
-  for(let t=0;t<40;t++){
-    const i=L[(r()*L.length)|0];if(s.pop[i]<1||s.infect[i])continue;
-    const dens=s.pop[i]/w.area[i];
-    if(r()<dz*0.0002*dens*(s.farm[i]+s.herd[i])){
-      const e=s.eth[i]>=0?s.eths[s.eth[i]]:null;
-      const o={id:s.outbreaks.length,name:`${e?cap(e.lang.lex.river)+' ':''}${pick(r,PLAGUE)}`,origin:i,year:s.year,deaths:0,vir:0.04+r()*0.13,cells:1,active:1,done:false,spread:[[0,i]],hit:new Set()};
-      s.outbreaks.push(o);s.infect[i]=3;s.ob[i]=o.id;s.inf.push(i);
-    }
-  }
-  const nl=[];
-  for(const o of s.outbreaks)if(!o.done)o.active=0;
-  for(const i of s.inf){if(!s.infect[i])continue;
-    const o=s.outbreaks[s.ob[i]],dens=s.pop[i]/w.area[i];
-    const m=Math.min(0.7,o.vir*(1-s.immune[i])*(0.5+0.5*Math.min(1,dens/15))*(o.virgin?1+2.5*Math.max(0,(o.dp||0)-s.dp[i]):1)*(1-0.2*s.tk[29][i])),dd=s.pop[i]*m;
-    s.pop[i]-=dd;o.deaths+=dd;o.active++;
-    if(s.pol[i]){const po=s.pols[s.pol[i]];po.shock+=0.003;po.plagueD=(po.plagueD||0)+dd;o.hit.add(s.pol[i])}
-    const spreadTo=j=>{s.infect[j]=3;s.ob[j]=o.id;nl.push(j);o.cells++;if(o.spread.length<4000)o.spread.push([s.year-o.year,j])};
-    for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||s.pop[j]<1||s.infect[j]||s.immune[j]>0.95||s.ob[j]===o.id)continue;
-      const dj=s.pop[j]/w.area[j];
-      if(r()<0.4*(1-s.immune[j])*Math.min(1,(dens+dj)/8+0.15)*(s.pol[j]===s.pol[i]?1:0.7))spreadTo(j)}
-    if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q];if(s.pop[j]<1||s.infect[j]||s.immune[j]>0.95||s.ob[j]===o.id)continue;if(r()<0.06*(1-s.immune[j]))spreadTo(j)}
-    s.infect[i]--;
-    if(s.infect[i]===0){s.immune[i]=Math.max(s.immune[i],0.85);if(o.virgin)s.dp[i]=Math.max(s.dp[i],o.dp*0.6)}else nl.push(i);
-  }
-  s.inf=nl;
-  for(const o of s.outbreaks){if(o.done||o.active>0||o.year===s.year)continue;o.done=true;o.end=s.year;o.hit=[...o.hit];
-    if(o.deaths>250000){const d=o.deaths>=1e6?`${(o.deaths/1e6).toFixed(1)} million`:`${Math.round(o.deaths/1000)} thousand`;
-      chron('plague',`The ${o.name} burns out after killing about ${d} across ${o.cells} provinces${o.virgin?', most of them people who had never met such a disease':''}.`,o.origin,[RPl(o)]);
-      if(o.deaths>5e6)spot(`The ${o.name} has killed ${d}`,o.origin,[RPl(o)])}}
-  if(s.year%5===0)for(let k=0;k<L.length;k++)s.immune[L[k]]*=0.927;
-}
+function disease(){epidemicYear()}
 
 /* ---------- figures ---------- */
 function figFor(o,R,kind){
@@ -685,7 +647,7 @@ function pushPressure(e,amount,cell,byPol,fromMig,food,young){refugeePressure(e,
 function startMigration(o){
   const s=S,w=WD,e=s.eths[o.eth];const n=Math.hypot(o.dx,o.dy)||1;
   const M={id:s.migs.length,eth:o.eth,rel:s.rel[o.cell],name:o.kind==='horde'&&o.pol?o.pol.full:e.name,pop:o.pop,cell:o.cell,dx:o.dx/n,dy:o.dy/n,path:[o.cell],kind:o.kind,start:s.year,steps:0,max:20+((s.r()*25)|0),fails:0,
-    food:o.food||0,young:o.young==null?o.pop*0.3:o.young,animals:o.animals||emptyHerd(),groups:[{eth:o.eth,ancestry:s.ancestry[o.cell],pop:o.pop}],blocked:new Map(),experience:o.pol?o.pol.raidSkill:s.raiding[o.cell],ancestry:s.ancestry[o.cell],S:0.75,mil:milAt(o.cell),farm:s.farm[o.cell],herd:s.herd[o.cell],crops:s.cropAccess.map(f=>f[o.cell]),techs:s.tk.map(f=>f[o.cell]),pol:o.pol?o.pol.id:0,prev:o.prev!=null?o.prev:-1,by:o.by?o.by.id:0,done:false,result:'',broke:[],cause:o.cause||''};
+    food:o.food||0,young:o.young==null?o.pop*0.3:o.young,animals:o.animals||emptyHerd(),groups:[{eth:o.eth,ancestry:s.ancestry[o.cell],pop:o.pop}],blocked:new Map(),experience:o.pol?o.pol.raidSkill:s.raiding[o.cell],ancestry:s.ancestry[o.cell],S:0.75,mil:milAt(o.cell),farm:s.farm[o.cell],herd:s.herd[o.cell],immunity:diseaseHistory(o.cell),settled:[],crops:s.cropAccess.map(f=>f[o.cell]),techs:s.tk.map(f=>f[o.cell]),pol:o.pol?o.pol.id:0,prev:o.prev!=null?o.prev:-1,by:o.by?o.by.id:0,done:false,result:'',broke:[],cause:o.cause||''};
   if(M.kind==='horde'||M.kind==='warband')M.max=60+Math.floor(s.r()*80);
   s.migs.push(M);s.activeMigs.push(M.id);
   const refs=[RM(M),RE(e)];let txt;
@@ -702,7 +664,7 @@ function startMigration(o){
 function fmtK(n){return n>=1e6?(n/1e6).toFixed(1)+' million':Math.round(n/1000)*1000>=1000?Math.round(n/1000)+' thousand':Math.round(n)+''}
 function migStep(M){migrationCampaign(M)}
 function disperse(M,why){const s=S;M.done=true;M.end=s.year;M.result=why==='trapped'?'trapped and scattered':'dwindled and scattered';
-  if(M.pop>0&&M.cell>=0){const old=s.pop[M.cell];s.pop[M.cell]+=M.pop;s.food[M.cell]+=M.food||0;depositMigrationGroups(M.cell,M,M.pop,old);s.young[M.cell]+=M.young||0;putHerd(M.cell,M.animals);M.animals=emptyHerd();M.food=0}
+  if(M.pop>0&&M.cell>=0){const old=s.pop[M.cell];s.pop[M.cell]+=M.pop;s.food[M.cell]+=M.food||0;depositMigrationGroups(M.cell,M,M.pop,old);mixDiseaseHistory(M.cell,M.immunity,M.pop,old);s.young[M.cell]+=M.young||0;putHerd(M.cell,M.animals);M.animals=emptyHerd();M.food=0}
   s.activeMigs=s.activeMigs.filter(k=>k!==M.id);
   if(M.logged&&M.path.length>8)chron('migration',`The ${M.name} ${M.result} after ${s.year-M.start} years of wandering.`,M.cell,[RM(M)])}
 function settle(M,j,t){settleMigration(M,j,t)}
@@ -939,7 +901,8 @@ function ethPass(log){
   const sx=new Float64Array(n),sy=new Float64Array(n),sz=new Float64Array(n),cnt=new Int32Array(n),pp=new Float64Array(n);
   const add=(e,p,i,province)=>{if(e<0||p<=0)return;sx[e]+=w.x3[i]*p;sy[e]+=w.y3[i]*p;sz[e]+=w.z3[i]*p;pp[e]+=p;if(province)cnt[e]++};
   for(let k=0;k<L.length;k++){const i=L[k],e=s.eth[i];if(e<0||s.pop[i]<1)continue;const minority=s.eth2[i]>=0&&s.eth2[i]!==e?clamp(s.mix[i],0,0.5):0;add(e,s.pop[i]*(1-minority),i,true);if(minority>0)add(s.eth2[i],s.pop[i]*minority,i,true)}
-  for(const id of s.activeMigs){const m=s.migs[id];add(m.eth,m.pop,m.cell,false)}
+  for(const id of s.activeMigs){const m=s.migs[id];for(const g of m.groups)add(g.eth,g.pop,m.cell,false)}
+  for(const e of s.expeditions||[])if(!e.done)add(e.eth,e.pop,e.home,false);
   for(const [e,p] of s.press)add(e,p.p,p.cell,false);
   for(let e=0;e<n;e++){const o=E[e];o.cells=cnt[e];o.pop=pp[e];if(pp[e]>o.peak)o.peak=pp[e];
     if(o.alive&&pp[e]<0.5)o.died=s.year;o.alive=pp[e]>=0.5;
@@ -951,9 +914,9 @@ function ethPass(log){
     if(cnt[e]<6||far[e]<0)continue;
     if(Math.acos(clamp(md[e],-1,1))<=thr||s.r()>0.5)continue;
     const f=far[e],c=newEth(e);made++;
-    for(let k=0;k<L.length;k++){const i=L[k];if(s.eth[i]!==e)continue;
-      const df=w.x3[i]*w.x3[f]+w.y3[i]*w.y3[f]+w.z3[i]*w.z3[f],dc=w.x3[i]*sx[e]+w.y3[i]*sy[e]+w.z3[i]*sz[e];
-      if(df>dc)s.eth[i]=c}
+    const queue=[f],seen=new Set(queue);let converted=0;
+    for(let at=0;at<queue.length&&converted<Math.max(2,Math.floor(cnt[e]*0.3));at++){const i=queue[at];if(s.eth[i]!==e||s.pop[i]<1)continue;s.eth[i]=c;converted++;
+      for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&!seen.has(j)&&s.eth[j]===e&&(!s.pol[i]||s.pol[i]===s.pol[j]||w.rough[j]<0.6)){seen.add(j);queue.push(j)}}}
     if(log&&pp[e]>2e6&&cnt[e]>=30){
       const dlat=w.lat[f]-Math.asin(clamp(sz[e],-1,1));let dlon=Math.atan2(w.y3[f],w.x3[f])-Math.atan2(sy[e],sx[e]);
       if(dlon>Math.PI)dlon-=2*Math.PI;if(dlon<-Math.PI)dlon+=2*Math.PI;
@@ -988,9 +951,9 @@ function mixPass(){
 function cityPass(){
   const s=S,w=WD;for(const id of s.alive)s.pols[id].cityPop=0;
   for(const i of w.landIdx){const p=s.pop[i],o=s.pol[i]?s.pols[s.pol[i]]:null;
-    const support=clamp(s.flow[i]/Math.max(1,p)*2+s.organisation[i]*0.12+s.node[i]*0.15+(o?o.bureau*0.08:0),0,0.45);
-    s.urban[i]=Math.min(p*support,s.harvest[i]*0.25+s.flow[i]);
+    s.urban[i]=Math.min(p*urbanShare(i,o),s.harvest[i]*0.25+s.foodImports[i])*Math.pow(1-s.cityDamage[i],2);
     if(o)o.cityPop+=s.urban[i];
+    if(s.city[i]<0&&s.ruinedCity[i]>=0&&s.cityDamage[i]<0.35&&s.urban[i]>4000){const old=s.cities[s.ruinedCity[i]];old.abandoned=false;old.rebuiltYear=s.year;s.city[i]=s.ruinedCity[i];s.ruinedCity[i]=-1}
     if(s.city[i]<0&&s.urban[i]>4000&&s.organisation[i]>0.25){const L=langAt(i);s.city[i]=s.cities.length;s.cities.push({name:cityWord(L,s.r),cell:i,born:s.year,eth:s.eth[i],peak:s.urban[i]})}
     if(s.city[i]>=0){const c=s.cities[s.city[i]];c.pop=s.urban[i];c.peak=Math.max(c.peak,c.pop)}
   }
@@ -1028,7 +991,7 @@ function regionPass(){
 function recordStats(){
   const s=S,w=WD;let tp=0;const eraPop=new Float64Array(ERAS.length);
   for(const i of w.landIdx){const p=s.pop[i];if(p<1)continue;tp+=p;eraPop[eraOf(i)]+=p}
-  for(const id of s.activeMigs)tp+=s.migs[id].pop;for(const p of s.press.values())tp+=p.p;
+  for(const id of s.activeMigs)tp+=s.migs[id].pop;for(const e of s.expeditions||[])if(!e.done)tp+=e.pop;for(const p of s.press.values())tp+=p.p;
   let np=0,nh=0,big=null;for(const id of s.alive){const o=s.pols[id];if(o.cells>=2||o.tier==='City-state'){if(o.kind==='horde')nh++;else np++}if(!big||o.cells>big.cells)big=o;if(o.cells>=3)o.hist.push(s.year,o.cells)}
   let pe=0;for(const e of s.eths)if(e.alive)pe++;
   let lead=0;for(let k=ERAS.length-1;k>=0;k--)if(eraPop[k]>tp*0.03){lead=k;break}
@@ -1044,7 +1007,7 @@ function* stepG(){
   agroPass();animalPass();computeK();economyPass();growth();yield;migrate();seaHop();refugeePass();
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(s.year%10===5)poolPass();if(s.year%20===7)caravanPass();yield;
-  yield* politicsG();frontierYear();
+  yield* politicsG();frontierYear();connectionYear();peoplesYear();urbanYear();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(s.year%5===0){yield;communityPass()}
   if(s.year%10===0){yield;buildTradeNetwork();recordStats();cityPass();yield;regionPass();yield;mixPass()}
@@ -1089,21 +1052,7 @@ function exitPass(a0,b0){if(a0==null){a0=0;b0=1}
     s.circE[i]=clamp(Math.max(w.circ[i],1-1.6*ex/own),0,1)}
 }
 // disease pools (McNeill, Crosby): dense, connected farming and herding peoples build up crowd diseases and immunity to them
-function poolPass(){
-  const s=S,w=WD,L=w.landIdx,dp=s.dp,tmp=s.bfsPar;
-  for(const i of L){if(s.pop[i]<1){dp[i]*=0.98;continue}
-    const dens=s.pop[i]/w.area[i],tgt=Math.min(1,0.22*Math.log10(1+dens)+0.3*s.herd[i]*s.farm[i]+(s.city[i]>=0?0.2:0));
-    let m=dp[i];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||s.pop[j]<1)continue;const c=Math.min(1,Math.sqrt(s.pop[i]*s.pop[j])/20000+s.car[i]);m=Math.max(m,dp[j]*(0.9+0.08*c))}
-    if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q];if(s.pop[j]>=1)m=Math.max(m,dp[j]*0.92)}
-    tmp[i]=Math.round(1000*(dp[i]+0.06*(Math.max(tgt,m)-dp[i])))}
-  for(const i of L)dp[i]=tmp[i]/1000;
-  // cattle plague
-  const r=s.r;
-  if(r()<0.04*P.disease){for(let t=0;t<60;t++){const c=L[(r()*L.length)|0];if(s.herd[c]<0.6||w.sH[c]<0.3||s.pop[c]<100)continue;
-    let n=0;ring(c,9,(j,dx,dy)=>{if(w.land[j]&&s.herd[j]>0.3&&dx*dx+dy*dy<=81){s.rp[j]=Math.max(s.rp[j],0.65);n++}});
-    const e=s.eth[c]>=0?s.eths[s.eth[c]]:null;chron('plague',`A cattle plague sweeps the herds${e?` of the ${e.name}`:''}; herders lose most of their beasts, and hunger drives many from the land.`,c,e?[RE(e)]:[]);
-    if(e)displace(c,0.3,0);break}}
-}
+function poolPass(){for(const i of WD.landIdx)S.dp[i]=S.pathogens.slice(0,4).reduce((n,d)=>n+d.recovered[i],0)/4}
 // volcanic winters, small and great
 function volcano(){
   const s=S,r=s.r,great=r()<0.15;
@@ -1114,8 +1063,8 @@ function volcano(){
   for(const id of s.alive){const o=s.pols[id];o.mandate=Math.max(0,(o.mandate==null?1:o.mandate)-0.25);o.shock+=0.15}
   // famine weakens bodies: a plague often follows
   if(r()<0.5){const L=WD.landIdx;let best=-1,bd=0;for(let t=0;t<300;t++){const i=L[(r()*L.length)|0];const d=s.pop[i]/WD.area[i]*(1+s.car[i]*3+(s.city[i]>=0?2:0));if(d>bd&&!s.infect[i]){bd=d;best=i}}
-    if(best>=0){const e=s.eth[best]>=0?s.eths[s.eth[best]]:null;const o={id:s.outbreaks.length,name:`${e?cap(e.lang.lex.river)+' ':''}${pick(r,PLAGUE)}`,origin:best,year:s.year,deaths:0,vir:0.18+r()*0.1,cells:1,active:1,done:false,spread:[[0,best]],hit:new Set()};
-      s.outbreaks.push(o);s.infect[best]=3;s.ob[best]=o.id;s.inf.push(best);chron('plague',`In the hungry years after the eruption, the ${o.name} breaks out.`,best,[RPl(o)])}}
+    if(best>=0)outbreakAt(1,best,Math.max(10,s.pop[best]*0.003),-1,best,'famine');}
+
 }
 // caravan routes across deserts: need camels (or wind wagons), people at both ends, and demand
 function caravanPass(){

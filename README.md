@@ -1,8 +1,16 @@
-# Asabiya — history engine (v0.8)
+# Asabiya — history engine (v0.9)
 
 A browser simulation of peoples, states, faiths and technologies on a world map, from 9000 BCE onward. It blends cliodynamics (Turchin's asabiya and structural-demographic theory), World3-style carrying capacity, and ecological history. The default map is the real Earth.
 
-Version 0.8 adds regional public stores, crop packages and local adaptation,
+Version 0.9 adds connected urban growth, food-denominated civic loans and
+default, funded overseas civic foundations, defensive frontier confederations,
+regional peoples, seasonal camp movements, scattered migrant settlements and
+city destruction with population flight. Epidemics have separate disease-family
+immunity, journey delays, environmental suitability and funded responses.
+Map input now supports two-finger pinch and continued one-finger panning.
+State and wall graphics retain their previous appearance.
+
+Version 0.8 added regional public stores, crop packages and local adaptation,
 terraces and waterworks, exposed pastoral frontiers, maintained walls and
 breaches, raids that can shatter governments, opportunistic interventions,
 coercive displacement, protection tribute and foreign military service.
@@ -64,6 +72,11 @@ Rebuild them after source edits when using that mode.
 | `dynamics.js` | Transport animals, communication and supply routes, civic identities, readiness, clan coalitions, elite bargains and migrant agreements |
 | `ecology.js` | Crop access and adaptation, highland and dryland investments, practical experience and invention budgets |
 | `frontiers.js` | Regional provisioning, frontier resistance, coercion, maintained walls, tribute, least-resistance migration and foreign service |
+| `epidemics.js` | Disease families, independent immunity, short epidemic steps, actual travel contacts, illness and livestock losses |
+| `connections.js` | Defensive confederations, funded maritime expeditions, daughter cities and trading enclaves |
+| `peoples.js` | Regional identities, renewable seasonal grounds, camp movement, migration settlements and city destruction |
+| `urbanism.js` | Food-supported urban networks, civic credit, default and negotiated debt protection |
+| `map-input.js` | Shared touch, pen and mouse map gestures |
 | `ui.js` | Map rendering, encyclopedia pages, chronicle, charts, checks, setup |
 | `shell.html` | Page markup and CSS |
 | `earth_elev.b64`, `koppen.b64` | Earth elevation (1600×800, delta-coded, zlib) and Köppen-Geiger classes (Beck et al. 2018) |
@@ -76,6 +89,8 @@ Edit files in `src/`, then run `python src/build.py` from the project root to re
 - `node climate.test.js`: numerical grid, unit conversion, data validation and Earth rainfall checks.
 - `node dynamics.test.js`: animal and food conservation, directed rivers and crossings, frontier transport, city states, succession, peace and preparedness, clans, learning, elite defection, migrant agreements, and actual city-filter logic.
 - `node frontiers.test.js`: crop access, highland and plateau farming, technical bottlenecks, local supply, wall upkeep and breaches, migration routing and cascades, actual foreign contingents, tribute, coercion and display filters.
+- `node interactions.test.js`: disease immunity and travel, funded response, defensive confederations, overseas founding, camp movement, migrant scatter, city destruction/refugees, credit/default and urban support.
+- `node map-input.test.js`: pinch anchoring, pan transitions, cancellation, tap selection, double tap and zoom limits.
 - `node society.test.js`: conservation, settlement, warfare, refugees, inheritance, collapse, deterministic replay and a 220-year political scenario.
 - `node generated.test.js`: a 250-year developed-world scenario on generated terrain, including coasts and river routes.
 - `node verify.js 23 1500`: an Earth history with periodic finite-value, nonnegative-stock and food-ledger assertions.

@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),assert=require('assert');
-const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
+const core=['world.js','lang.js','hist.js','society.js','dynamics.js','ecology.js','frontiers.js','epidemics.js','connections.js','peoples.js','urbanism.js','map-input.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('\n');
 eval(core+`
 WD=genWorld({seed:'frontier-atlas',landFrac:P.landFrac});newHistory('generated-scenario');S.year=0;S.animalOrigins=[];S.hearths.forEach(h=>h.done=true);
 // A synthetic developed-world scenario exercises coasts, drainage, winter
@@ -24,12 +24,14 @@ for(const c of capitals){const id=newPolity(c,null),o=S.pols[id];let pop=0,cells
   o.pop=pop;o.cells=cells;o.grain=pop*0.25;o.army=pop*0.01;o.staff=pop*0.004;o.bureau=0.5;o.central=0.45;o.succession=0.7;
 }
 routeDistances();buildTradeNetwork();
+assert(outbreakAt(2,capitals[0],Math.min(500,S.pop[capitals[0]]*0.2)),'developed scenario seeds an actual epidemic');
 for(let y=0;y<250;y++){
   step();assert(Math.abs(S.accounts.error)<0.05,'generated food ledger '+S.year+' '+S.accounts.error);
   if(S.animalAccounts)assert(Math.abs(S.animalAccounts.error)<0.01,'generated animal ledger');
   for(const id of S.alive)for(const k of ['grain','health','bureau','preparedness','conquestLoad'])assert(Number.isFinite(S.pols[id][k])&&S.pols[id][k]>=0,'generated state '+k);
   for(const id of S.alive)for(const k of ['health','central','bureau','strain','payroll'])assert(S.pols[id][k]<=1,'generated bounded field '+k+' '+S.pols[id][k]);
-  if(y%25===0)for(const i of WD.landIdx){for(const k of ['food','pop','traction','pack','mounts'])assert(Number.isFinite(S[k][i])&&S[k][i]>=0,'generated province '+k);for(const f of S.animals)assert(Number.isFinite(f[i])&&f[i]>=-1e-7,'generated animal stock')}
+  if(y%25===0)for(const i of WD.landIdx){for(const k of ['food','pop','traction','pack','mounts','sickness','rangeStock','cityDamage','urbanViability','urbanNetwork','foodImports'])assert(Number.isFinite(S[k][i])&&S[k][i]>=0,'generated province '+k);for(const f of S.animals)assert(Number.isFinite(f[i])&&f[i]>=-1e-7,'generated animal stock');for(const d of S.pathogens)assert(d.recovered[i]+d.exposed[i]+d.infectious[i]<1.0001,'generated disease compartments')}
 }
-console.log('PASS: 250-year generated-world scenario with developed transport, coasts, river networks and multiple governments; '+S.alive.length+' surviving polities');
+assert(S.societyCounters.epidemicDeaths>0,'developed scenario exercises disease mortality');
+console.log('PASS: 250-year generated-world scenario with developed transport, coasts, river networks, disease and multiple governments; '+S.alive.length+' surviving polities; '+Math.round(S.societyCounters.epidemicDeaths)+' epidemic deaths');
 `);

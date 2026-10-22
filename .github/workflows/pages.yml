@@ -32,6 +32,10 @@ jobs:
         run: node src/dynamics.test.js
       - name: Check frontiers and migration cascades
         run: node src/frontiers.test.js
+      - name: Check epidemics, civic networks and mobile peoples
+        run: node src/interactions.test.js
+      - name: Check touch and mouse map gestures
+        run: node src/map-input.test.js
       - name: Check generated worlds
         run: node src/generated.test.js
       - name: Build static site
