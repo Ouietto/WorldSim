@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.6.2: war, supply and stores)
+# Asabiya — history engine (v0.6.3: faster, and checked against history)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,10 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.6.3 adds:
+> - **An ensemble check** (`tools/ensemble.js`, see `tools/VALIDATION.md`): runs many Earth histories in parallel, scores them against 25 historical targets (first states, inventions, population, empire sizes, stateless regions), and compares versions seed by seed.
+> - **About twice as fast** in the browser (1.6× in Node), with identical results: per-cell arrays are read through local variables in the hot loops, and the climate re-solve no longer freezes the page for over a second.
 >
 > v0.6.2 adds:
 > - **Sacked cities:** captured cities may be plundered (more often by nomads and by armies of another faith); people die or flee to the nearest province of their own state and people, forts are wrecked, and nomads damage irrigation.

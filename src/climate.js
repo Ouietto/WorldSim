@@ -68,7 +68,10 @@ function climPrep(eHi){
 /* run the seasonal energy balance to a periodic state.
    opt: {orb, co2 (ppm), albLand: optional Float32Array(CN) land albedo, years}
    returns sea-level-equivalent monthly temperatures Tm[12*CN] */
-function climRun(g,opt){
+// generator versions yield every few milliseconds so the page stays responsive while the climate re-solves
+function drain(it){let r;while(!(r=it.next()).done);return r.value}
+function climRun(g,opt){return drain(climRunG(g,opt))}
+function* climRunG(g,opt){
   const P=Object.assign({},CLM,opt.par||{}),orb=opt.orb||ORB_NOW,co2=opt.co2||280,years=opt.years||14;
   const A=P.A-5.35*Math.log(co2/280)+(opt.dA||0),B=P.B,dt=365.25*86400/12;
   const Co=P.mixL*4.18e6,Cl=P.cLand*1e6;                       // J/m²/K
@@ -103,6 +106,7 @@ function climRun(g,opt){
       for(let pass=0;pass<2;pass++)for(let s=0;s<CW;s++){const x=dir>0?s:CW-1-s,i=y*CW+x,f=g.land[i];
         // air over land takes on carried temperature strongly; over ocean the sea dominates
         const kk=k*(f>0.5?1:0.25);const nv=T[i]+(carry-T[i])*kk;if(pass===1)T[i]=nv;carry=carry+(T[i]-carry)*(f>0.5?0.18:0.6)}}
+    yield;
     if(yr===years-1)Tm.set(T,m*CN);
   }
   return Tm;
@@ -169,10 +173,11 @@ function climWinds(g,Tm,m,P,Wm){
       U[i]=u;V[i]=v}}
   return{U,V,itcz,pr};
 }
-function climMoist(g,Tm,opt){
+function climMoist(g,Tm,opt){return drain(climMoistG(g,Tm,opt))}
+function* climMoistG(g,Tm,opt){
   const P=Object.assign({},CLM,opt&&opt.par||{}),SUB=30;   // substeps per month (days)
   const Pm=new Float32Array(12*CN),Wv=new Float32Array(CN),W2=new Float32Array(CN),Wind=[],Wmon=[];
-  const elev=g.elev,land=g.land;
+  const elev=g.elev,land=g.land,cold=g.cold,cosl=g.cosl,pLapse=P.lapse,pRh=P.rh,pCv=P.pCv,pRhMin=P.rhMin,pCold=P.pCold,pRecyc=P.recyc;
   // a warm start from an earlier run (opt.state) lets a single pass suffice when the climate changes gradually
   const st=opt&&opt.state,NP=st?1:2;
   if(st){Wv.set(st.Wv);for(let m=0;m<12;m++)Wmon[m]=st.Wmon[m]}else for(let i=0;i<CN;i++)Wv[i]=wsat(Tm[i])*P.rh;
@@ -187,17 +192,19 @@ function climMoist(g,Tm,opt){
         const up=Math.max(0,U[i]*(he-hw)/2/cy+V[i]*(hn-hs)/2)/1000;
         const r=P.pBase/100*(1+P.pConv*Math.max(0,-div)+P.pOro*up)*Math.max(0,1-P.pSub*Math.max(0,div)*10)+P.pFront/100*front;
         rate[i]=Math.max(0,r)*(1-P.pCold*g.cold[i])}}           // per half-day
-    for(let s=0;s<SUB;s++){
+    // saturation depends only on the place and the month: compute it once per month, not every day
+    const satM=new Float64Array(CN);for(let i=0;i<CN;i++)satM[i]=wsat(T[i]-pLapse*elev[i]/1000*land[i]);
+    for(let s=0;s<SUB;s++){if(s%8===7)yield;
       // advect: semi-Lagrangian from the upstream point (winds in cells per day, so half a step)
-      for(let y=0;y<CH;y++){const cy=Math.max(0.2,g.cosl[y]);for(let x=0;x<CW;x++){const i=y*CW+x;
+      for(let y=0;y<CH;y++){const cy=Math.max(0.2,cosl[y]);for(let x=0;x<CW;x++){const i=y*CW+x;
         let sx=x-U[i]/cy,sy=y+V[i];sy=clamp(sy,0,CH-1);const x0=Math.floor(sx),y0=Math.floor(sy),fx=sx-x0,fy=sy-y0,xa=((x0%CW)+CW)%CW,xb=(xa+1)%CW,y1=Math.min(y0+1,CH-1);
         W2[i]=Wv[y0*CW+xa]*(1-fx)*(1-fy)+Wv[y0*CW+xb]*fx*(1-fy)+Wv[y1*CW+xa]*(1-fx)*fy+Wv[y1*CW+xb]*fx*fy}}
-      for(let i=0;i<CN;i++){const t=T[i],sat=wsat(t-P.lapse*elev[i]/1000*land[i]);let w=W2[i];
-        if(land[i]<0.5){w+=(sat*P.rh-w)*0.6}                // the sea refills the air
-        const conv=P.pCv/100*clamp((t-18)/8,0,1.5)*clamp(w/sat-0.55,0,1)*2;
-        const rhf=clamp((w/sat-P.rhMin)/0.25,0,1);
-        let p=w*Math.min(0.9,(rate[i]+conv*(1-P.pCold*g.cold[i]))*rhf);if(w-p>sat){p=w-sat}                  // supersaturated air rains out
-        w-=p;if(land[i]>=0.5)w+=p*P.recyc*clamp((t+5)/20,0,1);  // evapotranspiration returns part of it
+      for(let i=0;i<CN;i++){const t=T[i],sat=satM[i];let w=W2[i];
+        if(land[i]<0.5){w+=(sat*pRh-w)*0.6}                // the sea refills the air
+        const conv=pCv/100*clamp((t-18)/8,0,1.5)*clamp(w/sat-0.55,0,1)*2;
+        const rhf=clamp((w/sat-pRhMin)/0.25,0,1);
+        let p=w*Math.min(0.9,(rate[i]+conv*(1-pCold*cold[i]))*rhf);if(w-p>sat){p=w-sat}                  // supersaturated air rains out
+        w-=p;if(land[i]>=0.5)w+=p*pRecyc*clamp((t+5)/20,0,1);  // evapotranspiration returns part of it
         Wv[i]=Math.max(0,w);acc[i]+=p}}
     Wmon[m]=Float32Array.from(Wv);if(pass===NP-1){Pm.set(acc,m*CN);Wind[m]=WD_}
   }
@@ -250,9 +257,10 @@ function climSummary(Tm,Pm){
   return{Ta,Pa,Ar,Dm};
 }
 // run the model for a heightmap; opt: {orb, co2, par, albLand}
-function climModel(eHi,opt){
+function climModel(eHi,opt){return drain(climModelG(eHi,opt))}
+function* climModelG(eHi,opt){
   opt=opt||{};const g=opt.g||climPrep(eHi);
-  const Tm=climRun(g,{orb:opt.orb,co2:opt.co2,dA:opt.dA,par:opt.par,albLand:opt.albLand,init:opt.init,years:opt.init?4:undefined}),M=climMoist(g,Tm,{par:opt.par,state:opt.state});
+  const Tm=yield* climRunG(g,{orb:opt.orb,co2:opt.co2,dA:opt.dA,par:opt.par,albLand:opt.albLand,init:opt.init,years:opt.init?4:undefined}),M=yield* climMoistG(g,Tm,{par:opt.par,state:opt.state});
   return Object.assign({g,Tm,Pm:M.Pm,wind:M.Wind,state:M.state,Tlast:Tm.slice(11*CN)},climSummary(Tm,M.Pm));
 }
 // map a model run to the hi-res grid: annual temperature (with altitude), rainfall and seasonal range

@@ -770,7 +770,8 @@ function frame(t){
     const sp=SPEEDS[ui.speed][0],t0=performance.now();
     // run the year in slices, keeping each frame short so the map and panels stay responsive
     const slice=()=>{if(!ui.gen||ui.genS!==S){ui.gen=stepG();ui.genS=S}if(ui.gen.next().done){ui.gen=null;return true}return false};
-    if(sp>=1e9){while(performance.now()-t0<14)slice()}
+    // at Max speed the simulation gets most of each frame (about 30 frames a second); otherwise it stays under 14 ms
+    if(sp>=1e9){while(performance.now()-t0<26)slice()}
     else{accY+=sp*dt;let n=Math.min(Math.floor(accY),60);accY-=n;while(performance.now()-t0<14){if(ui.gen){slice();continue}if(n<=0)break;n--;slice()}if(n>0)accY+=n}
     ui.dirty=true;
     if(S.year>=1800&&!ui.pausedAtEnd){ui.pausedAtEnd=true;setRunning(false);chron('nature','The age of agrarian empires gives way to the industrial era, where this version of the model stops being reliable.')}
