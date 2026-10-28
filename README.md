@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.6.3: faster, and checked against history)
+# Asabiya — history engine (v0.6.4: crops and soils)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,15 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.6.4 adds:
+> - **Crop packages** (`src/crops.js`): wheat and barley, rice, millet, sorghum, maize-beans-squash, potatoes and quinoa, yams and taro, the eastern North American crops, and cassava. Each has a climate niche, a yield, how well it stores, how easily it can be taxed, and how hard it is on the soil. Packages spread with farmers; each farm grows the best one that has reached it. Ocean contact exchanges them.
+> - **Processing and hand intensification:** freeze-dried potatoes (chuño) make Andean potatoes storable and taxable; lime-soaked maize feeds better; terraces and raised fields are invented independently wherever crowded farmers work slopes or wetlands.
+> - **Soil types** from climate and terrain (river silt, black earth, volcanic highland soils, acid forest soils, leached tropical soils, heavy clays, desert and mountain soils). They set fertility, how fast farming wears them out, salt risk and erosion. Steppe black earth is hard to farm until heavy ploughs. Farm suitability follows climate change.
+> - **A labour-tax route to the state:** storable staples, dense farming and irrigation let chiefs organize corvée without metal or horses.
+> - **Malaria** is absent from the Americas until ships bring it. **West African iron** has its own hearth (Nok, about 700 BCE).
+> - **Fixes:** BCE years skipped every pass scheduled on a non-zero remainder (JavaScript's negative `%`), so disease pools, caravan routes and the crop pass never ran before 1 CE. The regional check now counts leagues and overlords' blocs, and the largest state is reported apart from nomad confederations.
+> - **Map layers:** Staple crops, Soil types.
 >
 > v0.6.3 adds:
 > - **An ensemble check** (`tools/ensemble.js`, see `tools/VALIDATION.md`): runs many Earth histories in parallel, scores them against 25 historical targets (first states, inventions, population, empire sizes, stateless regions), and compares versions seed by seed.

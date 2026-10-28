@@ -1,5 +1,5 @@
 const fs=require('fs'),zlib=require('zlib');
-const core=['world.js','climate.js','lang.js','hist.js','tech.js','society.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
+const core=['world.js','climate.js','lang.js','hist.js','crops.js','tech.js','society.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
 const B=f=>zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/'+f,'utf8'),'base64'));
 const hs=process.argv[2]||'1',END=+(process.argv[3]||1500),pull=process.argv[4];
 eval(core+`

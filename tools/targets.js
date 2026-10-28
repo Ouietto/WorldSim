@@ -4,15 +4,15 @@
 // Years are engine years: 1 CE is 1 and 1 BCE is 0, so B(n) is the year n BCE.
 const B=n=>1-n;
 module.exports=[
-  // first kingdom holding 30% of a region's people (the engine's region check)
+  // first state, league or overlord's bloc holding 30% of a region's people (the engine's region check)
   {k:'r_meso',   g:'First states',  n:'Mesopotamia',  kind:'year',real:B(2600),lo:B(3200),hi:B(2000)},
   {k:'r_egypt',  g:'First states',  n:'Egypt',        kind:'year',real:B(3100),lo:B(3400),hi:B(2700)},
   {k:'r_indus',  g:'First states',  n:'Indus',        kind:'year',real:B(2600),lo:B(2900),hi:B(2000)},
   {k:'r_nchina', g:'First states',  n:'Yellow River', kind:'year',real:B(1900),lo:B(2200),hi:B(1500)},
-  {k:'r_mesoam', g:'First states',  n:'Mesoamerica',  kind:'year',real:B(500), lo:B(1200),hi:300},
-  {k:'r_andes',  g:'First states',  n:'Central Andes',kind:'year',real:B(200), lo:B(900), hi:600},
+  {k:'r_mesoam', g:'First states',  n:'Mesoamerica',  kind:'year',real:400,    lo:B(500), hi:1100},
+  {k:'r_andes',  g:'First states',  n:'Central Andes',kind:'year',real:700,    lo:0,      hi:1450},
   {k:'r_europe', g:'First states',  n:'Western Europe',kind:'year',real:B(50), lo:B(600), hi:500},
-  {k:'r_wafrica',g:'First states',  n:'West Africa',  kind:'year',real:700,  lo:300,  hi:1100},
+  {k:'r_wafrica',g:'First states',  n:'West Africa',  kind:'year',real:900,  lo:300,  hi:1350},
   // first invention anywhere
   {k:'t_writing',g:'Techniques',n:'Writing',  kind:'year',real:B(3200),lo:B(3500),hi:B(2800)},
   {k:'t_iron',   g:'Techniques',n:'Iron',     kind:'year',real:B(1200),lo:B(1600),hi:B(800)},
@@ -25,8 +25,8 @@ module.exports=[
   {k:'p_1000', g:'Population',n:'1000 CE (M)', kind:'num',real:290,lo:240,hi:350,at:1000},
   {k:'p_1500', g:'Population',n:'1500 CE (M)', kind:'num',real:460,lo:400,hi:540,at:1500},
   // size of the largest state, provinces (one province is roughly 10,000 km² at the equator)
-  {k:'b_m1000',g:'Empires',n:'Largest at 1000 BCE',kind:'num',real:120,lo:40, hi:250,at:B(1000)},
-  {k:'b_1',    g:'Empires',n:'Largest at 1 CE',    kind:'num',real:500,lo:300,hi:800,at:1},
+  {k:'b_m1000',g:'Empires',n:'Largest farming state at 1000 BCE',kind:'num',real:120,lo:40, hi:250,at:B(1000)},
+  {k:'b_1',    g:'Empires',n:'Largest farming state at 1 CE',    kind:'num',real:500,lo:300,hi:800,at:1},
   {k:'cUnity', g:'Empires',n:'China over half united (share of time after 250 BCE)',kind:'share',real:0.65,lo:0.45,hi:0.85},
   {k:'medMax', g:'Empires',n:'Mediterranean best share',kind:'share',real:0.95,lo:0.5,hi:1},
   {k:'ewShare',g:'Empires',n:'Large empires wider than tall',kind:'share',real:0.65,lo:0.5,hi:0.85},

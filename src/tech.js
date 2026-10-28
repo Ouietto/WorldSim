@@ -15,7 +15,7 @@ const TPOS={farm:[0,4,1],grain:[0,4,1],herd:[0,0,1],irrig:[0,1,1],copper:[4,3,1]
   writing:[2,5,2],wheel:[1,6,2],iron:[4,3,2],ard:[0,0,2],manure:[0,4,2],pigeon:[2,4,2],law:[7,5,2],
   coin:[7,3,3],roads:[1,6,3],nav:[1,1,3],caval:[6,0,3],paper:[2,4,3],crops:[0,4,3],plough:[0,0,3],kitesig:[2,2,3],windcart:[1,2,3],
   fungal:[0,4,3],ledger:[7,6,3],tidemill:[3,1,3],watermill:[3,1,3],feverbark:[5,4,3],saltflush:[0,1,3],
-  gun:[6,3,4],ocean:[1,2,4],xcrops:[0,4,4],windmill:[3,2,4]};
+  gun:[6,3,4],ocean:[1,2,4],xcrops:[0,4,4],windmill:[3,2,4],chuno:[0,4,2],nixtamal:[0,3,2],terrace:[0,1,2]};
 // generic descriptions for cells that our own history left empty or barely used
 const TGEN=[
   ['ox-drawn seed drills','water-lifting wheels','wind-pumped terraces','kiln-dried grain stores','cultivated forest gardens','planting almanacs','geared threshing machines'],

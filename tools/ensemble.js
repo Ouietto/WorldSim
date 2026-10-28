@@ -10,7 +10,7 @@
 // Results are cached by source contents, seed, end year and environment, so the baseline costs nothing the second time.
 const fs=require('fs'),path=require('path'),os=require('os'),crypto=require('crypto'),{spawn,execFileSync}=require('child_process');
 const ROOT=path.join(__dirname,'..'),TARGETS=require('./targets.js');
-const CORE=['world.js','climate.js','lang.js','hist.js','tech.js','society.js','earth_elev.b64','koppen.b64','earth_climate.b64'];
+const CORE=['world.js','climate.js','lang.js','hist.js','crops.js','tech.js','society.js','earth_elev.b64','koppen.b64','earth_climate.b64'];
 const arg=(k,d)=>{const i=process.argv.indexOf('--'+k);return i>0?process.argv[i+1]:d};
 const range=s=>s.split(',').flatMap(p=>{const m=p.match(/^(\d+)-(\d+)$/);if(!m)return[p];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(String(i));return a});
 const SEEDS=range(arg('seeds','1-16')),END=+arg('end',1500),JOBS=+arg('jobs',Math.max(1,os.cpus().length)),REF=arg('ref',null),LABEL=arg('label',null);

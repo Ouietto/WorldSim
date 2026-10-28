@@ -1,5 +1,5 @@
 const fs=require('fs'),zlib=require('zlib');
-let core=['world.js','climate.js','lang.js','hist.js','tech.js','society.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
+let core=['world.js','climate.js','lang.js','hist.js','crops.js','tech.js','society.js'].map(f=>fs.readFileSync(__dirname+'/'+f,'utf8')).join('');
 const elev=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_elev.b64','utf8'),'base64'));
 const kg=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/koppen.b64','utf8'),'base64'));
 const climate=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_climate.b64','utf8'),'base64'));
