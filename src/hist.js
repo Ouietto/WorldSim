@@ -118,6 +118,7 @@ function newHistory(hseed){
   prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
   for(const i of w.landIdx)s.adapt[i]=w.mal[i]*0.5;
   s.orb0=w.isEarth?null:(r()*23000);
+  climInit();
   for(const i of w.coastIdx)s.sail[i]=0.05;
   for(let k=0;k<s.AG.length;k++)s.AG[k]=gauss(r);
   climateStep();computeK();
@@ -175,9 +176,6 @@ function climateStep(){
     else chron('nature',K.start,-1);
     s.epoch=e;s.epochs.push(e);
   }
-  // orbital forcing of the subtropical monsoon
-  if(WD.isEarth)s.orbM=1/(1+Math.exp((y+3300)/320));
-  else s.orbM=0.5+0.5*Math.cos(2*Math.PI*(y-s.orb0)/23000);
 }
 function epochTemp(){const e=S.epoch;if(!e||e.k==='dry')return 0;const y=S.year,ramp=Math.min(1,(y-e.start)/40,(e.end-y)/40);return e.amp*Math.max(0,ramp)}
 function regionName(c){const la=WD.lat[c]*180/Math.PI,lo=(WD.cxA[c]+0.5)/W*360-180;
@@ -195,15 +193,15 @@ function weather(){
     s.anom[i]=a;s.wm[i]=Math.exp(cv*a)}
 }
 function computeK(){
-  const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),orb=s.orbM;
+  const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;
   for(let k=0;k<L.length;k++){
-    const i=L[k],T=w.T[i]+dT;
+    const i=L[k],T=w.T[i]+dT+cdT[i];
     if(T<-9){s.K[i]=1;continue}
-    const wm=s.wm[i],mz=w.monZone[i],Pn=w.Pr[i]*wm+orb*mz*420,ar=w.area[i],rv=w.rv[i];
+    const wm=s.wm[i],Pn=Math.max(0.3*w.Pr[i],w.Pr[i]+cdP[i])*wm,ar=w.area[i],rv=w.rv[i];
     const npp=Math.min(3000/(1+Math.exp(1.315-0.119*(T+w.amp[i]*0.15))),3000*(1-Math.exp(-0.000664*Pn)));
     const Kf=ar*0.1*npp/1000*(1+0.5*w.coast[i]+0.4*rv);
     const dry=clamp(wm,0.3,1.6);
-    let sh=w.sH[i];if(mz>0)sh=Math.max(sh,orb*mz*0.7);if(w.desert[i])sh=Math.max(sh,0.25*s.camel[i]);
+    let sh=w.sH[i];if(w.desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w.Pr[i]+cdP[i]-80)/350,0,0.7));if(w.desert[i])sh=Math.max(sh,0.25*s.camel[i]);
     const Kh=ar*1.6*sh*s.herd[i]*Math.min(1.3,dry)*(1+0.2*s.horse[i])*(1-s.rp[i]);
     const irr=s.irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
@@ -1142,7 +1140,7 @@ function recordStats(){
   let np=0,nh=0,big=null;for(const id of s.alive){const o=s.pols[id];if(o.cells>=2){if(o.kind==='horde')nh++;else np++}if(!big||o.cells>big.cells)big=o;if(o.cells>=3)o.hist.push(s.year,o.cells)}
   let pe=0;for(const e of s.eths)if(e.alive)pe++;
   let lead=0;for(let k=ERAS.length-1;k>=0;k--)if(eraPop[k]>tp*0.03){lead=k;break}
-  s.stats.push({y:s.year,pop:tp,np,nh,big:big?big.full:'',bc:big?big.cells:0,pe,lead,gT:s.gT+epochTemp(),orb:s.orbM,eraPop:Array.from(eraPop,v=>v/(tp||1))});
+  s.stats.push({y:s.year,pop:tp,np,nh,big:big?big.full:'',bc:big?big.cells:0,pe,lead,gT:s.gT+epochTemp()+s.climAnom,co2:s.co2,ch4:s.ch4,eraPop:Array.from(eraPop,v=>v/(tp||1))});
 }
 function step(){for(const _ of stepG());}
 // one simulated year, split into slices so the page can stay responsive between them
@@ -1151,12 +1149,13 @@ function* stepG(){
   climateStep();weather();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if(s.r()<0.0012*P.volcano)volcano();
+  if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;climUpdate();yield}
   computeK();growth();yield;migrate();seaHop();
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(s.year%10===5)poolPass();if(s.year%20===7)caravanPass();yield;
   yield* politicsG();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
-  if(s.year%10===0){yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){carbonPass();yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
@@ -1293,4 +1292,56 @@ function cropExchange(a,b){
   const ca=cropFor(w.T[a],w.Pr[a],w.rv[a])[0],cb=cropFor(w.T[b],w.Pr[b],w.rv[b])[0],ea=s.eths[s.eth[a]],eb=s.eths[s.eth[b]];
   chron('ideas',`Ships carry ${ca} to the ${eb?eb.name:'far shore'}, and bring ${cb===ca?'other crops':cb} home to the ${ea?ea.name:'homeland'}. Over the coming centuries the new crops will let poor and marginal soils feed far more people.`,b,[ea?RE(ea):null,eb?RE(eb):null].filter(Boolean));
   spot('New crops cross the ocean',b,[]);
+}
+
+/* ================= v0.6: the climate model through time ================= */
+// The world's climate is re-solved by climate.js as the orbit drifts and greenhouse gases change.
+// History uses the model's CHANGE from the present-day reference run, added to the world's baseline
+// (measured normals on Earth): T = baseline + dT, P = max(0.3 baseline, baseline + dP).
+function climInit(){
+  const s=S,w=WD;
+  Object.assign(s,{co2:262,ch4:590,cEx:0,landC:0,climY:-1e9,climCo2:262,climAnom:0,cdT:new Float32Array(N),cdP:new Float32Array(N),veg:new Uint8Array(N),climState:null,climLog:[]});
+  s.landC=landCarbon();climUpdate();
+}
+function orbitFor(y){return WD.isEarth?orbitAt(y):orbitAt(y-(S.orb0||0))}
+function landAlbedo(){
+  // coarse land albedo from vegetation and land use: cleared forest and fields are brighter than forest
+  const s=S,w=WD,a=new Float32Array(CN),n=new Float32Array(CN);
+  for(const i of w.landIdx){const cx=Math.floor(w.cxA[i]/2),cy=Math.floor(w.cyA[i]/2),j=cy*CW+cx;const b=VEG[s.veg[i]];let al=b?b[3]:CLM.albL;
+    const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<f0)al+=(0.31-al)*(1-s.forest[i]/f0)*(al<0.31?1:0);a[j]+=al;n[j]++}
+  for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:CLM.albL;return a;
+}
+function climUpdate(){if(typeof process!=="undefined"&&process.env&&process.env.NOCLIM){S.climY=S.year;S.climCo2=S.co2;return}
+  const s=S,w=WD,R0=w.clim;if(!R0)return;
+  const dA=-0.036*(Math.sqrt(s.ch4)-Math.sqrt(700));
+  const R=climModel(w.eHi,{g:R0.g,orb:orbitFor(s.year),co2:s.co2,dA,albLand:s.climY>-1e8?landAlbedo():null,init:(s.climR||R0).Tlast,state:(s.climR||R0).state});
+  s.climR=R;s.climY=s.year;s.climCo2=s.co2;
+  // map the change from the reference run onto the history grid
+  let gs=0,gw=0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,hx=x*SC+SC/2,hy=y*SC+SC/2;
+    s.cdT[i]=climSample(R.Ta,0,hx,hy)-climSample(R0.Ta,0,hx,hy);const dp=climSample(R.Pa,0,hx,hy)-climSample(R0.Pa,0,hx,hy);
+    // the coarse model's tropical rain belt is too narrow, so it SHIFTS where the real belt mostly widens; its drying signal is damped
+    s.cdP[i]=dp>0?dp:dp*0.4}
+  // keep the large-scale signal: the coarse model's local detail is not trusted on top of measured climate
+  boxBlur(s.cdT,W,H,3,2,true);boxBlur(s.cdP,W,H,4,2,true);
+  for(let j=0;j<CN;j++){const c=R0.g.cosl[Math.floor(j/CW)];gs+=c*(R.Ta[j]-R0.Ta[j]);gw+=c}
+  s.climAnom=gs/gw;
+  vegPass();
+  s.climLog.push({y:s.year,co2:s.co2,ch4:s.ch4,anom:s.climAnom});
+}
+function vegPass(){
+  const s=S,w=WD,R=s.climR;
+  for(const i of w.landIdx){const T=w.T[i]+s.cdT[i],Pp=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i]),a=w.amp[i];
+    const dry=w.dryMonths?w.dryMonths[i]:R?climSample(R.Dm,0,w.cxA[i]*SC+SC/2,w.cyA[i]*SC+SC/2):3;
+    s.veg[i]=vegFor(T,Pp,T+a/2,T-a/2,dry,w.elev[i])}
+}
+// land carbon in forests (GtC): about 12 kg C per m² of closed forest
+function landCarbon(){const s=S,w=WD;let c=0;for(const i of w.landIdx)c+=s.forest[i]*w.area[i]*1.2e-5;return c}
+// greenhouse gases follow land use: forest clearing releases CO2 (the oceans take most of it back over centuries);
+// rice paddies and herds add methane
+function carbonPass(){
+  const s=S,w=WD,c=landCarbon(),E=s.landC-c;s.landC=c;
+  s.cEx=s.cEx*(1-10/450)+Math.max(-50,E)/2.12*0.45;s.co2=262+Math.max(-8,s.cEx);
+  let rice=0,herd=0;for(const i of w.landIdx){const p=s.pop[i];if(p<1)continue;if(s.farm[i]>0.5&&w.rv[i]>0.2&&w.T[i]>18&&w.Pr[i]>900)rice+=p;herd+=p*s.herd[i]*w.sH[i]}
+  s.ch4=580+110*(rice+0.4*herd)/1.5e8;
 }

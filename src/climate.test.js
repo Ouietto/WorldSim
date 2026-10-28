@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),zlib=require('zlib'),assert=require('assert');
-const source=fs.readFileSync(__dirname+'/world.js','utf8');
+const source=fs.readFileSync(__dirname+'/world.js','utf8')+fs.readFileSync(__dirname+'/climate.js','utf8');
 eval(source+`
 const base={format:'asabiya-climate-v1',grid:{width:4,height:2,lon0:-135,lat0:45,dx:90,dy:-90,wrap:true},period:'annual',units:{temperature:'degC',precipitation:'mm/year'},noData:null,temperature:[10,20,30,40,-10,-20,-30,null],precipitation:[100,200,300,400,500,600,700,null]};
 let d=parseClimate(base),sample=climateSampler(d);

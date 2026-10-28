@@ -303,8 +303,10 @@ function genWorld(o){
     const sl=smp[Math.floor(smp.length*(1-o.landFrac))],mx=smp[smp.length-1],mn=smp[0];
     for(let i=0;i<raw.length;i++){const v=raw[i];eHi[i]=v>sl?20+Math.pow((v-sl)/(mx-sl),1.35)*6200:-(60+Math.pow((sl-v)/(sl-mn),0.5)*5600)}
   }
-  const C=genClimate(eHi);
+  // our own climate model (climate.js); measured normals override it on Earth below
+  const MR=climModel(eHi,{}),C=climToHi(MR,eHi);
   const w={seed:o.seed,eHi,isEarth:!!o.earth,imported:!!o.height&&!o.earth,kgHi:o.kg||null,fitted:false};
+  w.clim=MR;
   // raw (model) climate on the coarse grid, kept for grading
   const rawT=new Float32Array(N),rawP=new Float32Array(N),rawA=new Float32Array(N);
   const agg=(src,dst)=>{for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){let s=0;for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++)s+=src[(cy*SC+dy)*HW+cx*SC+dx];dst[cy*W+cx]=s/(SC*SC)}};

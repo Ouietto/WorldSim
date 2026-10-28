@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const fmtN=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(n>=1e8?0:1)+'M':n>=1e3?Math.round(n/1e3)+'k':Math.round(n)+'';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const TYPES={rise:['Rise','#c08a2a'],war:['War','#b2452c'],fall:['Fall','#6e5a8c'],diplomacy:['Diplomacy','#4f7f6a'],faith:['Faith','#b0729a'],migration:['Migrations','#a0703a'],culture:['Culture','#4f78a8'],ideas:['Ideas','#3f8a5c'],plague:['Plague','#8a2f4a'],famine:['Famine','#9a7b45'],people:['Peoples','#3d7a99'],nature:['Nature & climate','#6f7d84']};
-const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['soil','Soil'],['forest','Forest'],['inequality','Inequality'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
+const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Climate change'],['soil','Soil'],['forest','Forest'],['inequality','Inequality'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
 const SPEEDS=[[5,'5'],[25,'25'],[100,'100'],[400,'400'],[1e9,'Max']];
 const ERA_COL=[[120,128,130],[118,150,86],[196,140,64],[150,96,72],[178,74,58],[122,84,150],[64,96,150],[40,130,140]];
 const GROUP_COL=[[40,140,70],[222,190,120],[206,170,90],[110,170,110],[90,120,170],[200,215,225]];
@@ -12,6 +12,33 @@ const ui={running:false,speed:2,mode:'political',page:null,stack:[],z:1,ox:0,oy:
 let EARTH=null,IMPORTED=null,baseCv=null,compCv=document.createElement('canvas'),ovCv=document.createElement('canvas');
 compCv.width=HW;compCv.height=HH;ovCv.width=W;ovCv.height=H;
 const ovCtx=ovCv.getContext('2d'),ovImg=ovCtx.createImageData(W,H),compCtx=compCv.getContext('2d');
+/* ---------- refined borders ----------
+   Each province is drawn as 2x2 sub-cells. A sub-cell joins the neighbouring province it is closest to, unless a ridge or a strait
+   lies in between, so borders settle along mountain crests and water instead of following the square grid; coasts are cut at full detail. */
+const SW=W*2,SH=H*2,SN=SW*SH,subCv=document.createElement('canvas');subCv.width=SW;subCv.height=SH;
+const subCtx=subCv.getContext('2d'),subImg=subCtx.createImageData(SW,SH);
+let SUB=null;
+function prepSub(){
+  const w=WD,e=w.eHi,nb=new Int32Array(SN*9).fill(-1),wt=new Float32Array(SN*9),land=new Uint8Array(SN),HS=SC/2;
+  const E=(x,y)=>e[clamp(Math.round(y),0,HH-1)*HW+((Math.round(x)%HW)+HW)%HW];
+  for(let sy=0;sy<SH;sy++)for(let sx=0;sx<SW;sx++){const q=sy*SW+sx;let nl=0;for(let dy=0;dy<HS;dy++)for(let dx=0;dx<HS;dx++)if(e[(sy*HS+dy)*HW+sx*HS+dx]>0)nl++;land[q]=nl*2>=HS*HS?1:0;if(!land[q])continue;
+    const cx=sx>>1,cy=sy>>1,px=(sx+0.5)*HS,py=(sy+0.5)*HS,es=E(px,py);let k=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++,k++){const yy=cy+dy;if(yy<0||yy>=H)continue;const xx=(cx+dx+W)%W,j=yy*W+xx;if(!w.land[j])continue;
+      const ux=(sx+0.5)/2-(cx+dx+0.5),uy=(sy+0.5)/2-(cy+dy+0.5),g=Math.exp(-(ux*ux+uy*uy)/0.55);
+      const qx=(cx+dx+0.5)*SC,qy=(cy+dy+0.5)*SC,ec=E(qx,qy);let mx=-1e9,wet=0;
+      for(const t of [0.25,0.5,0.75]){const v=E(px+(qx-px)*t,py+(qy-py)*t);if(v>mx)mx=v;if(v<=0)wet=1}
+      const ridge=Math.max(0,mx-Math.max(es,ec));nb[q*9+k]=j;wt[q*9+k]=g*Math.exp(-ridge/350)*(wet?0.25:1)}}
+  SUB={nb,wt,land,lab:new Int32Array(SN),rep:new Int32Array(SN)};
+}
+// label every sub-cell by weighted vote of its 3x3 neighbourhood; rep = the province whose colour it takes
+function subLabels(key){
+  const {nb,wt,land,lab,rep}=SUB,cl=new Int32Array(9),cs=new Float32Array(9);
+  for(let q=0;q<SN;q++){if(!land[q]){lab[q]=-2;rep[q]=-1;continue}let n=0,best=-1,bw=-1,bc=-1,bcw=-1;
+    for(let k=0;k<9;k++){const j=nb[q*9+k];if(j<0)continue;const a=key?key[j]:j,ww=wt[q*9+k];let f=-1;for(let t=0;t<n;t++)if(cl[t]===a){f=t;break}if(f<0){f=n++;cl[f]=a;cs[f]=0}cs[f]+=ww}
+    for(let t=0;t<n;t++)if(cs[t]>bw){bw=cs[t];best=cl[t]}
+    for(let k=0;k<9;k++){const j=nb[q*9+k];if(j<0)continue;if((key?key[j]:j)===best&&wt[q*9+k]>bcw){bcw=wt[q*9+k];bc=j}}
+    lab[q]=best;rep[q]=bc}
+}
 const mapCv=$('map'),mapCtx=mapCv.getContext('2d'),chartCv=$('chart'),chartCtx=chartCv.getContext('2d');
 const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let DISPLAY_FONT='serif';
@@ -38,14 +65,17 @@ function paintBase(){
     d[i*4]=R*sh;d[i*4+1]=G*sh;d[i*4+2]=B*sh;d[i*4+3]=255;
   }
   ctx.putImageData(img,0,0);
-  ctx.strokeStyle='rgba(255,255,255,.10)';ctx.lineWidth=1;ctx.beginPath();
+  ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;ctx.beginPath();
   for(let l=-60;l<=60;l+=30){const yy=(90-l)/180*HH;ctx.moveTo(0,yy);ctx.lineTo(HW,yy)}
   for(let l=-150;l<=180;l+=30){const xx=(l+180)/360*HW;ctx.moveTo(xx,0);ctx.lineTo(xx,HH)}ctx.stroke();
-  ctx.strokeStyle='rgba(48,96,124,.85)';ctx.lineCap='round';
-  for(const i of w.landIdx){if(w.rv[i]<0.3)continue;const j=w.down[i];if(j<0)continue;
-    const x1=(w.cxA[i]+0.5)*SC,y1=(w.cyA[i]+0.5)*SC,x2=(w.cxA[j]+0.5)*SC,y2=(w.cyA[j]+0.5)*SC;
-    if(Math.abs(x2-x1)>HW/2)continue;
-    ctx.lineWidth=0.4+(w.rv[i]-0.3)*3.2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+  // rivers as smooth curves: each reach bends through its cell centre, from the midpoint with its main tributary to the midpoint with the cell downstream
+  const up=new Int32Array(N).fill(-1),upv=new Float32Array(N);
+  for(const i of w.landIdx){const j=w.down[i];if(j>=0&&w.rv[i]>upv[j]){upv[j]=w.rv[i];up[j]=i}}
+  const cen=i=>[(w.cxA[i]+0.5)*SC,(w.cyA[i]+0.5)*SC],mid=(a,b)=>{const [x1,y1]=cen(a),[x2,y2]=cen(b);if(Math.abs(x2-x1)>HW/2)return null;return[(x1+x2)/2,(y1+y2)/2]};
+  ctx.strokeStyle='rgba(52,104,136,.8)';ctx.lineCap='round';ctx.lineJoin='round';
+  for(const i of w.landIdx){if(w.rv[i]<0.3)continue;const j=w.down[i];if(j<0)continue;const [cx,cy]=cen(i),e=mid(i,j);if(!e)continue;
+    const u0=up[i]>=0&&w.rv[up[i]]>=0.3?mid(up[i],i):null,s0=u0||[cx,cy];
+    ctx.lineWidth=0.4+(w.rv[i]-0.3)*3;ctx.beginPath();ctx.moveTo(s0[0],s0[1]);ctx.quadraticCurveTo(cx,cy,e[0],e[1]);ctx.stroke()}
   baseCv=c;
 }
 
@@ -66,6 +96,11 @@ function blocs(){
   for(const id of s.alive){const o=s.pols[id];if(o.over&&col.has(o.over)){const [c]=col.get(o.over);col.set(id,[c.map(v=>v*0.6+255*0.4),150])}}
   return col;
 }
+const TCOL=[[-30,[90,60,150]],[-15,[70,110,200]],[0,[150,200,230]],[10,[150,200,120]],[20,[235,210,90]],[28,[230,120,60]],[35,[170,40,40]]];
+const RCOL=[[150,96,50],[214,180,110],[236,226,150],[140,196,110],[50,150,110],[40,110,170],[50,60,150]];
+function rainCol(v){v=clamp(v,0,1)*(RCOL.length-1);const k=Math.min(RCOL.length-2,Math.floor(v)),f=v-k,a=RCOL[k],b=RCOL[k+1];return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f]}
+const rainCss=()=>'linear-gradient(90deg,'+RCOL.map((c,k)=>`rgb(${c}) ${Math.round(k/(RCOL.length-1)*100)}%`).join(',')+')';
+function tempCol(t){if(t<=TCOL[0][0])return TCOL[0][1];for(let k=1;k<TCOL.length;k++)if(t<=TCOL[k][0]){const [a,ca]=TCOL[k-1],[b,cb]=TCOL[k],f=(t-a)/(b-a);return[ca[0]+(cb[0]-ca[0])*f,ca[1]+(cb[1]-ca[1])*f,ca[2]+(cb[2]-ca[2])*f]}return TCOL[TCOL.length-1][1]}
 function buildOverlay(){
   const s=S,w=WD,d=ovImg.data,m=ui.mode;d.fill(0);
   const bc=m==='alliances'?blocs():null,know=[...ui.know].map(k=>TI[k]);
@@ -93,6 +128,10 @@ function buildOverlay(){
       case'capacity':c=ramp((Math.log10(s.K[i]/w.area[i])+2)/4);a=200;break;
       case'asabiya':if(p>=1){c=ramp(s.s[i]);a=200}break;
       case'disease':if(s.infect[i]){c=[220,40,40];a=230}else if(p>=1&&s.immune[i]>0.05){c=[60,120,200];a=40+170*s.immune[i]}break;
+      case'ctemp':{const t=w.T[i]+s.cdT[i]+s.dT+s.gT+epochTemp();c=tempCol(t);a=w.land[i]?210:0}break;
+      case'crain':case'cwind':if(w.land[i]){const pp=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i]);c=rainCol(Math.log10(Math.max(pp,10)/40)/Math.log10(4000/40));a=m==='cwind'?150:205}break;
+      case'veg':if(w.land[i]){const b=VEG[s.veg[i]];if(b){c=b[2];const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<0.5*f0)c=[c[0]*0.5+196*0.5,c[1]*0.5+170*0.5,c[2]*0.5+110*0.5];if(s.farm[i]>0.5&&s.pop[i]/w.area[i]>3)c=[(c[0]+218)/2,(c[1]+190)/2,(c[2]+90)/2];a=215}}break;
+      case'cchange':if(w.land[i]){const dp=s.cdP[i],dt=s.cdT[i];const v=clamp(dp/250,-1,1);c=v>=0?[70-40*v,140+30*v,190]:[200,140+40*v,70];a=Math.min(220,40+Math.abs(v)*200+Math.abs(dt)*20)}break;
       case'weather':{const v=s.anom[i];c=v>0?[30,150,150]:[170,110,40];a=Math.min(220,Math.abs(v)*120)}break;
       case'climate':
         if(ui.climView==='mismatch'&&g){const k=g.code[i];if(k){c=[[0,0,0],[90,170,110],[200,120,50],[60,120,210],[150,110,210],[230,90,70]][k];a=k===1?110:210}}
@@ -107,21 +146,26 @@ function buildOverlay(){
 function buildComp(){
   const s=S,w=WD,ctx=compCtx;
   ctx.globalAlpha=1;ctx.drawImage(baseCv,0,0);
-  buildOverlay();ctx.imageSmoothingEnabled=true;ctx.drawImage(ovCv,0,0,HW,HH);
+  buildOverlay();
   const m=ui.mode;
+  if(!SUB)prepSub();
+  const keyM=m==='peoples'?s.eth:m==='religion'?s.rel:(m==='political'||m==='alliances')?s.pol:null;
+  subLabels(keyM);
+  {const sd=subImg.data,od=ovImg.data,rep=SUB.rep;for(let q=0;q<SN;q++){const j=rep[q],o=q*4;if(j<0){sd[o+3]=0;continue}const r=j*4;sd[o]=od[r];sd[o+1]=od[r+1];sd[o+2]=od[r+2];sd[o+3]=od[r+3]}
+   subCtx.putImageData(subImg,0,0)}
+  ctx.imageSmoothingEnabled=true;ctx.drawImage(subCv,0,0,HW,HH);
   if(m==='political'||m==='alliances'||m==='peoples'||m==='religion'){
     const key=m==='peoples'?s.eth:m==='religion'?s.rel:s.pol,polMode=m==='political'||m==='alliances';
     let selP=0;if(ui.page){if(polMode&&ui.page.t==='pol')selP=ui.page.id;else if(m==='peoples'&&ui.page.t==='eth')selP=ui.page.id;else if(m==='religion'&&ui.page.t==='rel')selP=ui.page.id;else if(ui.page.t==='cell')selP=key[ui.page.id]}
     const thin=new Path2D(),hi=new Path2D(),war=new Path2D();
     const seg=(p,x1,y1,x2,y2)=>{p.moveTo(x1,y1);p.lineTo(x2,y2)};
-    for(const i of w.landIdx){
-      const a=key[i],x=w.cxA[i],y=w.cyA[i],jr=w.nb[i*4+1],jd=w.nb[i*4+3];
-      for(const [j,x1,y1,x2,y2] of [[jr,(x+1)*SC,y*SC,(x+1)*SC,(y+1)*SC],[jd,x*SC,(y+1)*SC,(x+1)*SC,(y+1)*SC]]){
-        if(j<0||!w.land[j]||(j===jr&&x>=W-1))continue;const b=key[j];if(b===a)continue;
-        if(polMode&&a>0&&b>0&&s.pols[a].enemies.has(b)){seg(war,x1,y1,x2,y2);continue}
-        if(a<=0&&b<=0&&!(m==='peoples'))continue;
-        seg(selP>0&&(a===selP||b===selP)?hi:thin,x1,y1,x2,y2)}
-    }
+    // borders traced on the refined sub-cell labels (marching squares through edge midpoints)
+    const L=SUB.lab,HS=SC/2,cat=(p,q)=>{if(p===-2||q===-2)return null;if(polMode&&p>0&&q>0&&s.pols[p].enemies.has(q))return war;if(p<=0&&q<=0&&m!=='peoples')return null;return selP>0&&(p===selP||q===selP)?hi:thin};
+    for(let sy=0;sy<SH-1;sy++)for(let sx=0;sx<SW-1;sx++){const q=sy*SW+sx,a=L[q],b=L[q+1],c=L[q+SW],d=L[q+SW+1];if(a===b&&b===c&&c===d)continue;
+      const X=(sx+1)*HS,Y=(sy+1)*HS,h2=HS/2*0+HS/2;const mids=[];
+      if(a!==b)mids.push([X,Y-h2,a,b]);if(c!==d)mids.push([X,Y+h2,c,d]);if(a!==c)mids.push([X-h2,Y,a,c]);if(b!==d)mids.push([X+h2,Y,b,d]);
+      if(mids.length===2){const [m1,m2]=mids,P1=cat(m1[2],m1[3]);if(P1)seg(P1,m1[0],m1[1],m2[0],m2[1])}
+      else for(const mm of mids){const P1=cat(mm[2],mm[3]);if(P1)seg(P1,mm[0],mm[1],X,Y)}}
     if(polMode){const hatch=new Path2D(),fortP=new Path2D();
       for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=s.pols[p],x=w.cxA[i]*SC,y=w.cyA[i]*SC;
         if(o.kind==='horde'&&((w.cxA[i]+w.cyA[i])&1)){hatch.moveTo(x,y+SC);hatch.lineTo(x+SC,y)}
@@ -155,6 +199,10 @@ function drawMap(){
       const [x1,y1]=cellXY(o.capital),[x2,y2]=cellXY(p.capital);if(Math.abs(x2-x1)>HW/2)continue;
       each(x1,y1,(sx,sy)=>{ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+(x2-x1)*k,sy+(y2-y1)*k);ctx.stroke()})}}
     ctx.setLineDash([])}
+  // prevailing winds from the climate model (coarse cells), for the selected month
+  if(m==='cwind'&&s.climR&&s.climR.wind){const Wn=s.climR.wind[ui.windMonth||0];if(Wn){ctx.strokeStyle='rgba(30,40,60,.75)';ctx.fillStyle='rgba(30,40,60,.75)';ctx.lineWidth=1.1;const step=Math.max(2,Math.round(5/ui.z));
+    for(let y=1;y<CH;y+=step)for(let x=0;x<CW;x+=step){const j=y*CW+x,uu=Wn.U[j],vv=Wn.V[j],sp=Math.hypot(uu,vv);if(sp<0.15)continue;const L=Math.min(14,4+sp*4)*Math.min(1.6,ui.z*0.8+0.4),dx=uu/sp*L,dy=-vv/sp*L;
+      each((x+0.5)*CSC,(y+0.5)*CSC,(sx,sy)=>{ctx.beginPath();ctx.moveTo(sx-dx/2,sy-dy/2);ctx.lineTo(sx+dx/2,sy+dy/2);ctx.stroke();const ang=Math.atan2(dy,dx);ctx.beginPath();ctx.moveTo(sx+dx/2,sy+dy/2);ctx.lineTo(sx+dx/2-4*Math.cos(ang-0.5),sy+dy/2-4*Math.sin(ang-0.5));ctx.lineTo(sx+dx/2-4*Math.cos(ang+0.5),sy+dy/2-4*Math.sin(ang+0.5));ctx.fill()})}}}
   // caravan routes
   if((m==='political'||m==='alliances'||m==='religion'||m==='peoples')&&s.routes){ctx.lineWidth=1.6;ctx.strokeStyle='rgba(232,200,140,.85)';ctx.setLineDash([2,3]);
     for(const R of s.routes){const pts=R.path.map(cellXY);if(pts.length<2)continue;
@@ -230,6 +278,11 @@ function drawLegend(){
     case'capacity':h=rampBox('Carrying capacity per km² this year','0.01','100');break;
     case'asabiya':h=rampBox('Asabiya (collective solidarity)','0','1');break;
     case'disease':h=keys([[[220,40,40],'Outbreak now'],[[60,120,200],'Immunity from past exposure']]);break;
+    case'ctemp':h=`<div>Mean temperature this century (model change added to ${WD.isEarth?'measured':'modelled'} climate)</div><div class="ramp" style="background:linear-gradient(90deg,${TCOL.map(([t,c])=>`rgb(${c.map(Math.round)}) ${Math.round((t+30)/65*100)}%`).join(',')})"></div><div class="row"><span>−30 °C</span><span>0</span><span>35 °C</span></div>`;break;
+    case'crain':h=`<div>Annual rainfall this century</div><div class="ramp" style="background:${rainCss()}"></div><div class="row"><span>40 mm</span><span>4,000 mm</span></div>`;break;
+    case'cwind':h=`<div>Annual rainfall, with surface winds</div><div class="ramp" style="background:${rainCss()}"></div><div class="row"><span>40 mm</span><span>4,000 mm</span></div>`+`<div class="kchips" id="windm">${['January','July'].map((l,k)=>`<button type="button" data-m="${k*6}" aria-pressed="${(ui.windMonth||0)===k*6}">${l}</button>`).join('')}</div><p style="margin:6px 0 0;opacity:.85">Winds blow from high to low pressure, turned by the Earth's rotation. Watch the tropical rain belt and monsoons swing with the seasons.</p>`;break;
+    case'veg':h='<div class="keys">'+VEG.map(b=>`<span><i style="background:rgb(${b[2]})"></i>${b[1]}</span>`).join('')+'<span><i style="background:rgb(207,180,100)"></i>Fields</span><span><i style="background:rgb(190,165,115)"></i>Cleared forest</span></div><p style="margin:6px 0 0;opacity:.85">What grows where, from the current climate. Fields and cleared forest show where people have changed the land.</p>';break;
+    case'cchange':h=keys([[[40,170,190],'Wetter than today'],[[200,100,70],'Drier than today']])+'<p style="margin:6px 0 0;opacity:.85">How this era\'s climate differs from today\'s: the orbit, greenhouse gases and land cover change the monsoons and rain belts. Around 9000–5000 BCE the northern summer sun was stronger and the African monsoon reached far into the Sahara.</p>';break;
     case'weather':h=keys([[[30,150,150],'Wetter than normal'],[[170,110,40],'Drier than normal']]);break;
     case'climate':
       h=`<div class="kchips">${[['mismatch','Model vs observed'],['model','Model zones'],['observed','Observed zones']].map(([k,l])=>`<button type="button" data-cv="${k}" aria-pressed="${ui.climView===k}">${l}</button>`).join('')}</div>`;
@@ -245,6 +298,7 @@ function techShare(k){let t=0;const f=S.tk[k];for(const i of WD.landIdx)if(f[i]>
 $('legend').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.k){const k=b.dataset.k;ui.know.has(k)?ui.know.delete(k):ui.know.add(k)}
   if(b.dataset.cv)ui.climView=b.dataset.cv;
+  if(b.dataset.m!=null)ui.windMonth=+b.dataset.m;
   drawLegend();ui.dirty=true});
 
 /* ---------- chart ---------- */
@@ -538,7 +592,7 @@ function renderChecks(){
     h+=`<h3 class="sec">China: unity and division</h3><p style="margin:0">Share of China's heartland held by its largest state. The dashed line is a rough reading of the real record.${cmax&&cmax[1]?` Peak so far: <b>${Math.round(cmax[1]*100)}%</b> in ${fy(cmax[0])}.`:''}</p><canvas class="sparkc" id="chinachart" style="height:120px"></canvas>`;
   }
   if(s&&s.epochs.length){h+=`<h3 class="sec">Climate epochs this run</h3><ul class="deeds">${s.epochs.map(e=>`<li><span>${fy(e.start)}</span><div>${e.k==='dry'?'Great drought in the '+esc(e.where):e.k==='cold'?'Cold epoch':'Warm epoch'}, ${e.end-e.start} years${e.k!=='dry'?` (${e.amp>0?'+':''}${e.amp.toFixed(1)} °C)`:''}</div></li>`).join('')}</ul>`}
-  if(s){const M=s.orbM;h+=`<p class="note">Orbital monsoon boost now: ${Math.round(M*100)}% ${w.isEarth?'(on Earth it fades between about 4000 and 2500 BCE, drying the Sahara and Arabia)':''}.</p>`}
+  if(s&&s.co2){const o=orbitFor(s.year);h+=`<p class="note">Climate now: ${s.climAnom>=0?'+':''}${s.climAnom.toFixed(2)} °C against the modern orbit and pre-industrial air; CO₂ ${s.co2.toFixed(0)} ppm, methane ${Math.round(s.ch4)} ppb. Orbit: tilt ${o.obl.toFixed(2)}°, eccentricity ${o.ecc.toFixed(4)}, perihelion at solar longitude ${Math.round(o.peri)}°. See the Climate tab.</p>`}
   el.innerHTML=h;
   if(w.isEarth&&s)drawChina();
   el.querySelectorAll('input[type=range]').forEach(inp=>inp.addEventListener('input',()=>{const k=inp.id.slice(2);CL[k]=+inp.value;const d=CDEF.find(x=>x[0]===k);$('co-'+k).textContent=(+CL[k]).toFixed(d[4]<0.01?3:d[4]<1?2:0)}));
@@ -595,7 +649,8 @@ function fmtP(k,v){if(k==='startYear')return fy(v);if(k==='landFrac')return Math
 
 /* ---------- tabs ---------- */
 function showPane(p){ui.pane=p;for(const b of document.querySelectorAll('.tabs button'))b.setAttribute('aria-selected',b.dataset.pane===p);
-  for(const k of ['chron','figs','plague','insp','check','setup'])$('pane-'+k).hidden=k!==p;
+  for(const k of ['chron','figs','plague','insp','clim','check','setup'])$('pane-'+k).hidden=k!==p;
+  if(p==='clim')renderClimate();
   if(p==='insp')renderPage();if(p==='chron')renderChron(true);if(p==='figs')renderFigs();if(p==='plague')renderPlagues();if(p==='check')renderChecks()}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)showPane(b.dataset.pane)});
 
@@ -605,7 +660,8 @@ $('speed').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 function setRunning(on){ui.running=on&&ui.ready;$('play').textContent=ui.running?'Pause':'Play'}
 $('play').addEventListener('click',()=>setRunning(!ui.running));
 $('modes').innerHTML=MODES.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${l}</button>`).join('');
-$('modes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.mode=b.dataset.m;for(const x of $('modes').children)x.setAttribute('aria-pressed',x===b);drawLegend();ui.dirty=true});
+function setMode(m){ui.mode=m;for(const x of $('modes').children)x.setAttribute('aria-pressed',x.dataset.m===m);drawLegend();ui.dirty=true}
+$('modes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setMode(b.dataset.m)});
 document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea'))return;if(e.code==='Space'){e.preventDefault();setRunning(!ui.running)}});
 let drag=null;
 mapCv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ox:ui.ox,oy:ui.oy,moved:false};mapCv.setPointerCapture(e.pointerId)});
@@ -697,7 +753,7 @@ function frame(t){
   if(ui.ringT&&performance.now()<ui.ringT)ui.dirty=true;
   if(ui.dirty&&S&&baseCv&&t-ui.lastRender>110){ui.lastRender=t;ui.dirty=false;buildComp();drawMap();updateTop()}
   if(S&&t-ui.lastSide>700){ui.lastSide=t;
-    if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues()}
+    if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='clim')renderClimate()}
     if(ui.mode==='knowledge'&&ui.running&&t%3000<700)drawLegend();
     drawChart()}
   requestAnimationFrame(frame);
@@ -719,3 +775,28 @@ async function boot(){
   }catch(err){console.error(err);busy(true,'Earth could not be loaded here, so a generated world is used instead.');setTimeout(()=>buildWorld('gen'),800)}
 }
 boot();
+
+/* ---------- climate tab ---------- */
+// how well the model's present-day climate matches the measured normals (Earth only), computed once per world
+function climSkill(){const w=WD;if(w.climSkillV!==undefined)return w.climSkillV;w.climSkillV=null;
+  if(!w.isEarth||!EARTH_CLIMATE||!w.clim)return null;const smp=climateSampler(EARTH_CLIMATE),R=w.clim,g=R.g;
+  let et=0,ep=0,n=0,ok=0,nk=0;
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){const j=y*CW+x;if(g.land[j]<0.6)continue;const la=90-(y+0.5)*180/CH,lo=(x+0.5)*360/CW-180,t=smp(la,lo,'temperature'),pp=smp(la,lo,'precipitation');if(!Number.isFinite(t)||!Number.isFinite(pp))continue;
+    const mt=R.Ta[j]-CLM.lapse*g.elev[j]/1000;et+=(mt-t)**2;ep+=(Math.log10(R.Pa[j]+50)-Math.log10(pp+50))**2;n++;
+    if(w.kgHi){const kg=kgGroup(w.kgHi[(y*CSC+CSC/2)*HW+x*CSC+CSC/2]);if(kg>=0){nk++;if(simGroup(mt,R.Pa[j],R.Ar[j])===kg)ok++}}}
+  return w.climSkillV=n?{t:Math.sqrt(et/n),p:Math.sqrt(ep/n),k:nk?ok/nk:null}:null}
+function sparkSvg(pts,col,lo,hi,fmt){if(pts.length<2)return'';const W_=300,H_=56,x0=pts[0][0],x1=pts[pts.length-1][0];const X=x=>(x-x0)/(x1-x0||1)*W_,Y=v=>H_-4-(v-lo)/(hi-lo||1)*(H_-8);
+  return`<svg viewBox="0 0 ${W_} ${H_}" class="spark" preserveAspectRatio="none" style="width:100%;height:${H_}px"><polyline fill="none" stroke="${col}" stroke-width="1.6" points="${pts.map(p=>X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join(' ')}"/><text x="2" y="10" font-size="9" fill="currentColor" opacity=".7">${fmt(hi)}</text><text x="2" y="${H_-1}" font-size="9" fill="currentColor" opacity=".7">${fmt(lo)}</text></svg>`}
+function renderClimate(){const el=$('pane-clim'),s=S,w=WD;if(!s||!s.co2){el.innerHTML='';return}
+  const o=orbitFor(s.year),anom=s.climAnom+s.gT+epochTemp()+s.dT,sk=climSkill();
+  let h=`<h3 class="sec">The climate now</h3><dl class="kv"><dt>Global temperature</dt><dd>${anom>=0?'+':''}${anom.toFixed(2)} °C against the present day</dd><dt>Carbon dioxide</dt><dd>${s.co2.toFixed(1)} ppm</dd><dt>Methane</dt><dd>${Math.round(s.ch4)} ppb</dd><dt>Forest carbon</dt><dd>${Math.round(s.landC)} Gt C</dd><dt>Axial tilt</dt><dd>${o.obl.toFixed(2)}°</dd><dt>Eccentricity</dt><dd>${o.ecc.toFixed(4)}</dd><dt>Perihelion</dt><dd>${perihelionWord(o.peri)}</dd><dt>Model last solved</dt><dd>${fy(s.climY)}</dd></dl>`;
+  const st=s.stats.filter(x=>x.co2!=null);
+  if(st.length>1){const c=st.map(x=>[x.y,x.co2]),t=st.map(x=>[x.y,x.gT]);const cl=Math.min(...c.map(p=>p[1])),ch=Math.max(...c.map(p=>p[1])),tl=Math.min(...t.map(p=>p[1])),th=Math.max(...t.map(p=>p[1]));
+    h+=`<h3 class="sec">Carbon dioxide</h3>${sparkSvg(c,'#b0643c',Math.floor(cl-1),Math.ceil(ch+1),v=>v+' ppm')}<h3 class="sec">Global temperature</h3>${sparkSvg(t,'#3c78b0',tl-0.1,th+0.1,v=>(v>=0?'+':'')+v.toFixed(1)+' °C')}`}
+  h+=`<h3 class="sec">Map layers</h3><div class="kchips" id="climmodes">${[['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Change from today'],['climate','Climate zones']].map(([k,l])=>`<button type="button" data-mode="${k}" aria-pressed="${ui.mode===k}">${l}</button>`).join('')}</div>`;
+  if(sk)h+=`<h3 class="sec">How good is the model?</h3><p style="margin:0">Run on Earth's real mountains and coasts with today's orbit, the model misses measured annual temperatures by <b>${sk.t.toFixed(1)} °C</b> on average and rainfall by a factor of about <b>${Math.pow(10,sk.p).toFixed(1)}</b>${sk.k!=null?`; it puts <b>${Math.round(sk.k*100)}%</b> of land in the right climate group`:''}. On Earth the simulation therefore keeps the measured climate and uses only the model's <i>changes</i> through time; invented worlds use the model directly.</p>`;
+  h+=`<details class="more2"><summary>How the climate model works</summary><p>Sunlight is computed from the orbit for every latitude and month. Each place balances absorbed sunlight against heat radiated to space; land heats and cools faster than the sea, which makes seasons and continental extremes. Heat spreads toward the poles, and winds carry ocean temperatures inland.</p><p>Air pressure comes from the tropical rain belt, the subtropical highs, the stormy subpolar lows, and heat lows over hot land. Winds blow from high to low pressure, turned by the Earth's rotation. Oceans keep the air humid; winds carry the moisture inland, and it rains where air rises: where winds meet, up mountainsides, along storm tracks. Forests return part of the rain to the air.</p><p>The climate is solved again every 250 years, or sooner when greenhouse gases change: the slow wobble of the orbit moves the monsoons, cleared forests release carbon dioxide and change how much sunlight the land reflects, and rice paddies and herds add methane. Biomes follow the climate, and fields and cleared forest follow the people.</p></details>`;
+  el.innerHTML=h;
+}
+function perihelionWord(p){const months=['late March','late April','late May','late June','late July','late August','late September','late October','late November','late December','late January','late February'];return'Earth is closest to the sun in '+months[Math.floor(((p+15)%360)/30)]}
+$('pane-clim').addEventListener('click',e=>{const b=e.target.closest('button[data-mode]');if(!b)return;setMode(b.dataset.mode);renderClimate()});
