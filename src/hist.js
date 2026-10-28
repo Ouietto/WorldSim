@@ -206,8 +206,8 @@ function computeK(){
     const irr=s.irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const T_=s.tk,hv=w.heavy[i],lc=w.leach[i];
-    let Kfa=ar*3.5*w.sF[i]*s.farm[i]*s.fert[i]*wf*(1+0.8*s.metal[i]+0.9*s.iron[i]*(1-0.4*lc)+1.0*s.crops[i]+0.7*s.admin[i]+0.55*s.ard[i]*(1-0.6*hv)+0.7*s.plough[i]*hv+0.6*s.manure[i]+s.xcrops[i]*(0.25+0.8*lc+0.5*w.trop[i]+0.3*(1-w.sF[i]))+0.4*T_[26][i]*Math.max(lc,s.forest[i])+0.15*T_[28][i]*w.coast[i])*(1+rv*(0.25+2.2*s.irrig[i]));
-    Kfa*=(0.45+0.55*(1-s.forest[i]))*(1-0.6*s.salt[i])*(1-0.5*w.oncho[i]);
+    let Kfa=ar*4.2*w.sF[i]*s.farm[i]*s.fert[i]*wf*(1+0.8*s.metal[i]+0.9*s.iron[i]*(1-0.4*lc)+1.0*s.crops[i]+0.7*s.admin[i]+0.55*s.ard[i]*(1-0.6*hv)+0.7*s.plough[i]*hv+0.6*s.manure[i]+s.xcrops[i]*(0.25+0.8*lc+0.5*w.trop[i]+0.3*(1-w.sF[i]))+0.4*T_[26][i]*Math.max(lc,s.forest[i])+0.15*T_[28][i]*w.coast[i])*(1+rv*(0.25+2.2*s.irrig[i]));
+    Kfa*=(1-0.3*s.forest[i]*(1-clamp(0.5*s.metal[i]+0.7*s.iron[i],0,0.9)))*(1-0.6*s.salt[i])*(1-0.5*w.oncho[i]);
     if(w.T[i]<12)Kfa*=clamp(1+0.18*dT,0.4,1.35);
     // heavy, wet temperate forest soils: hard to clear and work until iron axes and ploughs
     if(hv>0)Kfa*=1-0.7*hv*(1-Math.max(s.plough[i],0.4*s.iron[i]));
@@ -230,9 +230,10 @@ function growth(){
       if(s.salt[i]>0&&(pr<0.3||s.tk[30][i]>0.5))s.salt[i]=Math.max(0,s.salt[i]-0.0004-0.002*s.tk[30][i])}
     const f0=w.forest0[i];
     if(f0>0){let fo=s.forest[i];
-      // farmers clear forest when they need land; with stone and bronze tools it is slow work, iron axes speed it
-      if(fm>0.2&&pr>0.6)fo-=0.0015*fm*Math.min(1,(pr-0.6)*2.5)*fo*(1+2.5*s.iron[i]+0.5*s.metal[i]);
-      else fo+=0.004*(f0-fo)*(1-0.6*s.herd[i]*Math.min(1,pr*3));
+      // people clear as much forest as they need for fields and grazing (more people, more clearing; intensive farming needs less land);
+      // stone and bronze tools make it slow work, iron axes speed it; land no longer needed grows back
+      const dens=p/w.area[i],need=clamp(fm*dens/(25*(1+0.5*s.crops[i]+0.4*s.plough[i]+0.4*s.irrig[i]))+1.6*fm*w.sF[i]*Math.max(0,pr-0.7)+0.25*s.herd[i]*w.sH[i]*Math.min(1,pr),0,0.95),tgt=f0*(1-need);
+      if(fo>tgt)fo-=(fo-tgt)*0.006*(1+2*s.iron[i]+0.5*s.metal[i]);else fo+=(tgt-fo)*0.004;
       s.forest[i]=clamp(fo,0,f0)}
     if(s.rp[i]>0)s.rp[i]*=0.96;
     if(w.mal[i]>0)s.adapt[i]+=0.0012*w.mal[i]*Math.max(0,0.55-s.adapt[i]);
