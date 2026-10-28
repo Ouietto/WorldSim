@@ -20,7 +20,7 @@ const PDEF=[
 ['States','warRate','War frequency',0,3,0.05,1,'How often states declare war and press their attacks.'],
 ['States','asabR','Frontier cohesion',0.01,0.3,0.005,0.1,'Asabiya gained on frontiers with alien peoples or faiths.'],
 ['States','asabD','Interior decay',0.001,0.05,0.001,0.006,'Asabiya lost in safe interiors.'],
-['States','reach','Administrative reach',2,20,0.5,6,'Travel-day scale for delivering orders and receiving replies, before institutions and communication tools.'],
+['States','reach','Administrative reach',2,20,0.5,6,'Cells from the capital at which power falls to 37%, before technology.'],
 ['States','crisis','Instability sensitivity',0,3,0.05,1,'How easily structural pressure turns into civil war.'],
 ['States','allyRate','Alliances',0,3,0.05,1,'How readily states with shared interests ally.'],
 ['States','terrain','Terrain friction',0,3,0.05,1,'How much deserts, mountains and forests slow armies and administration.'],
@@ -102,6 +102,7 @@ function decodeEarth(elevBytes,kgBytes,climateBytes){
   if(climateBytes)EARTH_CLIMATE=parseClimate(new TextDecoder().decode(climateBytes));
   return{height:h,kg:new Uint8Array(kgBytes.buffer,kgBytes.byteOffset,HW*HH),climate:EARTH_CLIMATE};
 }
+
 const KG_CODES=['','Af','Am','As','Aw','BSh','BSk','BWh','BWk','Cfa','Cfb','Cfc','Csa','Csb','Csc','Cwa','Cwb','Cwc','Dfa','Dfb','Dfc','Dfd','Dsa','Dsb','Dsc','Dsd','Dwa','Dwb','Dwc','Dwd','EF','ET','Ocean'];
 const KG_GROUPS=['Tropical (A)','Desert (BW)','Steppe (BS)','Temperate (C)','Continental (D)','Polar (E)'];
 function kgGroup(c){return c>=1&&c<=4?0:c===5||c===6?2:c===7||c===8?1:c>=9&&c<=17?3:c>=18&&c<=29?4:c===30||c===31?5:-1}
@@ -311,8 +312,7 @@ function genWorld(o){
   const numericClimate=o.climate||(o.earth?EARTH_CLIMATE:null);
   if(numericClimate){applyNumericClimate(C,numericClimate);w.climateMeta=C.climateMeta;for(const key of ['rainSeasonality','dryMonths','growingMonths'])if(C[key])w[key]=C[key]}
   if(o.temp&&!numericClimate)C.tHi.set(o.temp);if(o.prec&&!numericClimate)C.pHi.set(o.prec);
-  // Observations/imported numeric measurements must not be rewritten to pass
-  // a classification test. Köppen fitting remains available for model worlds.
+  // measured climate is never rewritten to pass a classification test; Köppen fitting stays for model worlds
   if(o.kg&&o.fit&&!numericClimate){w.fitChanged=fitClimate(C.tHi,C.pHi,C.aHi,eHi,o.kg);w.fitted=true}
   w.tHi=C.tHi;w.pHi=C.pHi;w.aHi=C.aHi;
   const elev=new Float32Array(N),T=new Float32Array(N),Pr=new Float32Array(N),amp=new Float32Array(N),rough=new Float32Array(N),land=new Uint8Array(N);
@@ -363,7 +363,7 @@ function genWorld(o){
   for(const i of landList){
     const t=T[i],p=Pr[i],tw=t+amp[i]/2;biome[i]=biomeOf(t,p);
     if(t<-9)continue;
-    const half=amp[i]/2,estimatedGs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI),gs=w.growingMonths&&Number.isFinite(w.growingMonths[i])?w.growingMonths[i]:estimatedGs;
+    const half=amp[i]/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
     w.gs=w.gs||new Float32Array(N);w.gs[i]=gs;
     const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
     // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
@@ -382,8 +382,7 @@ function genWorld(o){
   for(const i of landList){const b=biome[i],t=T[i],p=Pr[i],la=lat[i]*180/Math.PI;
     let c=2;if(b===7){c=8;desert[i]=1}else if(b===9)c=6;else if(b===1||b===2)c=6;else if(b===3)c=3;
     c+=Math.round(rough[i]*8);if(rv[i]>0.3)c=Math.max(1,c>>1);tcost[i]=Math.min(20,c);
-    const lo=(cxA[i]+0.5)/W*360-180;
-    tsetse[i]=(t>22&&p>900&&Math.abs(la)<20&&(!w.isEarth||lo>-18&&lo<52&&lm[i]===lm[cellAt(0,25)]))?1:0;
+    tsetse[i]=(t>22&&p>900&&Math.abs(la)<14)?1:0;
     if(p<520)monZone[i]=clamp((33-Math.abs(la))/8,0,1)*clamp((Math.abs(la)-9)/5,0,1)*(la>0?1:0.45)*clamp((520-p)/250,0,1)}
   Object.assign(w,{tcost,tsetse,monZone,desert});
   // weather interpolation
@@ -417,7 +416,7 @@ function genWorld(o){
         if(near)med.push(i)}}
     w.medCells=Int32Array.from(med);w.chinaCells=Int32Array.from(china);
   }
-  w.grade=gradeClimate(w,numericClimate?T:rawT,numericClimate?Pr:rawP,numericClimate?amp:rawA);
+  w.grade=gradeClimate(w,rawT,rawP,rawA);
   return w;
 }
 

@@ -1,3 +1,11 @@
+# Asabiya — history engine (rebuild branch: v0.5.2 + measured climate)
+
+> **This branch** restores the v0.5.2 model and adds the measured Earth climate from the later branches.
+>
+> - **Restored model:** the v0.5.2 aggregate cliodynamic model (asabiya, fiscal power, ecology, disease pools, caravans, inequality, ecological reach, frontier resistance).
+> - **Measured climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 climate normals (`src/earth_climate.b64`, see `src/CLIMATE.md`), plus the numerical climate importer.
+> - **Status:** the measured climate fixes Europe's and Central Asia's rainfall. History has **not yet been recalibrated** to it; in the first four-seed check the Congo interior is far too state-covered. The v0.7–v0.12 accounting models are kept on `main` and `codex/v12-paused`.
+
 # Asabiya — history engine (v0.7)
 
 A browser simulation of peoples, states, faiths and technologies on a world map, from 9000 BCE onward. It blends cliodynamics (Turchin's asabiya and structural-demographic theory), World3-style carrying capacity, and ecological history. The default map is the real Earth.
