@@ -341,7 +341,7 @@ function updateTop(){
   const s=S,st=s.stats[s.stats.length-1];
   $('yr').textContent=s.year<=0?(1-s.year).toLocaleString('en-US'):String(s.year);$('era').textContent=s.year<=0?'BCE':'CE';
   if(!st)return;
-  $('topstats').innerHTML=`<span>Population <b>${fmtN(st.pop)}</b></span><span>States <b>${st.np}</b></span><span>Hordes <b>${st.nh||0}</b></span><span>Leading era <b>${ERAS[st.lead||0]}</b></span><span>Largest <b>${esc(st.big||'none')}</b>${st.bc?` (${st.bc})`:''}</span>`;
+  $('topstats').innerHTML=`<span>Population <b>${fmtN(st.pop)}</b></span><span>States <b>${st.np}</b></span><span>Hordes <b>${st.nh||0}</b></span><span>Leading era <b>${ERAS[st.lead||0]}</b></span><span>Largest ${st.big?`<button type="button" class="biglink" id="biglink" title="Open and show the largest state">${esc(st.big)}</button>`:'<b>none</b>'}${st.bc?` (${st.bc})`:''}</span>`;
 }
 
 /* ---------- links and pages ---------- */
@@ -394,7 +394,7 @@ function renderPage(){
     else{
       const p=s.pol[i]?s.pols[s.pol[i]]:null,e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=s.rel[i]>=0?s.rels[s.rel[i]]:null,city=s.city[i]>=0?s.cities[s.city[i]]:null;
       h+=`<div class="kind">Province</div><h2 class="name">${city?esc(city.name):e?'Lands of the '+esc(e.name):'Empty land'}</h2><p class="sub2">${latd}°, ${lond}° · ${ERAS[eraOf(i)]}</p>`;
-      h+=`<dl class="kv" style="margin-top:10px"><dt>State</dt><dd>${p?lp(p):'none'}</dd><dt>People</dt><dd>${e?le(e):'none'}</dd><dt>Faith</dt><dd>${R?lr(R):e?'folk religion':'–'}</dd><dt>Population</dt><dd>${fmtN(s.pop[i])} / ${fmtN(s.K[i])}</dd>${city?`<dt>City</dt><dd>${esc(city.name)}${p&&p.capital===i?' (capital)':''}, since ${fy(city.born)}</dd>`:''}</dl>`;
+      h+=`<dl class="kv" style="margin-top:10px"><dt>State</dt><dd>${p?lp(p):'none'}</dd><dt>People</dt><dd>${e?le(e):'none'}</dd><dt>Faith</dt><dd>${R?lr(R):e?'folk religion':'–'}</dd><dt>Population</dt><dd>${fmtN(s.pop[i])} / ${fmtN(s.K[i])}</dd>${city?`<dt>City</dt><dd>${esc(city.name)}${p&&p.capital===i?' (capital)':''}, since ${fy(city.born)}</dd>`+(city.sacks&&city.sacks.length?`<dt>Sacked</dt><dd>${city.sacks.slice(-4).map(x=>fy(x.y)).join(', ')}${city.sacks.length>4?` and ${city.sacks.length-4} more`:''}</dd>`:''):''}</dl>`;
       h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.transh&&w.transh[i]>0.2&&s.herd[i]>0.3?`<dt>Herding</dt><dd>moves with the seasons</dd>`:''}${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
       h+=`<h3 class="sec">Ecology</h3><div class="bars">${w.sF[i]>0.08?bar('Soil fertility',s.fert[i],1,'t'):''}${w.forest0[i]>0.05?bar('Forest standing',s.forest[i]/w.forest0[i],1,'t'):''}${s.salt[i]>0.02?bar('Salt in the soil',s.salt[i],1):''}${w.mal[i]>0.05?bar('Fever burden',w.mal[i]*(1-s.adapt[i]),1):''}${w.oncho[i]>0.05?bar('River blindness',w.oncho[i],1):''}${bar('Disease pool',s.dp[i],1,'t')}${w.sF[i]>0.1?bar('Hemmed in (circumscription)',s.circE[i],1,'t'):''}${s.car[i]>0.1?bar('Caravan traffic',s.car[i],1,'t'):''}</div>`;
       h+=`<h3 class="sec">Known techniques</h3><div class="bars">${TECH.map((T,k)=>s.tk[k][i]>0.05?bar(T.n,s.tk[k][i],1,'t'):'').join('')||'<div class="note">Foraging only.</div>'}</div>`;
@@ -415,6 +415,8 @@ function renderPage(){
       const tribs=s.alive.map(k=>s.pols[k]).filter(p=>p.over===id);
       h+=`<h3 class="sec">Realm</h3><dl class="kv"><dt>Provinces</dt><dd>${o.cells} (peak ${o.maxCells})</dd>${o.league!=null&&s.leagues[o.league]?`<dt>League</dt><dd>${L_('league',o.league,s.leagues[o.league].name)}</dd>`:''}${o.daughters?`<dt>Daughter cities</dt><dd>${o.daughters}</dd>`:''}${o.shape?`<dt>Extent at peak</dt><dd>${o.shape.ew.toLocaleString()} km east–west × ${o.shape.ns.toLocaleString()} km north–south</dd>`:''}${o.fortN?`<dt>Fortified provinces</dt><dd>${o.fortN}</dd>`:''}<dt>Population</dt><dd>${fmtN(o.pop)}</dd><dt>Capital</dt><dd>${city?esc(city.name):'–'}</dd><dt>Social complexity</dt><dd>${o.spc.toFixed(1)} / 10</dd>${o.cplx!=null&&o.kind==='state'?`<dt>Cost of government</dt><dd>${Math.round((o.burden||0)*100)}% of what it can tax${(o.burden||0)>1?' — more than it returns':''}</dd><dt>Treasury</dt><dd>${o.treas>0.5?'full':o.treas>0?'solvent':o.treas>-1?'in debt':'bankrupt'}</dd><dt>Inequality</dt><dd>${Math.round(o.ineq*100)} / 100</dd><dt>Farming</dt><dd>${(o.plN||0)>0.5*(o.cells-(o.wasteN||0))?'plough':'hoe'} agriculture</dd>${o.wasteN?`<dt>Claimed wasteland</dt><dd>${o.wasteN} provinces</dd>`:''}`:''}<dt>Era</dt><dd>${ERAS[eraOf(c)]}</dd><dt>Faith of the realm</dt><dd>${o.rel>=0?lr(s.rels[o.rel]):'folk religion'}</dd><dt>Core people</dt><dd>${s.eths[o.core]?le(s.eths[o.core]):'?'}</dd><dt>Land use</dt><dd>${(o.press*100).toFixed(0)}% of capacity</dd><dt>Asabiya</dt><dd>${o.S.toFixed(2)}</dd><dt>Elites vs positions</dt><dd>${(o.E/etOf(o)).toFixed(2)}×</dd><dt>Reach</dt><dd>${o.h.toFixed(1)} cells</dd><dt>Civil wars</dt><dd>${o.crises}</dd></dl>`;
       h+=`<h3 class="sec">Relations</h3><dl class="kv"><dt>Allies</dt><dd>${allies.length?allies.map(lp).join(', '):'none'}</dd><dt>At war with</dt><dd>${en.length?en.map(lp).join(', '):'no one'}</dd>${wars.length?`<dt>Wars</dt><dd>${wars.map(lw).join(', ')}</dd>`:''}${o.over&&s.pols[o.over]?`<dt>Pays tribute to</dt><dd>${lp(s.pols[o.over])}</dd>`:''}${tribs.length?`<dt>Tributaries</dt><dd>${tribs.map(lp).join(', ')}</dd>`:''}</dl>`;
+      if(o.kind==='state'&&o.prep!=null){const hp=o.paysTo&&s.pols[o.paysTo];
+        h+=`<h3 class="sec">Army and stores</h3><div class="bars">${bar('Readiness for war',o.prep,1)}${(o.merc||0)>0.02?bar('Hired soldiers',o.merc,1):''}${(o.gran||0)>0.02?bar('Granaries',o.gran,1,'t'):''}</div>${hp?`<dl class="kv" style="margin-top:6px"><dt>Buys peace from</dt><dd>${lp(hp)}</dd></dl>`:''}`}
       if(o.kind==='state'&&((o.nob||0)>0.05||o.colN)){const rf=s.reforms.filter(x=>x.pol===o.id);
         h+=`<h3 class="sec">Land and lords</h3><div class="bars">${bar('Hereditary nobility',o.nob||0,1)}</div><dl class="kv" style="margin-top:6px">${o.colN?`<dt>Soldier colonies</dt><dd>${o.colN} planted</dd>`:''}<dt>Revenue kept by lords</dt><dd>${Math.round(45*(o.nob||0))}%</dd>${rf.length?`<dt>Attempts to reclaim land</dt><dd>${rf.filter(x=>x.ok).length} of ${rf.length} succeeded</dd>`:''}</dl>`}
       if(o.why){const W2=o.why;
@@ -672,13 +674,26 @@ $('speed').innerHTML=SPEEDS.map(([v,l],k)=>`<button type="button" data-k="${k}" 
 $('speed').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.speed=+b.dataset.k;for(const x of $('speed').children)x.setAttribute('aria-pressed',x===b)});
 function setRunning(on){ui.running=on&&ui.ready;$('play').textContent=ui.running?'Pause':'Play'}
 $('play').addEventListener('click',()=>setRunning(!ui.running));
-$('modes').innerHTML=MODES.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${l}</button>`).join('');
-function setMode(m){ui.mode=m;for(const x of $('modes').children)x.setAttribute('aria-pressed',x.dataset.m===m);drawLegend();ui.dirty=true}
+// map views: a few quick buttons and every layer in one grouped menu
+const QUICK=['political','peoples','religion','veg'];
+const MODE_GROUPS=[['Politics',['political','alliances','lords','unity','loyalty','inequality','circ']],['Peoples and ideas',['peoples','mixing','religion','knowledge','path','era']],['People and land',['density','capacity','asabiya','disease','soil','forest','niche','terrain']],['Climate',['ctemp','crain','cwind','veg','cchange','weather','climate']]];
+const MODE_NAME=Object.fromEntries(MODES);MODE_NAME.veg='Biomes';
+$('modes').innerHTML=QUICK.map(k=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${MODE_NAME[k]}</button>`).join('')+`<label class="msel"><span>Map</span><select id="modesel" aria-label="Map view">${MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.filter(k=>MODE_NAME[k]).map(k=>`<option value="${k}"${k===ui.mode?' selected':''}>${MODE_NAME[k]}</option>`).join('')}</optgroup>`).join('')}</select></label>`;
+function setMode(m){ui.mode=m;for(const x of $('modes').querySelectorAll('button'))x.setAttribute('aria-pressed',x.dataset.m===m);const sel=$('modesel');if(sel&&sel.value!==m)sel.value=m;drawLegend();ui.dirty=true}
 $('modes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setMode(b.dataset.m)});
+$('modesel').addEventListener('change',e=>setMode(e.target.value));
+$('topstats').addEventListener('click',e=>{if(!e.target.closest('#biglink')||!S)return;let b=null;for(const id of S.alive){const o=S.pols[id];if(!b||o.cells>b.cells)b=o}if(b){openPage('pol',b.id);centerOn(b.capital)}});
 document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea'))return;if(e.code==='Space'){e.preventDefault();setRunning(!ui.running)}});
-let drag=null;
-mapCv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ox:ui.ox,oy:ui.oy,moved:false};mapCv.setPointerCapture(e.pointerId)});
+let drag=null;const touches=new Map();let pinch=null;
+function zoomAt(sx,sy,z2){z2=clamp(z2,1,8);const f=z2/ui.z;ui.ox=sx-(sx-ui.ox)*f;ui.oy=sy-(sy-ui.oy)*f;ui.z=z2;clampView();drawMap()}
+function pinchState(){const r=mapCv.getBoundingClientRect(),[a,b]=[...touches.values()];return{d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2-r.left,my:(a.y+b.y)/2-r.top}}
+mapCv.addEventListener('pointerdown',e=>{touches.set(e.pointerId,{x:e.clientX,y:e.clientY});try{mapCv.setPointerCapture(e.pointerId)}catch(_){}
+  if(touches.size===2){const p=pinchState();pinch={d:p.d,z:ui.z,mx:p.mx,my:p.my};drag=null}
+  else if(touches.size===1)drag={x:e.clientX,y:e.clientY,ox:ui.ox,oy:ui.oy,moved:false}});
+for(const ev of ['pointercancel'])mapCv.addEventListener(ev,e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null});
 mapCv.addEventListener('pointermove',e=>{
+  if(touches.has(e.pointerId))touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&touches.size===2){const p=pinchState();ui.ox+=p.mx-pinch.mx;ui.oy+=p.my-pinch.my;pinch.mx=p.mx;pinch.my=p.my;zoomAt(p.mx,p.my,pinch.z*p.d/pinch.d);return}
   const r=mapCv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
   if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;if(drag.moved){ui.ox=drag.ox+dx;ui.oy=drag.oy+dy;clampView();drawMap()}return}
   const i=screenToCell(sx,sy),tip=$('tip');
@@ -693,7 +708,7 @@ mapCv.addEventListener('pointerup',e=>{if(drag&&!drag.moved&&S){const r=mapCv.ge
     if(WD.land[i]&&(m==='political'||m==='alliances')&&S.pol[i])openPage('pol',S.pol[i]);
     else if(WD.land[i]&&m==='peoples'&&S.eth[i]>=0)openPage('eth',S.eth[i]);
     else if(WD.land[i]&&m==='religion'&&S.rel[i]>=0)openPage('rel',S.rel[i]);
-    else openPage('cell',i)}}drag=null});
+    else openPage('cell',i)}}drag=null;touches.delete(e.pointerId);if(touches.size<2)pinch=null});
 mapCv.addEventListener('dblclick',e=>{const r=mapCv.getBoundingClientRect();const i=screenToCell(e.clientX-r.left,e.clientY-r.top);if(i>=0)openPage('cell',i)});
 mapCv.addEventListener('wheel',e=>{e.preventDefault();const r=mapCv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
   const z2=clamp(ui.z*Math.exp(-e.deltaY*0.0015),1,8),f=z2/ui.z;ui.ox=sx-(sx-ui.ox)*f;ui.oy=sy-(sy-ui.oy)*f;ui.z=z2;clampView();drawMap()},{passive:false});

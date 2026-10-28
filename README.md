@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.6.1: paths of invention)
+# Asabiya — history engine (v0.6.2: war, supply and stores)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,15 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.6.2 adds:
+> - **Sacked cities:** captured cities may be plundered (more often by nomads and by armies of another faith); people die or flee to the nearest province of their own state and people, forts are wrecked, and nomads damage irrigation.
+> - **Supplied sieges:** attacks on walls, capitals and cities depend on food near the attacker's front, rivers, roads and granaries.
+> - **Readiness for war:** armies grow sharp in war and slacken in long peace; forts and recent raids keep them up.
+> - **Mercenaries:** states with coin, money and low cohesion hire soldiers in war; unpaid mercenaries mutiny.
+> - **Paying for peace:** rich states raided by strong nomads may buy peace with yearly gifts, until they grow strong or go broke.
+> - **Granaries:** literate states store grain in good years and draw on it in droughts.
+> - **Interface:** quick map buttons plus a grouped Map menu, a clickable Largest state, and pinch zoom on touch screens.
 >
 > The v0.7–v0.12 accounting models are kept on `main` and `codex/v12-paused`.
 

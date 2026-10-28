@@ -44,10 +44,14 @@ button{font:inherit;color:inherit}
 .stats b{color:var(--ink);font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
 .main{display:grid;grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:minmax(0,1fr) 118px;gap:8px;min-height:0}
 .mapwrap{grid-column:1;grid-row:1;position:relative;border-radius:8px;overflow:hidden;background:#1d3b4f;min-height:0;touch-action:none}
-#map{display:block;width:100%;height:100%;cursor:crosshair}
+#map{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 .modes{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 .modes button{pointer-events:auto;border:0;border-radius:4px;padding:4px 8px;font-size:11.5px;cursor:pointer;background:rgba(14,22,27,.62);color:#dfe6e3;backdrop-filter:blur(4px)}
 .modes button[aria-pressed="true"]{background:#f2f2ec;color:#14202a}
+.modes .msel{pointer-events:auto;display:flex;align-items:center;gap:6px;border-radius:4px;padding:0 4px 0 8px;font-size:11.5px;background:rgba(14,22,27,.62);color:#dfe6e3;backdrop-filter:blur(4px)}
+.modes select{border:0;background:transparent;color:#f2f2ec;font:inherit;padding:4px 2px;cursor:pointer;max-width:170px}
+.modes select option,.modes select optgroup{color:#14202a;background:#f2f2ec}
+.biglink{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--link);cursor:pointer;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--link) 40%,transparent);text-underline-offset:2px}
 .legend{position:absolute;left:10px;bottom:10px;background:rgba(14,22,27,.72);color:#dfe6e3;border-radius:6px;padding:7px 9px;font-size:11px;max-width:min(460px,80%);backdrop-filter:blur(4px)}
 .legend .ramp{height:8px;border-radius:2px;margin:5px 0 3px}
 .legend .row{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:10px;opacity:.85}
@@ -183,7 +187,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
 
 <div class="app">
   <header class="bar">
-    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6.1</span></div>
+    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6.2</span></div>
     <div class="clock">
       <button id="play" class="btn primary" type="button" disabled>Play</button>
       <div class="seg" id="speed" role="group" aria-label="Years per second"></div>

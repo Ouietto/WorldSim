@@ -1,5 +1,5 @@
 "use strict";
-const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1:0;
+const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1:0,ABL=typeof process!=="undefined"&&process.env&&process.env.ABL||"";
 /* ================= SOLDIER COLONIES AND HEREDITARY NOBILITY =================
    States hold new frontiers by settling soldiers on the land: Roman coloniae, Chinese tuntian military farms, Assyrian and
    Inca resettlements, Byzantine themes, Ottoman timars. Settlers make the frontier hold and push it further, but land given
@@ -56,9 +56,10 @@ function leaguePass(){
     const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&s.eths[p.core]&&s.eths[p.core].fam===fam)kin.push(p)}
     if(o.league!=null){continue}
     const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
-    if(inL&&r()<0.2){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
+    const circ=S.circE[o.capital]||0;
+    if(inL&&r()<0.2*(1-0.8*circ)){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
     const free=kin.filter(p=>p.league==null);
-    if(free.length>=2&&r()<0.12){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
+    if(free.length>=2&&r()<0.12*(1-0.8*circ)){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
       s.leagues.push(L);for(const q of L.members)s.pols[q].league=L.id;
       chron('diplomacy',`${L.members.length} cities of the ${e.name} swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],...L.members.map(q=>R_(s.pols[q]))],'Small cities of one people were safer together than alone against the kingdoms around them.');
       spot(`The ${L.name} is founded`,o.capital,[['league',L.id,L.name]])}}
@@ -86,4 +87,52 @@ function colonizePass(){
     const far=o.daughters===1||o.cells>=10;
     if(far)chron('state',`Settlers from the ${o.full} sail away and found the ${d.full} on a distant shore.`,j,[R_(o),R_(d)],'The home city was crowded; the sea offered land like its own.');
   }
+}
+/* ================= WAR, SUPPLY AND STORES =================
+   Sacked cities send refugees to the nearest safe province of their own people. Rich states facing strong nomads may
+   pay for peace (Han and the Xiongnu, Song and the Liao) or hire soldiers instead of raising them; unpaid mercenaries
+   mutiny. Literate states keep granaries that soften famine. A siege needs food: attackers far from surplus land or
+   rivers and roads struggle against walls. Long peace lets armies decay (preparedness), which is when invaders do best. */
+// a city falls: plunder, death and flight
+function sackCity(o,j,q){
+  const s=S,w=WD,r=s.r,ci=s.city[j];if(ci<0||ABL.includes('sack'))return;const city=s.cities[ci],d=q?s.pols[q]:null;
+  const sameFaith=d&&o.rel>=0&&d.rel===o.rel,p=(o.kind==='horde'?0.3:sameFaith?0.05:0.14)*(1+(o.ruler&&o.ruler.exc==='aggr'?1:0));
+  if(r()>p)return;
+  const loss=s.pop[j]*(0.2+0.25*r()),fled=loss*0.5;s.pop[j]-=loss;
+  if(o.kind==='horde')o.loot+=loss*0.3;else o.treas=Math.min(1,(o.treas||0)+0.15);
+  s.fort[j]*=0.3;if(o.kind==='horde')s.irrig[j]*=0.7;
+  // refugees go to the nearest province still held by their own state and people, or else take to the roads
+  let dest=-1;if(d&&d.alive){let bd=1e9;ring(j,4,(c,dx,dy)=>{if(c!==j&&s.pol[c]===q&&s.eth[c]===s.eth[j]&&s.pop[c]>=1){const dd2=dx*dx+dy*dy;if(dd2<bd){bd=dd2;dest=c}}})}
+  if(dest>=0)s.pop[dest]+=fled;else pushPressure(s.eth[j],fled,j,o.id,null);
+  (city.sacks||(city.sacks=[])).push({y:s.year,by:o.id,lost:loss});
+  if(city.peak>=150000||(d&&j===d.capital))chron('war',`The ${o.full} sacks ${city.name}${d?`, a city of the ${d.full}`:''}; ${fmtK(loss)} people are killed or flee${dest>=0?` to ${s.city[dest]>=0?s.cities[s.city[dest]].name:'the provinces nearby'}`:''}.`,j,[R_(o)].concat(d?[R_(d)]:[]));
+}
+// food for a siege: attackers living off crowded land, far from rivers and roads, run short
+function siegeSupply(o,i){const s=S,w=WD;if(ABL.includes('siege'))return 1;return clamp(0.85+0.4*Math.max(0,1-s.pop[i]/Math.max(1,s.K[i]))+0.2*w.rv[i]+0.2*s.roads[i]+0.2*(o.gran||0),0.6,1.15)}
+function stateMil(o){if(ABL.includes('prep'))return 1;return o.kind==='horde'?1:(0.85+0.3*(o.prep??0.6))*(1+0.4*(o.merc||0))}
+// once a year per state, after the accounts
+function militaryPass(o){
+  const s=S,r=s.r,c=o.capital,atWar=o.enemies.size>0;
+  if(o.kind!=='state'){o.prep=1;o.merc=0;return}
+  if(o.prep==null)o.prep=0.6;
+  // readiness rises in war and decays in peace; forts and frontier raids keep it up
+  o.prep=atWar?o.prep+0.04*(1-o.prep):o.prep-0.006*(o.prep-0.35-0.3*Math.min(1,(o.fortN||0)/10)-(s.year-(o.raidY||-1e9)<10?0.3:0));
+  o.prep=clamp(o.prep,0.1,1);
+  // mercenaries: money instead of men, when cohesion is low and coin plentiful
+  const coin=s.coin[c]>0.5;
+  if(atWar&&coin&&o.treas>0.2&&o.S<0.5)o.merc=Math.min(0.8,(o.merc||0)+0.05);else o.merc=(o.merc||0)*0.92;
+  if(o.merc>0.01){o.treas-=0.02*o.merc;
+    if(o.treas<-0.5&&o.merc>0.3){o.shock+=0.3;o.merc=0;if(o.cells>=15)chron('war',`Unpaid, the mercenaries of the ${o.full} turn on their employers.`,c,[R_(o)],'The treasury could no longer pay the soldiers it had hired.')}}
+  // granaries: literate states store grain in good years
+  if(s.admin[c]>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*s.admin[c]*(1-(o.gran||0)));
+  if(o.gran>0.05)o.treas-=0.004*o.gran;
+  if(o.granUse){o.gran=Math.max(0,o.gran-o.granUse/(0.04*o.pop+1));o.granUse=0}
+  // paying for peace: a strong horde raiding a rich state
+  if(o.paysTo){const h=s.pols[o.paysTo];
+    if(!h||!h.alive||h.kind!=='horde'||power(o)>1.6*power(h)){o.paysTo=0}
+    else if(o.treas<-1){o.paysTo=0;o.shock+=0.15;chron('war',`The ${o.full} can no longer pay the ${h.full}, and the raids begin again.`,c,[R_(o),R_(h)])}
+    else{o.treas-=0.025;h.loot+=o.pop*0.0012}}
+  else if(s.year-(o.raidY||-1e9)<5&&o.raidBy&&o.treas>0.1&&o.cells>=10){const h=s.pols[o.raidBy];
+    if(h&&h.alive&&h.kind==='horde'&&power(h)>0.7*power(o)&&r()<0.15){o.paysTo=h.id;h.payers=(h.payers||0)+1;
+      chron('diplomacy',`The ${o.full} buys peace from the ${h.full} with yearly gifts of silk, grain and silver.`,c,[R_(o),R_(h)],'Paying was cheaper than fighting horsemen who could not be caught.')}}
 }

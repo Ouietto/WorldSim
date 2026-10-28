@@ -221,7 +221,7 @@ function computeK(){
 function growth(){
   const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s.pop[i];if(p<=0)continue;const K=s.K[i];
-    if(p<K)p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s.farm[i]+0.5*s.herd[i]));else{const ex=(p-K)*0.2;p-=ex;if(!s.pol[i]&&p>1.2*K&&p>20000&&s.eth[i]>=0)pushPressure(s.eth[i],ex*0.35,i,0,null)}
+    if(p<K)p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s.farm[i]+0.5*s.herd[i]));else{let ex=(p-K)*0.2;const gq=s.pol[i]?s.pols[s.pol[i]]:null;if(gq&&gq.gran>0.05&&gq.wet<-0.1){const sv=ex*0.6*gq.gran;ex-=sv;gq.granUse=(gq.granUse||0)+sv}p-=ex;if(!s.pol[i]&&p>1.2*K&&p>20000&&s.eth[i]>=0)pushPressure(s.eth[i],ex*0.35,i,0,null)}
     if(p<0.5){p=0;s.eth[i]=-1;s.eth2[i]=-1;s.rel[i]=-1}
     s.pop[i]=p;
     const pr=p/K,fm=s.farm[i];
@@ -548,7 +548,7 @@ function collapse(o){
 }
 function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5))+1.2*s.gun[c]+0.2*s.admin[c]+0.3*s.camel[c]*w.desert[c]}
 function cerealEff(i){return S.grain[i]*(1-0.75*WD.leach[i])*(1-0.65*WD.trop[i])}
-function strength(o){return o.kind==='horde'?o.pop+o.loot*3:(o.tax||0)*1.6+0.25*o.pop}
+function strength(o){return o.kind==='horde'?o.pop+o.loot*3:((o.tax||0)*1.6+0.25*o.pop)*stateMil(o)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -563,6 +563,7 @@ function attack(o,i,j,sea){
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15:dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+(w.tcost[j]||2))}return}
   let Ud=defense(j);
+  if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
   if(!q&&o.kind==='state')Ud*=(2.2+2*s.forest[j]+2*w.rough[j])/(1+3*s.gun[i])/(1+0.8*s.colony[i]);
   if(w.nomad[j]&&o.kind!=='horde'&&o.nomF<0.4)Ud*=2.5/(1+2*s.gun[i]);
@@ -583,15 +584,16 @@ function attack(o,i,j,sea){
     s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:(w.tcost[j]||2)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
     o.conq++;o.ruler.conq++;
+    if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004;d.mandate=Math.max(0,(d.mandate||1)-0.01);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA++;else war.gD++;war.lastGain=s.year;
         if(j===d.capital&&o.kind==='state'&&(d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
   }
 }
 function raid(o,i,j){
-  const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id)return;
+  const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
-    const taken=s.pop[j]*0.03;s.pop[j]-=taken;o.loot+=taken*0.5;t.shock+=0.012;t.raided=(t.raided||0)+1;
+    const taken=s.pop[j]*0.03;s.pop[j]-=taken;o.loot+=taken*0.5;t.shock+=0.012;t.raided=(t.raided||0)+1;t.raidY=s.year;t.raidBy=o.id;
     displace(j,0.04,o.id);
   }
 }
@@ -928,7 +930,7 @@ function* politicsG(){
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq)),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
-    statecraft(o,c,y);
+    statecraft(o,c,y);militaryPass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s.admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s.roads[c]+0.4*s.admin[c]+0.3*s.paper[c]))-1)*0.9:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+o.shock;

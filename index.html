@@ -44,10 +44,14 @@ button{font:inherit;color:inherit}
 .stats b{color:var(--ink);font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
 .main{display:grid;grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:minmax(0,1fr) 118px;gap:8px;min-height:0}
 .mapwrap{grid-column:1;grid-row:1;position:relative;border-radius:8px;overflow:hidden;background:#1d3b4f;min-height:0;touch-action:none}
-#map{display:block;width:100%;height:100%;cursor:crosshair}
+#map{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 .modes{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 .modes button{pointer-events:auto;border:0;border-radius:4px;padding:4px 8px;font-size:11.5px;cursor:pointer;background:rgba(14,22,27,.62);color:#dfe6e3;backdrop-filter:blur(4px)}
 .modes button[aria-pressed="true"]{background:#f2f2ec;color:#14202a}
+.modes .msel{pointer-events:auto;display:flex;align-items:center;gap:6px;border-radius:4px;padding:0 4px 0 8px;font-size:11.5px;background:rgba(14,22,27,.62);color:#dfe6e3;backdrop-filter:blur(4px)}
+.modes select{border:0;background:transparent;color:#f2f2ec;font:inherit;padding:4px 2px;cursor:pointer;max-width:170px}
+.modes select option,.modes select optgroup{color:#14202a;background:#f2f2ec}
+.biglink{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--link);cursor:pointer;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--link) 40%,transparent);text-underline-offset:2px}
 .legend{position:absolute;left:10px;bottom:10px;background:rgba(14,22,27,.72);color:#dfe6e3;border-radius:6px;padding:7px 9px;font-size:11px;max-width:min(460px,80%);backdrop-filter:blur(4px)}
 .legend .ramp{height:8px;border-radius:2px;margin:5px 0 3px}
 .legend .row{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:10px;opacity:.85}
@@ -183,7 +187,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
 
 <div class="app">
   <header class="bar">
-    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6.1</span></div>
+    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6.2</span></div>
     <div class="clock">
       <button id="play" class="btn primary" type="button" disabled>Play</button>
       <div class="seg" id="speed" role="group" aria-label="Years per second"></div>
@@ -1303,7 +1307,7 @@ function computeK(){
 function growth(){
   const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s.pop[i];if(p<=0)continue;const K=s.K[i];
-    if(p<K)p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s.farm[i]+0.5*s.herd[i]));else{const ex=(p-K)*0.2;p-=ex;if(!s.pol[i]&&p>1.2*K&&p>20000&&s.eth[i]>=0)pushPressure(s.eth[i],ex*0.35,i,0,null)}
+    if(p<K)p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s.farm[i]+0.5*s.herd[i]));else{let ex=(p-K)*0.2;const gq=s.pol[i]?s.pols[s.pol[i]]:null;if(gq&&gq.gran>0.05&&gq.wet<-0.1){const sv=ex*0.6*gq.gran;ex-=sv;gq.granUse=(gq.granUse||0)+sv}p-=ex;if(!s.pol[i]&&p>1.2*K&&p>20000&&s.eth[i]>=0)pushPressure(s.eth[i],ex*0.35,i,0,null)}
     if(p<0.5){p=0;s.eth[i]=-1;s.eth2[i]=-1;s.rel[i]=-1}
     s.pop[i]=p;
     const pr=p/K,fm=s.farm[i];
@@ -1630,7 +1634,7 @@ function collapse(o){
 }
 function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5))+1.2*s.gun[c]+0.2*s.admin[c]+0.3*s.camel[c]*w.desert[c]}
 function cerealEff(i){return S.grain[i]*(1-0.75*WD.leach[i])*(1-0.65*WD.trop[i])}
-function strength(o){return o.kind==='horde'?o.pop+o.loot*3:(o.tax||0)*1.6+0.25*o.pop}
+function strength(o){return o.kind==='horde'?o.pop+o.loot*3:((o.tax||0)*1.6+0.25*o.pop)*stateMil(o)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -1645,6 +1649,7 @@ function attack(o,i,j,sea){
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15:dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+(w.tcost[j]||2))}return}
   let Ud=defense(j);
+  if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
   if(!q&&o.kind==='state')Ud*=(2.2+2*s.forest[j]+2*w.rough[j])/(1+3*s.gun[i])/(1+0.8*s.colony[i]);
   if(w.nomad[j]&&o.kind!=='horde'&&o.nomF<0.4)Ud*=2.5/(1+2*s.gun[i]);
@@ -1665,15 +1670,16 @@ function attack(o,i,j,sea){
     s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:(w.tcost[j]||2)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
     o.conq++;o.ruler.conq++;
+    if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004;d.mandate=Math.max(0,(d.mandate||1)-0.01);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA++;else war.gD++;war.lastGain=s.year;
         if(j===d.capital&&o.kind==='state'&&(d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
   }
 }
 function raid(o,i,j){
-  const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id)return;
+  const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
-    const taken=s.pop[j]*0.03;s.pop[j]-=taken;o.loot+=taken*0.5;t.shock+=0.012;t.raided=(t.raided||0)+1;
+    const taken=s.pop[j]*0.03;s.pop[j]-=taken;o.loot+=taken*0.5;t.shock+=0.012;t.raided=(t.raided||0)+1;t.raidY=s.year;t.raidBy=o.id;
     displace(j,0.04,o.id);
   }
 }
@@ -2010,7 +2016,7 @@ function* politicsG(){
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq)),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
-    statecraft(o,c,y);
+    statecraft(o,c,y);militaryPass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s.admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s.roads[c]+0.4*s.admin[c]+0.3*s.paper[c]))-1)*0.9:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+o.shock;
@@ -2584,7 +2590,7 @@ function genAt(row,i){const s=S;if(!s.genByRow)return 0;let v=0;for(const k of s
 function divergence(){const s=S;let real=0,gen=0;for(let k=0;k<TECH.length;k++){if(!s.firstTech[k])continue;if(TECH[k].synth)gen++;else real++}return gen/(gen+real||1)}
 
 "use strict";
-const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1:0;
+const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1:0,ABL=typeof process!=="undefined"&&process.env&&process.env.ABL||"";
 /* ================= SOLDIER COLONIES AND HEREDITARY NOBILITY =================
    States hold new frontiers by settling soldiers on the land: Roman coloniae, Chinese tuntian military farms, Assyrian and
    Inca resettlements, Byzantine themes, Ottoman timars. Settlers make the frontier hold and push it further, but land given
@@ -2641,9 +2647,10 @@ function leaguePass(){
     const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&s.eths[p.core]&&s.eths[p.core].fam===fam)kin.push(p)}
     if(o.league!=null){continue}
     const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
-    if(inL&&r()<0.2){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
+    const circ=S.circE[o.capital]||0;
+    if(inL&&r()<0.2*(1-0.8*circ)){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
     const free=kin.filter(p=>p.league==null);
-    if(free.length>=2&&r()<0.12){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
+    if(free.length>=2&&r()<0.12*(1-0.8*circ)){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
       s.leagues.push(L);for(const q of L.members)s.pols[q].league=L.id;
       chron('diplomacy',`${L.members.length} cities of the ${e.name} swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],...L.members.map(q=>R_(s.pols[q]))],'Small cities of one people were safer together than alone against the kingdoms around them.');
       spot(`The ${L.name} is founded`,o.capital,[['league',L.id,L.name]])}}
@@ -2671,6 +2678,54 @@ function colonizePass(){
     const far=o.daughters===1||o.cells>=10;
     if(far)chron('state',`Settlers from the ${o.full} sail away and found the ${d.full} on a distant shore.`,j,[R_(o),R_(d)],'The home city was crowded; the sea offered land like its own.');
   }
+}
+/* ================= WAR, SUPPLY AND STORES =================
+   Sacked cities send refugees to the nearest safe province of their own people. Rich states facing strong nomads may
+   pay for peace (Han and the Xiongnu, Song and the Liao) or hire soldiers instead of raising them; unpaid mercenaries
+   mutiny. Literate states keep granaries that soften famine. A siege needs food: attackers far from surplus land or
+   rivers and roads struggle against walls. Long peace lets armies decay (preparedness), which is when invaders do best. */
+// a city falls: plunder, death and flight
+function sackCity(o,j,q){
+  const s=S,w=WD,r=s.r,ci=s.city[j];if(ci<0||ABL.includes('sack'))return;const city=s.cities[ci],d=q?s.pols[q]:null;
+  const sameFaith=d&&o.rel>=0&&d.rel===o.rel,p=(o.kind==='horde'?0.3:sameFaith?0.05:0.14)*(1+(o.ruler&&o.ruler.exc==='aggr'?1:0));
+  if(r()>p)return;
+  const loss=s.pop[j]*(0.2+0.25*r()),fled=loss*0.5;s.pop[j]-=loss;
+  if(o.kind==='horde')o.loot+=loss*0.3;else o.treas=Math.min(1,(o.treas||0)+0.15);
+  s.fort[j]*=0.3;if(o.kind==='horde')s.irrig[j]*=0.7;
+  // refugees go to the nearest province still held by their own state and people, or else take to the roads
+  let dest=-1;if(d&&d.alive){let bd=1e9;ring(j,4,(c,dx,dy)=>{if(c!==j&&s.pol[c]===q&&s.eth[c]===s.eth[j]&&s.pop[c]>=1){const dd2=dx*dx+dy*dy;if(dd2<bd){bd=dd2;dest=c}}})}
+  if(dest>=0)s.pop[dest]+=fled;else pushPressure(s.eth[j],fled,j,o.id,null);
+  (city.sacks||(city.sacks=[])).push({y:s.year,by:o.id,lost:loss});
+  if(city.peak>=150000||(d&&j===d.capital))chron('war',`The ${o.full} sacks ${city.name}${d?`, a city of the ${d.full}`:''}; ${fmtK(loss)} people are killed or flee${dest>=0?` to ${s.city[dest]>=0?s.cities[s.city[dest]].name:'the provinces nearby'}`:''}.`,j,[R_(o)].concat(d?[R_(d)]:[]));
+}
+// food for a siege: attackers living off crowded land, far from rivers and roads, run short
+function siegeSupply(o,i){const s=S,w=WD;if(ABL.includes('siege'))return 1;return clamp(0.85+0.4*Math.max(0,1-s.pop[i]/Math.max(1,s.K[i]))+0.2*w.rv[i]+0.2*s.roads[i]+0.2*(o.gran||0),0.6,1.15)}
+function stateMil(o){if(ABL.includes('prep'))return 1;return o.kind==='horde'?1:(0.85+0.3*(o.prep??0.6))*(1+0.4*(o.merc||0))}
+// once a year per state, after the accounts
+function militaryPass(o){
+  const s=S,r=s.r,c=o.capital,atWar=o.enemies.size>0;
+  if(o.kind!=='state'){o.prep=1;o.merc=0;return}
+  if(o.prep==null)o.prep=0.6;
+  // readiness rises in war and decays in peace; forts and frontier raids keep it up
+  o.prep=atWar?o.prep+0.04*(1-o.prep):o.prep-0.006*(o.prep-0.35-0.3*Math.min(1,(o.fortN||0)/10)-(s.year-(o.raidY||-1e9)<10?0.3:0));
+  o.prep=clamp(o.prep,0.1,1);
+  // mercenaries: money instead of men, when cohesion is low and coin plentiful
+  const coin=s.coin[c]>0.5;
+  if(atWar&&coin&&o.treas>0.2&&o.S<0.5)o.merc=Math.min(0.8,(o.merc||0)+0.05);else o.merc=(o.merc||0)*0.92;
+  if(o.merc>0.01){o.treas-=0.02*o.merc;
+    if(o.treas<-0.5&&o.merc>0.3){o.shock+=0.3;o.merc=0;if(o.cells>=15)chron('war',`Unpaid, the mercenaries of the ${o.full} turn on their employers.`,c,[R_(o)],'The treasury could no longer pay the soldiers it had hired.')}}
+  // granaries: literate states store grain in good years
+  if(s.admin[c]>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*s.admin[c]*(1-(o.gran||0)));
+  if(o.gran>0.05)o.treas-=0.004*o.gran;
+  if(o.granUse){o.gran=Math.max(0,o.gran-o.granUse/(0.04*o.pop+1));o.granUse=0}
+  // paying for peace: a strong horde raiding a rich state
+  if(o.paysTo){const h=s.pols[o.paysTo];
+    if(!h||!h.alive||h.kind!=='horde'||power(o)>1.6*power(h)){o.paysTo=0}
+    else if(o.treas<-1){o.paysTo=0;o.shock+=0.15;chron('war',`The ${o.full} can no longer pay the ${h.full}, and the raids begin again.`,c,[R_(o),R_(h)])}
+    else{o.treas-=0.025;h.loot+=o.pop*0.0012}}
+  else if(s.year-(o.raidY||-1e9)<5&&o.raidBy&&o.treas>0.1&&o.cells>=10){const h=s.pols[o.raidBy];
+    if(h&&h.alive&&h.kind==='horde'&&power(h)>0.7*power(o)&&r()<0.15){o.paysTo=h.id;h.payers=(h.payers||0)+1;
+      chron('diplomacy',`The ${o.full} buys peace from the ${h.full} with yearly gifts of silk, grain and silver.`,c,[R_(o),R_(h)],'Paying was cheaper than fighting horsemen who could not be caught.')}}
 }
 
 </script>
@@ -3018,7 +3073,7 @@ function updateTop(){
   const s=S,st=s.stats[s.stats.length-1];
   $('yr').textContent=s.year<=0?(1-s.year).toLocaleString('en-US'):String(s.year);$('era').textContent=s.year<=0?'BCE':'CE';
   if(!st)return;
-  $('topstats').innerHTML=`<span>Population <b>${fmtN(st.pop)}</b></span><span>States <b>${st.np}</b></span><span>Hordes <b>${st.nh||0}</b></span><span>Leading era <b>${ERAS[st.lead||0]}</b></span><span>Largest <b>${esc(st.big||'none')}</b>${st.bc?` (${st.bc})`:''}</span>`;
+  $('topstats').innerHTML=`<span>Population <b>${fmtN(st.pop)}</b></span><span>States <b>${st.np}</b></span><span>Hordes <b>${st.nh||0}</b></span><span>Leading era <b>${ERAS[st.lead||0]}</b></span><span>Largest ${st.big?`<button type="button" class="biglink" id="biglink" title="Open and show the largest state">${esc(st.big)}</button>`:'<b>none</b>'}${st.bc?` (${st.bc})`:''}</span>`;
 }
 
 /* ---------- links and pages ---------- */
@@ -3071,7 +3126,7 @@ function renderPage(){
     else{
       const p=s.pol[i]?s.pols[s.pol[i]]:null,e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=s.rel[i]>=0?s.rels[s.rel[i]]:null,city=s.city[i]>=0?s.cities[s.city[i]]:null;
       h+=`<div class="kind">Province</div><h2 class="name">${city?esc(city.name):e?'Lands of the '+esc(e.name):'Empty land'}</h2><p class="sub2">${latd}°, ${lond}° · ${ERAS[eraOf(i)]}</p>`;
-      h+=`<dl class="kv" style="margin-top:10px"><dt>State</dt><dd>${p?lp(p):'none'}</dd><dt>People</dt><dd>${e?le(e):'none'}</dd><dt>Faith</dt><dd>${R?lr(R):e?'folk religion':'–'}</dd><dt>Population</dt><dd>${fmtN(s.pop[i])} / ${fmtN(s.K[i])}</dd>${city?`<dt>City</dt><dd>${esc(city.name)}${p&&p.capital===i?' (capital)':''}, since ${fy(city.born)}</dd>`:''}</dl>`;
+      h+=`<dl class="kv" style="margin-top:10px"><dt>State</dt><dd>${p?lp(p):'none'}</dd><dt>People</dt><dd>${e?le(e):'none'}</dd><dt>Faith</dt><dd>${R?lr(R):e?'folk religion':'–'}</dd><dt>Population</dt><dd>${fmtN(s.pop[i])} / ${fmtN(s.K[i])}</dd>${city?`<dt>City</dt><dd>${esc(city.name)}${p&&p.capital===i?' (capital)':''}, since ${fy(city.born)}</dd>`+(city.sacks&&city.sacks.length?`<dt>Sacked</dt><dd>${city.sacks.slice(-4).map(x=>fy(x.y)).join(', ')}${city.sacks.length>4?` and ${city.sacks.length-4} more`:''}</dd>`:''):''}</dl>`;
       h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.transh&&w.transh[i]>0.2&&s.herd[i]>0.3?`<dt>Herding</dt><dd>moves with the seasons</dd>`:''}${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
       h+=`<h3 class="sec">Ecology</h3><div class="bars">${w.sF[i]>0.08?bar('Soil fertility',s.fert[i],1,'t'):''}${w.forest0[i]>0.05?bar('Forest standing',s.forest[i]/w.forest0[i],1,'t'):''}${s.salt[i]>0.02?bar('Salt in the soil',s.salt[i],1):''}${w.mal[i]>0.05?bar('Fever burden',w.mal[i]*(1-s.adapt[i]),1):''}${w.oncho[i]>0.05?bar('River blindness',w.oncho[i],1):''}${bar('Disease pool',s.dp[i],1,'t')}${w.sF[i]>0.1?bar('Hemmed in (circumscription)',s.circE[i],1,'t'):''}${s.car[i]>0.1?bar('Caravan traffic',s.car[i],1,'t'):''}</div>`;
       h+=`<h3 class="sec">Known techniques</h3><div class="bars">${TECH.map((T,k)=>s.tk[k][i]>0.05?bar(T.n,s.tk[k][i],1,'t'):'').join('')||'<div class="note">Foraging only.</div>'}</div>`;
@@ -3092,6 +3147,8 @@ function renderPage(){
       const tribs=s.alive.map(k=>s.pols[k]).filter(p=>p.over===id);
       h+=`<h3 class="sec">Realm</h3><dl class="kv"><dt>Provinces</dt><dd>${o.cells} (peak ${o.maxCells})</dd>${o.league!=null&&s.leagues[o.league]?`<dt>League</dt><dd>${L_('league',o.league,s.leagues[o.league].name)}</dd>`:''}${o.daughters?`<dt>Daughter cities</dt><dd>${o.daughters}</dd>`:''}${o.shape?`<dt>Extent at peak</dt><dd>${o.shape.ew.toLocaleString()} km east–west × ${o.shape.ns.toLocaleString()} km north–south</dd>`:''}${o.fortN?`<dt>Fortified provinces</dt><dd>${o.fortN}</dd>`:''}<dt>Population</dt><dd>${fmtN(o.pop)}</dd><dt>Capital</dt><dd>${city?esc(city.name):'–'}</dd><dt>Social complexity</dt><dd>${o.spc.toFixed(1)} / 10</dd>${o.cplx!=null&&o.kind==='state'?`<dt>Cost of government</dt><dd>${Math.round((o.burden||0)*100)}% of what it can tax${(o.burden||0)>1?' — more than it returns':''}</dd><dt>Treasury</dt><dd>${o.treas>0.5?'full':o.treas>0?'solvent':o.treas>-1?'in debt':'bankrupt'}</dd><dt>Inequality</dt><dd>${Math.round(o.ineq*100)} / 100</dd><dt>Farming</dt><dd>${(o.plN||0)>0.5*(o.cells-(o.wasteN||0))?'plough':'hoe'} agriculture</dd>${o.wasteN?`<dt>Claimed wasteland</dt><dd>${o.wasteN} provinces</dd>`:''}`:''}<dt>Era</dt><dd>${ERAS[eraOf(c)]}</dd><dt>Faith of the realm</dt><dd>${o.rel>=0?lr(s.rels[o.rel]):'folk religion'}</dd><dt>Core people</dt><dd>${s.eths[o.core]?le(s.eths[o.core]):'?'}</dd><dt>Land use</dt><dd>${(o.press*100).toFixed(0)}% of capacity</dd><dt>Asabiya</dt><dd>${o.S.toFixed(2)}</dd><dt>Elites vs positions</dt><dd>${(o.E/etOf(o)).toFixed(2)}×</dd><dt>Reach</dt><dd>${o.h.toFixed(1)} cells</dd><dt>Civil wars</dt><dd>${o.crises}</dd></dl>`;
       h+=`<h3 class="sec">Relations</h3><dl class="kv"><dt>Allies</dt><dd>${allies.length?allies.map(lp).join(', '):'none'}</dd><dt>At war with</dt><dd>${en.length?en.map(lp).join(', '):'no one'}</dd>${wars.length?`<dt>Wars</dt><dd>${wars.map(lw).join(', ')}</dd>`:''}${o.over&&s.pols[o.over]?`<dt>Pays tribute to</dt><dd>${lp(s.pols[o.over])}</dd>`:''}${tribs.length?`<dt>Tributaries</dt><dd>${tribs.map(lp).join(', ')}</dd>`:''}</dl>`;
+      if(o.kind==='state'&&o.prep!=null){const hp=o.paysTo&&s.pols[o.paysTo];
+        h+=`<h3 class="sec">Army and stores</h3><div class="bars">${bar('Readiness for war',o.prep,1)}${(o.merc||0)>0.02?bar('Hired soldiers',o.merc,1):''}${(o.gran||0)>0.02?bar('Granaries',o.gran,1,'t'):''}</div>${hp?`<dl class="kv" style="margin-top:6px"><dt>Buys peace from</dt><dd>${lp(hp)}</dd></dl>`:''}`}
       if(o.kind==='state'&&((o.nob||0)>0.05||o.colN)){const rf=s.reforms.filter(x=>x.pol===o.id);
         h+=`<h3 class="sec">Land and lords</h3><div class="bars">${bar('Hereditary nobility',o.nob||0,1)}</div><dl class="kv" style="margin-top:6px">${o.colN?`<dt>Soldier colonies</dt><dd>${o.colN} planted</dd>`:''}<dt>Revenue kept by lords</dt><dd>${Math.round(45*(o.nob||0))}%</dd>${rf.length?`<dt>Attempts to reclaim land</dt><dd>${rf.filter(x=>x.ok).length} of ${rf.length} succeeded</dd>`:''}</dl>`}
       if(o.why){const W2=o.why;
@@ -3349,13 +3406,26 @@ $('speed').innerHTML=SPEEDS.map(([v,l],k)=>`<button type="button" data-k="${k}" 
 $('speed').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.speed=+b.dataset.k;for(const x of $('speed').children)x.setAttribute('aria-pressed',x===b)});
 function setRunning(on){ui.running=on&&ui.ready;$('play').textContent=ui.running?'Pause':'Play'}
 $('play').addEventListener('click',()=>setRunning(!ui.running));
-$('modes').innerHTML=MODES.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${l}</button>`).join('');
-function setMode(m){ui.mode=m;for(const x of $('modes').children)x.setAttribute('aria-pressed',x.dataset.m===m);drawLegend();ui.dirty=true}
+// map views: a few quick buttons and every layer in one grouped menu
+const QUICK=['political','peoples','religion','veg'];
+const MODE_GROUPS=[['Politics',['political','alliances','lords','unity','loyalty','inequality','circ']],['Peoples and ideas',['peoples','mixing','religion','knowledge','path','era']],['People and land',['density','capacity','asabiya','disease','soil','forest','niche','terrain']],['Climate',['ctemp','crain','cwind','veg','cchange','weather','climate']]];
+const MODE_NAME=Object.fromEntries(MODES);MODE_NAME.veg='Biomes';
+$('modes').innerHTML=QUICK.map(k=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${MODE_NAME[k]}</button>`).join('')+`<label class="msel"><span>Map</span><select id="modesel" aria-label="Map view">${MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.filter(k=>MODE_NAME[k]).map(k=>`<option value="${k}"${k===ui.mode?' selected':''}>${MODE_NAME[k]}</option>`).join('')}</optgroup>`).join('')}</select></label>`;
+function setMode(m){ui.mode=m;for(const x of $('modes').querySelectorAll('button'))x.setAttribute('aria-pressed',x.dataset.m===m);const sel=$('modesel');if(sel&&sel.value!==m)sel.value=m;drawLegend();ui.dirty=true}
 $('modes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setMode(b.dataset.m)});
+$('modesel').addEventListener('change',e=>setMode(e.target.value));
+$('topstats').addEventListener('click',e=>{if(!e.target.closest('#biglink')||!S)return;let b=null;for(const id of S.alive){const o=S.pols[id];if(!b||o.cells>b.cells)b=o}if(b){openPage('pol',b.id);centerOn(b.capital)}});
 document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea'))return;if(e.code==='Space'){e.preventDefault();setRunning(!ui.running)}});
-let drag=null;
-mapCv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ox:ui.ox,oy:ui.oy,moved:false};mapCv.setPointerCapture(e.pointerId)});
+let drag=null;const touches=new Map();let pinch=null;
+function zoomAt(sx,sy,z2){z2=clamp(z2,1,8);const f=z2/ui.z;ui.ox=sx-(sx-ui.ox)*f;ui.oy=sy-(sy-ui.oy)*f;ui.z=z2;clampView();drawMap()}
+function pinchState(){const r=mapCv.getBoundingClientRect(),[a,b]=[...touches.values()];return{d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2-r.left,my:(a.y+b.y)/2-r.top}}
+mapCv.addEventListener('pointerdown',e=>{touches.set(e.pointerId,{x:e.clientX,y:e.clientY});try{mapCv.setPointerCapture(e.pointerId)}catch(_){}
+  if(touches.size===2){const p=pinchState();pinch={d:p.d,z:ui.z,mx:p.mx,my:p.my};drag=null}
+  else if(touches.size===1)drag={x:e.clientX,y:e.clientY,ox:ui.ox,oy:ui.oy,moved:false}});
+for(const ev of ['pointercancel'])mapCv.addEventListener(ev,e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null});
 mapCv.addEventListener('pointermove',e=>{
+  if(touches.has(e.pointerId))touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&touches.size===2){const p=pinchState();ui.ox+=p.mx-pinch.mx;ui.oy+=p.my-pinch.my;pinch.mx=p.mx;pinch.my=p.my;zoomAt(p.mx,p.my,pinch.z*p.d/pinch.d);return}
   const r=mapCv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
   if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;if(drag.moved){ui.ox=drag.ox+dx;ui.oy=drag.oy+dy;clampView();drawMap()}return}
   const i=screenToCell(sx,sy),tip=$('tip');
@@ -3370,7 +3440,7 @@ mapCv.addEventListener('pointerup',e=>{if(drag&&!drag.moved&&S){const r=mapCv.ge
     if(WD.land[i]&&(m==='political'||m==='alliances')&&S.pol[i])openPage('pol',S.pol[i]);
     else if(WD.land[i]&&m==='peoples'&&S.eth[i]>=0)openPage('eth',S.eth[i]);
     else if(WD.land[i]&&m==='religion'&&S.rel[i]>=0)openPage('rel',S.rel[i]);
-    else openPage('cell',i)}}drag=null});
+    else openPage('cell',i)}}drag=null;touches.delete(e.pointerId);if(touches.size<2)pinch=null});
 mapCv.addEventListener('dblclick',e=>{const r=mapCv.getBoundingClientRect();const i=screenToCell(e.clientX-r.left,e.clientY-r.top);if(i>=0)openPage('cell',i)});
 mapCv.addEventListener('wheel',e=>{e.preventDefault();const r=mapCv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
   const z2=clamp(ui.z*Math.exp(-e.deltaY*0.0015),1,8),f=z2/ui.z;ui.ox=sx-(sx-ui.ox)*f;ui.oy=sy-(sy-ui.oy)*f;ui.z=z2;clampView();drawMap()},{passive:false});
