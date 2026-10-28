@@ -91,3 +91,38 @@ There may be at most 2,000,000 grid cells.
 
 Run `node src/climate.test.js` from the project directory for unit conversion,
 grid orientation, missing-data, validation and Earth regional sanity checks.
+
+## Our own climate model (`climate.js`)
+
+A simplified planetary climate model, written for this project from standard textbook methods. No third-party model code is used. It runs on a 200 × 100 grid (1.8°) and is interpolated to the map, with temperature corrected for altitude.
+
+1. **Sunlight:** daily-mean insolation by latitude and month, from the orbit (eccentricity, axial tilt, longitude of perihelion), following Berger (1978).
+2. **Energy balance:**
+   - Each cell's temperature balances absorbed sunlight against outgoing radiation, OLR = A + B·T (Budyko 1969; Sellers 1969; North & Coakley 1979).
+   - Land and ocean have different heat capacities, so seasons and continental extremes emerge.
+   - Zonal-mean meridional heat diffusion is solved implicitly (North 1975). There is also local mixing toward the latitude mean, and prevailing winds carry ocean temperatures inland.
+   - Albedo responds to sea ice, snow, land cover and tropical cloud.
+3. **Pressure and winds:**
+   - Sea-level pressure combines an equatorial trough that follows the moist thermal equator, subtropical highs, subpolar lows, and thermal highs and lows over cold and hot land.
+   - Surface wind blows down the pressure gradient, turned by the Coriolis force (with about 30° of friction), plus easterly momentum in the deep tropics.
+4. **Moisture and rain:**
+   - Oceans keep the air near a humidity set by temperature (Clausius–Clapeyron).
+   - Moisture is carried by semi-Lagrangian advection in daily steps.
+   - Rain falls where air converges or climbs slopes, along mid-latitude storm tracks, and from tropical convection. It is suppressed under sinking air and near cold-current coasts.
+   - Land returns part of its rain to the air.
+5. **Biomes:** Whittaker-style potential vegetation from temperature, rainfall, seasonality, dry months and altitude, using the Köppen aridity threshold.
+
+**Grading against NOAA normals** (`node tools/climgrade.js` and `node tools/raingrade.js`, with `tune` for coordinate-descent fitting):
+- Annual land temperature is off by about 3.5 °C on average.
+- Annual rainfall is off by a factor of about 2.6 in typical cells.
+- About 60% of land falls in the right Köppen group.
+- Its known weaknesses at this resolution are narrow tropical rain belts (they shift where the real belt widens), weak South Asian monsoon rain, and some excess rain on subtropical west coasts.
+
+**How it is used:**
+- **Invented worlds** use the model directly.
+- **On Earth**, the measured normals remain the baseline. Every 250 simulated years, or sooner when CO₂ changes by more than 4 ppm, the history engine re-solves the model with that era's orbit and greenhouse gases, and adds only the model's *change* from the present-day reference run. The changes are smoothed, and drying is damped to 40% because of the rain-belt bias above.
+- **Greenhouse gases** come from the simulation:
+  - Forest carbon released by clearing raises CO₂, and the ocean takes the excess back over about 450 years.
+  - Rice paddies and herds raise methane.
+  - Cleared land and fields change albedo.
+- `tools/orbtest.js` compares rainfall between two dates. With today's settings the Sahara is roughly 50% wetter at 7000 BCE than today, from orbital precession alone.

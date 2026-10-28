@@ -1,6 +1,3 @@
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Asabiya History Engine</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,10 +48,6 @@ button{font:inherit;color:inherit}
 .modes{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 .modes button{pointer-events:auto;border:0;border-radius:4px;padding:4px 8px;font-size:11.5px;cursor:pointer;background:rgba(14,22,27,.62);color:#dfe6e3;backdrop-filter:blur(4px)}
 .modes button[aria-pressed="true"]{background:#f2f2ec;color:#14202a}
-.city-tools{pointer-events:auto;display:flex;align-items:center;gap:7px;border-radius:4px;padding:3px 7px;background:rgba(14,22,27,.8);color:#dfe6e3;font-size:11px}
-.city-tools select{font:inherit;background:#20333e;color:#eef2f0;border:1px solid #82918f;border-radius:3px;padding:1px 4px;max-width:120px}
-.city-tools label{display:flex;align-items:center;gap:4px;white-space:nowrap}
-.city-tools input{margin:0;accent-color:#a8731a}
 .legend{position:absolute;left:10px;bottom:10px;background:rgba(14,22,27,.72);color:#dfe6e3;border-radius:6px;padding:7px 9px;font-size:11px;max-width:min(460px,80%);backdrop-filter:blur(4px)}
 .legend .ramp{height:8px;border-radius:2px;margin:5px 0 3px}
 .legend .row{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:10px;opacity:.85}
@@ -108,6 +101,20 @@ h3.sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(
 .barrow{display:grid;grid-template-columns:132px minmax(0,1fr) 38px;gap:8px;align-items:center;font-size:12px}
 .barrow .track{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
 .barrow .fill{height:100%;background:var(--accent);border-radius:3px}
+.tgrid{display:grid;grid-template-columns:74px repeat(7,minmax(0,1fr));gap:3px;align-items:center}
+.tgrid .th{font-size:9.5px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tgrid .th i{display:block;height:3px;border-radius:2px;margin:0 3px 3px}
+.tgrid .rh{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tgrid .tc{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px;border:1px solid var(--line);background:var(--raise);border-radius:4px;cursor:pointer;aspect-ratio:1}
+.tgrid .tc:hover,.tgrid .tc.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tgrid b,.tkey b{display:block;border-radius:2px;min-height:6px}
+.tkey b{display:inline-block;width:9px;height:9px;min-height:0;vertical-align:-1px;margin-right:4px}
+b.r{background:var(--ink)}b.y{background:var(--warn)}b.g{background:var(--accent)}b.e{background:var(--chip)}
+.tkey{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10.5px;color:var(--muted);margin-top:6px}
+.tcomp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.cb{display:grid;grid-template-columns:52px 1fr;gap:6px;align-items:center;font-size:11px;margin:2px 0}
+.cb i{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}.cb u{display:block;height:100%;border-radius:3px}
 .barrow .fill.t{background:var(--ink)}
 .barrow .fill.g{background:var(--good)}
 .barrow .v{font-family:var(--f-mono);font-size:11px;text-align:right;color:var(--muted)}
@@ -176,7 +183,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
 
 <div class="app">
   <header class="bar">
-    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.7</span></div>
+    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6.1</span></div>
     <div class="clock">
       <button id="play" class="btn primary" type="button" disabled>Play</button>
       <div class="seg" id="speed" role="group" aria-label="Years per second"></div>
@@ -200,6 +207,8 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         <button role="tab" aria-selected="false" data-pane="figs">Figures</button>
         <button role="tab" aria-selected="false" data-pane="plague">Plagues</button>
         <button role="tab" aria-selected="false" data-pane="insp">Inspect</button>
+        <button role="tab" aria-selected="false" data-pane="clim">Climate</button>
+        <button role="tab" aria-selected="false" data-pane="tech">Technology</button>
         <button role="tab" aria-selected="false" data-pane="check">Checks</button>
         <button role="tab" aria-selected="false" data-pane="setup">Setup</button>
       </nav>
@@ -219,6 +228,8 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         <div class="cards" id="plaguelist"></div>
       </div>
       <div class="pane" id="pane-insp" hidden></div>
+      <div class="pane" id="pane-clim" hidden></div>
+      <div class="pane" id="pane-tech" hidden></div>
       <div class="pane" id="pane-check" hidden></div>
       <div class="pane" id="pane-setup" hidden>
         <h3 class="sec" style="margin-top:0">World</h3>
@@ -251,8 +262,6 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
           <div class="field"><label for="h-max">White = metres</label><input type="number" id="h-max" value="9000"></div>
         </div>
         <label class="check"><input type="checkbox" id="h-mid" checked><span>Sea level is mid-grey (Draggable World encoding), not a straight line between the two values.</span></label>
-        <div class="field"><label for="f-climate">Numerical climate data (optional JSON)</label><input type="file" id="f-climate" accept=".json,application/json"></div>
-        <p class="note">Import annual or monthly temperature and rainfall with geographic coordinates and explicit units. Numerical data takes precedence over the image maps below. Coloured map screenshots do not contain numerical climate values.</p>
         <div class="field"><label for="f-temp">Mean temperature image (optional)</label><input type="file" id="f-temp" accept="image/*"></div>
         <div class="row2">
           <div class="field"><label for="t-min">Black = °C</label><input type="number" id="t-min" value="-40"></div>
