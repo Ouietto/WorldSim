@@ -43,6 +43,7 @@ The regional targets ask when one state, league or overlord's bloc first held 30
 | Iron | 1200 BCE | 1600–800 BCE | Widespread iron working in Anatolia and the Levant. |
 | Coinage | 600 BCE | 900–300 BCE | Lydia, about 630 BCE; Chinese spade money about the same time. |
 | Paper | 100 BCE | 400 BCE–300 CE | Early Han paper; Cai Lun's process 105 CE. |
+| Horse domesticated | 3500 BCE | 4000–2000 BCE | Botai horse use about 3500 BCE (Outram et al. 2009); the DOM2 lineage of all modern horses on the lower Volga–Don about 2200 BCE (Librado et al. 2021). |
 | Gunpowder | 1200 CE | 950–1400 CE | Song dynasty weapons. |
 | World population 3000 BCE | 30 M | 14–60 M | McEvedy & Jones (1978) 14 M; HYDE 3.2 and others higher. |
 | 1 CE | 230 M | 170–300 M | McEvedy & Jones 170 M; Durand 270–330 M; HYDE about 230 M. |
@@ -52,5 +53,8 @@ The regional targets ask when one state, league or overlord's bloc first held 30
 | Largest state at 1 CE | 500 provinces | 300–800 | Han and Roman empires, 4.5–6 million km² (Taagepera 1979). |
 | China over half held by one state, after 250 BCE | 65% of the time | 45–85% | The engine's own China reference series (`CHINA_REF` in `world.js`). |
 | Mediterranean coastlands under one state at best | 95% | 50–100% | Rome; the band allows histories where no Rome appears but a large empire does. |
+| Pontic steppe black earth under farming states at 1000 BCE | about 0 | 0–25% | Cimmerian and Scythian herders held the steppe; Greek colonies and forest-steppe farmers were at its edges (Anthony, *The Horse, the Wheel, and Language*). |
 | Large empires wider than tall | 65% | 50–85% | Turchin, Adams & Hall (2006): Eurasian empires are elongated east–west. |
 | New Guinea, Congo interior, Amazon interior under kingdoms at 1500 CE | 0%, 15%, 0% | 0–10%, 0–35%, 0–10% | New Guinea and Amazonia had no kingdoms; the Kongo and Luba kingdoms reached the Congo basin's edges. |
+
+Not scored, but printed with each run (`x` in the JSON): the largest steppe confederation before 1 CE and when (the Xiongnu at their height held some 9 million km², Taagepera 1979), how many peoples were driven off their pastures into others (`pushed`), the first domestications of each herd animal, and whether any horses reached the Americas before ships did (there should be none).

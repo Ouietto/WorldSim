@@ -113,7 +113,8 @@ function stateMil(o){if(ABL.includes('prep'))return 1;return o.kind==='horde'?1:
 // once a year per state, after the accounts
 function militaryPass(o){
   const s=S,r=s.r,c=o.capital,atWar=o.enemies.size>0;
-  if(o.kind!=='state'){o.prep=1;o.merc=0;return}
+  if(o.kind!=='state'){const e=s.eths[o.core];o.prep=e&&e.xp!=null?Math.max(0.5,e.xp):0.8;o.merc=0;o.prest=(o.prest||0)*0.98;return}
+  if(o.prep==null){const e=s.eths[o.core];o.prep=e&&e.xp!=null?clamp(e.xp,0.2,1):0.6}
   if(o.prep==null)o.prep=0.6;
   // readiness rises in war and decays in peace; forts and frontier raids keep it up
   o.prep=atWar?o.prep+0.04*(1-o.prep):o.prep-0.006*(o.prep-0.35-0.3*Math.min(1,(o.fortN||0)/10)-(s.year-(o.raidY||-1e9)<10?0.3:0));

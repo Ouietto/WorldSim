@@ -66,17 +66,23 @@ function cropsInit(){
   if(!w.sF0){w.sF0=Float32Array.from(w.sF);w.sH0=Float32Array.from(w.sH);w.leach0=Float32Array.from(w.leach);w.trop0=Float32Array.from(w.trop)}
   else{w.sF.set(w.sF0);w.sH.set(w.sH0);w.leach.set(w.leach0);w.trop.set(w.trop0);w.exQ=null}
   if(w.malAm)for(const i of w.landIdx)if(w.malAm[i]>0)w.mal[i]=0;s.malAm=false;
-  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1)});
+  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99)});
+  if(!w.alat){w.alat=new Float32Array(N);for(const i of w.landIdx)w.alat[i]=Math.abs(w.lat[i]*180/Math.PI)}
 }
 // a farming hearth: its package is the historical one on Earth, or whichever fits best elsewhere
 function hearthPackage(h,c){const w=WD;if(h.pk!=null)return CI[h.pk];
   let best=0,bv=-1;CROPS.forEach((C,k)=>{if(C.introduced)return;const v=C.fit(w.T[c],w.Pr[c],w.rv[c],w.elev[c])*C.y;if(v>bv){bv=v;best=k}});return best}
 // the South American hearth also carries cassava, domesticated in the southwest Amazon
-function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
+// Crops are bred for the day length and season of their homeland; moving them far north or south takes centuries of selection.
+// Each crop's adapted band of latitude starts around its hearth and widens only where farmers grow it at the edge,
+// about a quarter of a degree a century: maize took some 5,000 years to go from the Balsas valley to the American Southwest
+// and the Eastern Woodlands (Smith 2006; Diamond 1997, on axes of spread).
+function bandIn(k,c){const b=S.cBand,a=WD.alat[c];b[2*k]=Math.min(b[2*k],Math.max(0,a-5));b[2*k+1]=Math.max(b[2*k+1],a+5)}
+function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
 // every ten years: packages spread with farmers and by sea, each farm grows its best package, and some learn to process it
 function cropPass(quiet){
   const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT;
-  const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc;
+  const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // new farmers bring the crops of the neighbours they learned farming from
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0)b|=pkAv[j]}pkAv[i]=b}
   if(!quiet)for(const i of L){if(farm[i]<0.3||!pkAv[i]||pop[i]<1)continue;
@@ -84,7 +90,7 @@ function cropPass(quiet){
     if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=pkAv[i]}}}
   for(const i of L){const av=pkAv[i];if(!av){sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
     const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=w.rv[i],el=w.elev[i];
-    let best=-1,bv=0,bf=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],f=C.fit(T,P,rv,el),v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}
+    const a=alat[i];let best=-1,bv=0,bf=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1),v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
       if(best===CI.potato){const pS=clamp((P-280)/450,0,1)*clamp((3400-P)/1600,0.25,1);b=Math.max(b,pS*rf*(1-0.7*w.leach[i]))}
@@ -94,12 +100,14 @@ function cropPass(quiet){
     if(best===CI.potato&&chu[i]>0.5){st=0.8;tx=0.7}
     s.crop[i]=best;s.cY[i]=bv;s.cTax[i]=tx;s.cStore[i]=st;s.cDrain[i]=C.drain;
     if(quiet)continue;
+    if(farm[i]>0.5&&pop[i]>=1){if(a>cB[2*best+1]-1.5)edge[best]|=1;if(a<cB[2*best]+1.5)edge[best]|=2}
     // discoveries: freezing and sun-drying potatoes where nights freeze and days are dry; soaking maize in lime
     if(best===CI.potato&&!s.firstTech[TI.chuno]&&el>2500&&P<1300&&T>-2&&T<14&&farm[i]>0.6&&pop[i]>2000&&r()<0.004){seedTech(chu,i,1,1);firstTech(TI.chuno,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     // Boserup: crowded farmers on slopes or in wetlands build terraces and raised fields
     // invented independently wherever crowding on slopes or wetlands demands it (Yemen, China, the Andes, Mesoamerica, New Guinea)
     if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&w.rv[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>4&&r()<0.0006){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     if(best===CI.maize&&!s.firstTech[TI.nixtamal]&&farm[i]>0.7&&pop[i]>3000&&r()<0.0015){seedTech(nix,i,1,1);firstTech(TI.nixtamal,i,s.pol[i]?s.pols[s.pol[i]]:null)}}
+  if(!quiet)for(let k=0;k<CROPS.length;k++){if(edge[k]&1)cB[2*k+1]+=0.025;if(edge[k]&2)cB[2*k]=Math.max(0,cB[2*k]-0.025)}
 }
 // after each climate re-solve: farm and pasture suitability follow the new climate (a greener Sahara can be farmed)
 function climateSuit(){const s=S,w=WD;if(!w.sF0)return;
@@ -107,7 +115,9 @@ function climateSuit(){const s=S,w=WD;if(!w.sF0)return;
     if(Math.abs(s.cdT[i])<0.05&&Math.abs(s.cdP[i])<5){w.sF[i]=w.sF0[i];w.sH[i]=w.sH0[i];w.leach[i]=w.leach0[i];w.trop[i]=w.trop0[i];continue}
     // the measured baseline already holds local detail the formulas miss, so apply only the change the formulas predict
     const a=suitFor(w,i,w.T[i],w.Pr[i]),b=suitFor(w,i,t,p);
-    w.sF[i]=clamp(w.sF0[i]+b[0]-a[0],0,1);w.sH[i]=clamp(w.sH0[i]+b[1]-a[1],0,1);w.leach[i]=clamp(w.leach0[i]+b[2]-a[2],0,1);w.trop[i]=clamp(w.trop0[i]+b[3]-a[3],0,1)}
+    // damped and capped: the formulas jump at thresholds (a biome boundary, a growing-season cutoff), the land does not
+    const dl=(x,y)=>clamp(0.5*(x-y),-0.2,0.2);
+    w.sF[i]=clamp(w.sF0[i]+dl(b[0],a[0]),0,1);w.sH[i]=clamp(w.sH0[i]+dl(b[1],a[1]),0,1);w.leach[i]=clamp(w.leach0[i]+b[2]-a[2],0,1);w.trop[i]=clamp(w.trop0[i]+b[3]-a[3],0,1)}
   w.exQ=null;cropPass(true)}
 // how much of a province's harvest a ruler can actually take: storable, visible staples, or labour service once
 // there are storehouses and roads to organize it (the Inca mit'a)
@@ -118,6 +128,8 @@ function taxEff(i){const s=S,w=WD,crop=Math.max(cerealEff(i),0);
 // first ocean contact between landmasses: each side gets the other's crops, and Old World fevers reach the Americas
 function contactCrops(a,b){const s=S,w=WD;const all=lm=>{let m=0;for(const i of w.landIdx)if(w.lm[i]===lm)m|=s.pkAv[i];return m};
   const ma=all(w.lm[a]),mb=all(w.lm[b]);s.pkAv[a]|=mb;s.pkAv[b]|=ma;
+  // ships also carry animals: horses reach the Americas only now
+  if(s.dom)for(let sp=0;sp<HERDS.length;sp++){const ha=s.dom[sp][a],hb=s.dom[sp][b];if(ha>0.05&&capFor(sp,b)>0.02)s.dom[sp][b]=Math.max(hb,0.1);if(hb>0.05&&capFor(sp,a)>0.02)s.dom[sp][a]=Math.max(ha,0.1)}
   const lonOf=i=>(w.cxA[i]+0.5)/W*360-180,am=i=>lonOf(i)<-30;
   if(!s.malAm&&am(a)!==am(b)&&w.malAm){s.malAm=true;for(const i of w.landIdx)if(w.malAm[i]>0)w.mal[i]=w.malAm[i];
     const c=am(a)?a:b;chron('plague','Ships from across the ocean bring malaria to the Americas; the warm lowlands become deadly.',c,[])}}
