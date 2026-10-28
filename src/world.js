@@ -34,6 +34,7 @@ const PDEF=[
 ['Leaders','leaderInfl','Leader influence',0,1,0.01,0.6,'How much a ruler’s traits matter.'],
 ['Leaders','leaderFlair','Exceptional rulers',0,0.15,0.005,0.03,'Chance that a ruler has one extreme trait.'],
 ['Ideas & faith','invent','Invention',0,3,0.05,1.4,'How often states make new discoveries.'],
+['Ideas & faith','pull','Pull of our history',0,1,0.05,0.85,'How strongly invention follows the path it took on our own Earth. Lower lets societies take roads our history never took; on invented worlds it is capped at 0.45.'],
 ['Ideas & faith','techDiff','Idea diffusion',0,3,0.05,1,'How fast techniques spread between neighbours.'],
 ['Ideas & faith','techLoss','Skill loss in isolation',0,3,0.05,1,'Small, cut-off groups forget techniques.'],
 ['Ideas & faith','faith','Prophets and schisms',0,3,0.05,1,'How often new religions and schisms arise.'],

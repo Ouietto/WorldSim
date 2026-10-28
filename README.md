@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.6: our own climate)
+# Asabiya — history engine (v0.6.1: paths of invention)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -9,6 +9,18 @@
 > - **A changing climate:** the history re-solves the climate every 250 years as the orbit drifts and as forest clearing, rice and herds change CO₂ and methane.
 > - **A Climate tab** and five new map layers: Temperature, Rainfall, Winds, Biomes, Climate change.
 > - **Map drawing:** borders traced on terrain-aware sub-cells, crisp coasts and smooth rivers.
+>
+> v0.6.1 adds:
+> - **A technology matrix** (`src/tech.js`): every technique sits in a grid of purpose (food, movement, information, power, materials, health, war, organization) × phenomenon harnessed (muscle, water, wind, fire, living things, signs, mechanism), tiers 1–4.
+>   - New techniques combine what a society already masters in that row and column, outside the cell itself (W. Brian Arthur, *The Nature of Technology*).
+>   - Where invention happens depends on land and resources, the traditions each people carries (inherited and blended by migration), and what a state needs; population and wealth set the speed.
+>   - Empty cells hold might-have-been techniques, created only when a society invents one, named in its own language with a plain description underneath.
+>   - **Pull of our history** (Setup → Ideas & faith) sets how often that happens; invented worlds cap it at 0.45. A state that takes one phenomenon far beyond our history enters an alternate age.
+>   - Real water mills and windmills join the list.
+> - **A Technology tab** (the matrix, technique pages, each state's land, traditions and pressures) and a **Paths of invention** map layer.
+> - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
+> - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
+> - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
 >
 > The v0.7–v0.12 accounting models are kept on `main` and `codex/v12-paused`.
 

@@ -101,6 +101,20 @@ h3.sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(
 .barrow{display:grid;grid-template-columns:132px minmax(0,1fr) 38px;gap:8px;align-items:center;font-size:12px}
 .barrow .track{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
 .barrow .fill{height:100%;background:var(--accent);border-radius:3px}
+.tgrid{display:grid;grid-template-columns:74px repeat(7,minmax(0,1fr));gap:3px;align-items:center}
+.tgrid .th{font-size:9.5px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tgrid .th i{display:block;height:3px;border-radius:2px;margin:0 3px 3px}
+.tgrid .rh{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tgrid .tc{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px;border:1px solid var(--line);background:var(--raise);border-radius:4px;cursor:pointer;aspect-ratio:1}
+.tgrid .tc:hover,.tgrid .tc.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tgrid b,.tkey b{display:block;border-radius:2px;min-height:6px}
+.tkey b{display:inline-block;width:9px;height:9px;min-height:0;vertical-align:-1px;margin-right:4px}
+b.r{background:var(--ink)}b.y{background:var(--warn)}b.g{background:var(--accent)}b.e{background:var(--chip)}
+.tkey{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10.5px;color:var(--muted);margin-top:6px}
+.tcomp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.cb{display:grid;grid-template-columns:52px 1fr;gap:6px;align-items:center;font-size:11px;margin:2px 0}
+.cb i{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}.cb u{display:block;height:100%;border-radius:3px}
 .barrow .fill.t{background:var(--ink)}
 .barrow .fill.g{background:var(--good)}
 .barrow .v{font-family:var(--f-mono);font-size:11px;text-align:right;color:var(--muted)}
@@ -169,7 +183,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
 
 <div class="app">
   <header class="bar">
-    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6</span></div>
+    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6.1</span></div>
     <div class="clock">
       <button id="play" class="btn primary" type="button" disabled>Play</button>
       <div class="seg" id="speed" role="group" aria-label="Years per second"></div>
@@ -194,6 +208,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         <button role="tab" aria-selected="false" data-pane="plague">Plagues</button>
         <button role="tab" aria-selected="false" data-pane="insp">Inspect</button>
         <button role="tab" aria-selected="false" data-pane="clim">Climate</button>
+        <button role="tab" aria-selected="false" data-pane="tech">Technology</button>
         <button role="tab" aria-selected="false" data-pane="check">Checks</button>
         <button role="tab" aria-selected="false" data-pane="setup">Setup</button>
       </nav>
@@ -214,6 +229,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
       </div>
       <div class="pane" id="pane-insp" hidden></div>
       <div class="pane" id="pane-clim" hidden></div>
+      <div class="pane" id="pane-tech" hidden></div>
       <div class="pane" id="pane-check" hidden></div>
       <div class="pane" id="pane-setup" hidden>
         <h3 class="sec" style="margin-top:0">World</h3>

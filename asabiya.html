@@ -101,6 +101,20 @@ h3.sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(
 .barrow{display:grid;grid-template-columns:132px minmax(0,1fr) 38px;gap:8px;align-items:center;font-size:12px}
 .barrow .track{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
 .barrow .fill{height:100%;background:var(--accent);border-radius:3px}
+.tgrid{display:grid;grid-template-columns:74px repeat(7,minmax(0,1fr));gap:3px;align-items:center}
+.tgrid .th{font-size:9.5px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tgrid .th i{display:block;height:3px;border-radius:2px;margin:0 3px 3px}
+.tgrid .rh{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tgrid .tc{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px;border:1px solid var(--line);background:var(--raise);border-radius:4px;cursor:pointer;aspect-ratio:1}
+.tgrid .tc:hover,.tgrid .tc.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tgrid b,.tkey b{display:block;border-radius:2px;min-height:6px}
+.tkey b{display:inline-block;width:9px;height:9px;min-height:0;vertical-align:-1px;margin-right:4px}
+b.r{background:var(--ink)}b.y{background:var(--warn)}b.g{background:var(--accent)}b.e{background:var(--chip)}
+.tkey{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10.5px;color:var(--muted);margin-top:6px}
+.tcomp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.cb{display:grid;grid-template-columns:52px 1fr;gap:6px;align-items:center;font-size:11px;margin:2px 0}
+.cb i{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}.cb u{display:block;height:100%;border-radius:3px}
 .barrow .fill.t{background:var(--ink)}
 .barrow .fill.g{background:var(--good)}
 .barrow .v{font-family:var(--f-mono);font-size:11px;text-align:right;color:var(--muted)}
@@ -169,7 +183,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
 
 <div class="app">
   <header class="bar">
-    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6</span></div>
+    <div class="brand"><span class="mark">Asabiya</span><span class="sub">history engine · v0.6.1</span></div>
     <div class="clock">
       <button id="play" class="btn primary" type="button" disabled>Play</button>
       <div class="seg" id="speed" role="group" aria-label="Years per second"></div>
@@ -194,6 +208,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         <button role="tab" aria-selected="false" data-pane="plague">Plagues</button>
         <button role="tab" aria-selected="false" data-pane="insp">Inspect</button>
         <button role="tab" aria-selected="false" data-pane="clim">Climate</button>
+        <button role="tab" aria-selected="false" data-pane="tech">Technology</button>
         <button role="tab" aria-selected="false" data-pane="check">Checks</button>
         <button role="tab" aria-selected="false" data-pane="setup">Setup</button>
       </nav>
@@ -214,6 +229,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
       </div>
       <div class="pane" id="pane-insp" hidden></div>
       <div class="pane" id="pane-clim" hidden></div>
+      <div class="pane" id="pane-tech" hidden></div>
       <div class="pane" id="pane-check" hidden></div>
       <div class="pane" id="pane-setup" hidden>
         <h3 class="sec" style="margin-top:0">World</h3>
@@ -304,6 +320,7 @@ const PDEF=[
 ['Leaders','leaderInfl','Leader influence',0,1,0.01,0.6,'How much a ruler’s traits matter.'],
 ['Leaders','leaderFlair','Exceptional rulers',0,0.15,0.005,0.03,'Chance that a ruler has one extreme trait.'],
 ['Ideas & faith','invent','Invention',0,3,0.05,1.4,'How often states make new discoveries.'],
+['Ideas & faith','pull','Pull of our history',0,1,0.05,0.85,'How strongly invention follows the path it took on our own Earth. Lower lets societies take roads our history never took; on invented worlds it is capped at 0.45.'],
 ['Ideas & faith','techDiff','Idea diffusion',0,3,0.05,1,'How fast techniques spread between neighbours.'],
 ['Ideas & faith','techLoss','Skill loss in isolation',0,3,0.05,1,'Small, cut-off groups forget techniques.'],
 ['Ideas & faith','faith','Prophets and schisms',0,3,0.05,1,'How often new religions and schisms arise.'],
@@ -1097,6 +1114,8 @@ const TECH=[
  {k:'feverbark',n:'Fever-bark medicine',era:4,pre:[6,15],em:{b:1/14000,pop:2e6},pos:[0.6,-0.4],synth:1,d:'A bark remedy for marsh fevers: halves the malaria burden, plague deaths -20%.'},
  {k:'saltflush',n:'Salt-flushing canals',era:4,pre:[2,10],em:{b:1/12000,pop:1e6,press:1},pos:[0.7,0.3],synth:1,d:'Drainage that rinses salt from irrigated fields: reverses salinization.'},
  {k:'pigeon',n:'Courier birds',era:3,pre:[6,1],em:{b:1/14000,pop:8e5},pos:[-0.2,-0.6],synth:1,d:'Trained birds carry messages: reach +10% and faster spread of ideas.'},
+ {k:'watermill',n:'Water mills',era:5,pre:[8,7],em:{b:1/6000,pop:2e6},d:'Water wheels grind grain and drive hammers: more food along rivers.'},
+ {k:'windmill',n:'Windmills',era:6,pre:[32],em:{b:1/7000,pop:3e6},d:'Wind turns millstones where rivers are scarce: more food in windy, dry lands.'},
 ];
 // positions of the real techniques in the need/energy space (see techFit)
 [[0.6,-0.6],[0.2,-0.5],[0.7,0.2],[0.1,0.5],[-0.2,0.4],[0.3,0.1],[-0.4,0],[0,0.5],[0.3,0.7],[-0.6,0.2],[-0.5,-0.1],[-0.4,0.5],[0,0.4],[0.2,0.8],[-0.6,-0.1],[0.7,0.1],[0.2,0.9],[-0.2,0.8],[0.3,-0.3],[0.5,-0.5]].forEach((p,k)=>{if(!TECH[k].pos)TECH[k].pos=p});
@@ -1168,6 +1187,7 @@ const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,1
 
 function newHistory(hseed){
   const w=WD,r=mulberry32(hashStr('hist:'+hseed+':'+w.seed));
+  if(typeof TECH_BASE!=='undefined'&&TECH_BASE)TECH.length=TECH_BASE;
   const tk=TECH.map(()=>new Float32Array(N));
   S={r,seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
     pop:new Float32Array(N),K:new Float32Array(N),eth:new Int32Array(N).fill(-1),eth2:new Int32Array(N).fill(-1),mix:new Float32Array(N),mixT:new Uint8Array(N),
@@ -1183,7 +1203,7 @@ function newHistory(hseed){
   prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
   for(const i of w.landIdx)s.adapt[i]=w.mal[i]*0.5;
   s.orb0=w.isEarth?null:(r()*23000);
-  climInit();
+  climInit();techMatrixInit();societyInit();
   for(const i of w.coastIdx)s.sail[i]=0.05;
   for(let k=0;k<s.AG.length;k++)s.AG[k]=gauss(r);
   climateStep();computeK();
@@ -1267,11 +1287,12 @@ function computeK(){
     const Kf=ar*0.1*npp/1000*(1+0.5*w.coast[i]+0.4*rv);
     const dry=clamp(wm,0.3,1.6);
     let sh=w.sH[i];if(w.desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w.Pr[i]+cdP[i]-80)/350,0,0.7));if(w.desert[i])sh=Math.max(sh,0.25*s.camel[i]);
-    const Kh=ar*1.6*sh*s.herd[i]*Math.min(1.3,dry)*(1+0.2*s.horse[i])*(1-s.rp[i]);
+    const Kh=ar*1.6*sh*s.herd[i]*Math.min(1.3,dry)*(1+0.2*s.horse[i])*(1+0.25*w.transh[i])*(1-s.rp[i]);
     const irr=s.irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const T_=s.tk,hv=w.heavy[i],lc=w.leach[i];
     let Kfa=ar*4.2*w.sF[i]*s.farm[i]*s.fert[i]*wf*(1+0.8*s.metal[i]+0.9*s.iron[i]*(1-0.4*lc)+1.0*s.crops[i]+0.7*s.admin[i]+0.55*s.ard[i]*(1-0.6*hv)+0.7*s.plough[i]*hv+0.6*s.manure[i]+s.xcrops[i]*(0.25+0.8*lc+0.5*w.trop[i]+0.3*(1-w.sF[i]))+0.4*T_[26][i]*Math.max(lc,s.forest[i])+0.15*T_[28][i]*w.coast[i])*(1+rv*(0.25+2.2*s.irrig[i]));
+    Kfa*=1+0.07*s.tk[32][i]*Math.min(1,rv*3)+0.05*s.tk[33][i]*(w.techEnv?w.techEnv[2][i]:0.5)+0.06*genAt(0,i)+0.04*genAt(3,i);
     Kfa*=(1-0.3*s.forest[i]*(1-clamp(0.5*s.metal[i]+0.7*s.iron[i],0,0.9)))*(1-0.6*s.salt[i])*(1-0.5*w.oncho[i]);
     if(w.T[i]<12)Kfa*=clamp(1+0.18*dT,0.4,1.35);
     // heavy, wet temperate forest soils: hard to clear and work until iron axes and ploughs
@@ -1503,14 +1524,16 @@ function tierOf(o){const n=o.cells-(o.wasteN||0),p=o.pop;
   if(o.kind==='horde')return n<6||p<2e4?'Clans':n<25||p<2e5?'Horde':'Confederation';
   const nom=o.nomF>0.5;
   // a narrow, crowded river kingdom is still a kingdom: size in people counts, not only in land
+  // a walled city and its fields: small in land, but a state of its own
+  if(n<=5&&!nom&&p>=FLOOR.king*P.floor*0.25&&(S.city[o.capital]>=0||(o.origin&&o.origin.type==='colony')))return'City-state';
   if(p<FLOOR.king*P.floor||(n<4&&p<4*FLOOR.king*P.floor))return'Chiefdom';
   if(n<20||(!nom&&o.adm<0.25)||p<FLOOR.emp*P.floor)return nom?'Khanate':'Kingdom';
   return nom?'Khaganate':'Empire'}
-function fullName(o){const t=o.tier;return t==='Horde'||t==='Clans'?`${o.base} ${t}`:`${t} of ${o.base}`}
+function fullName(o){const t=o.tier;return t==='Horde'||t==='Clans'?`${o.base} ${t}`:t==='City-state'?`City of ${o.base}`:`${t} of ${o.base}`}
 function styleOf(o){const e=S.eths[o.core];return e?STYLES[e.lang.style]:STYLES.romance}
 function titleOf(o,R){const st=styleOf(o).t,f=R.fem;const fam=S.eths[o.core]?S.eths[o.core].fam:-1;
   switch(o.tier){case'Chiefdom':case'Clans':return st.c;case'Horde':case'Confederation':case'Khanate':return st.h;
-    case'Kingdom':return st.k==='king'&&f?'queen':st.k;
+    case'Kingdom':case'City-state':return st.k==='king'&&f?'queen':st.k;
     default:{if(S.famTitle[fam])return S.famTitle[fam].word;return st.e==='emperor'&&f?'empress':st.k==='khan'?'khagan':st.e}}}
 function rulerName(o){const R=o.ruler;return`${titleOf(o,R)} ${R.name}${R.epithet?' '+R.epithet:''}`}
 function newRuler(L,o){
@@ -1568,7 +1591,7 @@ function succession(o){
   else o.gen++;
 }
 function etOf(o){const c=o.capital,s=S;return 0.02*(1+s.admin[c]+0.5*s.coin[c]+0.5*s.law[c])}
-const WHY_LABEL={pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
+const WHY_LABEL={pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
 function topCauses(why){return Object.entries(why).filter(e=>e[1]>0.08).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>WHY_LABEL[e[0]])}
 function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===id)out.push(i);return out}
 function civilWar(o,breakup){
@@ -1605,7 +1628,7 @@ function collapse(o){
   for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital){s.pol[i]=0;s.s[i]=0.3;lost++}
   if(o.maxCells>=20&&lost>=5)chron('fall',`The ${o.full} loses its grip; ${lost} provinces fall away into stateless hands.`,o.capital,[R_(o)],'Its asabiya had decayed below the point where it could hold together.');
 }
-function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5))+1.2*s.gun[c]+0.2*s.admin[c]+0.3*s.camel[c]*w.desert[c]}
+function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5))+1.2*s.gun[c]+0.2*s.admin[c]+0.3*s.camel[c]*w.desert[c]}
 function cerealEff(i){return S.grain[i]*(1-0.75*WD.leach[i])*(1-0.65*WD.trop[i])}
 function strength(o){return o.kind==='horde'?o.pop+o.loot*3:(o.tax||0)*1.6+0.25*o.pop}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
@@ -1613,7 +1636,7 @@ const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
   if(q){const d=s.pols[q];Ud=Math.pow(strength(d)+1,P.scaleExp)*(0.5*d.S+0.5*s.s[j])*milAt(j)*Math.exp(-dd(j)/d.h)*(0.6+0.4*s.integ[j])}
   else Ud=Math.pow(s.pop[j]*4+1,0.75)*s.s[j]*milAt(j)*0.8;
-  return Ud*(1+1.6*w.rough[j])*(1+2.5*s.fort[j]);
+  return Ud*(1+1.6*w.rough[j])*(1+2.5*s.fort[j])*(1+0.6*s.colony[j]+(q?0.3*(s.pols[q].nob||0)+(j===s.pols[q].capital&&s.pols[q].tier==='City-state'?0.4:0):0));
 }
 function displace(j,frac,byPol){const s=S;const p=s.pop[j]*frac;if(p<1)return 0;s.pop[j]-=p;pushPressure(s.eth[j],p,j,byPol,null);return p}
 function attack(o,i,j,sea){
@@ -1623,7 +1646,7 @@ function attack(o,i,j,sea){
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15:dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+(w.tcost[j]||2))}return}
   let Ud=defense(j);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
-  if(!q&&o.kind==='state')Ud*=(2.2+2*s.forest[j]+2*w.rough[j])/(1+3*s.gun[i]);
+  if(!q&&o.kind==='state')Ud*=(2.2+2*s.forest[j]+2*w.rough[j])/(1+3*s.gun[i])/(1+0.8*s.colony[i]);
   if(w.nomad[j]&&o.kind!=='horde'&&o.nomF<0.4)Ud*=2.5/(1+2*s.gun[i]);
   if(w.tsetse[j]&&!w.tsetse[o.capital])Ud*=1.5;
   if(w.desert[j]&&w.rv[j]<0.3&&o.kind!=='horde'&&s.camel[i]<0.5)Ud*=1.5;
@@ -1725,12 +1748,13 @@ function diplomacy(){
   const s=S,r=s.r,pols=s.pols;
   for(const id of s.alive){const o=pols[id];
     o.allies=o.allies.filter(q=>{const p=pols[q];if(!p||!p.alive||o.enemies.has(q))return false;
+      if(o.league!=null&&p.league===o.league)return true;
       if(q>id){const [a]=affinity(o,p);if(a<0.15&&r()<0.3){p.allies=p.allies.filter(x=>x!==id);
         if(o.cells>=40&&p.cells>=40)chron('diplomacy',`The alliance between the ${o.full} and the ${p.full} lapses.`,o.capital,[R_(o),R_(p)]);return false}}
       return true});
     if(o.cells<2)continue;
     for(const [q] of o.nb){if(q<=id)continue;const p=pols[q];if(!p||!p.alive||o.allies.includes(q)||o.enemies.has(q)||p.cells<2)continue;
-      if(o.allies.length>=3||p.allies.length>=3)continue;
+      if((o.allies.length>=3&&o.league==null)||(p.allies.length>=3&&p.league==null)||o.allies.length>=8||p.allies.length>=8)continue;
       let [a,threat]=affinity(o,p);const marriage=r()<0.06&&o.kind==='state'&&p.kind==='state';if(marriage)a+=0.3;
       if(a>0.55&&r()<0.25*P.allyRate){o.allies.push(q);p.allies.push(id);
         if(o.cells>=30&&p.cells>=30){const faith=o.rel>=0&&o.rel===p.rel&&threat&&threat.rel!==o.rel;
@@ -1857,12 +1881,19 @@ function migStep(M){
   }else{
     if(s.pop[j]>1000&&s.eth[j]>=0&&s.eth[j]!==M.eth){displace(j,0.15,0);const pr=s.press.get(s.eth[j]);if(pr)pr.mig=M.id}
     const room=s.K[j]-s.pop[j];
+    if(M.steps>2&&room>0&&M.pop>40000&&r()<0.09)dropPocket(M,j,0.04+0.04*r());
     if((room>M.pop*0.15&&M.steps>4&&r()<0.25)||M.steps>M.max)settle(M,j,null);
   }
   if(!M.done&&M.pop<15000)disperse(M,'dwindled');
 }
+// a band that stays behind: a pocket of the migrating people inside other peoples' lands
+function dropPocket(M,j,f){const s=S,d=M.pop*f;if(d<500)return;M.pop-=d;const old=s.pop[j],oe=s.eth[j];s.pop[j]+=d;
+  if(oe<0||old<1){s.eth[j]=M.eth;s.eth2[j]=-1}
+  else if(oe!==M.eth){if(d>old){s.eth[j]=M.eth;s.eth2[j]=oe;s.mix[j]=old/(old+d)}else{s.eth2[j]=M.eth;s.mix[j]=Math.max(s.mix[j]||0,d/(old+d))}s.mixT[j]=0}
+  for(let k=0;k<s.tk.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],(M.techs[k]||0)*0.6);
+  (M.pockets||(M.pockets=[])).push(j)}
 function disperse(M,why){const s=S;M.done=true;M.end=s.year;M.result=why==='trapped'?'trapped and scattered':'dwindled and scattered';
-  if(M.pop>0&&M.cell>=0){s.pop[M.cell]+=M.pop*0.5}
+  if(M.pop>0&&M.cell>=0){const tail=M.path.slice(-4);for(const c of tail)if(WD.land[c])dropPocket(M,c,0.6/tail.length)}
   s.activeMigs=s.activeMigs.filter(k=>k!==M.id);
   if(M.logged&&M.path.length>8)chron('migration',`The ${M.name} ${M.result} after ${s.year-M.start} years of wandering.`,M.cell,[RM(M)])}
 function settle(M,j,t){
@@ -1873,7 +1904,7 @@ function settle(M,j,t){
     if(oe<0||old<1){s.eth[c]=M.eth;s.eth2[c]=-1}
     else if(oe!==M.eth){if(per>old){s.eth[c]=M.eth;s.eth2[c]=oe;s.mix[c]=old/(old+per)}else{s.eth2[c]=M.eth;s.mix[c]=per/(old+per)}s.mixT[c]=0}
     if(M.rel>=0&&per>old)s.rel[c]=M.rel;
-    for(let k=0;k<s.tk.length;k++)s.tk[k][c]=Math.max(s.tk[k][c],M.techs[k]*0.8)}
+    for(let k=0;k<s.tk.length;k++)s.tk[k][c]=Math.max(s.tk[k][c],(M.techs[k]||0)*0.8)}
   const e=s.eths[M.eth],farmland=w.sF[j]>0.3&&M.farm>0.5;
   const strong=M.pop>100000;
   let o=null;
@@ -1922,11 +1953,12 @@ function politics(){for(const _ of politicsG());}
 function* politicsG(){
   const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;
   const sampleNow=y%10===0;
-  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow)o.sample=[]}
+  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p],pp=pop[i];
     o.pop+=pp;o.K+=s.K[i];o.cells++;o.sS+=s.s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w.nT[i];o.n1+=pp*w.nM[i];o.n2+=pp*w.nN[i];o.n3+=pp*w.nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s.admin[i];o.ig+=s.integ[i];const pl=s.ard[i]>0.5&&!w.tsetse[i];o.tax+=pp>=1?pp*s.farm[i]*cerealEff(i)*Math.exp(-di/(o.h||6))*(0.5+0.5*s.integ[i])*(0.6+0.4*s.circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w.heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s.car[i]>0.3){const tl=1500*s.car[i];o.tax+=tl;o.trade+=tl}
     if(w.nomad[i])o.nom++;if(w.coast[i])o.coastN++;if(s.farm[i]>0.5&&w.sF[i]>0.25&&pp/w.area[i]>2)o.farmN++;if(s.fort[i]>0.5)o.fortN++;
     o.cx+=w.cosLon[i];o.cy+=w.sinLon[i];o.yy+=w.cyA[i];if(pp>o.mp){o.mp=pp;o.mc=i}
+    if(sampleNow&&o.front&&o.front.length<8&&s.year-s.taken[i]<80&&s.pop[i]<0.6*s.K[i]&&s.K[i]>200)o.front.push(i);
     if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if(r()<24/o.cells)o.sample[(r()*24)|0]=i}}
   const next=[];
   for(const id of s.alive){const o=pols[id];
@@ -1973,15 +2005,15 @@ function* politicsG(){
     const a=s.anom[c];o.wet=o.wet*0.92+a*0.08;
     o.loot*=0.9;
     o.gate=clamp(0.5+1.1*(1-o.press)+(o.nomF>0.5||o.kind==='horde'?0.5:0.22)*a+Math.min(0.5,o.tribs*0.15)-(o.over?0.15:0)+Math.min(0.5,o.loot/(o.pop+1)*4)-Math.min(0.3,o.fortN*0.004),0.15,1.9);
-    o.h=P.reach*(1+0.8*s.admin[c]+0.5*s.law[c]+0.7*s.roads[c]+0.4*s.coin[c]+0.6*s.gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4:1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s.tk[24][c]+0.1*s.tk[31][c]);
+    o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s.admin[c]+0.5*s.law[c]+0.7*s.roads[c]+0.4*s.coin[c]+0.6*s.gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4:1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s.tk[24][c]+0.1*s.tk[31][c]);
     const Et=etOf(o);
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq)),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
     statecraft(o,c,y);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
-    const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s.admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-o.integ)*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s.roads[c]+0.4*s.admin[c]+0.3*s.paper[c]))-1)*0.9:0;
-    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+o.shock;
+    const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s.admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s.roads[c]+0.4*s.admin[c]+0.3*s.paper[c]))-1)*0.9:0;
+    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
     else if(o.cells>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl)civilWar(o);
@@ -2010,11 +2042,13 @@ function* politicsG(){
     if(!o.fE&&o.cells>=100){o.fE=1;const f=figFor(o,Rn,'ruler');deed(f,`Ruled the ${o.full} at ${o.cells} provinces`,[R_(o)]);
       chron('rise',`The ${o.base} realm grows to ${o.cells} provinces under ${rulerName(o)}.`,c,[R_(o),RF(f)]);spot(`The ${o.full} reaches ${o.cells} provinces`,c,[R_(o)])}
     // invention, tied to cultural vigour
+    // a league of cities shares one pool of skills and ideas
+    const lgI=o.league!=null&&s.leagues&&s.leagues[o.league]&&!s.leagues[o.league].end?s.leagues[o.league]:null,oP=lgI?Math.max(o.pop,lgI.pop||0):o.pop,oC=lgI?Math.max(o.cells,lgI.cells||0):o.cells;
     if(o.kind==='state')for(let k=6;k<TECH.length;k++){const T=TECH[k],em=T.em;if(!em||s.tk[k][c]>=0.5)continue;
-      const emP=em.pop*0.6;if(o.pop<emP*0.5||(em.cells&&o.cells<em.cells)||(em.coast&&!w.coast[c]&&o.coastN<2)||(em.horse&&s.horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3))continue;
+      const emP=em.pop*0.6;if(oP<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w.coast[c]&&o.coastN<2)||(em.horse&&s.horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3))continue;
       let ok=true;for(const p of T.pre)if(s.tk[p][c]<0.7){ok=false;break}if(!ok)continue;
       const fit=techFit(o,k),bos=em.press?clamp((o.press-0.7)*5,0,2):1;
-      if(r()<em.b*P.invent*Math.min(3,Math.sqrt(o.pop/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5:0.6+0.8*fit)){
+      if(r()<em.b*P.invent*Math.min(3,Math.sqrt(oP/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5*synthRel():0.6+0.8*fit)){
         seedTech(s.tk[k],c,1,1);if(k===6)for(const i of L)if(pol[i]===id)s.admin[i]=Math.max(s.admin[i],0.35);
         firstTech(k,c,o)}}
     // faith
@@ -2221,7 +2255,7 @@ function* stepG(){
   disease();if(s.year%10===5)poolPass();if(s.year%20===7)caravanPass();yield;
   yield* politicsG();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
-  if(s.year%10===0){carbonPass();yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
@@ -2241,7 +2275,12 @@ function prepEco(w){
   // ecological niche of each province (Turchin, Adams & Hall 2006): climate, moisture, way of life, disease setting
   const nT=new Float32Array(N),nM=new Float32Array(N),nN=new Float32Array(N),nD=new Float32Array(N);
   for(const i of w.landIdx){nT[i]=w.T[i]/8;nM[i]=2*clamp(Math.log(Math.max(1,w.Pr[i])/150)/Math.log(20),0,1);nN[i]=w.nomad[i]?1.2:w.desert[i]?0.8:0;nD[i]=0.8*mal[i]+(w.tsetse[i]?0.5:0)}
-  Object.assign(w,{forest0,heavy,mal,oncho,circ,nT,nM,nN,nD,ecoReady:true});
+  // seasonal pastures (transhumance): herds move between summer uplands and winter lowlands, or between desert-edge grass after the rains and wetter pasture in the dry season
+  const transh=new Float32Array(N);
+  for(const i of w.landIdx){if(w.sH[i]<0.12)continue;let v=0;const e0=w.elev[i],p0=w.Pr[i];
+    ring(i,3,j=>{if(!w.land[j]||w.sH[j]<0.08)return;v=Math.max(v,clamp((Math.abs(w.elev[j]-e0)-500)/1000,0,1),clamp((Math.abs(w.Pr[j]-p0)-150)/400,0,1)*(w.desert[i]||w.desert[j]||w.nomad[i]?1:0.4))});
+    transh[i]=v}
+  Object.assign(w,{forest0,heavy,mal,oncho,circ,nT,nM,nN,nD,transh,ecoReady:true});
 }
 // how strongly a place's people are tied to a technique's ecological niche
 function techFit(o,k){const p=TECH[k].pos;if(!p||!o.fac)return 1;const dx=p[0]-o.fac[0],dy=p[1]-o.fac[1];return Math.exp(-(dx*dx+dy*dy)/0.6)}
@@ -2254,12 +2293,14 @@ function statecraft(o,c,y){
   const s=S,r=s.r;
   if(o.cplx==null){o.cplx=0.2;o.treas=0.3;o.ineq=0.25;o.warC=0}
   if(o.kind!=='state'){o.pT=o.pF=o.pQ=0;o.burden=0;return}
+  // a state born this year has not yet collected its first taxes
+  if(o.tax==null){o.pT=o.pF=0;o.pQ=o.pQ||0;o.burden=o.burden||0.6;if(!o.fac)o.fac=[0,0];return}
   const real=Math.max(1,o.cells-(o.wasteN||0));
   o.warC*=0.995;
   const tgt=0.15+0.35*s.admin[c]+0.2*s.law[c]+0.2*s.roads[c]+0.15*s.paper[c]+0.3*Math.min(1,real/250)+0.1*Math.min(1,o.fortN/20)+0.2*Math.min(1,o.warC);
   o.cplx+=tgt>o.cplx?0.01*(tgt-o.cplx):0.0015*(tgt-o.cplx);
   const ledger=s.tk[27][c]>0.5;
-  const upkeep=0.28*Math.pow(o.cplx,ledger?1.6:1.8)*o.pop,rev=(o.tax||0)*(ledger?1.1:1)+1;
+  const upkeep=0.28*Math.pow(o.cplx,ledger?1.6:1.8)*o.pop,rev=(o.tax||0)*(1-0.45*(o.nob||0))*(ledger?1.1:1)+1;
   o.burden=upkeep/rev;
   o.pT=Math.max(0,o.burden-1)*1.2;
   const atWar=o.enemies.size>0;
@@ -2412,6 +2453,226 @@ function carbonPass(){
   s.ch4=580+110*(rice+0.4*herd)/1.5e8;
 }
 
+"use strict";
+/* ================= TECHNOLOGY MATRIX =================
+   Every technique sits in a grid: what it is FOR (rows) × what natural phenomenon it HARNESSES (columns), at a tier.
+   A new technique combines what a society already masters in its row and its column (W. Brian Arthur, The Nature of
+   Technology, 2009). Which cells a society reaches depends on its environment and resources, the traditions its people
+   carry, and its situation (need, energy, war, disease); its size and wealth set the speed (Henrich's "collective brain").
+   Real techniques keep their own calibrated rules; the empty cells hold might-have-been techniques that are created
+   only when some society actually invents one, named in the inventors' own language. */
+const TROWS=[['food','Food'],['move','Movement'],['info','Information'],['power','Power'],['mat','Materials'],['health','Health'],['war','War'],['order','Organization']];
+const TCOLS=[['muscle','Muscle and beasts','Beasts'],['water','Water','Water'],['wind','Wind','Wind'],['fire','Fire and minerals','Fire'],['life','Living things','Life'],['signs','Signs and symbols','Signs'],['mech','Mechanism','Mech']];
+const NTR=TROWS.length,NTC=TCOLS.length,NTT=4;
+const TIER_NAMES=['','early','developed','advanced','high'];
+// placement of the built-in techniques: [row, column, tier]
+const TPOS={farm:[0,4,1],grain:[0,4,1],herd:[0,0,1],irrig:[0,1,1],copper:[4,3,1],horse:[1,0,1],sail:[1,2,1],camel:[1,0,2],
+  writing:[2,5,2],wheel:[1,6,2],iron:[4,3,2],ard:[0,0,2],manure:[0,4,2],pigeon:[2,4,2],law:[7,5,2],
+  coin:[7,3,3],roads:[1,6,3],nav:[1,1,3],caval:[6,0,3],paper:[2,4,3],crops:[0,4,3],plough:[0,0,3],kitesig:[2,2,3],windcart:[1,2,3],
+  fungal:[0,4,3],ledger:[7,6,3],tidemill:[3,1,3],watermill:[3,1,3],feverbark:[5,4,3],saltflush:[0,1,3],
+  gun:[6,3,4],ocean:[1,2,4],xcrops:[0,4,4],windmill:[3,2,4]};
+// generic descriptions for cells that our own history left empty or barely used
+const TGEN=[
+  ['ox-drawn seed drills','water-lifting wheels','wind-pumped terraces','kiln-dried grain stores','cultivated forest gardens','planting almanacs','geared threshing machines'],
+  ['pack-beast relays','river barge networks','land sails','hot-air lanterns','bred riding beasts','route maps and waymarks','rail-guided carts'],
+  ['runner relays','water-clock signals','signal kites','beacon chains','courier birds','shorthand scripts','mechanical message drums'],
+  ['beast-driven treadmills','water wheels','wind engines','steam toys put to work','oil and tallow lamps for night work','work calendars','gear trains'],
+  ['quarrying levers','water-powered hammers','wind-blown furnaces','refined alloys','bamboo and timber composites','standard weights and measures','turning lathes'],
+  ['bone-setting','baths and clean water','wind-cooled sickhouses','distilled medicines','herbal pharmacopoeias','sickness records','surgical instruments'],
+  ['war beasts','fire ships','war kites','incendiary weapons','poisoned arrows','signal codes for armies','siege engines'],
+  ['labour levies','canal administration','weather lore and calendars','mints and assays','forest and herd reserves','archives','clockwork tallies'],
+];
+const AGE_NAMES=['an age of beasts','an age of waterworks','an age of sails and kites','a furnace age','a green age','an age of letters','a clockwork age'];
+const ROW_EFFECT=['more food','cheaper travel and longer reach','longer administrative reach','more food and revenue','stronger armies and tools','fewer deaths in epidemics','stronger armies','cheaper government'];
+let TECH_BASE=0;
+function techMatrixInit(){
+  // reset any generated techniques from a previous history
+  if(!TECH_BASE){TECH_BASE=TECH.length}
+  TECH.length=TECH_BASE;for(const k of Object.keys(TI))delete TI[k];TECH.forEach((t,k)=>{TI[t.k]=k;const p=TPOS[t.k];if(p){t.row=p[0];t.col=p[1];t.tier=p[2]}});
+  const s=S;s.genByRow=Array.from({length:NTR},()=>[]);s.genSlots=new Map();s.ages=[];s.ageCol=[];s.matrixLog=[];
+  prepTechEnv(WD);
+  for(const e of s.eths)if(!e.trad)e.trad=new Float32Array(NTC).fill(0.15);
+}
+// what the land itself offers each column (static), averaged later over a state's provinces
+function prepTechEnv(w){
+  if(w.techEnv)return;const env=Array.from({length:NTC},()=>new Float32Array(N));let wind=null;
+  if(w.clim&&w.clim.wind){wind=new Float32Array(CN);for(const Wm of w.clim.wind)if(Wm)for(let j=0;j<CN;j++)wind[j]+=Math.hypot(Wm.U[j],Wm.V[j])/12}
+  for(const i of w.landIdx){const p=w.Pr[i];
+    env[0][i]=clamp(w.sH[i]*0.9+0.2*(w.nomad[i]?1:0),0,1);
+    env[1][i]=clamp(w.rv[i]*1.4+0.35*w.coast[i]+clamp((p-400)/1600,0,0.4),0,1);
+    env[2][i]=wind?climSample(wind,0,w.cxA[i]*SC+SC/2,w.cyA[i]*SC+SC/2):0.5;
+    env[3][i]=clamp(w.rough[i]*1.6+0.25*w.forest0[i]+(w.elev[i]>800?0.15:0),0,1);
+    env[4][i]=clamp(0.45*w.forest0[i]+0.45*w.sF[i]+0.25*clamp((p-300)/1500,0,1),0,1)}
+  // wind: model wind speed relative to the windiest tenth of the land, more where coasts, steppe or desert leave it unbroken
+  const ws=Array.from(w.landIdx,i=>env[2][i]).sort((a,b)=>a-b),q9=ws[Math.floor(ws.length*0.9)]||1;
+  for(const i of w.landIdx)env[2][i]=clamp(env[2][i]/q9*(w.coast[i]||w.nomad[i]||w.desert[i]?1:0.6),0,1);
+  w.techEnv=env;
+}
+// how much a state's land, resources and know-how afford each column
+function techAfford(o){
+  const s=S,w=WD,env=w.techEnv,a=new Float32Array(NTC),cells=o.sample&&o.sample.length?o.sample:[o.capital],c=o.capital;
+  for(const i of cells)for(let k=0;k<5;k++)a[k]+=env[k][i];
+  for(let k=0;k<5;k++)a[k]/=cells.length;
+  a[0]=clamp(a[0]+0.3*s.herd[c]+0.25*s.horse[c]+0.2*s.camel[c],0,1);
+  a[3]=clamp(a[3]+0.25*s.metal[c]+0.2*s.iron[c],0,1);
+  a[5]=clamp(0.6*s.admin[c]+0.3*s.paper[c]+0.2*s.law[c],0,1);
+  let urb=0;for(const i of cells)if(s.city[i]>=0)urb++;a[6]=clamp(0.3*s.wheel[c]+0.3*s.iron[c]+urb/cells.length*1.5,0,1);
+  return a;
+}
+// highest tier mastered in each row and column, from what the capital knows
+function techLevels(c){
+  const s=S,rl=new Int8Array(NTR),cl=new Int8Array(NTC),own=new Int8Array(NTR*NTC),known=[];
+  for(let k=0;k<TECH.length;k++){const t=TECH[k];if(t.row==null||s.tk[k][c]<0.5)continue;known.push(t);if(t.tier>rl[t.row])rl[t.row]=t.tier;if(t.tier>cl[t.col])cl[t.col]=t.tier;const q=t.row*NTC+t.col;if(t.tier>own[q])own[q]=t.tier}
+  // highest tier in a row or column reached OUTSIDE a given cell: a technique must combine knowledge from elsewhere
+  const rowEx=(r,co)=>{let m=0;for(const t of known)if(t.row===r&&t.col!==co&&t.tier>m)m=t.tier;return m},colEx=(co,r)=>{let m=0;for(const t of known)if(t.col===co&&t.row!==r&&t.tier>m)m=t.tier;return m};
+  return{rl,cl,own,rowEx,colEx};
+}
+// a state's situation pulls some rows forward
+function techLean(o,aff){
+  const s=S,need=o.fac?o.fac[0]:0,energy=o.fac?o.fac[1]:0,c=o.capital;
+  return[0.6+0.6*Math.max(0,need),0.6+0.4*Math.min(1,o.cells/100)+0.3*(o.coastN||0)/Math.max(1,o.cells),0.6+0.5*Math.min(1,o.cells/80),
+    0.5+0.6*Math.max(0,energy)+0.4*Math.max(0,-need),0.7+0.3*aff[3],0.6+0.8*Math.min(1,s.dp[c]||0),
+    0.5+0.8*Math.min(1,o.enemies.size/2),0.5+0.6*clamp(o.burden||0,0,1.5)];
+}
+function pullNow(){return WD.isEarth?P.pull:Math.min(P.pull,0.45)}
+function synthMult(){const q=1-pullNow();return 0.02+3*q*q}
+// relative to the default pull on Earth, for the hand-made possible techniques
+function synthRel(){return synthMult()/0.0875}
+// every ten years: traditions drift toward what peoples practise; states may invent a might-have-been technique
+function matrixPass(){
+  const s=S,r=s.r,base=1/90000;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||o.cells<4||o.pop<3e5)continue;
+    const c=o.capital,aff=techAfford(o),e=s.eths[o.core];o.aff=aff;
+    if(e){if(!e.trad)e.trad=new Float32Array(NTC).fill(0.15);for(let k=0;k<NTC;k++)e.trad[k]+=0.06*(aff[k]-e.trad[k])}
+    const trad=e?e.trad:new Float32Array(NTC).fill(0.15),{rl,cl,own,rowEx,colEx}=techLevels(c),lean=techLean(o,aff);o.lean=lean;o.lvl={rl,cl};
+    const speed=P.invent*Math.min(3,Math.sqrt(o.pop/1e6))*(0.7+0.9*(o.cult||0))*synthMult();
+    for(let ro=0;ro<NTR;ro++)for(let co=0;co<NTC;co++){
+      if(Math.min(rl[ro],cl[co])<1)continue;
+      const t=Math.max(2,own[ro*NTC+co]+1);if(t<2||t>NTT||rowEx(ro,co)<t-1||colEx(co,ro)<t-1)continue;{
+        const key=ro*100+co*10+t;let real=false,known=false;
+        for(let k=0;k<TECH.length;k++){const T=TECH[k];if(T.row===ro&&T.col===co&&T.tier===t){if(!T.gen)real=true;if(s.tk[k][c]>=0.5)known=true}}
+        if(known)continue;
+        const colW=(0.3+0.7*aff[co])*(0.4+1.2*trad[co]);
+        const p=base/t*10*speed*colW*lean[ro]*(real?0.12:1);
+        if(r()<p)inventGen(o,ro,co,t,key)}}
+    // an alternate age: one column of might-have-been techniques far ahead of the rest
+    if(o.age==null){const cnt=new Int8Array(NTC);for(let k=TECH_BASE;k<TECH.length;k++)if(s.tk[k][c]>=0.5)cnt[TECH[k].col]++;
+      let best=-1,bv=0,second=0;for(let k=0;k<NTC;k++){if(cnt[k]>bv){second=bv;bv=cnt[k];best=k}else if(cnt[k]>second)second=cnt[k]}
+      if(bv>=4&&bv>=2*second&&!(s.year-(s.ageCol[best]??-1e9)<400)){o.age=best;s.ageCol[best]=s.year;s.ages.push({y:s.year,pol:id,col:best});
+        chron('ideas',`The ${o.full} enters ${AGE_NAMES[best]}: its craftsmen have taken ${TCOLS[best][1].toLowerCase()} further than any people of our own history.`,c,[R_(o)]);
+        spot(`The ${o.full} enters ${AGE_NAMES[best]}`,c,[R_(o)])}}
+  }
+}
+// create (or reinvent) the technique for a grid cell; named in the inventors' language
+function inventGen(o,ro,co,t,key){
+  const s=S,c=o.capital;let k=s.genSlots.get(key);
+  if(k==null){
+    const e=s.eths[o.core],L=e?e.lang:langAt(c),local=cap(word(L,s.r,2)),generic=(t>=3?TIER_NAMES[t]+' ':'')+TGEN[ro][co];
+    const T={k:'g'+key,n:local,generic,gen:1,synth:1,row:ro,col:co,tier:t,era:Math.min(7,1+t*1.5|0),pre:[],inventor:o.id,people:o.core,
+      d:`${cap(generic)}: ${ROW_EFFECT[ro]} (tier ${t}).`};
+    k=TECH.length;TECH.push(T);TI[T.k]=k;s.tk.push(new Float32Array(N));s.firstTech.push(null);s.genSlots.set(key,k);s.genByRow[ro].push(k);
+  }
+  seedTech(s.tk[k],c,1,1);
+  const T=TECH[k];
+  if(!s.firstTech[k]){s.firstTech[k]={y:s.year,cell:c,pol:o.id,eth:s.eth[c]};
+    chron('ideas',`Craftsmen of the ${o.full} devise the ${T.n} (${T.generic}), a path our own history never took.`,c,[R_(o)]);
+    s.matrixLog.push({y:s.year,k,pol:o.id})}
+}
+// summed strength of the generated techniques of one row known in a province
+function genAt(row,i){const s=S;if(!s.genByRow)return 0;let v=0;for(const k of s.genByRow[row])v+=(s.tk[k][i]||0)*TECH[k].tier;return v}
+// how far this world's set of known techniques has drifted from our own (0 = same mix, 1 = entirely different)
+function divergence(){const s=S;let real=0,gen=0;for(let k=0;k<TECH.length;k++){if(!s.firstTech[k])continue;if(TECH[k].synth)gen++;else real++}return gen/(gen+real||1)}
+
+"use strict";
+const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1:0;
+/* ================= SOLDIER COLONIES AND HEREDITARY NOBILITY =================
+   States hold new frontiers by settling soldiers on the land: Roman coloniae, Chinese tuntian military farms, Assyrian and
+   Inca resettlements, Byzantine themes, Ottoman timars. Settlers make the frontier hold and push it further, but land given
+   for service tends to become land held by birth: a hereditary nobility that protects its own provinces and keeps much of
+   their revenue. Rulers try to take it back; sometimes they succeed. */
+function societyInit(){const s=S;s.colony=new Float32Array(N);s.colonies=[];s.reforms=[]}
+// every ten years
+function colonyPass(){
+  const s=S,w=WD,r=s.r;
+  for(let i=0;i<N;i++)if(s.colony[i]>0)s.colony[i]*=0.97;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'){o.nob=0;continue}
+    if(o.nob==null)o.nob=0;
+    const c=o.capital,real=Math.max(1,o.cells-(o.wasteN||0));
+    // plant a colony on a recently taken, thinly settled frontier province
+    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.8*Math.min(1,o.warC||0)+0.4*(o.enemies.size?1:0))){
+      const j=o.front[(r()*o.front.length)|0];
+      if(s.pol[j]===id&&s.colony[j]<0.3&&s.K[j]>s.pop[j]*1.4&&w.land[j]){
+        const want=Math.min(0.012*o.pop,(s.K[j]-s.pop[j])*0.6);
+        // settlers come from the old lands around the capital
+        let src=0;const from=[c];ring(c,2,q=>{if(s.pol[q]===id&&s.pop[q]>1)from.push(q)});for(const q of from)src+=s.pop[q]*0.1;
+        const d=Math.min(want,src);if(d>2000){const f=d/src;for(const q of from)s.pop[q]-=s.pop[q]*0.1*f;
+          const old=s.pop[j],oe=s.eth[j];s.pop[j]+=d;
+          if(oe<0||old<1){s.eth[j]=o.core;s.eth2[j]=-1}else if(oe!==o.core){if(d>old){s.eth[j]=o.core;s.eth2[j]=oe;s.mix[j]=old/(old+d)}else{s.eth2[j]=o.core;s.mix[j]=Math.max(s.mix[j]||0,d/(old+d))}s.mixT[j]=0}
+          if(o.rel>=0&&d>old)s.rel[j]=o.rel;
+          for(let k=0;k<s.tk.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],s.tk[k][c]*0.85);
+          s.colony[j]=1;s.integ[j]=Math.max(s.integ[j],0.75);s.s[j]=Math.max(s.s[j],o.S);ring(j,1,q=>{if(s.pol[q]===id)s.integ[q]=Math.min(1,s.integ[q]+0.15)});
+          o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
+          if(o.colN===1&&real>=20)chron('state',`The ${o.full} settles veterans on conquered land at its frontier, granting them farms in return for service.`,j,[R_(o)],'Soldiers who farm the land they hold make a frontier that stays held.')}}}
+    // land held for service becomes land held by birth; large, loosely governed realms breed lords of their own
+    const col=Math.min(1,(o.colN||0)/Math.max(4,real/15)),adm=s.admin[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
+    o.nob=clamp(o.nob+10*(0.0012*col*(1-0.7*adm)+0.0005*(1-adm)*Math.min(1,real/80))*(1-o.nob)-10*0.001*adm*o.nob,0,0.95);
+    // a strong ruler with a well-run court may try to take the lands back
+    if(o.nob>0.5&&real>=15&&r()<0.06*(o.nob-0.4)*(o.burden>0.9?2:1)){
+      const p=clamp(0.2+0.35*o.S+0.3*adm+0.2*(o.mandate||0)-0.3*o.nob,0.05,0.85),ok=r()<p;
+      s.reforms.push({y:s.year,pol:id,ok});
+      if(ok){o.nob*=0.55;o.treas=Math.min(1,o.treas+0.3);chron('state',`${cap(rulerName(o))} of the ${o.full} reclaims the estates of the great families and puts the provinces back under royal officials.`,c,[R_(o)],'Lands granted for service had become private domains; the crown took them back while it was strong enough.')}
+      else{o.shock+=0.35;o.mandate=Math.max(0,(o.mandate||1)-0.25);chron('fall',`The great lords of the ${o.full} rise against ${rulerName(o)}, who tried to take back their lands.`,c,[R_(o)],'The nobles held the provinces, the soldiers and the revenue; the crown overreached.')}}
+  }
+}
+/* ================= CITY-STATES, LEAGUES AND DAUGHTER COLONIES =================
+   A walled city with its farmland can stand for centuries among larger neighbours (Sumer, the Greek poleis, Phoenicia,
+   the Maya, the Swahili coast, Hausaland, Italy). Neighbouring cities of one people band together in leagues, and
+   crowded coastal cities send settlers across the sea to found daughter cities in lands like their own. */
+function isCityState(o){return o.kind==='state'&&o.tier==='City-state'}
+function leaguePass(){
+  const s=S,r=s.r;if(!s.leagues)s.leagues=[];
+  for(const L of s.leagues){if(L.end)continue;L.members=L.members.filter(q=>{const p=s.pols[q];return p&&p.alive&&p.league===L.id&&isCityState(p)});
+    for(const q of s.alive){const p=s.pols[q];if(p.league===L.id&&!L.members.includes(q))p.league=null}
+    L.pop=0;L.cells=0;for(const q of L.members){L.pop+=s.pols[q].pop;L.cells+=s.pols[q].cells}
+    if(L.members.length<2){L.end=s.year;for(const q of L.members)s.pols[q].league=null;chron('diplomacy',`The ${L.name} breaks apart.`,L.cell,[['league',L.id,L.name]]);continue}
+    // members stand together
+    for(const a of L.members)for(const b of L.members)if(a!==b){const A=s.pols[a];if(!A.allies.includes(b)&&!A.enemies.has(b))A.allies.push(b)}}
+  for(const id of s.alive){const o=s.pols[id];if(!isCityState(o))continue;const fam=s.eths[o.core]?s.eths[o.core].fam:-1;
+    const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&s.eths[p.core]&&s.eths[p.core].fam===fam)kin.push(p)}
+    if(o.league!=null){continue}
+    const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
+    if(inL&&r()<0.2){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
+    const free=kin.filter(p=>p.league==null);
+    if(free.length>=2&&r()<0.12){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
+      s.leagues.push(L);for(const q of L.members)s.pols[q].league=L.id;
+      chron('diplomacy',`${L.members.length} cities of the ${e.name} swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],...L.members.map(q=>R_(s.pols[q]))],'Small cities of one people were safer together than alone against the kingdoms around them.');
+      spot(`The ${L.name} is founded`,o.capital,[['league',L.id,L.name]])}}
+}
+function colonizePass(){
+  const s=S,w=WD,r=s.r;
+  for(const id of s.alive.slice()){const o=s.pols[id];if(o.kind!=='state')continue;const c=o.capital;
+    if(!w.coast[c]||s.sail[c]<0.5||o.press<0.8||o.cells>40)continue;
+    const cityLike=isCityState(o)||(o.coastN||0)>=0.4*o.cells;if(!cityLike)continue;
+    if(r()>0.1*(isCityState(o)?1.5:0.7)*(0.5+s.nav[c]))continue;
+    const reach=8+14*s.nav[c]+12*s.ocean[c],cx=w.cxA[c],cy=w.cyA[c],CI=w.coastIdx;let best=-1,bs=0;
+    for(let t=0;t<60;t++){const j=CI[(r()*CI.length)|0];if(s.pol[j]||!w.land[j]||w.desert[j])continue;
+      let dx=Math.abs(w.cxA[j]-cx);dx=Math.min(dx,W-dx);const d=Math.hypot(dx,w.cyA[j]-cy);if(d<4||d>reach)continue;
+      const dT=Math.abs(w.T[j]-w.T[c]);if(dT>6||s.K[j]<3000)continue;
+      const sc=(s.K[j]-s.pop[j])/(1+dT)*(1-0.5*d/reach)*(s.eth[j]<0||s.pop[j]<500?1.5:1);if(sc>bs){bs=sc;best=j}}
+    if(best<0)continue;
+    const j=best,n=Math.min(0.03*o.pop,s.K[j]*0.5,40000);if(n<3000)continue;
+    s.pop[c]=Math.max(1,s.pop[c]-n*0.6);
+    const old=s.pop[j];s.pop[j]+=n;const oe=s.eth[j];s.eth[j]=o.core;if(oe>=0&&oe!==o.core&&old>=1){s.eth2[j]=oe;s.mix[j]=old/(old+n);s.mixT[j]=0}else s.eth2[j]=-1;
+    if(o.rel>=0)s.rel[j]=o.rel;for(let k=0;k<s.tk.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],s.tk[k][c]*0.9);
+    if(s.city[j]<0){s.city[j]=s.cities.length;s.cities.push({name:cityWord(s.eths[o.core].lang,r),cell:j,born:s.year,eth:o.core,peak:s.pop[j]})}
+    const nid=newPolity(j,null,{kind:'state',origin:{type:'colony',from:id,people:o.core}}),d=s.pols[nid];
+    d.S=Math.max(d.S,o.S*0.9);d.cult=o.cult;d.metro=id;o.daughters=(o.daughters||0)+1;
+    if(!d.allies.includes(id)){d.allies.push(id);o.allies.push(nid)}
+    const far=o.daughters===1||o.cells>=10;
+    if(far)chron('state',`Settlers from the ${o.full} sail away and found the ${d.full} on a distant shore.`,j,[R_(o),R_(d)],'The home city was crowded; the sea offered land like its own.');
+  }
+}
+
 </script>
 <script>
 "use strict";
@@ -2420,7 +2681,7 @@ const $=id=>document.getElementById(id);
 const fmtN=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(n>=1e8?0:1)+'M':n>=1e3?Math.round(n/1e3)+'k':Math.round(n)+'';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const TYPES={rise:['Rise','#c08a2a'],war:['War','#b2452c'],fall:['Fall','#6e5a8c'],diplomacy:['Diplomacy','#4f7f6a'],faith:['Faith','#b0729a'],migration:['Migrations','#a0703a'],culture:['Culture','#4f78a8'],ideas:['Ideas','#3f8a5c'],plague:['Plague','#8a2f4a'],famine:['Famine','#9a7b45'],people:['Peoples','#3d7a99'],nature:['Nature & climate','#6f7d84']};
-const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Climate change'],['soil','Soil'],['forest','Forest'],['inequality','Inequality'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
+const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Climate change'],['soil','Soil'],['forest','Forest'],['inequality','Inequality'],['lords','Lords'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['path','Paths of invention'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
 const SPEEDS=[[5,'5'],[25,'25'],[100,'100'],[400,'400'],[1e9,'Max']];
 const ERA_COL=[[120,128,130],[118,150,86],[196,140,64],[150,96,72],[178,74,58],[122,84,150],[64,96,150],[40,130,140]];
 const GROUP_COL=[[40,140,70],[222,190,120],[206,170,90],[110,170,110],[90,120,170],[200,215,225]];
@@ -2524,6 +2785,7 @@ function buildOverlay(){
   if(m!=='terrain')for(const i of w.landIdx){
     let c=null,a=0;const p=s.pop[i];
     switch(m){
+      case'lords':if(s.colony&&s.colony[i]>0.25){c=[245,200,90];a=230}else if(s.pol[i]&&s.pols[s.pol[i]].kind==='state'){c=ramp(s.pols[s.pol[i]].nob||0);a=170}break;
       case'political':if(s.pol[i]){const o=s.pols[s.pol[i]];c=o.rgb;a=o.kind==='horde'?70:isWaste(i)?62:158}break;
       case'soil':if((w.sF[i]>0.08&&s.farm[i]>0.3&&p>=1)||s.salt[i]>0.02){if(s.salt[i]>0.08){c=[235,235,225];a=60+190*Math.min(1,s.salt[i]*1.5)}else{c=ramp(clamp((s.fert[i]-0.3)/0.7,0,1));a=60+140*Math.min(1,w.sF[i]*2)}}break;
       case'forest':if(w.forest0[i]>0.05){const f=s.forest[i],lost=w.forest0[i]-f;if(lost>0.2&&f<0.25){c=[196,120,60];a=60+150*lost}else{c=[34,110,52];a=40+200*f}}break;
@@ -2539,6 +2801,7 @@ function buildOverlay(){
       case'knowledge':if(p>=1){
         if(know.length){let n=0;for(const k of know)if(s.tk[k][i]>0.5)n++;if(n){c=n===know.length?[230,170,60]:[120,150,190];a=n===know.length?200:110}}
         else{let n=0;for(const f of s.tk)if(f[i]>0.5)n++;c=ramp(n/TECH.length);a=190}}break;
+      case'path':if(p>=1){const [pc,pv]=pathAt(i);if(pc>=0){c=COL_RGB[pc];a=Math.min(220,90+pv*25)}else{c=[150,150,140];a=40}}break;
       case'era':if(p>=1){c=ERA_COL[eraOf(i)];a=190}break;
       case'density':if(p>=1){c=ramp((Math.log10(p/w.area[i])+2)/4);a=205}break;
       case'capacity':c=ramp((Math.log10(s.K[i]/w.area[i])+2)/4);a=200;break;
@@ -2672,6 +2935,7 @@ function drawLegend(){
   const rampBox=(t,a,b)=>`<div>${t}</div><div class="ramp" style="background:${rampCss()}"></div><div class="row"><span>${a}</span><span>${b}</span></div>`;
   const keys=list=>'<div class="keys">'+list.map(([c,l])=>`<span><i style="background:rgb(${c})"></i>${l}</span>`).join('')+'</div>';
   switch(m){
+    case'lords':h=rampBox('Share of each state held by hereditary lords','crown','lords')+keys([[[245,200,90],'Soldier colony, recently planted']])+'<p style="margin:6px 0 0;opacity:.85">States settle soldiers on new frontiers. Over generations, land granted for service becomes land held by birth: lords defend their own provinces but keep much of the revenue.</p>';break;
     case'political':h='Each colour is a state. Hatched, faint areas are nomad confederations; pale areas are wasteland a state only claims. Dotted tan lines are caravan routes. Red borders are war fronts; dark dashed lines are fortified frontiers; amber trails are peoples on the move. Click a state to open its page.';break;
     case'soil':h=rampBox('Soil fertility (farmland only; worn-out soils are cool, fresh ones warm)','depleted','fresh')+keys([[[235,235,225],'Salt-poisoned fields']])+'<p style="margin:6px 0 0;opacity:.85">Crowded fields wear out unless rested, manured or rotated; floodplains renew each year; irrigation in dry lands slowly salts the soil.</p>';break;
     case'forest':h=keys([[[34,110,52],'Standing forest'],[[196,120,60],'Cleared or lost forest']])+'<p style="margin:6px 0 0;opacity:.85">Farmers clear forest to plant; smelting eats charcoal; abandoned land grows back. Stripped hillsides erode.</p>';break;
@@ -2689,6 +2953,7 @@ function drawLegend(){
       const tp=worldPop();
       h=`Pick techniques. Gold: knows all picked; blue: knows some.${ui.know.size?'':' With none picked, colour shows how many techniques each place knows.'}<div class="kchips">`+TECH.map(t=>`<button type="button" data-k="${t.k}" aria-pressed="${ui.know.has(t.k)}" title="${t.synth?esc('Synthesized: '+t.d):''}">${t.synth?'✦ ':''}${t.n}<small>${tp?Math.round(techShare(TI[t.k])/tp*100)+'%':''}</small></button>`).join('')+'</div>';
       break}
+    case'path':h='Where each place has gone beyond our own history: colour shows the part of nature its might-have-been techniques harness. Grey places follow our path.'+keys(TCOLS.map((c,j)=>[COL_RGB[j],c[1]]));break;
     case'era':h='Era each place has reached, from what it knows.'+keys(ERAS.map((n,k)=>[ERA_COL[k],n]));break;
     case'density':h=rampBox('People per km²','0.01','100');break;
     case'capacity':h=rampBox('Carrying capacity per km² this year','0.01','100');break;
@@ -2771,6 +3036,8 @@ const L_=(t,id,name)=>`<a class="lnk" tabindex="0" data-t="${t}" data-id="${id}"
 const lm_=M=>L_('mig',M.id,'the '+M.name),lp=o=>L_('pol',o.id,o.alive?o.full:o.peak),le=e=>L_('eth',e.id,e.name),lr=R=>L_('rel',R.id,R.name),lf=f=>L_('fig',f.id,f.name),lw=w=>L_('war',w.id,w.name);
 function entityCell(t,id){const s=S;
   switch(t){case'cell':return id;case'pol':return s.pols[id].capital;case'eth':{const e=s.eths[id];return e.alive?cellAt(e.la*180/Math.PI,e.lon*180/Math.PI):-1}
+    case'tech':{const f=s.firstTech[id];return f?f.cell:-1}
+    case'league':return s.leagues[id].cell;
     case'rel':return s.rels[id].origin;case'fig':{const f=s.figs[id];const p=f.pol&&s.pols[f.pol];return p?p.capital:-1}
     case'plague':return s.outbreaks[id].origin;case'war':return s.pols[s.wars[id].d[0]].capital;case'mig':{const M=s.migs[id];return M.done?M.path[M.path.length-1]:M.cell}}return-1}
 function openPage(t,id,noPush){if(ui.page&&!noPush&&!(ui.page.t===t&&ui.page.id===id))ui.stack.push(ui.page);if(ui.stack.length>40)ui.stack.shift();ui.page={t,id:+id};showPane('insp');ui.dirty=true}
@@ -2805,10 +3072,13 @@ function renderPage(){
       const p=s.pol[i]?s.pols[s.pol[i]]:null,e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=s.rel[i]>=0?s.rels[s.rel[i]]:null,city=s.city[i]>=0?s.cities[s.city[i]]:null;
       h+=`<div class="kind">Province</div><h2 class="name">${city?esc(city.name):e?'Lands of the '+esc(e.name):'Empty land'}</h2><p class="sub2">${latd}°, ${lond}° · ${ERAS[eraOf(i)]}</p>`;
       h+=`<dl class="kv" style="margin-top:10px"><dt>State</dt><dd>${p?lp(p):'none'}</dd><dt>People</dt><dd>${e?le(e):'none'}</dd><dt>Faith</dt><dd>${R?lr(R):e?'folk religion':'–'}</dd><dt>Population</dt><dd>${fmtN(s.pop[i])} / ${fmtN(s.K[i])}</dd>${city?`<dt>City</dt><dd>${esc(city.name)}${p&&p.capital===i?' (capital)':''}, since ${fy(city.born)}</dd>`:''}</dl>`;
-      h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
+      h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.transh&&w.transh[i]>0.2&&s.herd[i]>0.3?`<dt>Herding</dt><dd>moves with the seasons</dd>`:''}${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
       h+=`<h3 class="sec">Ecology</h3><div class="bars">${w.sF[i]>0.08?bar('Soil fertility',s.fert[i],1,'t'):''}${w.forest0[i]>0.05?bar('Forest standing',s.forest[i]/w.forest0[i],1,'t'):''}${s.salt[i]>0.02?bar('Salt in the soil',s.salt[i],1):''}${w.mal[i]>0.05?bar('Fever burden',w.mal[i]*(1-s.adapt[i]),1):''}${w.oncho[i]>0.05?bar('River blindness',w.oncho[i],1):''}${bar('Disease pool',s.dp[i],1,'t')}${w.sF[i]>0.1?bar('Hemmed in (circumscription)',s.circE[i],1,'t'):''}${s.car[i]>0.1?bar('Caravan traffic',s.car[i],1,'t'):''}</div>`;
       h+=`<h3 class="sec">Known techniques</h3><div class="bars">${TECH.map((T,k)=>s.tk[k][i]>0.05?bar(T.n,s.tk[k][i],1,'t'):'').join('')||'<div class="note">Foraging only.</div>'}</div>`;
     }
+  }else if(t==='tech'){h+=techPage(id)
+  }else if(t==='league'){const Lg=s.leagues[id],mem=Lg.members.map(q=>s.pols[q]).filter(Boolean);
+    h+=`<div class="kind">League of cities</div><h2 class="name">The ${esc(Lg.name)}</h2><p class="sub2">${fy(Lg.born)}${Lg.end?' – '+fy(Lg.end):''}</p><dl class="kv" style="margin-top:10px"><dt>Members</dt><dd>${mem.length?mem.map(lp).join(', '):'none'}</dd></dl><h3 class="sec">Chronicle</h3>`+chronList(chronFor(x=>refHas(x,'league',id)))
   }else if(t==='pol'){
     const o=s.pols[id],R=o.ruler,c=o.capital,city=s.city[c]>=0?s.cities[s.city[c]]:null;
     h+=`<div class="kind">${o.alive?(o.kind==='horde'?'Nomad '+o.tier.toLowerCase():o.tier):'Fallen state'}${o.island?' · island realm':''}${o.conqDyn?' · conquest dynasty':''}</div><h2 class="name">${esc(o.alive?o.full:o.peak)}</h2>`;
@@ -2820,10 +3090,12 @@ function renderPage(){
       h+=`<div class="bars" style="margin-top:8px">${bar('Aggression',R.aggr,1,'t')}${bar('Competence',R.comp,1,'t')}${bar('Charisma',R.char,1,'t')}</div>`;
       const allies=o.allies.map(q=>s.pols[q]).filter(Boolean),en=[...o.enemies.keys()].map(q=>s.pols[q]).filter(Boolean),wars=[...new Set(o.enemies.values())].map(k=>s.wars[k]);
       const tribs=s.alive.map(k=>s.pols[k]).filter(p=>p.over===id);
-      h+=`<h3 class="sec">Realm</h3><dl class="kv"><dt>Provinces</dt><dd>${o.cells} (peak ${o.maxCells})</dd>${o.shape?`<dt>Extent at peak</dt><dd>${o.shape.ew.toLocaleString()} km east–west × ${o.shape.ns.toLocaleString()} km north–south</dd>`:''}${o.fortN?`<dt>Fortified provinces</dt><dd>${o.fortN}</dd>`:''}<dt>Population</dt><dd>${fmtN(o.pop)}</dd><dt>Capital</dt><dd>${city?esc(city.name):'–'}</dd><dt>Social complexity</dt><dd>${o.spc.toFixed(1)} / 10</dd>${o.cplx!=null&&o.kind==='state'?`<dt>Cost of government</dt><dd>${Math.round((o.burden||0)*100)}% of what it can tax${(o.burden||0)>1?' — more than it returns':''}</dd><dt>Treasury</dt><dd>${o.treas>0.5?'full':o.treas>0?'solvent':o.treas>-1?'in debt':'bankrupt'}</dd><dt>Inequality</dt><dd>${Math.round(o.ineq*100)} / 100</dd><dt>Farming</dt><dd>${(o.plN||0)>0.5*(o.cells-(o.wasteN||0))?'plough':'hoe'} agriculture</dd>${o.wasteN?`<dt>Claimed wasteland</dt><dd>${o.wasteN} provinces</dd>`:''}`:''}<dt>Era</dt><dd>${ERAS[eraOf(c)]}</dd><dt>Faith of the realm</dt><dd>${o.rel>=0?lr(s.rels[o.rel]):'folk religion'}</dd><dt>Core people</dt><dd>${s.eths[o.core]?le(s.eths[o.core]):'?'}</dd><dt>Land use</dt><dd>${(o.press*100).toFixed(0)}% of capacity</dd><dt>Asabiya</dt><dd>${o.S.toFixed(2)}</dd><dt>Elites vs positions</dt><dd>${(o.E/etOf(o)).toFixed(2)}×</dd><dt>Reach</dt><dd>${o.h.toFixed(1)} cells</dd><dt>Civil wars</dt><dd>${o.crises}</dd></dl>`;
+      h+=`<h3 class="sec">Realm</h3><dl class="kv"><dt>Provinces</dt><dd>${o.cells} (peak ${o.maxCells})</dd>${o.league!=null&&s.leagues[o.league]?`<dt>League</dt><dd>${L_('league',o.league,s.leagues[o.league].name)}</dd>`:''}${o.daughters?`<dt>Daughter cities</dt><dd>${o.daughters}</dd>`:''}${o.shape?`<dt>Extent at peak</dt><dd>${o.shape.ew.toLocaleString()} km east–west × ${o.shape.ns.toLocaleString()} km north–south</dd>`:''}${o.fortN?`<dt>Fortified provinces</dt><dd>${o.fortN}</dd>`:''}<dt>Population</dt><dd>${fmtN(o.pop)}</dd><dt>Capital</dt><dd>${city?esc(city.name):'–'}</dd><dt>Social complexity</dt><dd>${o.spc.toFixed(1)} / 10</dd>${o.cplx!=null&&o.kind==='state'?`<dt>Cost of government</dt><dd>${Math.round((o.burden||0)*100)}% of what it can tax${(o.burden||0)>1?' — more than it returns':''}</dd><dt>Treasury</dt><dd>${o.treas>0.5?'full':o.treas>0?'solvent':o.treas>-1?'in debt':'bankrupt'}</dd><dt>Inequality</dt><dd>${Math.round(o.ineq*100)} / 100</dd><dt>Farming</dt><dd>${(o.plN||0)>0.5*(o.cells-(o.wasteN||0))?'plough':'hoe'} agriculture</dd>${o.wasteN?`<dt>Claimed wasteland</dt><dd>${o.wasteN} provinces</dd>`:''}`:''}<dt>Era</dt><dd>${ERAS[eraOf(c)]}</dd><dt>Faith of the realm</dt><dd>${o.rel>=0?lr(s.rels[o.rel]):'folk religion'}</dd><dt>Core people</dt><dd>${s.eths[o.core]?le(s.eths[o.core]):'?'}</dd><dt>Land use</dt><dd>${(o.press*100).toFixed(0)}% of capacity</dd><dt>Asabiya</dt><dd>${o.S.toFixed(2)}</dd><dt>Elites vs positions</dt><dd>${(o.E/etOf(o)).toFixed(2)}×</dd><dt>Reach</dt><dd>${o.h.toFixed(1)} cells</dd><dt>Civil wars</dt><dd>${o.crises}</dd></dl>`;
       h+=`<h3 class="sec">Relations</h3><dl class="kv"><dt>Allies</dt><dd>${allies.length?allies.map(lp).join(', '):'none'}</dd><dt>At war with</dt><dd>${en.length?en.map(lp).join(', '):'no one'}</dd>${wars.length?`<dt>Wars</dt><dd>${wars.map(lw).join(', ')}</dd>`:''}${o.over&&s.pols[o.over]?`<dt>Pays tribute to</dt><dd>${lp(s.pols[o.over])}</dd>`:''}${tribs.length?`<dt>Tributaries</dt><dd>${tribs.map(lp).join(', ')}</dd>`:''}</dl>`;
+      if(o.kind==='state'&&((o.nob||0)>0.05||o.colN)){const rf=s.reforms.filter(x=>x.pol===o.id);
+        h+=`<h3 class="sec">Land and lords</h3><div class="bars">${bar('Hereditary nobility',o.nob||0,1)}</div><dl class="kv" style="margin-top:6px">${o.colN?`<dt>Soldier colonies</dt><dd>${o.colN} planted</dd>`:''}<dt>Revenue kept by lords</dt><dd>${Math.round(45*(o.nob||0))}%</dd>${rf.length?`<dt>Attempts to reclaim land</dt><dd>${rf.filter(x=>x.ok).length} of ${rf.length} succeeded</dd>`:''}</dl>`}
       if(o.why){const W2=o.why;
-        h+=`<h3 class="sec">Instability ${o.psi.toFixed(2)}</h3><div class="bars">${bar('Population pressure',W2.pP,2)}${bar('Elite overproduction',W2.pE,2)}${bar('Weak cohesion',W2.pS,2)}${bar('Overextension',W2.pX,2)}${bar('Ruler',W2.pR,2)}${bar('Cost of government',W2.pT||0,2)}${bar('Fiscal crisis',W2.pF||0,2)}${bar('Inequality',W2.pQ||0,2)}${bar('Recent shocks',W2.sh,2)}</div>`;
+        h+=`<h3 class="sec">Instability ${o.psi.toFixed(2)}</h3><div class="bars">${bar('Population pressure',W2.pP,2)}${bar('Elite overproduction',W2.pE,2)}${bar('Weak cohesion',W2.pS,2)}${bar('Overextension',W2.pX,2)}${bar('Ruler',W2.pR,2)}${bar('Cost of government',W2.pT||0,2)}${bar('Fiscal crisis',W2.pF||0,2)}${bar('Inequality',W2.pQ||0,2)}${W2.pB?bar('Overmighty lords',W2.pB,2):''}${bar('Recent shocks',W2.sh,2)}</div>`;
         const cs=topCauses(W2),risk=P.crisis*0.0035*o.psi*o.psi*100;
         h+=`<div class="verdict">${cs.length?`Main strains: ${esc(cs.join(' and '))}.`:'No major strains.'} Chance of civil war this year: ${risk<0.1?'under 0.1':risk.toFixed(1)}%.</div>`}
     }else{
@@ -2874,7 +3146,7 @@ function renderPage(){
     const M=s.migs[id],e=s.eths[M.eth];
     h+=`<div class="kind">${M.kind==='horde'?'Nomad migration':'Migration'}${M.done?'':' · on the move'}</div><h2 class="name">The ${esc(M.name)}</h2><p class="sub2">${fy(M.start)}${M.done?` – ${fy(M.end)}`:''} · ${le(e)}</p>`;
     h+=`<p style="margin:8px 0 0">${linkify(M.startTxt||'',[RM(M),RE(e)])}</p>`;
-    h+=`<dl class="kv" style="margin-top:10px"><dt>People</dt><dd>${fmtN(M.pop)}${M.done?'':' now'}</dd><dt>Distance</dt><dd>${M.path.length} provinces crossed</dd>${M.prev>=0?`<dt>Set in motion by</dt><dd>${lm_(s.migs[M.prev])}</dd>`:''}${M.broke.length?`<dt>Broke into</dt><dd>${M.broke.map(k=>s.pols[k]).filter(Boolean).map(lp).join(', ')}</dd>`:''}${M.done?`<dt>Outcome</dt><dd style="text-align:left;font-family:var(--f-ui)">${M.settledPol&&s.pols[M.settledPol]?`Founded the ${lp(s.pols[M.settledPol])}`:esc(cap(M.result))}</dd>`:''}</dl>`;
+    h+=`<dl class="kv" style="margin-top:10px"><dt>People</dt><dd>${fmtN(M.pop)}${M.done?'':' now'}</dd><dt>Distance</dt><dd>${M.path.length} provinces crossed</dd>${M.pockets&&M.pockets.length?`<dt>Left behind</dt><dd>${M.pockets.length} small settlement${M.pockets.length>1?'s':''} along the way</dd>`:''}${M.prev>=0?`<dt>Set in motion by</dt><dd>${lm_(s.migs[M.prev])}</dd>`:''}${M.broke.length?`<dt>Broke into</dt><dd>${M.broke.map(k=>s.pols[k]).filter(Boolean).map(lp).join(', ')}</dd>`:''}${M.done?`<dt>Outcome</dt><dd style="text-align:left;font-family:var(--f-ui)">${M.settledPol&&s.pols[M.settledPol]?`Founded the ${lp(s.pols[M.settledPol])}`:esc(cap(M.result))}</dd>`:''}</dl>`;
     const next=s.migs.filter(x=>x.prev===M.id);if(next.length)h+=`<h3 class="sec">Peoples it set moving</h3><p style="margin:0">${next.map(lm_).join(', ')}</p>`;
     h+=`<h3 class="sec">Route</h3><canvas class="mini" id="migmap" width="${W*2}" height="${H*2}"></canvas>`;
     h+=`<h3 class="sec">Chronicle</h3>`+chronList(chronFor(x=>refHas(x,'mig',id)));
@@ -2896,6 +3168,7 @@ function originText(o){const s=S,g=o.origin||{},from=g.from&&s.pols[g.from];
   switch(g.type){
     case'rebellion':return`Founded ${fy(o.born)} in a revolt against the ${from?lp(from):'old regime'}${g.why?' · '+esc(g.why.replace(/\.$/,'')):''}`;
     case'migration':{const M=s.migs[g.mig];return`Founded ${fy(o.born)} by the ${M?lm_(M):'migrants'}${from?` in the lands of the ${lp(from)}`:''}`}
+    case'colony':return`Founded ${fy(o.born)} by settlers from the ${from?lp(from):'mother city'}`;
     case'restoration':return`Founded ${fy(o.born)} as a restoration of the fallen ${from?lp(from):'empire'}`;
     default:{const e=s.eths[g.people!=null?g.people:o.core];return`${o.kind==='horde'?'Formed':'Founded'} ${fy(o.born)} ${o.kind==='horde'?'when the clans':'among the'} ${e?le(e):'people'}${o.kind==='horde'?' united':''}${g.settled?` · settled as rulers of farmland in ${fy(g.settled)}`:''}`}
   }}
@@ -2912,6 +3185,7 @@ function drawMigMap(id){
   const cv=$('migmap');if(!cv)return;const ctx=cv.getContext('2d'),M=S.migs[id];ctx.drawImage(baseCv,0,0,cv.width,cv.height);
   const sx=cv.width/W,sy=cv.height/H;ctx.strokeStyle='#ffc45a';ctx.lineWidth=2.5;ctx.beginPath();let px=null;
   for(const c of M.path){const x=(WD.cxA[c]+0.5)*sx,y=(WD.cyA[c]+0.5)*sy;if(px!==null&&Math.abs(x-px)<cv.width/2)ctx.lineTo(x,y);else ctx.moveTo(x,y);px=x}ctx.stroke();
+  if(M.pockets){ctx.fillStyle='#ffe6b0';ctx.strokeStyle='#7a5418';ctx.lineWidth=1;for(const c of M.pockets){ctx.beginPath();ctx.arc((WD.cxA[c]+0.5)*sx,(WD.cyA[c]+0.5)*sy,2.6,0,7);ctx.fill();ctx.stroke()}}
   const a=M.path[0],b=M.path[M.path.length-1];ctx.fillStyle='#fff';ctx.beginPath();ctx.arc((WD.cxA[a]+0.5)*sx,(WD.cyA[a]+0.5)*sy,4,0,7);ctx.fill();ctx.fillStyle='#ffc45a';ctx.beginPath();ctx.arc((WD.cxA[b]+0.5)*sx,(WD.cyA[b]+0.5)*sy,5,0,7);ctx.fill();
 }
 function drawPlagueMap(id){
@@ -3065,8 +3339,8 @@ function fmtP(k,v){if(k==='startYear')return fy(v);if(k==='landFrac')return Math
 
 /* ---------- tabs ---------- */
 function showPane(p){ui.pane=p;for(const b of document.querySelectorAll('.tabs button'))b.setAttribute('aria-selected',b.dataset.pane===p);
-  for(const k of ['chron','figs','plague','insp','clim','check','setup'])$('pane-'+k).hidden=k!==p;
-  if(p==='clim')renderClimate();
+  for(const k of ['chron','figs','plague','insp','clim','tech','check','setup'])$('pane-'+k).hidden=k!==p;
+  if(p==='clim')renderClimate();if(p==='tech')renderTech();
   if(p==='insp')renderPage();if(p==='chron')renderChron(true);if(p==='figs')renderFigs();if(p==='plague')renderPlagues();if(p==='check')renderChecks()}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)showPane(b.dataset.pane)});
 
@@ -3169,7 +3443,7 @@ function frame(t){
   if(ui.ringT&&performance.now()<ui.ringT)ui.dirty=true;
   if(ui.dirty&&S&&baseCv&&t-ui.lastRender>110){ui.lastRender=t;ui.dirty=false;buildComp();drawMap();updateTop()}
   if(S&&t-ui.lastSide>700){ui.lastSide=t;
-    if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='clim')renderClimate()}
+    if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='tech')renderTech();else if(ui.pane==='clim')renderClimate()}
     if(ui.mode==='knowledge'&&ui.running&&t%3000<700)drawLegend();
     drawChart()}
   requestAnimationFrame(frame);
@@ -3216,5 +3490,53 @@ function renderClimate(){const el=$('pane-clim'),s=S,w=WD;if(!s||!s.co2){el.inne
 }
 function perihelionWord(p){const months=['late March','late April','late May','late June','late July','late August','late September','late October','late November','late December','late January','late February'];return'Earth is closest to the sun in '+months[Math.floor(((p+15)%360)/30)]}
 $('pane-clim').addEventListener('click',e=>{const b=e.target.closest('button[data-mode]');if(!b)return;setMode(b.dataset.mode);renderClimate()});
+/* ===== Technology tab: the matrix of techniques ===== */
+const COL_RGB=[[150,110,70],[60,130,190],[120,180,200],[200,90,50],[80,160,80],[150,100,170],[110,110,120]];
+const COL_CSS=COL_RGB.map(c=>`rgb(${c})`);
+ui.tcell=null;
+// the column a province has pushed furthest beyond our own history (-1: none)
+function pathAt(i){const s=S;let best=-1,bv=0;const v=new Float32Array(NTC);
+  for(let k=TECH_BASE;k<TECH.length;k++)if(s.tk[k][i]>0.5)v[TECH[k].col]+=TECH[k].tier;
+  for(let c=0;c<NTC;c++)if(v[c]>bv){bv=v[c];best=c}return[best,bv]}
+function techFocusPol(){const s=S;if(ui.page&&ui.page.t==='pol'&&s.pols[ui.page.id]&&s.pols[ui.page.id].alive)return s.pols[ui.page.id];
+  let b=null;for(const id of s.alive){const o=s.pols[id];if(o.kind==='state'&&(!b||o.pop>b.pop))b=o}return b}
+function renderTech(){const el=$('pane-tech'),s=S;if(!s||!s.genByRow){el.innerHTML='';return}
+  const tp=worldPop()||1,share=k=>techShare(k)/tp,dv=divergence(),nGen=TECH.length-TECH_BASE;
+  let h=`<h3 class="sec">How far this world has left our path</h3><div class="bars">${bar('Divergence',dv,1,'t')}</div>`;
+  h+=`<p class="note" style="margin:6px 0 0">${nGen?`${nGen} might-have-been technique${nGen>1?'s':''} invented so far.`:'Every technique so far is one our own history also found.'} Pull of our history: ${pullNow().toFixed(2)}${WD.isEarth?'':' (capped on invented worlds)'}.</p>`;
+  if(s.ages.length)h+=`<dl class="kv" style="margin-top:8px">${s.ages.slice(-6).map(a=>`<dt>${fy(a.y)}</dt><dd>${lp(s.pols[a.pol])}: ${AGE_NAMES[a.col]}</dd>`).join('')}</dl>`;
+  // the grid: rows are what techniques are for, columns the phenomena they harness; four tier slots per cell
+  h+=`<h3 class="sec">The matrix</h3><div class="tgrid"><div></div>${TCOLS.map((c,j)=>`<div class="th" title="${esc(c[1])}"><i style="background:${COL_CSS[j]}"></i>${esc(c[2])}</div>`).join('')}`;
+  for(let r=0;r<NTR;r++){h+=`<div class="rh">${TROWS[r][1]}</div>`;
+    for(let c=0;c<NTC;c++){const slots=['','','',''];
+      for(let k=0;k<TECH.length;k++){const T=TECH[k];if(T.row!==r||T.col!==c)continue;const sh=s.firstTech[k]?Math.max(0.25,Math.min(1,share(k)*3)):0;
+        const cls=T.gen?'g':T.synth?'y':'r';if(!slots[T.tier-1]||sh)slots[T.tier-1]=`<b class="${cls}" style="opacity:${sh?sh.toFixed(2):0.18}"></b>`}
+      h+=`<button type="button" class="tc${ui.tcell===r*10+c?' on':''}" data-rc="${r*10+c}" aria-label="${TROWS[r][1]} by ${TCOLS[c][1]}">${slots.map(x=>x||'<b class="e"></b>').join('')}</button>`}}
+  h+=`</div><div class="tkey"><span><b class="r"></b>our history</span><span><b class="y"></b>could have been</span><span><b class="g"></b>invented here</span><span>each square holds tiers 1–4 · fainter: fewer people know it</span></div>`;
+  if(ui.tcell!=null){const r=Math.floor(ui.tcell/10),c=ui.tcell%10,list=TECH.map((T,k)=>[T,k]).filter(([T])=>T.row===r&&T.col===c).sort((a,b)=>a[0].tier-b[0].tier);
+    h+=`<h3 class="sec">${TROWS[r][1]} · ${TCOLS[c][1]}</h3>`;
+    h+=list.length?`<dl class="kv">${list.map(([T,k])=>`<dt>Tier ${T.tier}</dt><dd>${L_('tech',k,(T.synth?'✦ ':'')+T.n)}${T.generic?`<br><small>${esc(T.generic)}</small>`:''}<br><small>${s.firstTech[k]?fy(s.firstTech[k].y)+' · '+Math.round(share(k)*100)+'% of people':'not yet found'}</small></dd>`).join('')}</dl>`:`<p class="note">Nothing here yet. Someone who masters ${TROWS[r][1].toLowerCase()} and ${TCOLS[c][1].toLowerCase()} could find a technique in this cell: ${esc(TGEN[r][c])}.</p>`}
+  // the compass of one state: what its land offers, what its people carry, what its situation demands
+  const o=techFocusPol();
+  if(o&&o.aff){const e=s.eths[o.core];
+    h+=`<h3 class="sec">Where ${lp(o)} is heading</h3><p class="note" style="margin:0 0 6px">${ui.page&&ui.page.t==='pol'?'':'The largest state; open any state to see its own. '}Inventions come where land, tradition and need overlap.</p>`;
+    h+=`<div class="tcomp"><div><div class="tl">Land and resources</div>${TCOLS.map((c,j)=>cbar(c[2],o.aff[j],COL_CSS[j])).join('')}</div><div><div class="tl">Traditions${e?' of the '+esc(e.name):''}</div>${TCOLS.map((c,j)=>cbar(c[2],e&&e.trad?e.trad[j]:0,COL_CSS[j])).join('')}</div></div>`;
+    if(o.lean){const mx=Math.max(...o.lean);h+=`<div class="tl" style="margin-top:8px">What its situation pushes it toward</div><div class="bars">${TROWS.map((r,j)=>bar(r[1],o.lean[j],mx,'t')).join('')}</div>`}}
+  h+=`<h3 class="sec">Map</h3><div class="kchips"><button type="button" data-mode="path" aria-pressed="${ui.mode==='path'}">Paths of invention</button><button type="button" data-mode="knowledge" aria-pressed="${ui.mode==='knowledge'}">Knowledge</button></div>`;
+  h+=`<details class="more2"><summary>How invention works</summary><p>Every technique sits in a grid: what it is for, and what part of nature it puts to work. A new technique combines what a society already does well in its row and its column; W. Brian Arthur calls this combinatorial evolution. Where it happens depends on the land and its resources, the traditions a people carries and passes on through migration and mixing, and what a state needs; how fast it happens depends on how many people and how much wealth are involved.</p><p>Techniques from our own history keep their own rules. The other cells hold techniques our history could have found but did not; they appear only when a society invents one, named in its own language with a plain description underneath. The pull of our history sets how often that happens. A state that takes one phenomenon far beyond our own past enters an alternate age.</p></details>`;
+  el.innerHTML=h}
+function cbar(l,v,col){return`<div class="cb"><span>${esc(l)}</span><i><u style="width:${Math.round(clamp(v,0,1)*100)}%;background:${col}"></u></i></div>`}
+$('pane-tech').addEventListener('click',e=>{const b=e.target.closest('button[data-rc]');if(b){const v=+b.dataset.rc;ui.tcell=ui.tcell===v?null:v;renderTech();return}
+  const m=e.target.closest('button[data-mode]');if(m){setMode(m.dataset.mode);renderTech()}});
+function techPage(k){const s=S,T=TECH[k],f=s.firstTech[k],tp=worldPop()||1;
+  let h=`<div class="kind">${T.gen?'Might-have-been technique':T.synth?'Possible technique':'Technique'}</div><h2 class="name">${esc((T.synth?'✦ ':'')+T.n)}</h2>${T.generic?`<p class="sub2">${esc(cap(T.generic))}</p>`:''}`;
+  h+=`<dl class="kv" style="margin-top:10px"><dt>Purpose</dt><dd>${T.row!=null?TROWS[T.row][1]:'–'}</dd><dt>Harnesses</dt><dd>${T.col!=null?TCOLS[T.col][1]:'–'}</dd><dt>Tier</dt><dd>${T.tier||'–'}</dd>`;
+  h+=`<dt>First</dt><dd>${f?fy(f.y)+(f.pol&&s.pols[f.pol]?', '+lp(s.pols[f.pol]):''):'not yet found'}</dd><dt>Known by</dt><dd>${Math.round(techShare(k)/tp*100)}% of people</dd></dl>`;
+  h+=`<p style="margin:10px 0 0">${esc(T.d||'')}</p>`;
+  let par=[];if(T.pre&&T.pre.length)par=T.pre.map(q=>[TECH[q],q]);
+  else if(T.row!=null)par=TECH.map((P_,q)=>[P_,q]).filter(([P_,q])=>q!==k&&P_.tier===T.tier-1&&(P_.row===T.row||P_.col===T.col)&&s.firstTech[q]).slice(0,6);
+  if(par.length)h+=`<h3 class="sec">Built on</h3><p style="margin:0">${par.map(([P_,q])=>L_('tech',q,P_.n)).join(', ')}</p>`;
+  const kids=TECH.map((C,q)=>[C,q]).filter(([C])=>C.pre&&C.pre.includes(k));if(kids.length)h+=`<h3 class="sec">Leads to</h3><p style="margin:0">${kids.map(([C,q])=>L_('tech',q,C.n)).join(', ')}</p>`;
+  return h}
 
 </script>
