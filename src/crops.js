@@ -71,7 +71,7 @@ function cropsInit(){
   if(!w.sF0){w.sF0=Float32Array.from(w.sF);w.sH0=Float32Array.from(w.sH);w.leach0=Float32Array.from(w.leach);w.trop0=Float32Array.from(w.trop)}
   else{w.sF.set(w.sF0);w.sH.set(w.sH0);w.leach.set(w.leach0);w.trop.set(w.trop0);w.exQ=null}
   if(w.malAm)for(const i of w.landIdx)if(w.malAm[i]>0)w.mal[i]=0;s.malAm=false;
-  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99),open:new Float32Array(N).fill(1),sur:new Float32Array(N).fill(0.25),pkGrow:new Uint16Array(N),malF:new Float32Array(N).fill(1),fclr:new Float32Array(N)});
+  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99),open:new Float32Array(N).fill(1),pkGrow:new Uint16Array(N),malF:new Float32Array(N).fill(1),fclr:new Float32Array(N)});
   for(const i of w.landIdx)s.open[i]=1-w.turf[i];
   if(!w.alat){w.alat=new Float32Array(N);for(const i of w.landIdx)w.alat[i]=Math.abs(w.lat[i]*180/Math.PI)}
 }
