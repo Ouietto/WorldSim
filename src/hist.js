@@ -348,13 +348,15 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         if(INST[f]&&dark&&m<0.5)t*=pi?0.994:0.985;
       }else if(INST[f]&&dark){// saturated cell: only decays if no neighbour still knows it
         let m=0;if(nj0>=0)m=Math.max(m,T[f][nj0]);if(nj1>=0)m=Math.max(m,T[f][nj1]);if(nj2>=0)m=Math.max(m,T[f][nj2]);if(nj3>=0)m=Math.max(m,T[f][nj3]);if(m<0.5)t*=pi?0.994:0.985}
-      // farming is practised by everyone: a well-peopled province that has it refines it over generations,
-      // instead of staying at the level of the thin chain of neighbours that brought it
-      if(f===0&&t>0.3&&t<0.995&&!lowC)t+=0.004*(0.2+w.sF[i])*(1-t)
+      // farming and herding are practised by everyone: a well-peopled province that has them refines them over generations,
+      // instead of staying at the level of the thin chain of neighbours that brought them
+      if(f<=1&&t>0.3&&t<0.995&&!lowC)t+=0.004*(0.2+suit[f][i])*(1-t)
       if(lowC&&t>0)t*=1-loss*(f===0?0.3:1);
       A[i]=t;
     }
-    if(!s_firstTech[2]||s_irrig[i]<0.5){if(s_farm[i]>0.8&&w_rv[i]>0.25&&w_Pr[i]<1000&&s_pop[i]/w_area[i]>4&&r()<0.0008*P.invent){seedTech(s.irrig,i,1,1);firstTech(2,i,po)}}
+    // irrigation: farmers on a river invent it where they must; in a desert valley even a thin population needs canals
+    // (Samarra and Choga Mami, about 6000 BCE), in wetter lands only crowding drives it
+    if(!s_firstTech[2]||s_irrig[i]<0.5){if(s_farm[i]>0.8&&w_rv[i]>0.25&&w_Pr[i]<1000&&s_pop[i]/w_area[i]>4*clamp(w_Pr[i]/600,0.2,1)&&r()<0.0008*P.invent){seedTech(s.irrig,i,1,1);firstTech(2,i,po)}}
     const ri=s_rel[i];
     if(ri>=0){const R=rels[ri];
       let j=w_nb[i*4+((r()*4)|0)];
