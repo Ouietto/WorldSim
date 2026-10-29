@@ -168,7 +168,8 @@ function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
 // house). Peers with their own walls, scribes and gods break away at the first chance (Renfrew & Cherry 1986; Weber; Innis 1950).
 // Empire is not a technique: it is a state that has gathered enough of these to rule other cities directly.
 function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.min(1,info.rec);
-  const force=clamp(0.35*rec+0.35*s.admin[c]+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
+  // savanna kingdoms held by horsemen rather than scribes (Goody 1971)
+  const force=clamp(0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
   const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c],0,1);
   const R=o.rel>=0?s.rels[o.rel]:null,sacred=R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0;
   o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.5*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
