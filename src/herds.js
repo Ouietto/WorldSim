@@ -13,7 +13,7 @@ function landUseInit(){const s=S,w=WD;
   for(const e of s.eths)if(e.past==null)e.past=0.5;
 }
 // a people's herding tradition, inherited and blended like its culture
-function inheritPast(e,p,p2){e.past=p?clamp((p2?(p.past+p2.past)/2:p.past)+gauss(S.r)*0.04,0,1):0.5}
+function inheritPast(e,p,p2){e.past=p?clamp((p2?(p.past+p2.past)/2:p.past)+gauss(S.r)*0.04,0,1):0.5;e.pastSet=p?p.pastSet||0:0}
 // every ten years
 function landUsePass(){
   const s=S,w=WD,L=w.landIdx,past=s.past,pol=s.pol,pols=s.pols,eths=s.eths,y=s.year;
@@ -31,7 +31,8 @@ function landUsePass(){
     w.nomad[i]=past[i]>0.55&&(w.sH[i]>0.12||w.desert[i])?1:0;
     if(e){sum[e.id]+=p*past[i];wt[e.id]+=p}}
   // traditions drift, slowly, toward how a people actually lives
-  for(const e of eths){if(!wt[e.id])continue;e.past+=0.02*(sum[e.id]/wt[e.id]-e.past)}
+  // (a people's first generation of farmers or herders sets the tradition outright; after that it moves over centuries)
+  for(const e of eths){if(!wt[e.id])continue;const m=sum[e.id]/wt[e.id];if(!e.pastSet){e.pastSet=1;e.past=m}else e.past+=0.03*(m-e.past)}
 }
 // ---------- the ruling coalition: steppe lords versus landlords, merchants and officials ----------
 function elitePass(o){
@@ -166,7 +167,7 @@ function coalitionPass(){
         if(o.cells>=30)chron('war',`The ${t.full} submit to the ${o.full}, whose victories draw the clans of the steppe.`,o.capital,[R_(o),R_(t)])}}
     // a coalition driven off its pastures takes its herds and tactics elsewhere
     const lost=(o.c10||o.cells)-o.cells;
-    if(o.c10&&lost>0.35*o.c10&&o.cells>=5&&o.pop>30000&&o.lastBy&&pols[o.lastBy]&&s.activeMigs.length<12&&r()<0.5){
+    if(!ABL.includes('push')&&o.c10&&lost>0.35*o.c10&&o.cells>=5&&o.pop>30000&&o.lastBy&&pols[o.lastBy]&&s.activeMigs.length<12&&r()<0.5){
       const by=pols[o.lastBy],cells=polCells(id);let tot=0;for(const c of cells){const take=s.pop[c]*0.6;s.pop[c]-=take;tot+=take}
       const dx=-dxWrap(o.capital,by.capital),dy=-(WD.cyA[by.capital]-WD.cyA[o.capital]);o.shock+=0.3;
       startMigration({eth:o.core,pop:tot,cell:o.capital,dx,dy,kind:'horde',pol:o,by,cause:'pushed'});

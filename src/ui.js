@@ -8,7 +8,7 @@ const MODES=[['political','States'],['alliances','Alliances'],['peoples','People
 const SPEEDS=[[5,'5'],[25,'25'],[100,'100'],[400,'400'],[1e9,'Max']];
 const ERA_COL=[[120,128,130],[118,150,86],[196,140,64],[150,96,72],[178,74,58],[122,84,150],[64,96,150],[40,130,140]];
 const GROUP_COL=[[40,140,70],[222,190,120],[206,170,90],[110,170,110],[90,120,170],[200,215,225]];
-const ui={running:false,speed:2,mode:'political',page:null,stack:[],z:1,ox:0,oy:0,bs:1,filters:new Set(Object.keys(TYPES)),q:'',lastChronKey:'',dirty:true,lastRender:0,lastSide:0,pausedAtEnd:false,pane:'chron',know:new Set(),figFilter:'all',fq:'',plagueSort:'deaths',climView:'mismatch',src:'earth',ready:false,lastSpot:0,toastT:0,ringCell:-1,ringT:0,follow:false};
+const ui={running:false,speed:2,mode:'political',page:null,stack:[],z:1,ox:0,oy:0,bs:1,filters:new Set(Object.keys(TYPES)),q:'',lastChronKey:'',dirty:true,lastRender:0,lastSide:0,pausedAtEnd:false,pane:'chron',know:new Set(),figFilter:'all',fq:'',plagueSort:'deaths',climView:'mismatch',src:'earth',ready:false,lastSpot:0,toastT:0,ringCell:-1,ringT:0,follow:false,cities:(()=>{try{return localStorage.getItem('asabiya.cities')||'all'}catch(e){return'all'}})()};
 let EARTH=null,IMPORTED=null,baseCv=null,compCv=document.createElement('canvas'),ovCv=document.createElement('canvas');
 compCv.width=HW;compCv.height=HH;ovCv.width=W;ovCv.height=H;
 const ovCtx=ovCv.getContext('2d'),ovImg=ovCtx.createImageData(W,H),compCtx=compCv.getContext('2d');
@@ -228,9 +228,12 @@ function drawMap(){
   if(ui.ringCell>=0&&performance.now()<ui.ringT){const [mx,my]=cellXY(ui.ringCell),ph=(ui.ringT-performance.now())/4000;
     each(mx,my,(sx,sy)=>{ctx.strokeStyle=`rgba(255,240,200,${0.4+0.6*ph})`;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(sx,sy,10+18*(1-ph)*((performance.now()/600)%1+0.2),0,7);ctx.stroke()})}
   // cities
-  if((m==='political'||m==='alliances'||m==='peoples'||m==='religion')&&ui.z>=1.4){
+  const cm=ui.cities;
+  if(cm!=='none'&&(m==='political'||m==='alliances'||m==='peoples'||m==='religion')&&ui.z>=(cm==='caps'||cm==='holy'?1.1:1.4)){
     ctx.font=`11px ${cssVar('--f-ui')}`;ctx.textAlign='left';ctx.textBaseline='middle';
-    for(const c of s.cities){const p=s.pop[c.cell];if(p<60000)continue;const isCap=s.pol[c.cell]&&s.pols[s.pol[c.cell]].capital===c.cell;
+    const holy=cm==='holy'?new Set(s.rels.filter(R=>R.alive&&R.holy!=null&&R.holy>=0).map(R=>R.holy)):null;
+    for(const c of s.cities){const p=s.pop[c.cell];const isCap=s.pol[c.cell]&&s.pols[s.pol[c.cell]].capital===c.cell;
+      if(cm==='caps'||cm==='holy'?!(isCap||(holy&&holy.has(c.cell))):cm==='big'?!(isCap||p>=250000):!(isCap||p>=60000))continue;
       const [mx,my]=cellXY(c.cell);
       each(mx,my,(sx,sy)=>{ctx.fillStyle='#14202a';ctx.strokeStyle='#f5f3ec';ctx.lineWidth=1.5;
         if(isCap){ctx.fillRect(sx-3,sy-3,6,6);ctx.strokeRect(sx-3,sy-3,6,6)}else{ctx.beginPath();ctx.arc(sx,sy,2.5,0,7);ctx.fill();ctx.stroke()}
@@ -687,14 +690,16 @@ $('speed').innerHTML=SPEEDS.map(([v,l],k)=>`<button type="button" data-k="${k}" 
 $('speed').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.speed=+b.dataset.k;for(const x of $('speed').children)x.setAttribute('aria-pressed',x===b)});
 function setRunning(on){ui.running=on&&ui.ready;$('play').textContent=ui.running?'Pause':'Play'}
 $('play').addEventListener('click',()=>setRunning(!ui.running));
+const CITY_SHOW=[['all','All cities'],['big','Capitals and large cities'],['caps','Capitals only'],['holy','Capitals and holy cities'],['none','None']];
 // map views: a few quick buttons and every layer in one grouped menu
 const QUICK=['political','peoples','religion','veg'];
 const MODE_GROUPS=[['Politics',['political','alliances','lords','unity','loyalty','inequality','circ']],['Peoples and ideas',['peoples','mixing','religion','knowledge','path','era']],['People and land',['density','capacity','crops','landuse','herds','asabiya','disease','soil','soiltype','forest','niche','terrain']],['Climate',['ctemp','crain','cwind','veg','cchange','weather','climate']]];
 const MODE_NAME=Object.fromEntries(MODES);MODE_NAME.veg='Biomes';
-$('modes').innerHTML=QUICK.map(k=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${MODE_NAME[k]}</button>`).join('')+`<label class="msel"><span>Map</span><select id="modesel" aria-label="Map view">${MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.filter(k=>MODE_NAME[k]).map(k=>`<option value="${k}"${k===ui.mode?' selected':''}>${MODE_NAME[k]}</option>`).join('')}</optgroup>`).join('')}</select></label>`;
+$('modes').innerHTML=QUICK.map(k=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${MODE_NAME[k]}</button>`).join('')+`<label class="msel"><span>Map</span><select id="modesel" aria-label="Map view">${MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.filter(k=>MODE_NAME[k]).map(k=>`<option value="${k}"${k===ui.mode?' selected':''}>${MODE_NAME[k]}</option>`).join('')}</optgroup>`).join('')}</select></label><label class="msel"><span>Cities</span><select id="citysel" aria-label="Which cities to show">${CITY_SHOW.map(([k,l])=>`<option value="${k}"${k===ui.cities?' selected':''}>${l}</option>`).join('')}</select></label>`;
 function setMode(m){ui.mode=m;for(const x of $('modes').querySelectorAll('button'))x.setAttribute('aria-pressed',x.dataset.m===m);const sel=$('modesel');if(sel&&sel.value!==m)sel.value=m;drawLegend();ui.dirty=true}
 $('modes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setMode(b.dataset.m)});
 $('modesel').addEventListener('change',e=>setMode(e.target.value));
+$('citysel').addEventListener('change',e=>{ui.cities=e.target.value;try{localStorage.setItem('asabiya.cities',ui.cities)}catch(_){}ui.dirty=true});
 $('topstats').addEventListener('click',e=>{if(!e.target.closest('#biglink')||!S)return;let b=null;for(const id of S.alive){const o=S.pols[id];if(!b||o.cells>b.cells)b=o}if(b){openPage('pol',b.id);centerOn(b.capital)}});
 document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea'))return;if(e.code==='Space'){e.preventDefault();setRunning(!ui.running)}});
 let drag=null;const touches=new Map();let pinch=null;
@@ -749,7 +754,7 @@ function buildWorld(src){
     }catch(err){console.error(err);busy(true,'World generation failed: '+err.message)}
   },30);
 }
-$('src').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;if(v==='import'&&!IMPORTED){$('imp-status').className='status err';$('imp-status').textContent='Choose a heightmap below and build it first.';return}buildWorld(v)});
+$('src').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;if(v==='import'&&!IMPORTED){$('imp-status').className='status err';$('imp-status').textContent='Choose a heightmap below and build it first.';$('f-height').scrollIntoView({block:'center',behavior:'smooth'});return}buildWorld(v)});
 $('btn-world').addEventListener('click',()=>buildWorld(ui.src));
 $('btn-rerun').addEventListener('click',()=>{setRunning(false);startHistory()});
 $('btn-reroll').addEventListener('click',()=>{$('hseed').value=String(Math.floor(Math.random()*1e6));setRunning(false);startHistory()});

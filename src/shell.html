@@ -257,7 +257,6 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         </div>
         <div class="field"><label for="share-link">Share this history</label><div class="search" style="margin:0"><input type="text" id="share-link" readonly placeholder="Press Copy link"><button class="btn" id="btn-share" type="button">Copy link</button></div><div class="status" id="share-status"></div></div>
         <p class="note">Each visit starts a new random history. The same world, history seed and rules always give the same history. Change only the history seed to see which outcomes are structural and which were luck.</p>
-        <div id="rules"></div>
         <h3 class="sec">Import a world</h3>
         <p class="note">A greyscale equirectangular heightmap, such as a Draggable World export. Set the elevation that pure black and pure white stand for. Draggable World's WCL export uses −11,000 and +9,000 m with sea level at mid-grey.</p>
         <div class="field"><label for="f-height">Heightmap image</label><input type="file" id="f-height" accept="image/*"></div>
@@ -278,6 +277,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         </div>
         <div class="actions"><button class="btn" id="btn-import" type="button">Build world from images</button></div>
         <div class="status" id="imp-status"></div>
+        <div id="rules"></div>
         <p class="note">Earth elevation: ETOPO 2022 via Draggable World. Climate zones: Beck et al. (2018) Köppen-Geiger map, CC BY 4.0.</p>
       </div>
     </aside>
