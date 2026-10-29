@@ -4,6 +4,13 @@
 // Years are engine years: 1 CE is 1 and 1 BCE is 0, so B(n) is the year n BCE.
 const B=n=>1-n;
 module.exports=[
+  // farming arrival (half the peopled provinces in a box farm) and forager holdouts (Zvelebil; Rowley-Conwy 2011; Crema et al. 2016)
+  {k:'f_cEur',  g:'Farming frontier',n:'Central Europe (LBK)',kind:'year',real:B(5400),lo:B(5800),hi:B(4900)},
+  {k:'f_brit',  g:'Farming frontier',n:'Britain',             kind:'year',real:B(4000),lo:B(4400),hi:B(3500)},
+  {k:'f_scand', g:'Farming frontier',n:'Southern Scandinavia',kind:'year',real:B(3950),lo:B(4300),hi:B(3400)},
+  {k:'f_japan', g:'Farming frontier',n:'Western Japan (Yayoi)',kind:'year',real:B(900),lo:B(1200),hi:B(300)},
+  {k:'fs_pnw',  g:'Farming frontier',n:'Pacific Northwest farmed at 1500',kind:'share',real:0,lo:0,hi:0.1},
+  {k:'fs_cape', g:'Farming frontier',n:'Western Cape farmed at 1500',kind:'share',real:0,lo:0,hi:0.1},
   // first state, league or overlord's bloc holding 30% of a region's people (the engine's region check)
   {k:'r_meso',   g:'First states',  n:'Mesopotamia',  kind:'year',real:B(2600),lo:B(3200),hi:B(2000)},
   {k:'r_egypt',  g:'First states',  n:'Egypt',        kind:'year',real:B(3100),lo:B(3400),hi:B(2700)},

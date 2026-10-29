@@ -30,7 +30,7 @@ async function runAll(jobs){let next=0,done=0;const t0=Date.now();
     done++;process.stderr.write(`\r  ${done}/${jobs.length} runs done (${((Date.now()-t0)/60000).toFixed(1)} min)   `)}}));
   process.stderr.write('\n');return jobs.map(j=>JSON.parse(fs.readFileSync(j.cache,'utf8')))}
 
-const NEVER=1e9,applies=t=>!(t.at!=null&&t.at>END)&&!(t.kind==='year'&&t.hi>END)&&!(t.k.startsWith('s_')&&END<1500)&&!(['cUnity','medMax','ewShare'].includes(t.k)&&END<1),
+const NEVER=1e9,applies=t=>!(t.at!=null&&t.at>END)&&!(t.kind==='year'&&t.hi>END)&&!((t.k.startsWith('s_')||t.k.startsWith('fs_'))&&END<1500)&&!(['cUnity','medMax','ewShare'].includes(t.k)&&END<1),
   val=(r,t)=>{const v=r[t.k];return v==null?(t.kind==='year'?NEVER:null):v},inBand=(v,t)=>v!=null&&v!==NEVER&&v>=t.lo&&v<=t.hi,
   median=a=>{const s=a.filter(v=>v!=null).sort((x,y)=>x-y);if(!s.length)return null;const m=s.length>>1;return s.length%2?s[m]:(s[m-1]===NEVER||s[m]===NEVER?Math.max(s[m-1],s[m]):(s[m-1]+s[m])/2)},
   q=(a,p)=>{const s=a.filter(v=>v!=null).sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p*(s.length-1)+0.5))]:null},

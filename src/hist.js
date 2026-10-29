@@ -134,7 +134,7 @@ function newHistory(hseed){
     firstTech:new Array(TECH.length).fill(null),lmFound:new Uint8Array(w.lmCount),regionFirst:{},medBest:{share:0,y:null,pol:0},chinaHist:[],medHist:[],farmCheck:null};
   const s=S;
   s.farm=tk[0];s.herd=tk[1];s.irrig=tk[2];s.metal=tk[3];s.horse=tk[4];s.sail=tk[5];s.admin=tk[6];s.wheel=tk[7];s.iron=tk[8];s.coin=tk[9];s.law=tk[10];s.roads=tk[11];s.nav=tk[12];s.caval=tk[13];s.paper=tk[14];s.crops=tk[15];s.gun=tk[16];s.ocean=tk[17];s.camel=tk[18];s.grain=tk[19];s.ard=tk[20];s.plough=tk[21];s.manure=tk[22];s.xcrops=tk[23];s.integ=new Float32Array(N);s.uni=new Float32Array(N);s.uniFam=new Int32Array(N).fill(-1);
-  prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
+  prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),Kpot:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
   for(const i of w.landIdx)s.adapt[i]=w.mal[i]*0.5;
   s.orb0=w.isEarth?null:(r()*23000);
   cropsInit();landUseInit();herdInit();climInit();techMatrixInit();societyInit();
@@ -227,7 +227,7 @@ function computeK(){
     const irr=s_irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const T_=s.tk,hv=w_heavy[i],lc=w_leach[i];
-    let Kfa=ar*4.2*s_sFc[i]*s_farm[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*s_tk[TI.terrace][i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*T_[26][i]*Math.max(lc,s_forest[i])+0.15*T_[28][i]*w_coast[i])*(1+rv*(0.25+2.2*s_irrig[i]));
+    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*s_tk[TI.terrace][i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*T_[26][i]*Math.max(lc,s_forest[i])+0.15*T_[28][i]*w_coast[i])*(1+rv*(0.25+2.2*s_irrig[i]));
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
     if(w_turf[i]>0){const op=s_open[i],f1=0.04+0.08*s_iron[i]+0.6*s_plough[i];Kfa*=op+(1-op)*f1}
@@ -236,6 +236,8 @@ function computeK(){
     if(w_T[i]<12)Kfa*=clamp(1+0.18*dT,0.4,1.35);
     // heavy, wet temperate forest soils: hard to clear and work until iron axes and ploughs
     if(hv>0)Kfa*=1-0.7*hv*(1-Math.max(s_plough[i],0.4*s_iron[i]));
+    // what full farming would feed here, against what the wild already feeds: the farmers' edge is numbers (Bocquet-Appel 2011)
+    s.Kpot[i]=Kfa;Kfa*=s_farm[i];
     s_Kfa[i]=Kfa;s_Kh[i]=Kh;s_Kf[i]=Kf;const ps=s_past[i];
     // the province's mix of fields and pasture, set by what pays, who lives there, raids and rulers (see herds.js)
     s_K[i]=Math.max(1,Kf,(1-ps)*(Kfa+0.3*Kh+0.2*Kf)+ps*(Kh+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*s_tk[29][i]));
@@ -284,7 +286,10 @@ function migrate(){
     const mv=Math.min(p*mob*diff/(1+diff),p*0.3);
     s_pop[i]-=mv;s_pop[j]+=mv;
     if(pj<1||s_eth[j]<0){s_eth[j]=s_eth[i];s_eth2[j]=-1;s_rel[j]=s_rel[i];s_s[j]=s_s[i];s_adapt[j]=s_adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9)}
-    else if(s_eth[j]!==s_eth[i]){mixIn(j,s_eth[i],mv/(pj+mv)*0.6);if(s_eth2[j]===s_eth[i]&&s_mix[j]>0.5){const a=s_eth[j];s_eth[j]=s_eth2[j];s_eth2[j]=a;s_mix[j]=1-s_mix[j]}for(const f of T)f[j]=Math.max(f[j],f[i]*0.8)}
+    else if(s_eth[j]!==s_eth[i]){const sh=mv/(pj+mv);mixIn(j,s_eth[i],sh*0.6);if(s_eth2[j]===s_eth[i]&&s_mix[j]>0.5){const a=s_eth[j];s_eth[j]=s_eth2[j];s_eth2[j]=a;s_mix[j]=1-s_mix[j]}
+      // newcomers bring their ways in proportion to their numbers: a few farming families among foragers make a farming
+      // fringe, not a farming people (the availability phase, Zvelebil 1986)
+      for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}
   }
 }
 function virginSoil(tgt,src){
@@ -366,6 +371,10 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         if(nj3>=0&&(v=A[nj3])>m){m=v;same=pi&&pol[nj3]===pi;mc=ct3*clT}
         for(let q=ls0;q<ls1;q++){const j=w_lt[q];if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=0.7}}
         if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
+          // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
+          // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
+          // farm still passes the knowledge along
+          if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(s.Kf[i]+1);k*=clamp((adv-1)/6,0.02,1)}
           const cr=CARRY[f];if(cr){const nd=cr===1?Math.max(adm,0.6*mer):cr===2?Math.max(mer,0.5*adm):cr===3?adm:Math.max(adm,mer);k*=0.03+0.97*nd*(1+(same?0:prs))}
           const t0=t;t+=k*(m-t);
           // a fast change unsettles the old order: new scribes and clerks against the warrior nobility, felt as lost cohesion
