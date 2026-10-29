@@ -348,6 +348,9 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         if(INST[f]&&dark&&m<0.5)t*=pi?0.994:0.985;
       }else if(INST[f]&&dark){// saturated cell: only decays if no neighbour still knows it
         let m=0;if(nj0>=0)m=Math.max(m,T[f][nj0]);if(nj1>=0)m=Math.max(m,T[f][nj1]);if(nj2>=0)m=Math.max(m,T[f][nj2]);if(nj3>=0)m=Math.max(m,T[f][nj3]);if(m<0.5)t*=pi?0.994:0.985}
+      // farming and herding are practised by everyone: a well-peopled province that has them refines them itself,
+      // instead of staying at the level of the thin chain of neighbours that brought them
+      if(f<=1&&t>0.3&&t<0.995&&!lowC){const sf=suit[f];t+=0.02*(sf?0.2+sf[i]:1)*(1-t)}
       if(lowC&&t>0)t*=1-loss*(f===0?0.3:1);
       A[i]=t;
     }
@@ -1381,6 +1384,11 @@ function landAlbedo(){
     const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<f0)al+=(0.31-al)*(1-s.forest[i]/f0)*(al<0.31?1:0);a[j]+=al;n[j]++}
   for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:CLM.albL;return a;
 }
+// coarse rain-recycling factor from vegetation: deserts return little of their rain to the air, forests much.
+// Not used yet: the model's African rain belt shifts north instead of widening, so the feedback amplifies Sahel drying.
+function landRecyc(){const s=S,w=WD,a=new Float32Array(CN),n=new Float32Array(CN);
+  for(const i of w.landIdx){const cx=Math.floor(w.cxA[i]/2),cy=Math.floor(w.cyA[i]/2),j=cy*CW+cx;const b=VEG[s.veg[i]];a[j]+=b&&b[5]!=null?b[5]:1;n[j]++}
+  for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:1;return a}
 function climUpdate(){drain(climUpdateG())}
 function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.env.NOCLIM){S.climY=S.year;S.climCo2=S.co2;return}
   const s=S,w=WD,R0=w.climRef||w.clim;if(!R0)return;

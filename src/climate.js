@@ -177,7 +177,7 @@ function climMoist(g,Tm,opt){return drain(climMoistG(g,Tm,opt))}
 function* climMoistG(g,Tm,opt){
   const P=Object.assign({},CLM,opt&&opt.par||{}),SUB=30;   // substeps per month (days)
   const Pm=new Float32Array(12*CN),Wv=new Float32Array(CN),W2=new Float32Array(CN),Wind=[],Wmon=[];
-  const elev=g.elev,land=g.land,cold=g.cold,cosl=g.cosl,pLapse=P.lapse,pRh=P.rh,pCv=P.pCv,pRhMin=P.rhMin,pCold=P.pCold,pRecyc=P.recyc;
+  const elev=g.elev,land=g.land,cold=g.cold,cosl=g.cosl,pLapse=P.lapse,pRh=P.rh,pCv=P.pCv,pRhMin=P.rhMin,pCold=P.pCold,pRecyc=P.recyc,vr=opt&&opt.recyc;
   // a warm start from an earlier run (opt.state) lets a single pass suffice when the climate changes gradually
   const st=opt&&opt.state,NP=st?1:2;
   if(st){Wv.set(st.Wv);for(let m=0;m<12;m++)Wmon[m]=st.Wmon[m]}else for(let i=0;i<CN;i++)Wv[i]=wsat(Tm[i])*P.rh;
@@ -204,7 +204,8 @@ function* climMoistG(g,Tm,opt){
         const conv=pCv/100*clamp((t-18)/8,0,1.5)*clamp(w/sat-0.55,0,1)*2;
         const rhf=clamp((w/sat-pRhMin)/0.25,0,1);
         let p=w*Math.min(0.9,(rate[i]+conv*(1-pCold*cold[i]))*rhf);if(w-p>sat){p=w-sat}                  // supersaturated air rains out
-        w-=p;if(land[i]>=0.5)w+=p*pRecyc*clamp((t+5)/20,0,1);  // evapotranspiration returns part of it
+        // evapotranspiration returns part of it; plants and wet soil return more than bare desert (Charney 1975; Claussen et al. 1999)
+        w-=p;if(land[i]>=0.5)w+=p*Math.min(0.95,pRecyc*clamp((t+5)/20,0,1)*(vr?vr[i]:1));
         Wv[i]=Math.max(0,w);acc[i]+=p}}
     Wmon[m]=Float32Array.from(Wv);if(pass===NP-1){Pm.set(acc,m*CN);Wind[m]=WD_}
   }
@@ -220,18 +221,18 @@ function orbitAt(year){const ya=Math.max(0,1950-year);return{ecc:0.0167+0.0027*c
    Potential vegetation from climate (after Whittaker 1975 and the Köppen aridity threshold), with a slow forest/open state.
    Human land use is layered on top by the history engine. */
 const VEG=[
-  // key, name, colour, albedo (planetary, clouds included), carbon (kg C per m²)
-  ['ice','Ice sheet',[236,240,244],0.62,0],
-  ['tundra','Tundra',[176,184,160],0.36,1],
-  ['taiga','Boreal forest',[78,112,84],0.27,9],
-  ['tforest','Temperate forest',[84,134,82],0.27,14],
-  ['mediterranean','Mediterranean scrub',[158,160,96],0.31,4],
-  ['steppe','Grassland and steppe',[186,182,112],0.32,2.5],
-  ['desert','Desert',[222,200,150],0.37,0.3],
-  ['savanna','Savanna',[196,178,92],0.31,4],
-  ['dryforest','Tropical dry forest',[136,150,72],0.29,9],
-  ['rainforest','Tropical rainforest',[42,110,64],0.25,20],
-  ['alpine','Alpine',[160,156,148],0.38,1],
+  // key, name, colour, albedo (planetary, clouds included), carbon (kg C per m²), rain recycling relative to the default
+  ['ice','Ice sheet',[236,240,244],0.62,0,0.2],
+  ['tundra','Tundra',[176,184,160],0.36,1,0.8],
+  ['taiga','Boreal forest',[78,112,84],0.27,9,1.05],
+  ['tforest','Temperate forest',[84,134,82],0.27,14,1.1],
+  ['mediterranean','Mediterranean scrub',[158,160,96],0.31,4,0.85],
+  ['steppe','Grassland and steppe',[186,182,112],0.32,2.5,0.9],
+  ['desert','Desert',[222,200,150],0.37,0.3,0.55],
+  ['savanna','Savanna',[196,178,92],0.31,4,0.95],
+  ['dryforest','Tropical dry forest',[136,150,72],0.29,9,1.05],
+  ['rainforest','Tropical rainforest',[42,110,64],0.25,20,1.15],
+  ['alpine','Alpine',[160,156,148],0.38,1,0.7],
 ];
 const VI={};VEG.forEach((b,k)=>VI[b[0]]=k);
 // T: annual mean °C, P: mm/yr, warm/cold: warmest and coldest month, dry: months under 30 mm, elev: m
@@ -260,7 +261,7 @@ function climSummary(Tm,Pm){
 function climModel(eHi,opt){return drain(climModelG(eHi,opt))}
 function* climModelG(eHi,opt){
   opt=opt||{};const g=opt.g||climPrep(eHi);
-  const Tm=yield* climRunG(g,{orb:opt.orb,co2:opt.co2,dA:opt.dA,par:opt.par,albLand:opt.albLand,init:opt.init,years:opt.init?4:undefined}),M=yield* climMoistG(g,Tm,{par:opt.par,state:opt.state});
+  const Tm=yield* climRunG(g,{orb:opt.orb,co2:opt.co2,dA:opt.dA,par:opt.par,albLand:opt.albLand,init:opt.init,years:opt.init?4:undefined}),M=yield* climMoistG(g,Tm,{par:opt.par,state:opt.state,recyc:opt.recyc});
   return Object.assign({g,Tm,Pm:M.Pm,wind:M.Wind,state:M.state,Tlast:Tm.slice(11*CN)},climSummary(Tm,M.Pm));
 }
 // map a model run to the hi-res grid: annual temperature (with altitude), rainfall and seasonal range
