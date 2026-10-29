@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.6.4: crops and soils)
+# Asabiya — history engine (v0.6.5: horses, herds and the steppe)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,25 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.6.5 adds:
+> - **Fields and pasture** (`src/herds.js`): each province mixes farming and herding by what pays, the people's herding tradition, raids and what its rulers want. Courts can split between steppe lords and landlords.
+> - **Real herds:** horses, two kinds of camel, reindeer and llamas are tamed where their wild ancestors lived, spread with herders and trade, and die off in hard winters. No horses reach the Americas before ships.
+> - **Riders and confederations:** riding skill and war experience belong to peoples and are inherited by states. Winning khans draw in other clans; beaten coalitions flee onto their neighbours.
+> - **Grass turf:** dense grassland turf is broken only slowly before heavy ploughs, so steppe provinces stay herding land.
+> - **Crops:** each crop has a latitude band that widens slowly where it is grown. Farmers pass on only crops they can grow; seed that is merely carried travels ten times slower.
+> - **Cities and writing:**
+>   - Towns of 25,000 count as cities even in sparse provinces; canals, trade, storable grain and walls draw people into them.
+>   - Writing grows from the accounts of those cities.
+> - **Irrigation and salt:** irrigation is invented where it is needed, in dry river valleys. Salt builds with intensive every-year cropping, not from the first canal.
+> - **Disease:** clearing warm forests can release new diseases; malaria rises with tropical clearing and falls with regrowth.
+> - **Climate fix:** history now measures climate change against a reference with the same vegetation albedo. This removes a false +1 °C warming that had made Bronze Age deserts and the steppe too wet.
+> - **Interface:**
+>   - Herds and Fields-and-pasture map layers.
+>   - A Cities filter on the map.
+>   - Steppe-and-sown and way-of-life sections on state and people pages.
+>   - Map import higher in Setup; sidebar tabs that wrap.
+> - **Model check on GitHub Actions** (`.github/workflows/ensemble.yml`): 16 histories in about 6 minutes. 50% of 27 targets are in band, against 37% for v0.6.4.
 >
 > v0.6.4 adds:
 > - **Crop packages** (`src/crops.js`): wheat and barley, rice, millet, sorghum, maize-beans-squash, potatoes and quinoa, yams and taro, the eastern North American crops, and cassava. Each has a climate niche, a yield, how well it stores, how easily it can be taxed, and how hard it is on the soil. Packages spread with farmers; each farm grows the best one that has reached it. Ocean contact exchanges them.
