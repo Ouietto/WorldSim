@@ -219,7 +219,7 @@ function computeK(){
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
     if(ABL.includes('oldsod')){if(w.soil[i]===SOI.blackearth)Kfa*=0.12+0.55*Math.max(s_plough[i],0.5*s_iron[i])}
-    else if(w_turf[i]>0){const op=s_open[i],f1=0.12+0.1*s_iron[i]+0.55*s_plough[i];Kfa*=op+(1-op)*f1}
+    else if(w_turf[i]>0){const op=s_open[i],f1=0.04+0.08*s_iron[i]+0.6*s_plough[i];Kfa*=op+(1-op)*f1}
     Kfa*=1+0.07*s_tk[32][i]*Math.min(1,rv*3)+0.05*s_tk[33][i]*(w.techEnv?w_techEnv[2][i]:0.5)+0.06*genAt(0,i)+0.04*genAt(3,i);
     Kfa*=(1-0.3*s_forest[i]*(1-clamp(0.5*s_metal[i]+0.7*s_iron[i],0,0.9)))*(1-0.6*s_salt[i])*(1-0.5*w_oncho[i]);
     if(w_T[i]<12)Kfa*=clamp(1+0.18*dT,0.4,1.35);

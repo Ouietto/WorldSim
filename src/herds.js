@@ -22,11 +22,16 @@ function landUsePass(){
     // fields on dry, drought-prone land are a gamble that herds, which can move, are not
     const risk=1-0.4*clamp((550-w.Pr[i])/300,0,1)*(1-0.7*s.irrig[i]*w.rv[i]);
     const F=(s.Kfa[i]+0.3*s.Kh[i]+0.2*s.Kf[i])*risk,Hh=s.Kh[i]+0.4*s.Kf[i];if(F+Hh<=0)continue;
-    const pay=Hh/(F+Hh),e=s.eth[i]>=0?eths[s.eth[i]]:null,trad=e&&e.past!=null?e.past:0.5;
+    const e=s.eth[i]>=0?eths[s.eth[i]]:null,trad=e&&e.past!=null?e.past:0.5;
     // raided, open country is safer grazed than sown
     const raided=y-s.raidC[i]<30&&w.rough[i]<0.35?1:0;
     const o=pol[i]?pols[pol[i]]:null,policy=o&&o.kind==='state'&&o.steppe!=null?o.steppe-0.5:o&&o.kind==='horde'?0.4:0;
-    const z=6*(pay-0.5)+3*(trad-0.5)+0.8*raided+1.6*policy,target=1/(1+Math.exp(-z));
+    const share=Fx=>1/(1+Math.exp(-(6*(Hh/(Fx+Hh)-0.5)+3*(trad-0.5)+0.8*raided+1.6*policy)));
+    // on grassland, the broken fields and the unbroken turf are weighed apart: turf that hoes and ards cannot work is pasture
+    let target;const tu=w.turf?w.turf[i]:0;
+    if(tu>0){const op=s.open[i],f1=0.04+0.08*s.iron[i]+0.6*s.plough[i],Fb=s.Kfa[i]/Math.max(0.01,op+(1-op)*f1),rest=0.3*s.Kh[i]+0.2*s.Kf[i];
+      target=op*share((Fb+rest)*risk)+(1-op)*share((Fb*f1+rest)*risk)}
+    else target=share(F);
     past[i]+=0.15*(target-past[i]);
     w.nomad[i]=past[i]>0.55&&(w.sH[i]>0.12||w.desert[i])?1:0;
     if(e){sum[e.id]+=p*past[i];wt[e.id]+=p}}
