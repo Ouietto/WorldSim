@@ -6,7 +6,7 @@ const TECH=[
  {k:'copper',n:'Bronze',era:2,pre:[0]},
  {k:'horse',n:'Horse riding',era:2,pre:[1]},
  {k:'sail',n:'Seafaring',era:1},
- {k:'writing',n:'Writing',era:2,pre:[0,3],em:{b:1/5000,pop:1.5e6,cells:4}},
+ {k:'writing',n:'Writing',era:2,pre:[0,3],em:{b:1/5000,pop:1.5e6,cells:2,urb:1}},
  {k:'wheel',n:'Wheel and chariot',era:2,pre:[3],em:{b:1/5000,pop:1e6}},
  {k:'iron',n:'Ironworking',era:3,pre:[3,7,6],em:{b:1/12000,pop:3e6}},
  {k:'coin',n:'Coinage',era:4,pre:[6,8],em:{b:1/3600,pop:4e6}},
@@ -997,10 +997,11 @@ function* politicsG(){
     const lgI=o.league!=null&&s.leagues&&s_leagues[o.league]&&!s_leagues[o.league].end?s_leagues[o.league]:null,oP=lgI?Math.max(o.pop,lgI.pop||0):o.pop,oC=lgI?Math.max(o.cells,lgI.cells||0):o.cells;
     if(o.kind==='state')for(let k=6;k<TECH.length;k++){const T=TECH[k],em=T.em;if(!em||s_tk[k][c]>=0.5)continue;
       // thresholds were set when world population ran about 40% above the historical estimates; rescaled with it
-      const emP=em.pop*0.6*0.65;if(oP<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w_coast[c]&&o.coastN<2)||(em.horse&&s_horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3))continue;
+      // writing grew out of the accounts of temple and palace cities (Schmandt-Besserat 1992): townspeople count for more
+      const emP=em.pop*0.6*0.65,oPx=em.urb?oP*(1+3*clamp((o.cityUrb||0)/(o.pop+1),0,0.8)):oP;if(oPx<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w_coast[c]&&o.coastN<2)||(em.horse&&s_horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3))continue;
       let ok=true;for(const p of T.pre)if(s_tk[p][c]<0.7){ok=false;break}if(!ok)continue;
       const fit=techFit(o,k),bos=em.press?clamp((o.press-0.7)*5,0,2):1;
-      if(r()<em.b*P.invent*Math.min(3,Math.sqrt(oP/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5*synthRel():0.6+0.8*fit)){
+      if(r()<em.b*P.invent*Math.min(3,Math.sqrt(oPx/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5*synthRel():0.6+0.8*fit)){
         seedTech(s_tk[k],c,1,1);if(k===6)for(const i of L)if(pol[i]===id)s_admin[i]=Math.max(s_admin[i],0.35);
         firstTech(k,c,o)}}
     // faith
@@ -1148,13 +1149,18 @@ function mixPass(){
     }
   }
 }
+// share of a province's people who live in its town: canals and rivers that make grain cheap to move to a centre, trade,
+// storable staples and walls draw people together (Adams 1981; Algaze 2008). Irrigated southern Mesopotamia was mostly urban.
+function urbanShare(i){const s=S,w=WD;return clamp(0.05+0.4*s.irrig[i]*Math.min(1,2*w.rv[i])+0.25*Math.min(1,s.car[i])+0.1*s.cStore[i]+(s.fort[i]>0.3?0.1:0),0,0.8)}
 function cityPass(){
   const s=S,w=WD,r=s.r,pols=s.pols;const s_city=s.city,s_eth=s.eth,s_farm=s.farm,s_pol=s.pol,s_pop=s.pop;
-  for(const id of s.alive)pols[id].cityPop=0;
+  for(const id of s.alive){pols[id].cityPop=0;pols[id].cityUrb=0}
   for(const i of w.landIdx){const p=s_pol[i];
-    if(s_city[i]>=0){if(p)pols[p].cityPop+=s_pop[i];continue}
-    if(s_pop[i]<120000||s_farm[i]<0.5||!p)continue;
-    const o=pols[p];if(i!==o.capital&&s_pop[i]<Math.max(150000,o.mp*0.6))continue;
+    if(s_city[i]>=0){if(p){pols[p].cityPop+=s_pop[i];pols[p].cityUrb+=s_pop[i]*urbanShare(i)}continue}
+    if(s_farm[i]<0.5||!p)continue;
+    const o=pols[p],urb=s_pop[i]*urbanShare(i);
+    // a town of 25,000 is a city whatever the province's size; otherwise a large province grows one at the capital
+    if(urb<25000&&(s_pop[i]<120000||(i!==o.capital&&s_pop[i]<Math.max(150000,o.mp*0.6))))continue;
     const L=langAt(i);s_city[i]=s.cities.length;s.cities.push({name:cityWord(L,r),cell:i,born:s.year,eth:s_eth[i],peak:s_pop[i]})}
   for(const c of s.cities)if(s_pop[c.cell]>c.peak)c.peak=s_pop[c.cell];
 }
