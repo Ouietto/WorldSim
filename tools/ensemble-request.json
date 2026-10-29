@@ -1,1 +1,1 @@
-{"seeds": "1-16", "end": 1500, "env": "", "ref": "7489045", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Run 26: farmer-forager frontier (compared with run 21)."}
+{"seeds": "1-16", "end": 1500, "env": "", "ref": "7489045", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Run 27: frontier with crowded farmers settling forager land."}

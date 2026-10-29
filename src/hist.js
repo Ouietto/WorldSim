@@ -364,17 +364,20 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
       if(!known[f]||f===4||f===18)continue;   // horses and camels come from real herds (herds.js), not from diffusing know-how
       const A=T[f];let t=A[i];
       if(t<0.995){
-        let m=0,same=0,mc=1,v;
-        if(nj0>=0&&(v=A[nj0])>m){m=v;same=pi&&pol[nj0]===pi;mc=ct0}
-        if(nj1>=0&&(v=A[nj1])>m){m=v;same=pi&&pol[nj1]===pi;mc=ct1}
-        if(nj2>=0&&(v=A[nj2])>m){m=v;same=pi&&pol[nj2]===pi;mc=ct2*clT}
-        if(nj3>=0&&(v=A[nj3])>m){m=v;same=pi&&pol[nj3]===pi;mc=ct3*clT}
-        for(let q=ls0;q<ls1;q++){const j=w_lt[q];if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=0.7}}
+        let m=0,same=0,mc=1,v,mj=-1;
+        if(nj0>=0&&(v=A[nj0])>m){m=v;same=pi&&pol[nj0]===pi;mc=ct0;mj=nj0}
+        if(nj1>=0&&(v=A[nj1])>m){m=v;same=pi&&pol[nj1]===pi;mc=ct1;mj=nj1}
+        if(nj2>=0&&(v=A[nj2])>m){m=v;same=pi&&pol[nj2]===pi;mc=ct2*clT;mj=nj2}
+        if(nj3>=0&&(v=A[nj3])>m){m=v;same=pi&&pol[nj3]===pi;mc=ct3*clT;mj=nj3}
+        for(let q=ls0;q<ls1;q++){const j=w_lt[q];if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=0.7;mj=j}}
         if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
           // farm still passes the knowledge along
-          if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(s.Kf[i]+1);k*=clamp((adv-1)/6,0.02,1)}
+          if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(s.Kf[i]+1);
+            // crowded farmers next door settle the forager's land anyway, by boat too (Neolithic Britain: Brace et al. 2019)
+            const sq=mj>=0&&s.K[mj]>0?clamp((pop[mj]/s.K[mj]-0.6)/0.4,0,1)*clamp(adv-0.5,0,1):0;
+            k*=Math.max(clamp((adv-1)/5,0.03,1),0.6*sq)}
           const cr=CARRY[f];if(cr){const nd=cr===1?Math.max(adm,0.6*mer):cr===2?Math.max(mer,0.5*adm):cr===3?adm:Math.max(adm,mer);k*=0.03+0.97*nd*(1+(same?0:prs))}
           const t0=t;t+=k*(m-t);
           // a fast change unsettles the old order: new scribes and clerks against the warrior nobility, felt as lost cohesion
