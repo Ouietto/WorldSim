@@ -161,3 +161,17 @@ function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
   const spd=clamp(0.25*marks+0.45*runners+0.35*sound+0.15*Math.min(1,s.horse[c]),0,1.5);
   const memo=clamp(0.5*marks+0.6*mem+0.25*objects,0,1.3);
   o.info={rec,spd,memo};o.leg=0.75+0.35*Math.min(1,rec);return o.info}
+
+// ---------- monopolies and holding power ----------
+// Conquering a neighbour is easy; holding it is not. A centre holds a province that depends on something it monopolises:
+// force (a paid standing army), knowledge (scribes and records), the economy (trade, cities, metals) or the sacred (the god's
+// house). Peers with their own walls, scribes and gods break away at the first chance (Renfrew & Cherry 1986; Weber; Innis 1950).
+// Empire is not a technique: it is a state that has gathered enough of these to rule other cities directly.
+function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.min(1,info.rec);
+  const force=clamp(0.35*rec+0.35*s.admin[c]+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
+  const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c],0,1);
+  const R=o.rel>=0?s.rels[o.rel]:null,sacred=R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0;
+  o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.5*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
+// what a defeated state brings to the table on its own: walls, scribes, its own city and cohesion
+function selfHold(d){const s=S,c=d.capital,info=d.info||infoCap(d);
+  return clamp(0.35*Math.min(1,info.rec)+0.25*(s.city[c]>=0?1:0)+0.25*Math.min(1,s.fort[c]*2)+0.25*d.S,0,1)}

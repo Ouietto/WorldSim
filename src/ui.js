@@ -109,7 +109,9 @@ function buildOverlay(){
     let c=null,a=0;const p=s.pop[i];
     switch(m){
       case'lords':if(s.colony&&s.colony[i]>0.25){c=[245,200,90];a=230}else if(s.pol[i]&&s.pols[s.pol[i]].kind==='state'){c=ramp(s.pols[s.pol[i]].nob||0);a=170}break;
-      case'political':if(s.pol[i]){const o=s.pols[s.pol[i]];c=o.rgb;a=o.kind==='horde'?70:isWaste(i)?62:158}break;
+      case'political':if(s.pol[i]){const o=s.pols[s.pol[i]];const ov=o.over&&s.pols[o.over]&&s.pols[o.over].alive?s.pols[o.over]:null;
+        // tributaries take a paler, fainter version of their overlord's colour
+        if(ov&&o.kind==='state'){c=ov.rgb.map(v=>v*0.55+255*0.45);a=isWaste(i)?45:105}else{c=o.rgb;a=o.kind==='horde'?70:isWaste(i)?62:158}}break;
       case'crops':if(s.crop&&s.crop[i]>=0&&s.farm[i]>0.3&&p>=1){c=CROP_RGB[s.crop[i]];a=190}break;
       case'soiltype':if(w.soil&&w.T[i]>-9){c=SOIL_RGB[w.soil[i]];a=170}break;
       case'landuse':if(s.past&&p>=1&&(s.farm[i]>0.1||s.herd[i]>0.1)){const f=s.past[i];c=[LU_F[0]+(LU_P[0]-LU_F[0])*f,LU_F[1]+(LU_P[1]-LU_F[1])*f,LU_F[2]+(LU_P[2]-LU_F[2])*f];a=w.nomad[i]?215:165}break;
@@ -267,7 +269,7 @@ function drawLegend(){
   const keys=list=>'<div class="keys">'+list.map(([c,l])=>`<span><i style="background:rgb(${c})"></i>${l}</span>`).join('')+'</div>';
   switch(m){
     case'lords':h=rampBox('Share of each state held by hereditary lords','crown','lords')+keys([[[245,200,90],'Soldier colony, recently planted']])+'<p style="margin:6px 0 0;opacity:.85">States settle soldiers on new frontiers. Over generations, land granted for service becomes land held by birth: lords defend their own provinces but keep much of the revenue.</p>';break;
-    case'political':h='Each colour is a state. Hatched, faint areas are nomad confederations; pale areas are wasteland a state only claims. Dotted tan lines are caravan routes. Red borders are war fronts; dark dashed lines are fortified frontiers; amber trails are peoples on the move. Click a state to open its page.';break;
+    case'political':h='Each colour is a state; tributaries are drawn in a paler shade of their overlord\'s colour. Hatched, faint areas are nomad confederations; pale areas are wasteland a state only claims. Dotted tan lines are caravan routes. Red borders are war fronts; dark dashed lines are fortified frontiers; amber trails are peoples on the move. Click a state to open its page.';break;
     case'crops':h='The staple each farming people grows: the best of the crop packages that have reached it for its climate.'+keys(CROPS.map((C,k)=>[CROP_RGB[k],cap(C.n)]));break;
     case'landuse':h='How each province uses its land, from fields to pasture. The mix follows what pays (crops, soil, tools, rain), the people\'s herding tradition, raids, and what the rulers want. Brighter: herders who move with their animals.'+keys([[LU_F,'Fields'],[LU_F.map((v,k)=>(v+LU_P[k])/2),'Mixed'],[LU_P,'Pasture']]);break;
     case'herds':h='Domestic herds, by the most common animal. Each was tamed where its wild ancestors lived and spreads with herders and trade; hard winters can kill them off. Speckled: wild herds not yet tamed.'+keys([...HERDS.map(x=>[x.col,x.n]),[[120,110,95],'Wild herds']]);break;
@@ -430,7 +432,8 @@ function renderPage(){
       if(o.kind==='state'&&o.prep!=null){const hp=o.paysTo&&s.pols[o.paysTo];
         h+=`<h3 class="sec">Army and stores</h3><div class="bars">${bar('Readiness for war',o.prep,1)}${(o.merc||0)>0.02?bar('Hired soldiers',o.merc,1):''}${(o.gran||0)>0.02?bar('Granaries',o.gran,1,'t'):''}</div>${hp?`<dl class="kv" style="margin-top:6px"><dt>Buys peace from</dt><dd>${lp(hp)}</dd></dl>`:''}`}
       if(o.kind==='state'&&o.info){const sys=['writing','alphabet','printing','drumscript','drums','beacons','khipu','griots','relays'].filter(k=>TI[k]!=null&&s.tk[TI[k]][c]>0.5).map(k=>TECH[TI[k]].n.toLowerCase());
-        h+=`<h3 class="sec">Communication</h3><div class="bars">${bar('Records',o.info.rec,1.5)}${bar('Speed',o.info.spd,1.5)}${bar('Memory',o.info.memo,1.3)}</div><p style="margin:6px 0 0;opacity:.85">${sys.length?cap(sys.join(', '))+'.':'Only the spoken message: no records, no relays, no keepers of memory.'}</p>`}
+        h+=`<h3 class="sec">Communication</h3><div class="bars">${bar('Records',o.info.rec,1.5)}${bar('Speed',o.info.spd,1.5)}${bar('Memory',o.info.memo,1.3)}</div><p style="margin:6px 0 0;opacity:.85">${sys.length?cap(sys.join(', '))+'.':'Only the spoken message: no records, no relays, no keepers of memory.'}</p>`;
+        if(o.mono)h+=`<h3 class="sec">Hold over conquests</h3><div class="bars">${bar('Holding power',o.hold||0,1)}${bar('Force',o.mono.force,1,'t')}${bar('Records',o.mono.rec,1,'t')}${bar('Trade and cities',o.mono.econ,1,'t')}</div><p style="margin:6px 0 0;opacity:.85">${o.mono.sacred?'Holds the holy city of its faith. ':''}${o.empireY?`An empire since ${fy(o.empireY)}: it rules many cities directly.`:(o.hold||0)<0.4?'Conquered peers keep their own rulers and pay tribute, and break away when they can.':'Can annex and govern conquered cities.'}</p>`}
       if(o.kind==='state'&&o.steppe!=null&&(o.steppe>0.15||o.dual||(o.pD||0)>0.05)){
         h+=`<h3 class="sec">Steppe and sown</h3><div class="bars">${bar('Steppe lords at court',o.steppe,1,'t')}${(o.pD||0)>0.02?bar('Court split',o.pD,1):''}</div><p style="margin:6px 0 0;opacity:.85">${o.steppe>0.6?'Herding nobles dominate: conquest is for pasture and plunder.':o.steppe>0.4?'Herding lords and landed officials share the court uneasily.':'Landlords, merchants and officials dominate: conquest is for taxable farmland.'}${o.dual?' Herders and farmers are ruled under separate laws.':''}</p>`}
       if(o.kind==='state'&&((o.nob||0)>0.05||o.colN)){const rf=s.reforms.filter(x=>x.pol===o.id);
