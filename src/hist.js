@@ -200,7 +200,7 @@ function weather(){
 // diminishing returns: each new farming technique adds less on top of the others (Boserup's intensification, Malthus's ceiling)
 const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
 function computeK(){
-  const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=s.admin,s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL,s_wheel=s.wheel,w_turf=w.turf,s_open=s.open,s_malF=s.malF;
+  const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=s.admin,s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL,s_wheel=s.wheel,s_pol=s.pol,s_pols=s.pols,w_turf=w.turf,s_open=s.open,s_malF=s.malF;
   for(let k=0;k<L.length;k++){
     const i=L[k],T=w_T[i]+dT+cdT[i];
     if(T<-9){s_K[i]=1;continue}
@@ -215,8 +215,14 @@ function computeK(){
     const irr=s_irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const T_=s.tk,hv=w_heavy[i],lc=w_leach[i];
-    let Kfa=ar*4.2*s_sFc[i]*s_farm[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*s_tk[TI.terrace][i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*T_[26][i]*Math.max(lc,s_forest[i])+0.15*T_[28][i]*w_coast[i])*(1+rv*(0.25+2.2*s_irrig[i]));
+    // tools and labour: a tool kit (metal, ploughs, administration, rotations) or sheer work per acre (weeding, transplanting,
+    // short fallows; Boserup 1965) both raise yields; they substitute more than they add
+    const tl=0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*s_tk[TI.terrace][i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*T_[26][i]*Math.max(lc,s_forest[i])+0.15*T_[28][i]*w_coast[i],lb=1.6*s_lint[i];
+    let Kfa=ar*4.2*s_sFc[i]*s_farm[i]*s_fert[i]*wf*intens(tl>lb?tl+0.25*lb:lb+0.25*tl)*(1+rv*(0.25+2.2*s_irrig[i]));
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
+    // surplus: the share of the harvest beyond what farmers need. Tools, canals and storable staples raise output per worker;
+    // labour intensity feeds more mouths per acre but leaves less over per worker (Boserup 1965; Geertz 1963)
+    s.sur[i]=clamp(0.08+0.22*(1-Math.exp(-tl/1.5))+0.12*s_irrig[i]*Math.min(1,2*rv)+0.08*s.cStore[i],0.04,0.5)*(1-0.4*s_lint[i]);
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
     if(w_turf[i]>0){const op=s_open[i],f1=0.04+0.08*s_iron[i]+0.6*s_plough[i];Kfa*=op+(1-op)*f1}
     Kfa*=1+0.07*s_tk[32][i]*Math.min(1,rv*3)+0.05*s_tk[33][i]*(w.techEnv?w_techEnv[2][i]:0.5)+0.06*genAt(0,i)+0.04*genAt(3,i);
@@ -227,6 +233,8 @@ function computeK(){
     s_Kfa[i]=Kfa;s_Kh[i]=Kh;s_Kf[i]=Kf;const ps=s_past[i];
     // the province's mix of fields and pasture, set by what pays, who lives there, raids and rulers (see herds.js)
     s_K[i]=Math.max(1,Kf,(1-ps)*(Kfa+0.3*Kh+0.2*Kf)+ps*(Kh+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*s_tk[29][i]));
+    // a state that takes more than the surplus takes the peasants' bread: fewer of them can live on the land
+    const pq=s_pol[i];if(pq){const oq=s_pols[pq];if(oq.kind==='state'&&oq.ext>1)s_K[i]*=1-0.5*Math.min(1,oq.ext-1)*s.sur[i]}
   }
 }
 function growth(){
@@ -244,7 +252,10 @@ function growth(){
       // salt builds where crowded irrigated land is cropped every year with poor drainage; thin early canal farming with fallow
       // years and floods to flush the soil kept it down (Jacobsen & Adams 1958; Powell 1985)
       if(ir>0.1&&w_Pr[i]<550&&pr>0.5){const dens=p/w_area[i];s_salt[i]=Math.min(0.85,s_salt[i]+0.0004*w_soilSalt[i]*ir*Math.min(1.2,pr)*clamp((dens-4)/8,0,1)*(1-0.9*s_tk[30][i]))}
-      if(s_salt[i]>0&&(pr<0.3||s_tk[30][i]>0.5))s_salt[i]=Math.max(0,s_salt[i]-0.0004-0.002*s_tk[30][i])}
+      if(s_salt[i]>0&&(pr<0.3||s_tk[30][i]>0.5))s_salt[i]=Math.max(0,s_salt[i]-0.0004-0.002*s_tk[30][i]);
+      // crowded farmers with nowhere to go work their land harder over generations (Boserup 1965; Carneiro 1970);
+      // where free land is near, they move instead. The skill fades slowly once the pressure is gone.
+      const li=s.lint[i];if(pr>0.8)s.lint[i]=li+0.0004*(1-li)*fm*Math.min(1,(pr-0.8)/0.2)*clamp((s.circE[i]-0.2)/0.6,0,1);else if(pr<0.5)s.lint[i]=li*0.999}
     const f0=w_forest0[i];
     if(f0>0){let fo=s_forest[i];
       // people clear as much forest as they need for fields and grazing (more people, more clearing; intensive farming needs less land);
@@ -268,7 +279,7 @@ function migrate(){
     const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)continue;
     let mob=mg*(0.08+0.25*s_herd[i]*w_sH[i]*(0.5+s_horse[i]));
     if(s_pol[j]&&s_pol[j]!==s_pol[i])mob*=0.4;
-    else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)}
+    else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)+2*Math.max(0,(o.ext??0.6)-0.8)}
     const mv=Math.min(p*mob*diff/(1+diff),p*0.3);
     s_pop[i]-=mv;s_pop[j]+=mv;
     if(pj<1||s_eth[j]<0){s_eth[j]=s_eth[i];s_eth2[j]=-1;s_rel[j]=s_rel[i];s_s[j]=s_s[i];s_adapt[j]=s_adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9)}
@@ -537,7 +548,7 @@ function succession(o){
   else o.gen++;
 }
 function etOf(o){const c=o.capital,s=S;return 0.02*(1+s.admin[c]+0.5*s.coin[c]+0.5*s.law[c])}
-const WHY_LABEL={pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
+const WHY_LABEL={pW:'taxes that took the peasants\' bread',pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
 function topCauses(why){return Object.entries(why).filter(e=>e[1]>0.08).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>WHY_LABEL[e[0]])}
 function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===id)out.push(i);return out}
 function civilWar(o,breakup){
@@ -903,9 +914,9 @@ function politics(){for(const _ of politicsG());}
 function* politicsG(){
   const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nb=w.nb,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
   const sampleNow=y%10===0;
-  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}}
+  for(const id of s.alive){const o=pols[id];o.pop=0;o.sigP=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p],pp=pop[i];
-    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_admin[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.sigP+=pp*s.sur[i];o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_admin[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*s.sur[i]*(o.ext??0.6)/0.15*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom++;if(w_coast[i])o.coastN++;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN++;if(s_fort[i]>0.5)o.fortN++;
     o.cx+=w_cosLon[i];o.cy+=w_sinLon[i];o.yy+=w_cyA[i];if(pp>o.mp){o.mp=pp;o.mc=i}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]>200)o.front.push(i);
@@ -963,7 +974,7 @@ function* politicsG(){
     statecraft(o,c,y);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
-    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+o.shock;
+    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
     else if(o.cells>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl)civilWar(o);
@@ -1073,7 +1084,8 @@ function* politicsG(){
       sv+=fr?asR*0.6*sv*(1-sv):(0.3-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
       if(pi>=1){const dens=pi/w_area[i],agr=s_farm[i]*s_sFc[i],past=s_herd[i]*Math.max(w_sH[i],w_desert[i]*s_camel[i]*0.6);
         // density threshold rescaled with population, which ran about 40% above historical estimates when it was set
-        if(agr>0.35&&dens>3.2&&!w_nomad[i]&&localPop(i)>=FLOOR.chief*3*P.floor){
+        // chiefs and kings live on surplus, not on head counts: crowded farmers who work hard for little spare do not raise them
+        if(agr>0.35&&dens*S.sur[i]/0.25>3.2&&!w_nomad[i]&&localPop(i)>=FLOOR.chief*3*P.floor){
           if(r()<P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_admin[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i])*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
             const id=newPolity(i,null);
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
@@ -1276,6 +1288,15 @@ function statecraft(o,c,y){
   const atWar=o.enemies.size>0;
   o.treas=clamp(o.treas+0.04*(1-o.burden)-(atWar?0.02:0),-2,1);
   o.pF=Math.max(0,-o.treas)*0.6;
+  // extraction: the share of the surplus the state takes. War, debt and more elites than posts push it up; a state can only
+  // take what its records and officials can see (Scott 1998). Beyond the surplus it takes the peasants' bread: they starve,
+  // flee to open land or rise (Goldstone 1991; Turchin & Nefedov 2009)
+  if(o.ext==null)o.ext=0.6;
+  {const rec=clamp(s.tk[TI.writing][c]+0.6*s.admin[c],0,1),cap=0.4+0.8*rec;
+   const need=0.5+(atWar?0.3:0)+0.3*Math.max(0,-o.treas)+0.2*clamp(o.E/etOf(o)-1,0,1.5);
+   o.ext+=0.05*(Math.min(need,cap)-o.ext)}
+  o.sig=o.pop>0?o.sigP/o.pop:0.25;
+  o.pW=Math.max(0,o.ext-0.8)*1.2;
   if(o.treas<-1.2&&s.law[c]>0.5&&r()<0.02){
     if(o.ineq>0.5&&r()<0.5){o.treas=0;o.ineq=Math.max(0.2,o.ineq-0.12);o.mandate=Math.min(1,o.mandate+0.15);if(real>=25)chron('culture',`${cap(rulerName(o))} of the ${o.full} proclaims a jubilee: debts are cancelled and debt-slaves freed.`,c,[R_(o)],'Debts had piled up faster than anyone could repay them; cancelling them bought peace and loyalty.')}
     else{o.treas=-0.2;o.mandate=Math.max(0,o.mandate-0.2);o.shock+=0.3;if(real>=25)chron('fall',`The treasury of the ${o.full} is empty: the crown defaults on its debts and its soldiers go unpaid.`,c,[R_(o)],'Spending on armies and officials had long outrun what the land could pay.')}}
