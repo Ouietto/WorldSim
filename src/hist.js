@@ -1109,7 +1109,7 @@ function* politicsG(){
         if(agr>0.35&&dens>3.2&&!w_nomad[i]&&localPop(i)>=FLOOR.chief*3*P.floor){
           // pristine states need crowding and nowhere to go (Carneiro 1970); everywhere else a state's example, trade or threat
           // has to reach first (secondary state formation: Price 1978; Wright 1977)
-          const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rv[i]),cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+1.5*s_car[i]+prist);
+          const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rv[i]),cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
           if(r()<cg*P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_admin[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i])*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
             const id=newPolity(i,null);
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
@@ -1340,6 +1340,8 @@ function localPop(i){const w=WD,s=S;let t=s.pop[i];for(let d=0;d<4;d++){const j=
 function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nb=w.nb;
   for(const i of L){const p=s.pol[i];if(!p){x[i]=0;continue}const o=s.pols[p];
     x[i]=o.kind!=='state'?0.25:o.tier==='Chiefdom'||o.tier==='Clans'?0.2:clamp((o.spc||2)/7,0.25,1)}
+  // a caravan road carries the example of the state at its far end: salt, gold, scribes and envoys
+  for(const i of L)if(s.car[i]>0.1)x[i]=Math.max(x[i],0.8*Math.min(1,s.car[i]))
   for(let k=0;k<10;k++){const fw=k%2===0;for(let a=0;a<L.length;a++){const i=L[fw?a:L.length-1-a];let m=x[i];
     for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&w.land[j]){const v=0.8*x[j];if(v>m)m=v}}x[i]=m}}}
 // the exit option (Herbst, Scott): open land nearby lets subjects walk away; crowding or barren surroundings trap them (Carneiro)
