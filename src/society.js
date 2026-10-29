@@ -137,3 +137,27 @@ function militaryPass(o){
     if(h&&h.alive&&h.kind==='horde'&&power(h)>0.7*power(o)&&r()<0.15){o.paysTo=h.id;h.payers=(h.payers||0)+1;
       chron('diplomacy',`The ${o.full} buys peace from the ${h.full} with yearly gifts of silk, grain and silver.`,c,[R_(o),R_(h)],'Paying was cheaper than fighting horsemen who could not be caught.')}}
 }
+
+// ---------- communication: five media ----------
+// Marks (scripts, alphabets, notation), sound and light (talking drums, beacons), objects (knotted cords, tallies), memory
+// specialists (remembrancers) and runners (relay posts). Each serves records, speed or memory; paper and printing amplify
+// marks, roads and horses amplify runners. Sources: Innis 1950; Goody 1986; Urton 2003 (khipu); Finnegan 1970 (drum languages).
+const TONAL=new Set(['sinitic','tibetan','bantu','mande','thai']);
+function commNeed(k,o,c){const s=S,w=WD,T=s.tk;
+  switch(k){
+    case 'noScript':return T[TI.writing][c]<0.3;
+    // drum languages carry the tones of speech; forests and hills hide fires and slow runners
+    case 'drums':{const e=s.eths[o.core];const tonal=!!(e&&e.lang&&TONAL.has(e.lang.style));return (w.forest0[c]>0.35||w.rough[c]>0.3)&&(tonal||s.r()<0.2)}
+    case 'threat':return o.fortN>0||o.enemies.size>0||(o.raided||0)>0;
+    // a script meeting traders, sailors or foreigners outside the scribal class
+    case 'trade':return s.car[c]>0.1||(w.coast[c]&&s.sail[c]>0.5)||(o.cityPop||0)>0.2*o.pop;
+    case 'hasDrums':return T[TI.drums][c]>0.5}
+  return true}
+function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
+  const marks=Math.min(1.3,v('writing')+0.3*v('alphabet'))*(1+0.3*v('paper')+0.3*v('printing'));
+  const sound=Math.max(v('drums'),v('beacons'))+0.5*v('drumscript'),objects=v('khipu'),mem=v('griots');
+  const runners=v('relays')*(1+0.5*s.roads[c]+0.4*Math.min(1,s.horse[c]));
+  const rec=clamp(0.75*marks+0.55*objects+0.1*mem+0.3*v('drumscript'),0,1.5);
+  const spd=clamp(0.25*marks+0.45*runners+0.35*sound+0.15*Math.min(1,s.horse[c]),0,1.5);
+  const memo=clamp(0.5*marks+0.6*mem+0.25*objects,0,1.3);
+  o.info={rec,spd,memo};o.leg=0.75+0.35*Math.min(1,rec);return o.info}

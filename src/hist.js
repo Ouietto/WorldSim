@@ -37,6 +37,15 @@ const TECH=[
  {k:'chuno',n:'Freeze-dried potatoes',era:2,pre:[0],d:'Potatoes frozen at night and dried in the sun keep for years: they can be stored in state warehouses and taxed like grain.'},
  {k:'terrace',n:'Terraces and raised fields',era:2,pre:[0],d:'Stone-walled terraces on hillsides, raised and drained beds in wetlands: hand labour turns poor ground into intensive fields, without ploughs or draft animals.'},
  {k:'nixtamal',n:'Lime-soaked maize',era:2,pre:[0],d:'Cooking maize with lime frees its niacin and protein: maize farmers eat better and grow more.'},
+ // communication: five media (marks, sound and light, objects, memory specialists, runners), each strong in records, speed or memory
+ {k:'griots',n:'Court remembrancers',era:1,pre:[],em:{b:1/2500,pop:1.2e5,need:'noScript'},pos:[-0.4,-0.4],medium:'memory',d:'Professional keepers of genealogies, law and history, like the griots of Mali: a dynasty\'s memory without writing.'},
+ {k:'drums',n:'Talking drums',era:2,pre:[],em:{b:1/3000,pop:1e5,need:'drums'},pos:[-0.2,-0.3],medium:'sound',d:'Drums that speak the tones and rhythms of the language: messages cross forest and hills faster than a runner.'},
+ {k:'beacons',n:'Beacon chains',era:2,pre:[],em:{b:1/3500,pop:3e5,need:'threat'},pos:[0.3,0.2],medium:'sound',d:'Fire by night and smoke by day, relayed from hill to hill: warning of raids and revolts within hours.'},
+ {k:'khipu',n:'Knotted-cord records',era:2,pre:[0],em:{b:1/3000,pop:4e5,cells:6,need:'noScript'},pos:[-0.3,0.1],medium:'objects',d:'Accounts, census and tribute kept in knotted cords, like the Inca khipu: records without a script.'},
+ {k:'relays',n:'Relay posts',era:3,pre:[],em:{b:1/3500,pop:8e5,cells:20},pos:[0,0.5],medium:'runners',d:'Runners or riders posted in stages along the roads, like the Inca chasqui and the Persian post: orders cross the realm in days.'},
+ {k:'alphabet',n:'Alphabet',era:3,pre:[6],em:{b:1/6000,pop:2e5,need:'trade'},pos:[-0.3,0.3],medium:'marks',d:'A few dozen signs for sounds instead of hundreds for words: reading and writing escape the scribal class.'},
+ {k:'printing',n:'Printing',era:6,pre:[14,3],em:{b:1/8000,pop:5e6},pos:[-0.2,0.7],medium:'marks',d:'Carved blocks or movable type multiply texts: books, notices and dissent spread beyond any court.'},
+ {k:'drumscript',n:'Drum notation',era:4,pre:[6,14],em:{b:1/9000,pop:6e5,need:'hasDrums'},pos:[-0.1,0.2],synth:1,medium:'sound',d:'Drum language written down on paper: messages both fast and kept. Speed of sound with the records of a script.'},
 ];
 // positions of the real techniques in the need/energy space (see techFit)
 [[0.6,-0.6],[0.2,-0.5],[0.7,0.2],[0.1,0.5],[-0.2,0.4],[0.3,0.1],[-0.4,0],[0,0.5],[0.3,0.7],[-0.6,0.2],[-0.5,-0.1],[-0.4,0.5],[0,0.4],[0.2,0.8],[-0.6,-0.1],[0.7,0.1],[0.2,0.9],[-0.2,0.8],[0.3,-0.3],[0.5,-0.5]].forEach((p,k)=>{if(!TECH[k].pos)TECH[k].pos=p});
@@ -323,13 +332,16 @@ function firstTech(k,cell,o){
 function techStep(a0,b0){if(a0==null){a0=0;b0=1}
   const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nb=w.nb,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
   const suit=[w.sF,w.sH,w.rv,null,w.sH];
+  // drums carry where forest and hills hide fires and slow runners; beacons need hills in sight of each other
+  if(!w.drumSuit){w.drumSuit=new Float32Array(N);w.beaconSuit=new Float32Array(N);for(const i of L){w.drumSuit[i]=clamp(Math.max(w.forest0[i],1.5*w.rough[i]),0,1);w.beaconSuit[i]=clamp(2*w.rough[i]+0.2,0,1)}}
+  suit[TI.drums]=w.drumSuit;suit[TI.beacons]=w.beaconSuit;
   const known=TECH.map((t,k)=>s_firstTech[k]||k===5?1:0);
-  const NT=T.length,pop=s.pop,pol=s.pol,INST=TECH.map((t,k)=>k===6||k===9||k===10||k===11||k===14);
+  const NT=T.length,pop=s.pop,pol=s.pol,INST=TECH.map((t,k)=>k===6||k===9||k===10||k===11||k===14||t.k==='relays'||t.k==='khipu');
   for(let kk=Math.floor(a0*L.length),ke=Math.floor(b0*L.length);kk<ke;kk++){
     const i=L[kk];if(s_pop[i]<1)continue;
     let conn=s_pop[i];const pi=s_pol[i],po=pi?pols[pi]:null;
     for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0)conn+=s_pop[j]}
-    const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]);
+    const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
     const ls0=w_ls[i],ls1=s_sail[i]>0.3?w_ls[i+1]:ls0;
     const dark=po?po.cult<0.1:true;
     const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+Math.sqrt(s_pop[i]*s_pop[j])/6000+s_car[i]+s_car[j])*pg,ct0=cti(w_nb[i*4]),ct1=cti(w_nb[i*4+1]),ct2=cti(w_nb[i*4+2]),ct3=cti(w_nb[i*4+3]);
@@ -519,7 +531,9 @@ function newPolity(c,from,opt){
 }
 function succession(o){
   const s=S,r=s.r,L=s.eths[o.core]?s.eths[o.core].lang:s.eths[0].lang,Et=etOf(o),old=o.dyn,R0=o.ruler;
-  const pU=0.06+0.25*Math.max(0,o.E/Et-1)+0.35*Math.max(0,0.6-(o.mandate==null?1:o.mandate));
+  // a court that keeps its genealogies, laws and precedents (in writing or in the heads of remembrancers) passes power on more smoothly
+  const mem=o.info?Math.min(1,o.info.memo):0;
+  const pU=(0.06+0.25*Math.max(0,o.E/Et-1)+0.35*Math.max(0,0.6-(o.mandate==null?1:o.mandate)))*(1-0.35*mem);
   o.rulers.push({name:R0.name,base:R0.base,epithet:R0.epithet,from:R0.since,to:s.year,conq:R0.conq,fig:R0.fig,dyn:o.dyn});
   if(o.rulers.length>60)o.rulers.shift();
   o.ruler=newRuler(L,o);
@@ -531,7 +545,7 @@ function succession(o){
       s.famTitle[fam]={word:w,fig:f.id,from:o.id};
       chron('culture',`The name of ${f.name} outlives its bearer: rulers of the ${s.eths[fam].name} family of peoples will style themselves ${w}.`,o.capital,[RF(f),R_(o)])}}
   if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);civilWar(o,true);return}
-  if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3;o.mandate=0.75;
+  if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
       chron('war',`${o.ruler.name} seizes the throne of the ${o.full}; the House of ${old} falls.`,o.capital,[R_(o),RF(f)])}}
   else o.gen++;
@@ -905,7 +919,7 @@ function* politicsG(){
   const sampleNow=y%10===0;
   for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p],pp=pop[i];
-    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_admin[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_admin[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom++;if(w_coast[i])o.coastN++;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN++;if(s_fort[i]>0.5)o.fortN++;
     o.cx+=w_cosLon[i];o.cy+=w_sinLon[i];o.yy+=w_cyA[i];if(pp>o.mp){o.mp=pp;o.mc=i}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]>200)o.front.push(i);
@@ -955,7 +969,10 @@ function* politicsG(){
     const a=s_anom[c];o.wet=o.wet*0.92+a*0.08;
     o.loot*=0.9;
     o.gate=clamp(0.5+1.1*(1-o.press)+(o.nomF>0.5||o.kind==='horde'?0.5:0.22)*a+Math.min(0.5,o.tribs*0.15)-(o.over?0.15:0)+Math.min(0.5,o.loot/(o.pop+1)*4)-Math.min(0.3,o.fortN*0.004),0.15,1.9);
-    o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s_admin[c]+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4:1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c]);
+    // reach: how fast orders travel and how much the centre can see (drums, beacons, relays, records, scripts); without any of it
+    // a ruler cannot delegate far (Spencer 2010)
+    if(o.kind==='state')infoCap(o);
+    o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s_admin[c]+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4:1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c])*(o.kind==='state'?0.55+0.45*Math.min(1.2,o.info.spd+0.5*o.info.rec):1);
     const Et=etOf(o);
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq)),0.004,0.12);
     o.shock*=0.92;
@@ -997,7 +1014,7 @@ function* politicsG(){
     if(o.kind==='state')for(let k=6;k<TECH.length;k++){const T=TECH[k],em=T.em;if(!em||s_tk[k][c]>=0.5)continue;
       // thresholds were set when world population ran about 40% above the historical estimates; rescaled with it
       // writing grew out of the accounts of temple and palace cities (Schmandt-Besserat 1992): townspeople count for more
-      const emP=em.pop*0.6*0.65,oPx=em.urb?oP*(1+3*clamp((o.cityUrb||0)/(o.pop+1),0,0.8)):oP;if(oPx<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w_coast[c]&&o.coastN<2)||(em.horse&&s_horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3))continue;
+      const emP=em.pop*0.6*0.65,oPx=em.urb?oP*(1+3*clamp((o.cityUrb||0)/(o.pop+1),0,0.8)):oP;if(oPx<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w_coast[c]&&o.coastN<2)||(em.horse&&s_horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3)||(em.need&&!commNeed(em.need,o,c)))continue;
       let ok=true;for(const p of T.pre)if(s_tk[p][c]<0.7){ok=false;break}if(!ok)continue;
       const fit=techFit(o,k),bos=em.press?clamp((o.press-0.7)*5,0,2):1;
       if(r()<em.b*P.invent*Math.min(3,Math.sqrt(oPx/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5*synthRel():0.6+0.8*fit)){
