@@ -200,7 +200,7 @@ function weather(){
 // diminishing returns: each new farming technique adds less on top of the others (Boserup's intensification, Malthus's ceiling)
 const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
 function computeK(){
-  const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=s.admin,s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL;
+  const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=s.admin,s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL,s_wheel=s.wheel,w_turf=w.turf,s_open=s.open,s_malF=s.malF;
   for(let k=0;k<L.length;k++){
     const i=L[k],T=w_T[i]+dT+cdT[i];
     if(T<-9){s_K[i]=1;continue}
@@ -209,16 +209,17 @@ function computeK(){
     const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.4*rv);
     const dry=clamp(wm,0.3,1.6);
     let sh=Math.max(w_sH[i],0.5*s_domR[i],0.6*s_domL[i]);if(w_desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w_Pr[i]+cdP[i]-80)/350,0,0.7));if(w_desert[i])sh=Math.max(sh,0.25*s_camel[i]);
-    const Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.2*s_horse[i])*(1+0.25*w_transh[i])*(1-s_rp[i]);
+    // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
+    const mob=Math.min(1,s_horse[i])*(0.4+0.6*s_wheel[i]);
+    const Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
     const irr=s_irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const T_=s.tk,hv=w_heavy[i],lc=w_leach[i];
     let Kfa=ar*4.2*s_sFc[i]*s_farm[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*s_tk[TI.terrace][i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*T_[26][i]*Math.max(lc,s_forest[i])+0.15*T_[28][i]*w_coast[i])*(1+rv*(0.25+2.2*s_irrig[i]));
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
-    // steppe black earth lies under a dense grass sod that scratch ploughs and hoes barely break: little farmed until heavy iron ploughs
-    // thick steppe turf defeats the hoe and mostly the ard; only heavy ploughs open it. River valleys and floodplains
-    // escape it: early farmers on both steppes worked the valleys (the Wei and Yellow River; the Dnieper and Don)
-    if(w_sod[i]){const sk=1-Math.min(1,2*w_rv[i]),f0=0.4+0.6*Math.max(s_plough[i],0.5*s_iron[i]),f1=0.12+0.55*Math.max(s_plough[i],0.5*s_iron[i]);Kfa*=ABL.includes('sod')?f0:f0+(f1-f0)*sk}
+    // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
+    if(ABL.includes('oldsod')){if(w.soil[i]===SOI.blackearth)Kfa*=0.12+0.55*Math.max(s_plough[i],0.5*s_iron[i])}
+    else if(w_turf[i]>0){const op=s_open[i],f1=0.12+0.1*s_iron[i]+0.55*s_plough[i];Kfa*=op+(1-op)*f1}
     Kfa*=1+0.07*s_tk[32][i]*Math.min(1,rv*3)+0.05*s_tk[33][i]*(w.techEnv?w_techEnv[2][i]:0.5)+0.06*genAt(0,i)+0.04*genAt(3,i);
     Kfa*=(1-0.3*s_forest[i]*(1-clamp(0.5*s_metal[i]+0.7*s_iron[i],0,0.9)))*(1-0.6*s_salt[i])*(1-0.5*w_oncho[i]);
     if(w_T[i]<12)Kfa*=clamp(1+0.18*dT,0.4,1.35);
@@ -226,7 +227,7 @@ function computeK(){
     if(hv>0)Kfa*=1-0.7*hv*(1-Math.max(s_plough[i],0.4*s_iron[i]));
     s_Kfa[i]=Kfa;s_Kh[i]=Kh;s_Kf[i]=Kf;const ps=s_past[i];
     // the province's mix of fields and pasture, set by what pays, who lives there, raids and rulers (see herds.js)
-    s_K[i]=Math.max(1,Kf,(1-ps)*(Kfa+0.3*Kh+0.2*Kf)+ps*(Kh+0.4*Kf))*(1-0.5*w_mal[i]*(1-s_adapt[i])*(1-0.5*s_tk[29][i]));
+    s_K[i]=Math.max(1,Kf,(1-ps)*(Kfa+0.3*Kh+0.2*Kf)+ps*(Kh+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*s_tk[29][i]));
   }
 }
 function growth(){
@@ -248,10 +249,10 @@ function growth(){
       // people clear as much forest as they need for fields and grazing (more people, more clearing; intensive farming needs less land);
       // stone and bronze tools make it slow work, iron axes speed it; land no longer needed grows back
       const dens=p/w_area[i],need=clamp(fm*dens/(25*(1+0.5*s_crops[i]+0.4*s_plough[i]+0.4*s_irrig[i]))+1.6*fm*w_sF[i]*Math.max(0,pr-0.7)+0.25*s_herd[i]*w_sH[i]*Math.min(1,pr),0,0.95),tgt=f0*(1-need);
-      if(fo>tgt)fo-=(fo-tgt)*0.0015*(1+5*s_iron[i]+0.5*s_metal[i]);else fo+=(tgt-fo)*0.004;
+      if(fo>tgt){const d=(fo-tgt)*0.0015*(1+5*s_iron[i]+0.5*s_metal[i]);fo-=d;s.fclr[i]=d}else{fo+=(tgt-fo)*0.004;s.fclr[i]=0}
       s_forest[i]=clamp(fo,0,f0)}
     if(s_rp[i]>0)s_rp[i]*=0.96;
-    if(w_mal[i]>0)s_adapt[i]+=0.0012*w_mal[i]*Math.max(0,0.55-s_adapt[i]);
+    if(w_mal[i]>0)s_adapt[i]+=0.0012*w_mal[i]*s.malF[i]*Math.max(0,0.55-s_adapt[i]);
   }
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
@@ -417,11 +418,19 @@ function disease(){
       s.outbreaks.push(o);s_infect[i]=3;s_ob[i]=o.id;s.inf.push(i);
     }
   }
+  // spillover: people cutting into warm forests meet the diseases of its animals (Wolfe, Dunavan & Diamond 2007)
+  for(let t=0;t<20;t++){const i=L[(r()*L.length)|0],cl=s.fclr[i];if(!(cl>0)||s_pop[i]<1||s_infect[i])continue;const f0=w.forest0[i];if(f0<0.4||w.T[i]<18)continue;
+    const dens=s_pop[i]/w_area[i];
+    if(r()<dz*0.0025*Math.min(2,cl/0.002)*Math.min(1,dens/5)*clamp(2*s.forest[i]/f0,0,1)){
+      const e=s_eth[i]>=0?s_eths[s_eth[i]]:null;
+      const o={id:s.outbreaks.length,name:`${e?cap(e.lang.lex.mountain)+' ':''}${pick(r,['fever','wasting sickness','pox','sleeping sickness','bleeding fever'])}`,origin:i,year:s.year,deaths:0,vir:0.12+r()*0.15,cells:1,active:1,done:false,spread:[[0,i]],hit:new Set(),novel:true};
+      s.outbreaks.push(o);s_infect[i]=3;s_ob[i]=o.id;s.inf.push(i);s_dp[i]=Math.min(1,s_dp[i]+0.06);s.spills=(s.spills||0)+1;
+      chron('plague',`A new ${o.name} crosses from the animals of the forest to the ${e?e.name:'people'} clearing it.`,i,[RPl(o)],'Cutting into the forest brought farmers and their animals close to wild hosts of diseases no one had met before.')}}
   const nl=[];
   for(const o of s.outbreaks)if(!o.done)o.active=0;
   for(const i of s.inf){if(!s_infect[i])continue;
     const o=s_outbreaks[s_ob[i]],dens=s_pop[i]/w_area[i];
-    const m=Math.min(0.7,o.vir*(1-s_immune[i])*(0.5+0.5*Math.min(1,dens/15))*(o.virgin?1+2.5*Math.max(0,(o.dp||0)-s_dp[i]):1)*(1-0.2*s_tk[29][i])),dd=s_pop[i]*m;
+    const m=Math.min(0.7,o.vir*(1-(o.novel?0.3:1)*s_immune[i])*(0.5+0.5*Math.min(1,dens/15))*(o.virgin?1+2.5*Math.max(0,(o.dp||0)-s_dp[i]):1)*(1-0.2*s_tk[29][i])),dd=s_pop[i]*m;
     s_pop[i]-=dd;o.deaths+=dd;o.active++;
     if(s_pol[i]){const po=s_pols[s_pol[i]];po.shock+=0.003;po.plagueD=(po.plagueD||0)+dd;o.hit.add(s_pol[i])}
     const spreadTo=j=>{s_infect[j]=3;s_ob[j]=o.id;nl.push(j);o.cells++;if(o.spread.length<4000)o.spread.push([s.year-o.year,j])};
@@ -561,7 +570,7 @@ function collapse(o){
 }
 function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5))+1.2*s.gun[c]+0.2*s.admin[c]+0.3*s.camel[c]*w.desert[c]}
 // what a field-taxing state can take: herds move, and a herding cell yields little grain to the tax collector
-function cerealEff(i){return S.cTax[i]*(1-0.45*WD.leach[i])*(1-0.35*WD.trop[i])*(ABL.includes('ptax')?1:1-0.8*clamp((S.past[i]-0.45)/0.4,0,1))}
+function cerealEff(i){return S.cTax[i]*(1-0.45*WD.leach[i])*(1-0.35*WD.trop[i])*(ABL.includes('ptax')?1:ABL.includes('fullptax')?1-0.7*S.past[i]:1-0.8*clamp((S.past[i]-0.45)/0.4,0,1))}
 const herdLed=o=>o&&o.kind==='state'&&(o.steppe||0)>0.5;
 function strength(o){const rd=rideOf(o);return o.kind==='horde'?(o.pop+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop)*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
@@ -980,7 +989,8 @@ function* politicsG(){
     // a league of cities shares one pool of skills and ideas
     const lgI=o.league!=null&&s.leagues&&s_leagues[o.league]&&!s_leagues[o.league].end?s_leagues[o.league]:null,oP=lgI?Math.max(o.pop,lgI.pop||0):o.pop,oC=lgI?Math.max(o.cells,lgI.cells||0):o.cells;
     if(o.kind==='state')for(let k=6;k<TECH.length;k++){const T=TECH[k],em=T.em;if(!em||s_tk[k][c]>=0.5)continue;
-      const emP=em.pop*0.6;if(oP<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w_coast[c]&&o.coastN<2)||(em.horse&&s_horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3))continue;
+      // thresholds were set when world population ran about 40% above the historical estimates; rescaled with it
+      const emP=em.pop*0.6*0.65;if(oP<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w_coast[c]&&o.coastN<2)||(em.horse&&s_horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3))continue;
       let ok=true;for(const p of T.pre)if(s_tk[p][c]<0.7){ok=false;break}if(!ok)continue;
       const fit=techFit(o,k),bos=em.press?clamp((o.press-0.7)*5,0,2):1;
       if(r()<em.b*P.invent*Math.min(3,Math.sqrt(oP/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5*synthRel():0.6+0.8*fit)){

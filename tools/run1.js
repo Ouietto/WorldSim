@@ -36,7 +36,7 @@ const sn=S.stateNow&&END>=1500?S.stateNow.res:null;out.s_ng=sn?+sn[0].share.toFi
 const al=S.alive.map(k=>S.pols[k]);const regPop={};for(const R of WD.regions){let t=0;for(const i of R.cells)t+=S.pop[i];regPop[R.k]=+(t/1e6).toFixed(2)}
 out.x={regPop,who,regionKinds:Object.fromEntries(Object.entries(S.regionFirst).map(([k,v])=>[k,(v.kind||'state')+': '+v.name])),states:al.filter(o=>o.kind==='state').length,hordes:al.filter(o=>o.kind==='horde').length,
   cityStates:al.filter(o=>o.tier==='City-state').length,gen:typeof TECH_BASE!=='undefined'?TECH.length-TECH_BASE:0,co2:S.co2?+S.co2.toFixed(1):null,
-  hordeMax:hMax,pushed:S.migs?S.migs.filter(m=>m&&m.cause==='pushed').length:null,domestic:S.domLog?S.domLog.slice(0,8).map(d=>HERDS[d.sp].k+' '+d.y+'@'+Math.round(LA(d.cell))+','+Math.round(LO(d.cell))):null,
+  hordeMax:hMax,spills:S.spills||0,pushed:S.migs?S.migs.filter(m=>m&&m.cause==='pushed').length:null,domestic:S.domLog?S.domLog.slice(0,8).map(d=>HERDS[d.sp].k+' '+d.y+'@'+Math.round(LA(d.cell))+','+Math.round(LO(d.cell))):null,
   horsesAmericas:S.horse?WD.landIdx.filter(i=>LO(i)<-52&&LA(i)<62&&S.horse[i]>0.05).length:null,contact:!!S.malAm,sacks:S.cities.reduce((a,c)=>a+(c.sacks?c.sacks.length:0),0),nan:al.filter(o=>!(o.cult>=0&&o.psi>=0)).length};
 {let hh=0;for(const i of WD.landIdx)hh=(hh*31+Math.round(S.pop[i])+S.pol[i]*7)%2147483647;out.x.hash=hh}
 out.time={init:tInit/1000,total:(Date.now()-t0)/1000,byMillennium:sec};

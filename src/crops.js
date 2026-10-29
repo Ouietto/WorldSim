@@ -22,16 +22,16 @@ const CI=Object.fromEntries(CROPS.map((c,k)=>[c.k,k]));
 // soils, assigned once from long-standing climate and terrain; fert multiplies farm yield, drain how fast farming wears it out,
 // salt how readily irrigation poisons it, erode how fast bare slopes lose it
 const SOILS=[
-  {k:'tundra',n:'Frozen soils',fert:0.3,drain:1.2,salt:1,erode:1},
-  {k:'desert',n:'Desert soils',fert:0.9,drain:1.0,salt:1.6,erode:1},
-  {k:'alluvium',n:'River silt',fert:1.12,drain:0.5,salt:1.1,erode:0.5},
-  {k:'volcanic',n:'Volcanic highland soils',fert:1.15,drain:0.8,salt:1,erode:1.2},
-  {k:'mountain',n:'Thin mountain soils',fert:0.85,drain:1.2,salt:1,erode:1.6},
-  {k:'tropical',n:'Leached tropical soils',fert:1.0,drain:1.6,salt:1,erode:1.2},
-  {k:'podzol',n:'Acid forest soils',fert:0.72,drain:1.2,salt:1,erode:1},
-  {k:'blackearth',n:'Black earth',fert:1.05,drain:0.7,salt:1,erode:0.8,sod:1},
-  {k:'clay',n:'Heavy savanna clays',fert:1.0,drain:0.9,salt:1.2,erode:0.8},
-  {k:'forest',n:'Brown forest soils',fert:1.0,drain:1.0,salt:1,erode:1},
+  {k:'tundra',n:'Frozen soils',fert:0.3,drain:1.2,salt:1,erode:1,dig:0.5},
+  {k:'desert',n:'Desert soils',fert:0.9,drain:1.0,salt:1.6,erode:1,dig:0.7},
+  {k:'alluvium',n:'River silt',fert:1.12,drain:0.5,salt:1.1,erode:0.5,dig:1.3},
+  {k:'volcanic',n:'Volcanic highland soils',fert:1.15,drain:0.8,salt:1,erode:1.2,dig:1.0},
+  {k:'mountain',n:'Thin mountain soils',fert:0.85,drain:1.2,salt:1,erode:1.6,dig:0.5},
+  {k:'tropical',n:'Leached tropical soils',fert:1.0,drain:1.6,salt:1,erode:1.2,dig:0.9},
+  {k:'podzol',n:'Acid forest soils',fert:0.72,drain:1.2,salt:1,erode:1,dig:0.7},
+  {k:'blackearth',n:'Black earth',fert:1.05,drain:0.7,salt:1,erode:0.8,dig:1.0},
+  {k:'clay',n:'Heavy savanna clays',fert:1.0,drain:0.9,salt:1.2,erode:0.8,dig:0.45},
+  {k:'forest',n:'Brown forest soils',fert:1.0,drain:1.0,salt:1,erode:1,dig:0.8},
 ];
 const SOI=Object.fromEntries(SOILS.map((s,k)=>[s.k,k]));
 function soilFor(w,i){const T=w.T[i],P=w.Pr[i],la=Math.abs(w.lat[i]*180/Math.PI);
@@ -60,13 +60,19 @@ function cropsInit(){
   if(!w.soil){w.soil=new Uint8Array(N);w.soilFert=new Float32Array(N).fill(1);w.soilDrain=new Float32Array(N).fill(1);w.soilSalt=new Float32Array(N).fill(1);w.soilErode=new Float32Array(N).fill(1);
     w.terrFit=new Float32Array(N);for(const i of w.landIdx)w.terrFit[i]=Math.min(1,2*w.rough[i]+(w.Pr[i]>1000&&w.rv[i]>0.15&&w.rough[i]<0.1?0.6:0));
     w.sod=new Uint8Array(N);w.heavy0=Float32Array.from(w.heavy);
-    for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;if(so.sod)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
+    // turf: grassland moist enough for a dense mat of roots but too dry for trees (the chernozem steppe, the tallgrass prairie)
+    // is barely broken by hoes. Drier steppe grows sparse bunchgrass with bare ground between, easy to dig; wetter land grows
+    // woods, which are cleared by axe and fire instead. Floodplains are open ground, stripped and silted by floods.
+    w.turf=new Float32Array(N);w.soilDig=new Float32Array(N).fill(1);
+    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if(b===5||b===6)w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*w.rv[i]))}
+    for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;w.soilDig[i]=so.dig;if(w.turf[i]>0.3)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
       // heavy wet clays belong to forest and savanna-clay soils, not to volcanic highlands, river silt or mountain soils
       if(!['forest','podzol','clay'].includes(so.k))w.heavy[i]=0}}
   if(!w.sF0){w.sF0=Float32Array.from(w.sF);w.sH0=Float32Array.from(w.sH);w.leach0=Float32Array.from(w.leach);w.trop0=Float32Array.from(w.trop)}
   else{w.sF.set(w.sF0);w.sH.set(w.sH0);w.leach.set(w.leach0);w.trop.set(w.trop0);w.exQ=null}
   if(w.malAm)for(const i of w.landIdx)if(w.malAm[i]>0)w.mal[i]=0;s.malAm=false;
-  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99)});
+  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99),open:new Float32Array(N).fill(1),malF:new Float32Array(N).fill(1),fclr:new Float32Array(N)});
+  for(const i of w.landIdx)s.open[i]=1-w.turf[i];
   if(!w.alat){w.alat=new Float32Array(N);for(const i of w.landIdx)w.alat[i]=Math.abs(w.lat[i]*180/Math.PI)}
 }
 // a farming hearth: its package is the historical one on Earth, or whichever fits best elsewhere
@@ -107,7 +113,7 @@ function cropPass(quiet){
     // invented independently wherever crowding on slopes or wetlands demands it (Yemen, China, the Andes, Mesoamerica, New Guinea)
     if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&w.rv[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>4&&r()<0.0006){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     if(best===CI.maize&&!s.firstTech[TI.nixtamal]&&farm[i]>0.7&&pop[i]>3000&&r()<0.0015){seedTech(nix,i,1,1);firstTech(TI.nixtamal,i,s.pol[i]?s.pols[s.pol[i]]:null)}}
-  if(!quiet)for(let k=0;k<CROPS.length;k++){if(edge[k]&1)cB[2*k+1]+=0.025;if(edge[k]&2)cB[2*k]=Math.max(0,cB[2*k]-0.025)}
+  if(!quiet){for(let k=0;k<CROPS.length;k++){if(edge[k]&1)cB[2*k+1]+=0.025;if(edge[k]&2)cB[2*k]=Math.max(0,cB[2*k]-0.025)}openPass()}
 }
 // after each climate re-solve: farm and pasture suitability follow the new climate (a greener Sahara can be farmed)
 function climateSuit(){const s=S,w=WD;if(!w.sF0)return;
@@ -115,7 +121,8 @@ function climateSuit(){const s=S,w=WD;if(!w.sF0)return;
     if(Math.abs(s.cdT[i])<0.05&&Math.abs(s.cdP[i])<5){w.sF[i]=w.sF0[i];w.sH[i]=w.sH0[i];w.leach[i]=w.leach0[i];w.trop[i]=w.trop0[i];continue}
     // the measured baseline already holds local detail the formulas miss, so apply only the change the formulas predict
     const a=suitFor(w,i,w.T[i],w.Pr[i]),b=suitFor(w,i,t,p);
-    // damped and capped: the formulas jump at thresholds (a biome boundary, a growing-season cutoff), the land does not
+    // halved and capped: our climate model's Holocene anomalies run about twice what pollen records show (+3 °C over Europe
+    // at 6,000 years ago against about +1 °C: Davis et al. 2003, Bartlein et al. 2011), and the formulas jump at thresholds
     const dl=(x,y)=>clamp(0.5*(x-y),-0.2,0.2);
     w.sF[i]=clamp(w.sF0[i]+dl(b[0],a[0]),0,1);w.sH[i]=clamp(w.sH0[i]+dl(b[1],a[1]),0,1);w.leach[i]=clamp(w.leach0[i]+b[2]-a[2],0,1);w.trop[i]=clamp(w.trop0[i]+b[3]-a[3],0,1)}
   w.exQ=null;cropPass(true)}
@@ -133,3 +140,23 @@ function contactCrops(a,b){const s=S,w=WD;const all=lm=>{let m=0;for(const i of 
   const lonOf=i=>(w.cxA[i]+0.5)/W*360-180,am=i=>lonOf(i)<-30;
   if(!s.malAm&&am(a)!==am(b)&&w.malAm){s.malAm=true;for(const i of w.landIdx)if(w.malAm[i]>0)w.mal[i]=w.malAm[i];
     const c=am(a)?a:b;chron('plague','Ships from across the ocean bring malaria to the Americas; the warm lowlands become deadly.',c,[])}}
+
+// ---------- opening the land ----------
+// Turf is broken field by field, by labour. Farming peoples do it when crowded (Boserup 1965): slowly with hoes and digging
+// sticks, faster with ards and iron shares, quickly with heavy ploughs; friable soils (loess, silt) go faster than clays.
+// Herding peoples leave the turf for their animals. Fields abandoned or turned to pasture go back to grass within a few generations.
+// Tropical forest cleared for fields leaves sunlit pools where malaria mosquitoes breed (Livingstone 1958); regrowth shades them out.
+function openPass(){const s=S,w=WD,L=w.landIdx,op=s.open,pop=s.pop,K=s.K,nb=w.nb,eths=s.eths;
+  for(const i of L){const tu=w.turf[i];
+    if(tu>0){const o0=1-tu;let o=op[i];
+      if(pop[i]<1||s.farm[i]<0.3||s.past[i]>0.7)o-=0.05*(o-o0);
+      else{const e=s.eth[i]>=0?eths[s.eth[i]]:null,trad=1-(e&&e.past!=null?e.past:0.5);
+        // crowding here, or crowded farmers next door looking for land
+        let push=clamp((pop[i]/Math.max(1,K[i])-0.6)/0.4,0,1);
+        for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&pop[j]>=1&&s.farm[j]>0.3)push=Math.max(push,op[j]*clamp((pop[j]/Math.max(1,K[j])-0.7)/0.3,0,1))}
+        // hoes and scratch-ards barely cut virgin sod; iron shares help a little; the heavy mouldboard plough turns it over
+        const tool=0.015+0.03*s.ard[i]+0.08*s.iron[i]+2.5*s.plough[i];
+        o+=0.04*tool*w.soilDig[i]*push*trad*(1-0.7*s.past[i])*(1-o)}
+      op[i]=clamp(o,o0,1)}
+    const f0=w.forest0[i];if(f0>0.3&&w.T[i]>20)s.malF[i]=0.55+0.45*clamp(1-s.forest[i]/f0,0,1)}
+}

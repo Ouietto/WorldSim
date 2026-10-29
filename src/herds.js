@@ -32,7 +32,7 @@ function landUsePass(){
     if(e){sum[e.id]+=p*past[i];wt[e.id]+=p}}
   // traditions drift, slowly, toward how a people actually lives
   // (a people's first generation of farmers or herders sets the tradition outright; after that it moves over centuries)
-  for(const e of eths){if(!wt[e.id])continue;const m=sum[e.id]/wt[e.id];if(!e.pastSet){e.pastSet=1;e.past=m}else e.past+=0.03*(m-e.past)}
+  for(const e of eths){if(!wt[e.id])continue;const m=sum[e.id]/wt[e.id];if(ABL.includes('oldtrad'))e.past+=0.02*(m-e.past);else if(!e.pastSet){e.pastSet=1;e.past=m}else e.past+=0.03*(m-e.past)}
 }
 // ---------- the ruling coalition: steppe lords versus landlords, merchants and officials ----------
 function elitePass(o){
