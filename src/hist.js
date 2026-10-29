@@ -51,6 +51,9 @@ const TECH=[
 [[0.6,-0.6],[0.2,-0.5],[0.7,0.2],[0.1,0.5],[-0.2,0.4],[0.3,0.1],[-0.4,0],[0,0.5],[0.3,0.7],[-0.6,0.2],[-0.5,-0.1],[-0.4,0.5],[0,0.4],[0.2,0.8],[-0.6,-0.1],[0.7,0.1],[0.2,0.9],[-0.2,0.8],[0.3,-0.3],[0.5,-0.5]].forEach((p,k)=>{if(!TECH[k].pos)TECH[k].pos=p});
 const TI={};TECH.forEach((t,k)=>TI[t.k]=k);
 const SYNTH0=TECH.findIndex(t=>t.synth);
+// who carries each institution: 1 writing (court, then merchants' accounts), 2 merchants (coins, the alphabet),
+// 3 the court alone (law, roads, relays, cord records), 4 anyone who reads (paper, printing)
+const CARRY=TECH.map(t=>({writing:1,coin:2,alphabet:2,law:3,roads:3,relays:3,khipu:3,paper:4,printing:4,ledger:3})[t.k]||0);
 const ERAS=['Foraging','Neolithic','Bronze Age','Iron Age','Classical','Medieval','Gunpowder age','Age of Sail'];
 function eraOf(i){
   const t=S.tk,v=k=>t[k][i]>0.5;
@@ -347,6 +350,11 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
     const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+Math.sqrt(s_pop[i]*s_pop[j])/6000+s_car[i]+s_car[j])*pg,ct0=cti(w_nb[i*4]),ct1=cti(w_nb[i*4+1]),ct2=cti(w_nb[i*4+2]),ct3=cti(w_nb[i*4+3]);
     let nj0=-1,nj1=-1,nj2=-1,nj3=-1;{const b=i*4;let j=w_nb[b];if(j>=0&&pop[j]>=1)nj0=j;j=w_nb[b+1];if(j>=0&&pop[j]>=1)nj1=j;j=w_nb[b+2];if(j>=0&&pop[j]>=1)nj2=j;j=w_nb[b+3];if(j>=0&&pop[j]>=1)nj3=j}
     const clT=w_cosLat[i],lowC=conn<3000,noFarm=s_farm[i]<0.3&&s_herd[i]<0.3;
+    // carriers: an institution is taken up by the people who need it, scribes by a court with cities to run, accounts by
+    // merchants; a chiefdom beside a literate empire has no one to read (Goody 1986). A rival that beats you with it
+    // forces the pace (Renfrew and Cherry 1986).
+    const stt=po&&po.kind==='state',adm=stt?clamp(0.04+0.1*(po.cityI||0)+po.cells/250+2*(po.cityUrb||0)/(po.pop+1)+0.3*Math.max(0,(po.cplx||0.2)-0.3),0,1):0.02,
+      mer=clamp(0.03+1.2*s_car[i]+(s.city[i]>=0?0.15:0),0,1),prs=stt?Math.min(1,0.4*(po.enemies?po.enemies.size:0)+(po.shock||0)):0;
     for(let f=0;f<NT;f++){
       if(!known[f]||f===4||f===18)continue;   // horses and camels come from real herds (herds.js), not from diffusing know-how
       const A=T[f];let t=A[i];
@@ -357,7 +365,11 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         if(nj2>=0&&(v=A[nj2])>m){m=v;same=pi&&pol[nj2]===pi;mc=ct2*clT}
         if(nj3>=0&&(v=A[nj3])>m){m=v;same=pi&&pol[nj3]===pi;mc=ct3*clT}
         for(let q=ls0;q<ls1;q++){const j=w_lt[q];if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=0.7}}
-        if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;t+=k*(m-t)}
+        if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
+          const cr=CARRY[f];if(cr){const nd=cr===1?Math.max(adm,0.6*mer):cr===2?Math.max(mer,0.5*adm):cr===3?adm:Math.max(adm,mer);k*=0.03+0.97*nd*(1+(same?0:prs))}
+          const t0=t;t+=k*(m-t);
+          // a fast change unsettles the old order: new scribes and clerks against the warrior nobility, felt as lost cohesion
+          if(cr&&pi){const dt=t-t0;if(dt>0.01)s.s[i]=Math.max(0.02,s.s[i]-3*dt*dt)}}
         if(INST[f]&&dark&&m<0.5)t*=pi?0.994:0.985;
       }else if(INST[f]&&dark){// saturated cell: only decays if no neighbour still knows it
         let m=0;if(nj0>=0)m=Math.max(m,T[f][nj0]);if(nj1>=0)m=Math.max(m,T[f][nj1]);if(nj2>=0)m=Math.max(m,T[f][nj2]);if(nj3>=0)m=Math.max(m,T[f][nj3]);if(m<0.5)t*=pi?0.994:0.985}
