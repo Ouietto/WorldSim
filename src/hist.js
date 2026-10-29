@@ -350,7 +350,8 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
     let conn=s_pop[i];const pi=s_pol[i],po=pi?pols[pi]:null;
     for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0)conn+=s_pop[j]}
     const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
-    const ls0=w_ls[i],ls1=s_sail[i]>0.3?w_ls[i+1]:ls0;
+    // narrow straits were crossed in skin boats and dugouts long before seafaring (Crete by 7000 BCE, Britain by 4000 BCE)
+    const ls0=w_ls[i],ls1=s_sail[i]>0.3?w_ls[i+1]:ls0,lsE=w_ls[i+1];
     const dark=po?po.cult<0.1:true;
     const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+Math.sqrt(s_pop[i]*s_pop[j])/6000+s_car[i]+s_car[j])*pg,ct0=cti(w_nb[i*4]),ct1=cti(w_nb[i*4+1]),ct2=cti(w_nb[i*4+2]),ct3=cti(w_nb[i*4+3]);
     let nj0=-1,nj1=-1,nj2=-1,nj3=-1;{const b=i*4;let j=w_nb[b];if(j>=0&&pop[j]>=1)nj0=j;j=w_nb[b+1];if(j>=0&&pop[j]>=1)nj1=j;j=w_nb[b+2];if(j>=0&&pop[j]>=1)nj2=j;j=w_nb[b+3];if(j>=0&&pop[j]>=1)nj3=j}
@@ -369,7 +370,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         if(nj1>=0&&(v=A[nj1])>m){m=v;same=pi&&pol[nj1]===pi;mc=ct1;mj=nj1}
         if(nj2>=0&&(v=A[nj2])>m){m=v;same=pi&&pol[nj2]===pi;mc=ct2*clT;mj=nj2}
         if(nj3>=0&&(v=A[nj3])>m){m=v;same=pi&&pol[nj3]===pi;mc=ct3*clT;mj=nj3}
-        for(let q=ls0;q<ls1;q++){const j=w_lt[q];if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=0.7;mj=j}}
+        for(let q=ls0;q<lsE;q++){const raft=q>=ls1;if(raft&&w.ld[q]>2)continue;const j=w_lt[q];if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=raft?0.2:0.7;mj=j}}
         if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
