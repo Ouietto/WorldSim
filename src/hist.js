@@ -255,7 +255,7 @@ function growth(){
       if(s_salt[i]>0&&(pr<0.3||s_tk[30][i]>0.5))s_salt[i]=Math.max(0,s_salt[i]-0.0004-0.002*s_tk[30][i]);
       // crowded farmers with nowhere to go work their land harder over generations (Boserup 1965; Carneiro 1970);
       // where free land is near, they move instead. The skill fades slowly once the pressure is gone.
-      const li=s.lint[i];if(pr>0.8)s.lint[i]=li+0.0004*(1-li)*fm*Math.min(1,(pr-0.8)/0.2)*clamp((s.circE[i]-0.2)/0.6,0,1);else if(pr<0.5)s.lint[i]=li*0.999}
+      const li=s.lint[i];if(pr>0.8&&!(typeof process!=='undefined'&&process.env&&process.env.NOLINT))s.lint[i]=li+0.0004*(1-li)*fm*Math.min(1,(pr-0.8)/0.2)*clamp((s.circE[i]-0.2)/0.6,0,1);else if(pr<0.5)s.lint[i]=li*0.999}
     const f0=w_forest0[i];
     if(f0>0){let fo=s_forest[i];
       // people clear as much forest as they need for fields and grazing (more people, more clearing; intensive farming needs less land);
