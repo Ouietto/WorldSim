@@ -242,7 +242,9 @@ function growth(){
       s_fert[i]+=0.0025*(1-s_fert[i])*(1+0.6*s_herd[i]*w_sH[i]+(pr<0.5?1+lc:0));
       if(s_forest[i]<0.15&&w_rough[i]>0.3)s_fert[i]=Math.max(0.3,s_fert[i]-0.0003*w_soilErode[i]*w_rough[i]*fm);
       const ir=s_irrig[i]*Math.min(1,w_rv[i]*2);
-      if(ir>0.1&&w_Pr[i]<550&&pr>0.5)s_salt[i]=Math.min(0.85,s_salt[i]+0.0004*w_soilSalt[i]*ir*Math.min(1.2,pr)*(1-0.9*s_tk[30][i]));
+      // salt builds where crowded irrigated land is cropped every year with poor drainage; thin early canal farming with fallow
+      // years and floods to flush the soil kept it down (Jacobsen & Adams 1958; Powell 1985)
+      if(ir>0.1&&w_Pr[i]<550&&pr>0.5){const dens=p/w_area[i];s_salt[i]=Math.min(0.85,s_salt[i]+0.0004*w_soilSalt[i]*ir*Math.min(1.2,pr)*clamp((dens-4)/8,0,1)*(1-0.9*s_tk[30][i]))}
       if(s_salt[i]>0&&(pr<0.3||s_tk[30][i]>0.5))s_salt[i]=Math.max(0,s_salt[i]-0.0004-0.002*s_tk[30][i])}
     const f0=w_forest0[i];
     if(f0>0){let fo=s_forest[i];
