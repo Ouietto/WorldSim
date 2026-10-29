@@ -1109,7 +1109,7 @@ function* politicsG(){
         if(agr>0.35&&dens>3.2&&!w_nomad[i]&&localPop(i)>=FLOOR.chief*3*P.floor){
           // pristine states need crowding and nowhere to go (Carneiro 1970); everywhere else a state's example, trade or threat
           // has to reach first (secondary state formation: Price 1978; Wright 1977)
-          const prist=clamp((dens-8)/16,0,1)*(0.3+0.7*s_circE[i]),cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
+          const prist=clamp((dens-6)/12,0,1)*(0.3+0.7*s_circE[i])+0.8*s_irrig[i]*Math.min(1,2*w.rv[i]),cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
           if(r()<cg*P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_admin[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i])*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
             const id=newPolity(i,null);
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
