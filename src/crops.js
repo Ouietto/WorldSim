@@ -121,9 +121,8 @@ function climateSuit(){const s=S,w=WD;if(!w.sF0)return;
     if(Math.abs(s.cdT[i])<0.05&&Math.abs(s.cdP[i])<5){w.sF[i]=w.sF0[i];w.sH[i]=w.sH0[i];w.leach[i]=w.leach0[i];w.trop[i]=w.trop0[i];continue}
     // the measured baseline already holds local detail the formulas miss, so apply only the change the formulas predict
     const a=suitFor(w,i,w.T[i],w.Pr[i]),b=suitFor(w,i,t,p);
-    // halved and capped: our climate model's Holocene anomalies run about twice what pollen records show (+3 °C over Europe
-    // at 6,000 years ago against about +1 °C: Davis et al. 2003, Bartlein et al. 2011), and the formulas jump at thresholds
-    const dl=(x,y)=>clamp(0.5*(x-y),-0.2,0.2);
+    // capped: the formulas jump at thresholds (a biome boundary, a growing-season cutoff), the land changes less abruptly
+    const dl=(x,y)=>clamp(x-y,-0.2,0.2);
     w.sF[i]=clamp(w.sF0[i]+dl(b[0],a[0]),0,1);w.sH[i]=clamp(w.sH0[i]+dl(b[1],a[1]),0,1);w.leach[i]=clamp(w.leach0[i]+b[2]-a[2],0,1);w.trop[i]=clamp(w.trop0[i]+b[3]-a[3],0,1)}
   w.exQ=null;cropPass(true)}
 // how much of a province's harvest a ruler can actually take: storable, visible staples, or labour service once

@@ -1366,7 +1366,12 @@ function cropExchange(a,b){
 function climInit(){
   const s=S,w=WD;
   Object.assign(s,{co2:262,ch4:590,cEx:0,landC:0,climY:-1e9,climCo2:262,climAnom:0,cdT:new Float32Array(N),cdP:new Float32Array(N),veg:new Uint8Array(N),climState:null,climLog:[]});
-  s.landC=landCarbon();climUpdate();
+  s.landC=landCarbon();
+  // the reference climate: today's orbit and pre-industrial air over today's natural vegetation. Changes through time are
+  // measured against this, so the reference and every later run see land albedo the same way (forests darker than open land)
+  vegPass();
+  if(!w.climRef&&w.clim)w.climRef=climModel(w.eHi,{g:w.clim.g,albLand:landAlbedo(),init:w.clim.Tlast,state:w.clim.state});
+  climUpdate();
 }
 function orbitFor(y){return WD.isEarth?orbitAt(y):orbitAt(y-(S.orb0||0))}
 function landAlbedo(){
@@ -1378,9 +1383,9 @@ function landAlbedo(){
 }
 function climUpdate(){drain(climUpdateG())}
 function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.env.NOCLIM){S.climY=S.year;S.climCo2=S.co2;return}
-  const s=S,w=WD,R0=w.clim;if(!R0)return;
+  const s=S,w=WD,R0=w.climRef||w.clim;if(!R0)return;
   const dA=-0.036*(Math.sqrt(s.ch4)-Math.sqrt(700));
-  const R=yield* climModelG(w.eHi,{g:R0.g,orb:orbitFor(s.year),co2:s.co2,dA,albLand:s.climY>-1e8?landAlbedo():null,init:(s.climR||R0).Tlast,state:(s.climR||R0).state});
+  const R=yield* climModelG(w.eHi,{g:R0.g,orb:orbitFor(s.year),co2:s.co2,dA,albLand:landAlbedo(),init:(s.climR||R0).Tlast,state:(s.climR||R0).state});
   s.climR=R;s.climY=s.year;s.climCo2=s.co2;
   // map the change from the reference run onto the history grid
   let gs=0,gw=0;
