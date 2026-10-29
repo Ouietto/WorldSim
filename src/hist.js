@@ -955,8 +955,7 @@ function* politicsG(){
     const a=s_anom[c];o.wet=o.wet*0.92+a*0.08;
     o.loot*=0.9;
     o.gate=clamp(0.5+1.1*(1-o.press)+(o.nomF>0.5||o.kind==='horde'?0.5:0.22)*a+Math.min(0.5,o.tribs*0.15)-(o.over?0.15:0)+Math.min(0.5,o.loot/(o.pop+1)*4)-Math.min(0.3,o.fortN*0.004),0.15,1.9);
-    // without scribes and officials a ruler cannot delegate authority far beyond a few days' travel (Spencer 2010)
-    o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s_admin[c]+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4:1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c])*(o.kind==='state'?0.4+0.6*clamp(s_tk[TI.writing][c]+0.6*s_admin[c],0,1):1);
+    o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s_admin[c]+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4:1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c]);
     const Et=etOf(o);
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq)),0.004,0.12);
     o.shock*=0.92;
