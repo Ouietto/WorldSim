@@ -348,9 +348,9 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         if(INST[f]&&dark&&m<0.5)t*=pi?0.994:0.985;
       }else if(INST[f]&&dark){// saturated cell: only decays if no neighbour still knows it
         let m=0;if(nj0>=0)m=Math.max(m,T[f][nj0]);if(nj1>=0)m=Math.max(m,T[f][nj1]);if(nj2>=0)m=Math.max(m,T[f][nj2]);if(nj3>=0)m=Math.max(m,T[f][nj3]);if(m<0.5)t*=pi?0.994:0.985}
-      // farming and herding are practised by everyone: a well-peopled province that has them refines them itself,
-      // instead of staying at the level of the thin chain of neighbours that brought them
-      if(f<=1&&t>0.3&&t<0.995&&!lowC){const sf=suit[f];t+=0.02*(sf?0.2+sf[i]:1)*(1-t)}
+      // farming is practised by everyone: a well-peopled province that has it refines it over generations,
+      // instead of staying at the level of the thin chain of neighbours that brought it
+      if(f===0&&t>0.3&&t<0.995&&!lowC)t+=0.004*(0.2+w.sF[i])*(1-t)
       if(lowC&&t>0)t*=1-loss*(f===0?0.3:1);
       A[i]=t;
     }

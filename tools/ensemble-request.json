@@ -1,1 +1,1 @@
-{"seeds": "1-16", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Run 3: farming refines locally; recycling feedback code (unused)."}
+{"seeds": "1-16", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Run 4: slower local refinement, farming only."}
