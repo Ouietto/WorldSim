@@ -218,7 +218,10 @@ function computeK(){
     if(T<-9){s_K[i]=1;continue}
     const wm=s_wm[i],Pn=Math.max(0.3*w_Pr[i],w_Pr[i]+cdP[i])*wm,ar=w_area[i],rv=w_rv[i];
     const npp=Math.min(3000/(1+Math.exp(1.315-0.119*(T+w_amp[i]*0.15))),3000*(1-Math.exp(-0.000664*Pn)));
-    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.4*rv);
+    // cool temperate coasts are the richest foraging on Earth: salmon runs, shellfish, seals (Yesner 1980; the Jomon, the
+    // Ertebolle and the Northwest Coast were among the densest forager peoples known)
+    const la=Math.abs(w.lat[i])*57.3,cool=w_coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0;
+    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.8*cool+0.4*rv);
     const dry=clamp(wm,0.3,1.6);
     let sh=Math.max(w_sH[i],0.5*s_domR[i],0.6*s_domL[i]);if(w_desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w_Pr[i]+cdP[i]-80)/350,0,0.7));if(w_desert[i])sh=Math.max(sh,0.25*s_camel[i]);
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
@@ -370,7 +373,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         if(nj1>=0&&(v=A[nj1])>m){m=v;same=pi&&pol[nj1]===pi;mc=ct1;mj=nj1}
         if(nj2>=0&&(v=A[nj2])>m){m=v;same=pi&&pol[nj2]===pi;mc=ct2*clT;mj=nj2}
         if(nj3>=0&&(v=A[nj3])>m){m=v;same=pi&&pol[nj3]===pi;mc=ct3*clT;mj=nj3}
-        for(let q=ls0;q<lsE;q++){const raft=q>=ls1;if(raft&&w.ld[q]>2)continue;const j=w_lt[q];if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=raft?0.2:0.7;mj=j}}
+        for(let q=ls0;q<lsE;q++){const raft=q>=ls1,j=w_lt[q];if(raft&&(w.ld[q]>2||w.lm[j]===w.lm[i]))continue;if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=raft?0.2:0.7;mj=j}}
         if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
