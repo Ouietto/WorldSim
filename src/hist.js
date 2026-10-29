@@ -215,10 +215,7 @@ function computeK(){
     const irr=s_irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const T_=s.tk,hv=w_heavy[i],lc=w_leach[i];
-    // tools and labour: a tool kit (metal, ploughs, administration, rotations) or sheer work per acre (weeding, transplanting,
-    // short fallows; Boserup 1965) both raise yields; they substitute more than they add
-    const tl=0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*s_tk[TI.terrace][i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*T_[26][i]*Math.max(lc,s_forest[i])+0.15*T_[28][i]*w_coast[i],lb=1.6*s_lint[i];
-    let Kfa=ar*4.2*s_sFc[i]*s_farm[i]*s_fert[i]*wf*intens(tl>lb?tl+0.25*lb:lb+0.25*tl)*(1+rv*(0.25+2.2*s_irrig[i]));
+    let Kfa=ar*4.2*s_sFc[i]*s_farm[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*s_tk[TI.terrace][i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*T_[26][i]*Math.max(lc,s_forest[i])+0.15*T_[28][i]*w_coast[i])*(1+rv*(0.25+2.2*s_irrig[i]));
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
     if(w_turf[i]>0){const op=s_open[i],f1=0.04+0.08*s_iron[i]+0.6*s_plough[i];Kfa*=op+(1-op)*f1}
@@ -247,10 +244,7 @@ function growth(){
       // salt builds where crowded irrigated land is cropped every year with poor drainage; thin early canal farming with fallow
       // years and floods to flush the soil kept it down (Jacobsen & Adams 1958; Powell 1985)
       if(ir>0.1&&w_Pr[i]<550&&pr>0.5){const dens=p/w_area[i];s_salt[i]=Math.min(0.85,s_salt[i]+0.0004*w_soilSalt[i]*ir*Math.min(1.2,pr)*clamp((dens-4)/8,0,1)*(1-0.9*s_tk[30][i]))}
-      if(s_salt[i]>0&&(pr<0.3||s_tk[30][i]>0.5))s_salt[i]=Math.max(0,s_salt[i]-0.0004-0.002*s_tk[30][i]);
-      // crowded farmers with nowhere to go work their land harder over generations (Boserup 1965; Carneiro 1970);
-      // where free land is near, they move instead. The skill fades slowly once the pressure is gone.
-      const li=s.lint[i];if(pr>0.8)s.lint[i]=li+0.0004*(1-li)*fm*Math.min(1,(pr-0.8)/0.2)*clamp((s.circE[i]-0.2)/0.6,0,1);else if(pr<0.5)s.lint[i]=li*0.999}
+      if(s_salt[i]>0&&(pr<0.3||s_tk[30][i]>0.5))s_salt[i]=Math.max(0,s_salt[i]-0.0004-0.002*s_tk[30][i])}
     const f0=w_forest0[i];
     if(f0>0){let fo=s_forest[i];
       // people clear as much forest as they need for fields and grazing (more people, more clearing; intensive farming needs less land);
