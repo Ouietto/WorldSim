@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.6.5: horses, herds and the steppe)
+# Asabiya — history engine (v0.7: the ancient Earth, emergent farming and animals)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,17 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.7 adds:
+> - **The ancient Earth:** histories start in 12,000 BCE on the low seas of the deglaciation. Shelves drown as the sea rises (Doggerland, Beringia, Sundaland, the Gulf), land bridges part, the last ice sheets retreat, and the Younger Dryas, 8.2 ka and 4.2 ka shifts strike on their real dates.
+> - **Emergent farming:** farming is no longer placed. Foragers settle on rich wild food in the real ranges of the wild ancestors, start to sow under crowding, cold or feasting demand, sometimes give up, and lock in after thousands of years of selection. Setup can switch back to historical or random hearths.
+> - **Sacred sites:** gathering places bind peoples, keep their memory, erode when abandoned, can be rediscovered, and can become a faith's holy city; city-states around one site can league.
+> - **Communication and holding power:** remembrancers, talking drums, beacons, knotted cords, relay posts, the alphabet, printing; states hold conquests by force, records, trade and the sacred; tributaries are drawn paler.
+> - **Institutions by need:** courts with cities take up writing and law, merchants coins and the alphabet; fast change strains cohesion.
+> - **The farming frontier:** foragers adopt farming only as far as it beats the wild; rich coasts hold out; narrow straits are crossed by boat. **Contact states:** outside the cradles, states form where a state's example, trade or threat reaches.
+> - **Animals:** commensal, prey and directed domestication plus tamed-only animals, real and never-were (eland, zebras, ostriches, moose, peccaries…), with jobs in riding, caravans, pasture, war and messages, and breeds that drift with their keepers.
+> - **Deep traditions:** peoples inherit what they have long worked with; it speeds related inventions and lets them skip steps.
+> - Ensemble check: 54% of historical targets across 16 histories.
 >
 > v0.6.5 adds:
 > - **Fields and pasture** (`src/herds.js`): each province mixes farming and herding by what pays, the people's herding tradition, raids and what its rulers want. Courts can split between steppe lords and landlords.
