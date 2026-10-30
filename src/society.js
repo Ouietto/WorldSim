@@ -64,6 +64,9 @@ function leaguePass(){
     const circ=S.circE[o.capital]||0;
     if(inL&&r()<0.2*(1-0.3*circ)){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
     const free=kin.filter(p=>p.league==null);
+    // cities league against a danger: a war on their hands or a much bigger neighbour at the gate (Renfrew & Cherry 1986)
+    const threat=o.enemies.size>0||[...o.nb.keys()].some(q=>{const t=s.pols[q];return t&&t.alive&&(t.kind==='horde'||t.cells>=3*Math.max(1,o.cells))});
+    if(!threat)continue;
     if(free.length>=2&&r()<0.12*(1-0.3*circ)){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
       s.leagues.push(L);for(const q of L.members)s.pols[q].league=L.id;
       chron('diplomacy',`${L.members.length} cities of the ${e.name} swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],...L.members.map(q=>R_(s.pols[q]))],'Small cities of one people were safer together than alone against the kingdoms around them.');
