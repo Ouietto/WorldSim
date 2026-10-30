@@ -1,1 +1,1 @@
-{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 63: run 62 plus walls bought with treasure and labour, with yearly upkeep."}
+{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 64: run 63 plus travel cost from broken ground, not height (altitude penalty only above 3800 m)."}
