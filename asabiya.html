@@ -1480,7 +1480,7 @@ function migrate(){
     const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)continue;
     let mob=mg*(0.08+0.25*s_herd[i]*w_sH[i]*(0.5+s_horse[i]));
     if(s_pol[j]&&s_pol[j]!==s_pol[i])mob*=0.4;
-    else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)}
+    else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)+2*Math.max(0,(o.ext??0.45)-0.7)}
     const mv=Math.min(p*mob*diff/(1+diff),p*0.3);
     s_pop[i]-=mv;s_pop[j]+=mv;
     if(pj<1||s_eth[j]<0){s_eth[j]=s_eth[i];s_eth2[j]=-1;s_rel[j]=s_rel[i];s_s[j]=s_s[i];s_adapt[j]=s_adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9)}
@@ -1724,7 +1724,7 @@ function newRuler(L,o){
   let base=personName(L,r),num=0;
   if(o&&o.rulers.length&&r()<0.4){const famous=o.rulers.filter(x=>x.fig!=null);const pool=famous.length&&r()<0.7?famous:o.rulers;base=pick(r,pool).base||base}
   if(o){o.nameUse=o.nameUse||{};num=(o.nameUse[base]||0)+1;o.nameUse[base]=num}
-  const R={base,name:num>1?`${base} ${roman(num)}`:base,fem:r()<0.15,aggr:tri(),comp:tri(),char:tri(),piety:tri(),exc:'',epithet:'',conq:0,since:s.year,mi:0,fig:null};
+  const R={base,name:num>1?`${base} ${roman(num)}`:base,fem:r()<0.15,aggr:tri(),comp:tri(),char:tri(),piety:tri(),greed:tri(),exc:'',epithet:'',conq:0,since:s.year,mi:0,fig:null};
   const acc=16+r()*28;R.birth=s.year-Math.floor(acc);R.death=Math.floor(clamp(50+gauss(r)*14,acc+1,88));
   if(r()<P.leaderFlair){const k=pick(r,['aggr','comp','char','piety']);R[k]=0.93+0.07*r();R.exc=k;
     R.epithet=pick(r,k==='aggr'?['the Great','the Conqueror','the Terrible']:k==='comp'?['the Wise','the Lawgiver','the Builder']:k==='char'?['the Beloved','the Radiant','the Lion']:['the Pious','the Saint','the Devout'])}
@@ -1776,7 +1776,7 @@ function succession(o){
   else o.gen++;
 }
 function etOf(o){const c=o.capital,s=S;return 0.02*(1+s.admin[c]+0.5*s.coin[c]+0.5*s.law[c])}
-const WHY_LABEL={pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
+const WHY_LABEL={pW:'taxes that took the peasants\' bread',pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
 function topCauses(why){return Object.entries(why).filter(e=>e[1]>0.08).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>WHY_LABEL[e[0]])}
 function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===id)out.push(i);return out}
 function civilWar(o,breakup){
@@ -2148,7 +2148,7 @@ function* politicsG(){
   const sampleNow=y%10===0;
   for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p],pp=pop[i];
-    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_admin[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_admin[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom++;if(w_coast[i])o.coastN++;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN++;if(s_fort[i]>0.5)o.fortN++;
     o.cx+=w_cosLon[i];o.cy+=w_sinLon[i];o.yy+=w_cyA[i];if(pp>o.mp){o.mp=pp;o.mc=i}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]>200)o.front.push(i);
@@ -2209,7 +2209,7 @@ function* politicsG(){
     statecraft(o,c,y);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
-    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+o.shock;
+    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
     else if(o.cells>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl)civilWar(o);
@@ -2486,7 +2486,7 @@ function* stepG(){
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
   if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){genCache();ritualPass();deepPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){genCache();ritualPass();deepPass();tributePass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
@@ -2538,6 +2538,16 @@ function statecraft(o,c,y){
   o.burden=upkeep/rev;
   o.pT=Math.max(0,o.burden-1)*1.2;
   const atWar=o.enemies.size>0;
+  // extraction: how much of what the farmers grow above their needs the ruler takes. His own appetite and the realm's needs
+  // (war, debt) set the aim; what records, officials and the labour levy can see and collect caps it (Scott 1998; D'Altroy &
+  // Earle 1985 on staple finance). A light hand keeps the peasants loyal; a heavy one starves them, drives them off or raises
+  // them (Goldstone 1991; Turchin & Nefedov 2009).
+  {const R0=o.ruler||{},greed=R0.greed??0.5,rec=o.info?Math.min(1,o.info.rec):s.admin[c];
+   o.levy=clamp(o.pop/Math.max(1,o.cells)/60000,0,1)*clamp((o.cplx||0.2)/0.5,0,1);
+   const aim=0.4+0.4*(greed-0.5)+(atWar?0.15:0)+0.2*Math.max(0,-o.treas),cap=0.3+0.45*rec+0.25*o.levy;
+   if(o.ext==null)o.ext=Math.min(aim,cap);o.ext+=0.08*(Math.min(aim,cap)-o.ext);
+   o.pW=Math.max(0,o.ext-(0.5+0.25*(o.leg??0.8)))*1.5;
+   if(o.ext<0.45)o.mandate=Math.min(1,(o.mandate??1)+0.003*(0.45-o.ext)*10)}
   o.treas=clamp(o.treas+0.04*(1-o.burden)-(atWar?0.02:0),-2,1);
   o.pF=Math.max(0,-o.treas)*0.6;
   if(o.treas<-1.2&&s.law[c]>0.5&&r()<0.02){
@@ -3553,7 +3563,7 @@ function militaryPass(o){
   if(o.merc>0.01){o.treas-=0.02*o.merc;
     if(o.treas<-0.5&&o.merc>0.3){o.shock+=0.3;o.merc=0;if(o.cells>=15)chron('war',`Unpaid, the mercenaries of the ${o.full} turn on their employers.`,c,[R_(o)],'The treasury could no longer pay the soldiers it had hired.')}}
   // granaries: literate states store grain in good years
-  if(s.admin[c]>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*s.admin[c]*(1-(o.gran||0)));
+  {const keep=Math.max(s.admin[c],s.tk[TI.khipu][c],s.ritW?0.7*s.ritW[c]:0);if(keep>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*keep*(1-(o.gran||0)))}
   if(o.gran>0.05)o.treas-=0.004*o.gran;
   if(o.granUse){o.gran=Math.max(0,o.gran-o.granUse/(0.04*o.pop+1));o.granUse=0}
   // paying for peace: a strong horde raiding a rich state
@@ -3597,10 +3607,10 @@ function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
 // Empire is not a technique: it is a state that has gathered enough of these to rule other cities directly.
 function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.min(1,info.rec);
   // savanna kingdoms held by horsemen rather than scribes (Goody 1971)
-  const force=clamp(0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
-  const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c],0,1);
+  const force=clamp(0.25*(o.levy||0)*Math.min(1,(o.ext??0.45)/0.45)+0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
+  const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c]+0.4*Math.min(1,o.gran||0),0,1);
   const R=o.rel>=0?s.rels[o.rel]:null,sacred=Math.max(R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0,s.ritW?clamp((s.ritW[c]-0.3)/0.5,0,1):0);   // the god's house, or an old sanctuary at the capital
-  o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.5*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
+  o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.8*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
 // what a defeated state brings to the table on its own: walls, scribes, its own city and cohesion
 function selfHold(d){const s=S,c=d.capital,info=d.info||infoCap(d);
   return clamp(0.35*Math.min(1,info.rec)+0.25*(s.city[c]>=0?1:0)+0.25*Math.min(1,s.fort[c]*2)+0.25*d.S,0,1)}
@@ -3642,6 +3652,14 @@ function ritualPass(){const s=S,w=WD,r=s.r,y=s.year,L=w.landIdx;
 }
 // the most revered living site in a set of cells, for a new faith's holy city
 function holySite(cells){const s=S;let best=null;for(const c of cells){const k=s.ritAt[c];if(k<0)continue;const R=s.rits[k];if(R.alive&&R.imp>0.5&&(!best||R.imp>best.imp))best=R}return best}
+
+// every ten years: a much stronger neighbour can make a small realm pay tribute without a war, by gifts and threats; tribute
+// empires such as the Aztec Triple Alliance ruled mostly this way (Hassig 1985; Smith 2012)
+function tributePass(){const s=S,r=s.r;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||o.over||(o.hold??0)<0.35||o.cells<3)continue;const po=power(o),Rn=o.ruler||{aggr:0.5};
+    for(const [q] of o.nb){const d=s.pols[q];if(!d||!d.alive||d.kind!=='state'||d.over||d.league!=null||o.enemies.has(q)||o.allies.includes(q)||d.cells*3>o.cells)continue;
+      if(power(d)*4>po)continue;if(r()<0.03*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)){d.over=id;o.tribs++;
+        if(d.cells>=3||o.cells>=20)chron('diplomacy',`Without a battle, the ${d.full} sends gifts and submits to the ${o.full}, paying tribute to keep its own ruler.`,d.capital,[R_(d),R_(o)],'A far stronger neighbour asked for tribute; refusing would have meant war.')}}}}
 
 </script>
 <script>
@@ -4090,6 +4108,7 @@ function renderPage(){
         h+=`<h3 class="sec">Army and stores</h3><div class="bars">${bar('Readiness for war',o.prep,1)}${(o.merc||0)>0.02?bar('Hired soldiers',o.merc,1):''}${(o.gran||0)>0.02?bar('Granaries',o.gran,1,'t'):''}</div>${hp?`<dl class="kv" style="margin-top:6px"><dt>Buys peace from</dt><dd>${lp(hp)}</dd></dl>`:''}`}
       if(o.kind==='state'&&o.info){const sys=['writing','alphabet','printing','drumscript','drums','beacons','khipu','griots','relays'].filter(k=>TI[k]!=null&&s.tk[TI[k]][c]>0.5).map(k=>TECH[TI[k]].n.toLowerCase());
         h+=`<h3 class="sec">Communication</h3><div class="bars">${bar('Records',o.info.rec,1.5)}${bar('Speed',o.info.spd,1.5)}${bar('Memory',o.info.memo,1.3)}</div><p style="margin:6px 0 0;opacity:.85">${sys.length?cap(sys.join(', '))+'.':'Only the spoken message: no records, no relays, no keepers of memory.'}</p>`;
+        if(o.ext!=null)h+=`<h3 class="sec">Taxing the surplus</h3><div class="bars">${bar('Extraction',o.ext,1,'t')}${bar('Ruler\'s appetite',(o.ruler&&o.ruler.greed)||0.5,1,'t')}${bar('Labour levy',o.levy||0,1,'t')}${bar('Storehouses',Math.min(1,o.gran||0),1,'t')}</div><p class="note">How much of the farmers\' spare harvest the ruler takes. A greedy ruler, a war or debts push it up; records, officials and the labour levy cap what can be collected. Beyond about half, peasants go hungry, flee to open land or rise.</p>`;
         if(o.mono)h+=`<h3 class="sec">Hold over conquests</h3><div class="bars">${bar('Holding power',o.hold||0,1)}${bar('Force',o.mono.force,1,'t')}${bar('Records',o.mono.rec,1,'t')}${bar('Trade and cities',o.mono.econ,1,'t')}</div><p style="margin:6px 0 0;opacity:.85">${o.mono.sacred?'Holds the holy city of its faith. ':''}${o.empireY?`An empire since ${fy(o.empireY)}: it rules many cities directly.`:(o.hold||0)<0.4?'Conquered peers keep their own rulers and pay tribute, and break away when they can.':'Can annex and govern conquered cities.'}</p>`}
       if(o.kind==='state'&&o.steppe!=null&&(o.steppe>0.15||o.dual||(o.pD||0)>0.05)){
         h+=`<h3 class="sec">Steppe and sown</h3><div class="bars">${bar('Steppe lords at court',o.steppe,1,'t')}${(o.pD||0)>0.02?bar('Court split',o.pD,1):''}</div><p style="margin:6px 0 0;opacity:.85">${o.steppe>0.6?'Herding nobles dominate: conquest is for pasture and plunder.':o.steppe>0.4?'Herding lords and landed officials share the court uneasily.':'Landlords, merchants and officials dominate: conquest is for taxable farmland.'}${o.dual?' Herders and farmers are ruled under separate laws.':''}</p>`}

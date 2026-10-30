@@ -133,7 +133,7 @@ function militaryPass(o){
   if(o.merc>0.01){o.treas-=0.02*o.merc;
     if(o.treas<-0.5&&o.merc>0.3){o.shock+=0.3;o.merc=0;if(o.cells>=15)chron('war',`Unpaid, the mercenaries of the ${o.full} turn on their employers.`,c,[R_(o)],'The treasury could no longer pay the soldiers it had hired.')}}
   // granaries: literate states store grain in good years
-  if(s.admin[c]>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*s.admin[c]*(1-(o.gran||0)));
+  {const keep=Math.max(s.admin[c],s.tk[TI.khipu][c],s.ritW?0.7*s.ritW[c]:0);if(keep>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*keep*(1-(o.gran||0)))}
   if(o.gran>0.05)o.treas-=0.004*o.gran;
   if(o.granUse){o.gran=Math.max(0,o.gran-o.granUse/(0.04*o.pop+1));o.granUse=0}
   // paying for peace: a strong horde raiding a rich state
@@ -177,10 +177,10 @@ function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
 // Empire is not a technique: it is a state that has gathered enough of these to rule other cities directly.
 function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.min(1,info.rec);
   // savanna kingdoms held by horsemen rather than scribes (Goody 1971)
-  const force=clamp(0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
-  const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c],0,1);
+  const force=clamp(0.25*(o.levy||0)*Math.min(1,(o.ext??0.45)/0.45)+0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
+  const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c]+0.4*Math.min(1,o.gran||0),0,1);
   const R=o.rel>=0?s.rels[o.rel]:null,sacred=Math.max(R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0,s.ritW?clamp((s.ritW[c]-0.3)/0.5,0,1):0);   // the god's house, or an old sanctuary at the capital
-  o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.5*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
+  o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.8*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
 // what a defeated state brings to the table on its own: walls, scribes, its own city and cohesion
 function selfHold(d){const s=S,c=d.capital,info=d.info||infoCap(d);
   return clamp(0.35*Math.min(1,info.rec)+0.25*(s.city[c]>=0?1:0)+0.25*Math.min(1,s.fort[c]*2)+0.25*d.S,0,1)}
@@ -222,3 +222,11 @@ function ritualPass(){const s=S,w=WD,r=s.r,y=s.year,L=w.landIdx;
 }
 // the most revered living site in a set of cells, for a new faith's holy city
 function holySite(cells){const s=S;let best=null;for(const c of cells){const k=s.ritAt[c];if(k<0)continue;const R=s.rits[k];if(R.alive&&R.imp>0.5&&(!best||R.imp>best.imp))best=R}return best}
+
+// every ten years: a much stronger neighbour can make a small realm pay tribute without a war, by gifts and threats; tribute
+// empires such as the Aztec Triple Alliance ruled mostly this way (Hassig 1985; Smith 2012)
+function tributePass(){const s=S,r=s.r;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||o.over||(o.hold??0)<0.35||o.cells<3)continue;const po=power(o),Rn=o.ruler||{aggr:0.5};
+    for(const [q] of o.nb){const d=s.pols[q];if(!d||!d.alive||d.kind!=='state'||d.over||d.league!=null||o.enemies.has(q)||o.allies.includes(q)||d.cells*3>o.cells)continue;
+      if(power(d)*4>po)continue;if(r()<0.03*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)){d.over=id;o.tribs++;
+        if(d.cells>=3||o.cells>=20)chron('diplomacy',`Without a battle, the ${d.full} sends gifts and submits to the ${o.full}, paying tribute to keep its own ruler.`,d.capital,[R_(d),R_(o)],'A far stronger neighbour asked for tribute; refusing would have meant war.')}}}}
