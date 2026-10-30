@@ -221,6 +221,26 @@ function eventPass(){const s=S,w=WD,y=s.year;let any=false;s.evT.fill(0);s.evP.f
       if(la>=la0&&la<=la1&&lo>=lo0&&lo<=lo1)s.evP[i]*=1-f*(1-e.dry)}}
   return any}
 
+// The African and Asian humid period (deMenocal et al. 2000; Shanahan et al. 2015; Fleitmann et al. 2007; Kuper & Kropelin
+// 2006): stronger summer sun drove the monsoons far north. Lakes and grass covered the Sahara, Arabia had lakes, the Thar
+// was green. Our coarse climate model shifts its rain belt instead of widening it, so on Earth the reconstructed signal is
+// added to its rain change until the model can make it itself. The rains failed between about 6500 and 1800 BCE, earliest in
+// Arabia and latest in the Indus lands, and the herders of the drying lands crowded onto the Nile, the Euphrates and the Sahel.
+const HUMID=[
+  // [name, lat0, lat1, lon0, lon1, extra rain (mm), decline starts, gone by]
+  ['the Sahara',11,27,-18,38,320,-5000,-3300],['Arabia',13,30,38,60,200,-6500,-4500],['the Near East',29,38,34,50,70,-4500,-3000],
+  ['the Thar and the Indus lands',22,31,66,78,150,-3500,-1800],['the East African lakes',-3,12,30,45,120,-5000,-3000]];
+function humidFrac(y,a,b){if(y<-9900)return 0;const on=Math.min(1,(y+9900)/400);return on*(y<=a?1:y>=b?0:1-(y-a)/(b-a))}
+function humidRain(i,y){const w=WD,la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;let d=0;
+  for(const [,a,b,c,e,amp,t0,t1] of HUMID){const f=humidFrac(y,t0,t1);if(f<=0)continue;
+    const m=clamp(Math.min(la-a,b-la)/3,0,1)*clamp(Math.min(lo-c,e-lo)/4,0,1);if(m>0)d=Math.max(d,amp*f*m)}return d}
+// every fifty years on Earth: the humid period's rain is laid on the climate model's own change, and land and vegetation follow
+function humidStep(){const s=S,w=WD,y=s.year;if(!w.isEarth||!s.cdP0)return;if(y<-10000||y>-1700)return;
+  for(const i of w.landIdx)s.cdP[i]=s.cdP0[i]+humidRain(i,y);if(typeof climateSuit==='function'&&s.pkAv)climateSuit();vegPass();w.exQ=null;
+  for(const H of HUMID){const k='hum_'+H[0];if(y>=H[6]&&!s[k]){s[k]=1;chron('nature',`The summer rains begin to fail in ${H[0]}. Lakes shrink, grass gives way to sand, and herders drift toward the rivers.`,-1)}
+    if(y>=H[7]&&s[k]===1){s[k]=2;chron('nature',`The desert has returned to ${H[0]}. Those who stayed now live by the rivers, the oases and the wells.`,-1)}}
+  if(y>=-9600&&!s.hum_on){s.hum_on=1;chron('nature','Summer rains reach deep into the deserts: lakes fill across the Sahara and Arabia, and grass and herds follow.',-1)}}
+
 /* ---------- climate through time ---------- */
 const EPOCH_KINDS=[
  {k:'cold',w:0.5,amp:[-1.3,-0.7],dur:[150,380],start:'A long cold epoch sets in: growing seasons shorten and the northern edge of farming retreats.',end:'The long cold epoch eases.'},
@@ -1334,7 +1354,7 @@ function step(){for(const _ of stepG());}
 const ymod=(y,n)=>((y%n)+n)%n;
 function* stepG(){
   const s=S;s.year++;
-  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
+  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if(s.r()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
@@ -1546,6 +1566,7 @@ function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.en
     s.cdP[i]=dp>0?dp:dp*0.4}
   // keep the large-scale signal: the coarse model's local detail is not trusted on top of measured climate
   boxBlur(s.cdT,W,H,3,2,true);boxBlur(s.cdP,W,H,4,2,true);
+  s.cdP0=Float32Array.from(s.cdP);if(WD.isEarth)for(const i of WD.landIdx)s.cdP[i]+=humidRain(i,s.year);
   if(typeof climateSuit==='function'&&s.pkAv)climateSuit();
   for(let j=0;j<CN;j++){const c=R0.g.cosl[Math.floor(j/CW)];gs+=c*(R.Ta[j]-R0.Ta[j]);gw+=c}
   s.climAnom=gs/gw;
