@@ -58,7 +58,7 @@ function leaguePass(){
     const site=s.ritOf?s.ritOf[o.capital]:-1;
     const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&((s.eths[p.core]&&s.eths[p.core].fam===fam)||(site>=0&&s.ritOf[p.capital]===site)))kin.push(p)}
     // a shared sanctuary binds cities that do not touch: chiefs' lands between them do not stop the festival
-    if(site>=0)for(const q of s.alive){const p=s.pols[q];if(q===id||!isCityState(p)||kin.includes(p)||p.enemies.has(id)||s.ritOf[p.capital]!==site)continue;if(angDist(o.capital,p.capital)<0.06)kin.push(p)}
+    if(site>=0&&s.rits[site].imp>0.7)for(const q of s.alive){const p=s.pols[q];if(q===id||!isCityState(p)||kin.includes(p)||p.enemies.has(id)||s.ritOf[p.capital]!==site)continue;if(angDist(o.capital,p.capital)<0.06)kin.push(p)}
     if(o.league!=null){continue}
     const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
     const circ=S.circE[o.capital]||0;
