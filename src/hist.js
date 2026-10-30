@@ -1144,7 +1144,8 @@ function* politicsG(){
     if(o.kind==='horde'&&o.cells>=6&&o.pop>50000&&s.activeMigs.length<10&&((o.wet<-0.4&&o.press>0.75&&r()<0.02*P.wander)||(o.S>0.55&&Rn.aggr>0.7&&r()<0.006*P.wander))){hordeMigration(o)}
     // war
     // a walled city with its fields makes war too: city-states fought each other constantly (Lagash and Umma)
-    if((o.cells>=2||o.tier==='City-state')&&o.enemies.size<3&&r()<P.warRate*0.02*o.aggrM*o.gate){
+    // chiefdoms raid and fight their neighbours too (Carneiro 1981): a single valley's chief can go to war
+    if((o.cells>=2||o.tier==='City-state'||(o.kind==='state'&&o.pop>=2*FLOOR.chief*P.floor))&&o.enemies.size<3&&r()<P.warRate*0.02*o.aggrM*o.gate){
       let best=0,bw=0,holy=false;const po=power(o),Rl=o.rel>=0?s_rels[o.rel]:null,hp=Rl?pol[Rl.holy]:0;
       for(const [q,b] of o.nb){const t=pols[q];if(!t||!t.alive||o.enemies.has(q)||o.allies.includes(q)||o.over===q||t.over===id||(o.truce.get(q)||-1e9)>y)continue;
         let wt=b*Math.pow(po/(power(t)+1),1.5);
