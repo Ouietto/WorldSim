@@ -53,15 +53,18 @@ async function inflateB64(b64){
 /* ---------- base painting ---------- */
 const BCOL=[[0,0,0],[234,239,240],[170,175,158],[104,124,98],[121,145,96],[174,178,121],[196,186,137],[216,199,160],[188,177,112],[84,126,79]];
 function paintBase(){
-  const w=WD,c=document.createElement('canvas');c.width=HW;c.height=HH;const ctx=c.getContext('2d'),img=ctx.createImageData(HW,HH),d=img.data,e=w.eHi;
+  const w=WD,c=document.createElement('canvas');c.width=HW;c.height=HH;const ctx=c.getContext('2d'),img=ctx.createImageData(HW,HH),d=img.data,e0=w.eHi;
+  // the coast of the history's own time: low seas expose the shelves, and the last ice sheets lie white over the north
+  const sl=(S&&S.seaLvl!=null?S.seaLvl:w.seaLvl)||0,ice=S&&w.iceY?w.iceY:null,yr=S?S.year:0,e=e0;
   for(let y=0;y<HH;y++)for(let x=0;x<HW;x++){
-    const i=y*HW+x,v=e[i],xl=y*HW+(x+HW-1)%HW,yu=y>0?i-HW:i;
-    const sh=clamp(1+((e[xl]-v)*0.0011+(e[yu]-v)*0.0011)*(v>0?1:0.2),0.6,1.3);
+    const i=y*HW+x,v=e0[i]-sl,xl=y*HW+(x+HW-1)%HW,yu=y>0?i-HW:i;
+    const sh=clamp(1+((e[xl]-e0[i])*0.0011+(e[yu]-e0[i])*0.0011)*(v>0?1:0.2),0.6,1.3);
     let R,G,B;
     if(v<=0){const t=clamp(-v/5500,0,1);R=94-62*t;G=142-80*t;B=162-72*t;if(v>-200){R+=18;G+=14;B+=8}}
     else{const b=biomeOf(w.tHi[i],w.pHi[i]);[R,G,B]=BCOL[b];
       if(v>2200&&b!==1){const t=clamp((v-2200)/2600,0,1);R+=(158-R)*t;G+=(150-G)*t;B+=(140-B)*t}
-      if(v>4600&&w.tHi[i]<2){R=G=B=232}}
+      if(v>4600&&w.tHi[i]<2){R=G=B=232}
+      if(ice){const ci=((y/SC)|0)*W+((x/SC)|0);if(yr<ice[ci]){R=228;G=236;B=242}}}
     d[i*4]=R*sh;d[i*4+1]=G*sh;d[i*4+2]=B*sh;d[i*4+3]=255;
   }
   ctx.putImageData(img,0,0);
@@ -404,7 +407,7 @@ function renderPage(){
   try{
   if(t==='cell'){
     const i=id,latd=(w.lat[i]*180/Math.PI).toFixed(1),lond=((w.cxA[i]+0.5)/W*360-180).toFixed(1);
-    if(!w.land[i]){h+=`<h2 class="name">Open sea</h2><p class="sub2">${latd}°, ${lond}° · depth ${Math.round(-w.elev[i])} m</p>`}
+    if(!w.land[i]){h+=`<h2 class="name">Open sea</h2><p class="sub2">${latd}°, ${lond}° · depth ${Math.round(-Math.min(w.elev[i],w.lvl?w.lvl[i]-(S?S.seaLvl:0):0))} m</p>`}
     else{
       const p=s.pol[i]?s.pols[s.pol[i]]:null,e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=s.rel[i]>=0?s.rels[s.rel[i]]:null,city=s.city[i]>=0?s.cities[s.city[i]]:null;
       h+=`<div class="kind">Province</div><h2 class="name">${city?esc(city.name):e?'Lands of the '+esc(e.name):'Empty land'}</h2><p class="sub2">${latd}°, ${lond}° · ${ERAS[eraOf(i)]}</p>`;
@@ -803,6 +806,7 @@ function frame(t){
     if(ui.ready&&ui.running){const el=$('toast');el.innerHTML=`<span class="ty">${fy(sp.y)}</span> ${linkify(sp.txt,sp.refs)}`;el.hidden=false;ui.toastT=t+5000;ui.ringCell=sp.cell;ui.ringT=performance.now()+4000;if(ui.follow&&sp.cell>=0)centerOn(sp.cell)}}
   if(ui.toastT&&t>ui.toastT){$('toast').hidden=true;ui.toastT=0}
   if(ui.ringT&&performance.now()<ui.ringT)ui.dirty=true;
+  if(S&&baseCv&&S.seaVer!==ui.seaVer){ui.seaVer=S.seaVer;paintBase();ui.dirty=true}
   if(ui.dirty&&S&&baseCv&&t-ui.lastRender>110){ui.lastRender=t;ui.dirty=false;buildComp();drawMap();updateTop()}
   if(S&&t-ui.lastSide>700){ui.lastSide=t;
     if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='tech')renderTech();else if(ui.pane==='clim')renderClimate()}

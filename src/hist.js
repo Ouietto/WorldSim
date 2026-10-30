@@ -121,10 +121,11 @@ const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,1
 
 function newHistory(hseed){
   const w=WD,r=mulberry32(hashStr('hist:'+hseed+':'+w.seed));
+  seaReset(P.startYear);
   if(typeof TECH_BASE!=='undefined'&&TECH_BASE)TECH.length=TECH_BASE;
   const tk=TECH.map(()=>new Float32Array(N));
   S={r,seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
-    pop:new Float32Array(N),K:new Float32Array(N),eth:new Int32Array(N).fill(-1),eth2:new Int32Array(N).fill(-1),mix:new Float32Array(N),mixT:new Uint8Array(N),
+    pop:new Float32Array(N),K:new Float32Array(N),evT:new Float32Array(N),evP:new Float32Array(N).fill(1),seaLvl:WD.seaLvl??0,seaVer:0,eth:new Int32Array(N).fill(-1),eth2:new Int32Array(N).fill(-1),mix:new Float32Array(N),mixT:new Uint8Array(N),
     pol:new Int32Array(N),s:new Float32Array(N).fill(0.3),rel:new Int32Array(N).fill(-1),fort:new Float32Array(N),
     fert:new Float32Array(N).fill(1),immune:new Float32Array(N),infect:new Uint8Array(N),ob:new Int32Array(N).fill(-1),
     dist:new Uint16Array(N).fill(65535),taken:new Int32Array(N).fill(-1e9),q:new Int32Array(N),lab:new Int32Array(N),city:new Int32Array(N).fill(-1),
@@ -152,8 +153,8 @@ function newHistory(hseed){
   const q=s.q;let h=0,t=0;
   seeds.forEach((i,k)=>{const mac=macs[k];s.eth[i]=newEth(-1,-1,makeLang(r,pick(r,MACROS[mac]),mac));q[t++]=i});
   while(h<t){const i=q[h++];
-    for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&s.eth[j]<0&&w.T[j]>-9){s.eth[j]=s.eth[i];q[t++]=j}}
-    if(w.coast[i]){ring(i,3,j=>{if(w.land[j]&&s.eth[j]<0&&w.T[j]>-9){s.eth[j]=s.eth[i];q[t++]=j}})}
+    const iced=j=>w.iceY&&w.iceY[j]>s.start;for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}}
+    if(w.coast[i]){ring(i,3,j=>{if(w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}})}
   }
   for(const i of w.landIdx)if(s.eth[i]>=0){s.pop[i]=s.K[i]*0.55;s.lmFound[w.lm[i]]=1}
   for(let k=0;k<10;k++)ethPass(false);
@@ -171,6 +172,54 @@ function newHistory(hseed){
   chron('nature',`Foragers of ${seeds.length} unrelated stocks people the habitable world.`,seeds[0]);
   recordStats();
 }
+
+/* ---------- the ancient Earth: rising seas, retreating ice, abrupt climate shifts ---------- */
+// The world is generated at the low sea level of 12,000 BCE; each history first drowns what was already under water at its
+// start year, then drowns the shelves as the sea rises (Doggerland, the Gulf, Sundaland, Beringia, the Torres Strait).
+function seaReset(y){const w=WD;if(!w.land0)return;w.land.set(w.land0);const lv=w.isEarth?seaLevelAt(y):0;
+  for(let i=0;i<N;i++)if(w.land[i]&&w.lvl[i]<=lv)w.land[i]=0;shoreline(w);seaLanes(w);w.seaLvl=lv}
+function seaStep(){const s=S,w=WD,lv=seaLevelAt(s.year);if(lv<=s.seaLvl+0.01)return;s.seaLvl=w.seaLvl=lv;
+  const gone=[];for(const i of w.landIdx)if(w.lvl[i]<=lv)gone.push(i);if(!gone.length)return;
+  const lm0=w.lm.slice();let moved=0,where=-1,wp=0,nm=null;
+  for(const i of gone){const p=s.pop[i];if(p>wp&&s.eth[i]>=0){wp=p;where=i;nm=regionName(i)}
+    w.land[i]=0;let best=-1,bk=-1;for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&w.lvl[j]>lv&&s.K[j]>bk){bk=s.K[j];best=j}}
+    if(best>=0&&p>0){s.pop[best]+=p;moved+=p;if(s.eth[best]<0)s.eth[best]=s.eth[i];else mixIn(best,s.eth[i],p/(s.pop[best]+1)*0.6)}
+    const pid=s.pol[i];s.pop[i]=0;s.eth[i]=-1;s.eth2[i]=-1;s.rel[i]=-1;s.pol[i]=0;s.K[i]=0;
+    if(pid&&s.pols[pid]&&s.pols[pid].capital===i){const o=s.pols[pid];let c=-1;if(best>=0&&s.pol[best]===pid)c=best;else for(const j of w.landIdx)if(s.pol[j]===pid&&w.land[j]){c=j;break}if(c>=0)o.capital=c}}
+  shoreline(w);seaLanes(w);s.seaVer++;
+  const lf=new Uint8Array(w.lmCount);for(const i of w.landIdx)if(s.pop[i]>=1)lf[w.lm[i]]=1;s.lmPop=new Int32Array(w.lmCount);s.lmFound=lf;
+  // a land bridge cut: two sizeable lands now where there was one
+  const rep=new Map();for(const i of w.landIdx){const m=w.lm[i];if(w.lmSize[m]>=40&&!rep.has(m))rep.set(m,i)}
+  const byOld=new Map();for(const [m,i] of rep){const o=lm0[i];if(!byOld.has(o))byOld.set(o,[]);byOld.get(o).push(m)}
+  let split=false;
+  // the shores facing each other across the new strait: a drowned province touching the smaller land, and the nearest
+  // drowned province touching the larger one
+  const shore=(g,m)=>{for(let d=0;d<4;d++){const j=w.nb[g*4+d];if(j>=0&&w.land[j]&&w.lm[j]===m)return j}return -1};
+  for(const ms of byOld.values()){if(ms.length<2)continue;ms.sort((a,b)=>w.lmSize[a]-w.lmSize[b]);const m=ms[0],M=ms[ms.length-1];
+    const As=[],Bs=[];for(const g of gone){const j=shore(g,m),k=shore(g,M);if(j>=0)As.push([g,j]);if(k>=0)Bs.push([g,k])}if(!As.length)continue;
+    let a=As[0][1],b=-1,bd=1e9;for(const [ga,ja] of As)for(const [gb,jb] of Bs){const d=angDist(ga,gb)-(s.pop[ja]>0?0.01:0);if(d<bd){bd=d;a=ja;b=jb}}
+    split=true;const isle=w.lmSize[m]<w.lmSize[M]*0.25;
+    chron('nature',isle?`The rising sea cuts the ${regionName(a)} off from the mainland. It is an island now, and only boats can cross.`:`The rising sea drowns the land bridge between the ${regionName(a)} and the ${b>=0?regionName(b):'far shore'}: what was one land is now two, and only boats can cross.`,a)}
+  if(!split&&gone.length>=3&&moved>2000&&nm)chron('nature',`The sea rises over the lowlands of the ${nm}; about ${Math.round(moved/1000)*1000} people move to higher ground.`,where)}
+// abrupt shifts of the real deglaciation and Holocene (Alley 2000; Alley & Agustsdottir 2005; Weiss 2016): the Younger Dryas
+// chill around the North Atlantic with drought in the Levant, the 8.2 ka chill, and the 4.2 ka drought from the Nile to the Indus
+const EARTH_EVENTS=[
+  {k:'yd',a:-10900,b:-9650,up:150,dn:60,na:4,g:0.8,box:[25,42,25,65],dry:0.8,
+    start:'Within a lifetime the cold returns to the northern lands: forests give way to steppe, and the rains fail in the south.',end:'The great cold breaks within a generation; the world warms quickly and the rains come back.'},
+  {k:'e82',a:-6250,b:-6100,up:20,dn:40,na:1.5,g:0.2,box:[15,40,-15,65],dry:0.85,
+    start:'A sharp chill and drought settle on the northern lands and the dry lands from the Nile to Persia.',end:'The chill of a long century passes.'},
+  {k:'e42',a:-2250,b:-1950,up:40,dn:60,na:0,g:0,box:[20,40,25,80],dry:0.7,
+    start:'A great drought settles over the lands from the Nile to the Indus; canals run low and the rain-fed plains fail.',end:'The long drought from the Nile to the Indus ends.'}];
+function eventPass(){const s=S,w=WD,y=s.year;let any=false;s.evT.fill(0);s.evP.fill(1);
+  for(const e of EARTH_EVENTS){if(y<e.a-1||y>e.b+e.dn)continue;
+    if(y>=e.a&&!s['ev_'+e.k]){s['ev_'+e.k]=1;chron('nature',e.start,-1)}
+    if(y>=e.b&&s['ev_'+e.k]===1){s['ev_'+e.k]=2;chron('nature',e.end,-1)}
+    const f=y<e.a?0:Math.min(1,(y-e.a)/e.up,y<=e.b?1:Math.max(0,1-(y-e.b)/e.dn));if(f<=0)continue;any=true;
+    const [la0,la1,lo0,lo1]=e.box;
+    for(const i of w.landIdx){const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;
+      const na=clamp((la-30)/15,0,1)*clamp((lo+110)/20,0,1)*clamp((70-lo)/20,0,1);s.evT[i]-=f*(e.g+e.na*na);
+      if(la>=la0&&la<=la1&&lo>=lo0&&lo<=lo1)s.evP[i]*=1-f*(1-e.dry)}}
+  return any}
 
 /* ---------- climate through time ---------- */
 const EPOCH_KINDS=[
@@ -214,9 +263,9 @@ const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
 function computeK(){
   const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=s.admin,s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL,s_wheel=s.wheel,w_turf=w.turf,s_open=s.open,s_malF=s.malF;
   for(let k=0;k<L.length;k++){
-    const i=L[k],T=w_T[i]+dT+cdT[i];
-    if(T<-9){s_K[i]=1;continue}
-    const wm=s_wm[i],Pn=Math.max(0.3*w_Pr[i],w_Pr[i]+cdP[i])*wm,ar=w_area[i],rv=w_rv[i];
+    const i=L[k],T=w_T[i]+dT+cdT[i]+s.evT[i];
+    if(T<-9||s.year<w.iceY?.[i]){s_K[i]=1;continue}
+    const wm=s_wm[i]*s.evP[i],Pn=Math.max(0.3*w_Pr[i],w_Pr[i]+cdP[i])*wm,ar=w_area[i],rv=w_rv[i];
     const npp=Math.min(3000/(1+Math.exp(1.315-0.119*(T+w_amp[i]*0.15))),3000*(1-Math.exp(-0.000664*Pn)));
     // cool temperate coasts are the richest foraging on Earth: salmon runs, shellfish, seals (Yesner 1980; the Jomon, the
     // Ertebolle and the Northwest Coast were among the densest forager peoples known)
@@ -1269,7 +1318,7 @@ function step(){for(const _ of stepG());}
 const ymod=(y,n)=>((y%n)+n)%n;
 function* stepG(){
   const s=S;s.year++;
-  climateStep();weather();hearthCheck();
+  climateStep();if(WD.isEarth){if(s.year%5===0)eventPass();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if(s.r()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
