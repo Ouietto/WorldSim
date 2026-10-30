@@ -204,30 +204,30 @@ function steppeFront(i,ei){const w=WD,s=S;
 const BEASTS=[
   {k:'dog',n:'dogs',one:'dog',path:'commensal',tame:1,bred:1,real:1,col:[150,120,90],roles:{hunt:1,guard:1,pack:0.25,war:0.2}},
   {k:'cat',n:'cats',one:'cat',path:'commensal',tame:0.8,bred:1,real:1,col:[200,170,120],roles:{mouse:1},box:[[10,42,-15,70]],clim:(T,P)=>T>10&&P<1300},
-  {k:'donkey',n:'donkeys',one:'donkey',path:'directed',tame:0.7,bred:1,real:1,col:[150,140,130],roles:{pack:0.7,ride:0.25,desert:1},box:[[8,33,20,55]],clim:(T,P)=>T>14&&P<700},
+  {k:'donkey',n:'donkeys',one:'donkey',path:'directed',tame:0.7,bred:1,real:1,col:[150,140,130],roles:{pack:0.7,ride:0.25,desert:1},box:[[8,31,22,44]],clim:(T,P)=>T>14&&P<700},
   {k:'elephant',n:'elephants',one:'elephant',path:'tamed',tame:0.45,bred:0,real:1,col:[120,120,130],roles:{war:1,haul:0.6},box:[[5,30,68,110],[28,37,-10,12]],clim:(T,P)=>T>14&&P>400},
   {k:'guineafowl',n:'guineafowl',one:'guineafowl',path:'commensal',tame:0.9,bred:1,real:1,col:[90,90,110],roles:{meat:0.12},box:[[-25,16,-18,45]],clim:(T,P)=>T>18&&P>300},
-  {k:'eland',n:'eland',one:'eland',path:'prey',tame:0.3,bred:1,col:[190,150,90],roles:{meat:0.8,tsetse:1},box:[[-32,12,10,42]],clim:(T,P)=>T>14&&P>300&&P<1500},
-  {k:'zebra',n:'zebras',one:'zebra',path:'directed',tame:0.1,bred:1,col:[60,60,60],roles:{ride:0.8,pack:0.4,tsetse:1},box:[[-35,12,10,42]],clim:(T,P)=>T>12&&P>250&&P<1200},
-  {k:'gwolf',n:'golden wolves',one:'golden wolf',path:'commensal',tame:0.45,bred:1,col:[180,140,80],roles:{hunt:0.8,guard:1,war:0.3},box:[[5,35,-17,45]],clim:(T,P)=>T>14},
-  {k:'serval',n:'servals',one:'serval',path:'commensal',tame:0.4,bred:1,col:[210,160,60],roles:{mouse:0.9},box:[[-30,18,-18,45]],clim:(T,P)=>T>18&&P>400},
-  {k:'cheetah',n:'cheetahs',one:'cheetah',path:'tamed',tame:0.35,bred:0,breed:0.01,col:[220,180,90],roles:{hunt:0.8,war:0.15,prestige:1},box:[[-30,30,-18,50],[25,40,40,80]],clim:(T,P)=>T>12&&P<900},
-  {k:'hippo',n:'hippopotamuses',one:'hippopotamus',path:'prey',tame:0.03,bred:1,col:[110,90,110],roles:{meat:0.6,war:0.5,river:1},box:[[-30,32,-18,45]],clim:(T,P,rv)=>T>16&&rv>0.3},
-  {k:'ostrich',n:'ostriches',one:'ostrich',path:'prey',tame:0.3,bred:1,col:[110,100,90],roles:{meat:0.3,courier:1},box:[[-35,35,-18,60]],clim:(T,P)=>T>12&&P<700},
-  {k:'bison',n:'bison',one:'bison',path:'prey',tame:0.12,bred:1,col:[100,70,50],roles:{meat:1,haul:0.4},box:[[30,60,-115,-90]],clim:(T,P,rv,sH)=>sH>0.3},
-  {k:'moose',n:'moose',one:'moose',path:'directed',tame:0.12,bred:1,col:[90,80,60],roles:{ride:0.4,pack:0.6,taiga:1},box:[[48,70,-170,-50],[48,70,10,180]],clim:(T,P)=>T<6&&T>-10&&P>300},
-  {k:'peccary',n:'peccaries',one:'peccary',path:'prey',tame:0.35,bred:1,col:[120,100,90],roles:{meat:0.5},box:[[-30,30,-110,-35]],clim:(T,P)=>T>18&&P>600},
-  {k:'capybara',n:'capybaras',one:'capybara',path:'prey',tame:0.35,bred:1,col:[150,110,80],roles:{meat:0.5},box:[[-35,12,-82,-35]],clim:(T,P,rv)=>T>16&&rv>0.15},
-  {k:'tapir',n:'tapirs',one:'tapir',path:'directed',tame:0.18,bred:1,col:[70,70,80],roles:{pack:0.5,forest:1},box:[[-25,20,-95,-35]],clim:(T,P)=>T>20&&P>1200},
-  {k:'emu',n:'emus',one:'emu',path:'prey',tame:0.3,bred:1,col:[130,110,90],roles:{meat:0.4},box:[[-40,-10,112,155]],clim:(T,P)=>P<1000},
-  {k:'deer',n:'red deer',one:'red deer',path:'prey',tame:0.18,bred:1,col:[160,90,60],roles:{meat:0.6},box:[[35,62,-10,60]],clim:(T,P)=>T>2&&T<16&&P>400}];
+  {k:'eland',n:'eland',one:'eland',path:'prey',tame:0.12,bred:1,col:[190,150,90],roles:{meat:0.8,tsetse:1},box:[[-32,12,10,42]],clim:(T,P)=>T>14&&P>300&&P<1500},
+  {k:'zebra',n:'zebras',one:'zebra',path:'directed',tame:0.06,bred:1,col:[60,60,60],roles:{ride:0.8,pack:0.4,tsetse:1},box:[[-35,12,10,42]],clim:(T,P)=>T>12&&P>250&&P<1200},
+  {k:'gwolf',n:'golden wolves',one:'golden wolf',path:'commensal',tame:0.25,bred:1,col:[180,140,80],roles:{hunt:0.8,guard:1,war:0.3},box:[[5,35,-17,45]],clim:(T,P)=>T>14},
+  {k:'serval',n:'servals',one:'serval',path:'commensal',tame:0.2,bred:1,col:[210,160,60],roles:{mouse:0.9},box:[[-30,18,-18,45]],clim:(T,P)=>T>18&&P>400},
+  {k:'cheetah',n:'cheetahs',one:'cheetah',path:'tamed',tame:0.35,bred:0,breed:0.01,real:1,col:[220,180,90],roles:{hunt:0.8,war:0.15,prestige:1},box:[[-30,30,-18,50],[25,40,40,80]],clim:(T,P)=>T>12&&P<900},
+  {k:'hippo',n:'hippopotamuses',one:'hippopotamus',path:'prey',tame:0.015,bred:1,col:[110,90,110],roles:{meat:0.6,war:0.5,river:1},box:[[-30,32,-18,45]],clim:(T,P,rv)=>T>16&&rv>0.3},
+  {k:'ostrich',n:'ostriches',one:'ostrich',path:'prey',tame:0.15,bred:1,col:[110,100,90],roles:{meat:0.3,courier:1},box:[[-35,35,-18,60]],clim:(T,P)=>T>12&&P<700},
+  {k:'bison',n:'bison',one:'bison',path:'prey',tame:0.06,bred:1,col:[100,70,50],roles:{meat:1,haul:0.4},box:[[30,60,-115,-90]],clim:(T,P,rv,sH)=>sH>0.3},
+  {k:'moose',n:'moose',one:'moose',path:'directed',tame:0.06,bred:1,col:[90,80,60],roles:{ride:0.4,pack:0.6,taiga:1},box:[[48,70,-170,-50],[48,70,10,180]],clim:(T,P)=>T<6&&T>-10&&P>300},
+  {k:'peccary',n:'peccaries',one:'peccary',path:'prey',tame:0.15,bred:1,col:[120,100,90],roles:{meat:0.5},box:[[-30,30,-110,-35]],clim:(T,P)=>T>18&&P>600},
+  {k:'capybara',n:'capybaras',one:'capybara',path:'prey',tame:0.12,bred:1,col:[150,110,80],roles:{meat:0.5},box:[[-35,12,-82,-35]],clim:(T,P,rv)=>T>16&&rv>0.15},
+  {k:'tapir',n:'tapirs',one:'tapir',path:'directed',tame:0.08,bred:1,col:[70,70,80],roles:{pack:0.5,forest:1},box:[[-25,20,-95,-35]],clim:(T,P)=>T>20&&P>1200},
+  {k:'emu',n:'emus',one:'emu',path:'prey',tame:0.1,bred:1,col:[130,110,90],roles:{meat:0.4},box:[[-40,-10,112,155]],clim:(T,P)=>P<1000},
+  {k:'deer',n:'red deer',one:'red deer',path:'prey',tame:0.08,bred:1,col:[160,90,60],roles:{meat:0.6},box:[[35,62,-10,60]],clim:(T,P)=>T>2&&T<16&&P>400}];
 const BI=Object.fromEntries(BEASTS.map((b,k)=>[b.k,k]));
 function beastWild(w,b,i,earth){if(b.k==='dog')return 0;const T=w.T[i],P=w.Pr[i],la=latOf(i),lo=lonOf(i);
   if(earth&&!b.box.some(([a,c,d,e])=>la>=a&&la<=c&&lo>=d&&lo<=e))return 0;return b.clim(T,P,w.rv[i],w.sH[i])?1:0}
 function beastsInit(){const s=S,w=WD,earth=w.isEarth;
   if(!w.bwild){w.bwild=BEASTS.map(b=>{const a=new Uint8Array(N);for(let i=0;i<N;i++)if(w.land0?w.land0[i]:w.land[i])a[i]=beastWild(w,b,i,earth);return a});
     if(!earth){const rr=mulberry32(hashStr('beasts:'+w.seed));BEASTS.forEach((b,k)=>{const keep=new Map();for(let i=0;i<N;i++){if(!w.bwild[k][i])continue;const lm=w.lm[i];if(!keep.has(lm))keep.set(lm,rr()<0.5);if(!keep.get(lm))w.bwild[k][i]=0}})}}
-  s.bst=BEASTS.map(()=>new Float32Array(N));s.bP=BEASTS.map(()=>new Float32Array(N));s.bFirst=BEASTS.map(()=>null);s.alt=[];
+  s.bst=BEASTS.map(()=>new Float32Array(N));s.bP=BEASTS.map(()=>new Float32Array(N));s.bFirst=BEASTS.map(()=>null);s.bTold={};s.alt=[];
   s.lins=[];s.linOf={};for(const b of BEASTS)if(b.bred)s.linOf[b.k]=new Int32Array(N).fill(-1);s.linOf.horse=new Int32Array(N).fill(-1);
   s.mountX=new Float32Array(N);s.packX=new Float32Array(N);s.meatX=new Float32Array(N);s.huntX=new Float32Array(N);s.mouseX=new Float32Array(N);s.warX=new Float32Array(N);s.courX=new Float32Array(N);
   // dogs came with the first peoples everywhere but Australia and Africa south of the Sahara (they reached Africa with herders,
@@ -252,16 +252,19 @@ function beastCap(k,i){const s=S,w=WD,b=BEASTS[k],T=w.T[i]+s.cdT[i],P=w.Pr[i];
 // every ten years
 function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
   for(let k=0;k<BEASTS.length;k++){const b=BEASTS[k],d=s.bst[k],Pg=s.bP[k],wild=w.bwild[k];
-    if(b.k!=='dog')for(const i of L){if(!wild[i]||d[i]>0.05||s.pop[i]<300)continue;
-      const st=s.pol[i]?s.pols[s.pol[i]]:null,sed=s.sed?s.sed[i]:0;
-      const ctx=b.path==='commensal'?Math.max(s.farm[i]>0.5?1:0,sed*0.6):b.path==='prey'?Math.max(0.8*s.herd[i],0.5*sed):
-        b.path==='directed'?(s.herd[i]>0.4?s.herd[i]*(0.5+0.5*Math.min(1,s.horse[i]+s.camel[i]+s.bst[BI.donkey][i]+(s.domL?s.domL[i]:0))):0):
-        (st&&st.kind==='state'&&st.cells>=10&&st.tier!=='Chiefdom'?1:0);
-      if(ctx<=0)continue;
-      // no one tames a second animal for a job one they already keep does well: no golden wolves where dogs guard the camp
-      const role=Object.keys(b.roles)[0];if(BEASTS.some((o,q)=>q!==k&&o.roles[role]&&s.bst[q][i]>0.2)||(role==='ride'&&s.horse[i]>0.3)||(role==='pack'&&s.camel[i]>0.3))continue;
-      if(Pg[i]===0){let near=false;ring(i,5,j=>{if(d[j]>0.05)near=true});if(near)continue}
-      if(ctx<=0)continue;Pg[i]+=0.005*b.tame*ctx*(0.5+r());if(Pg[i]>=1){Pg[i]=0;tameBeast(k,i)}}
+    // taming is a chance event: the more people of the right kind live beside the wild animal, the likelier it is each decade
+    if(b.k!=='dog'&&!(s.bFirst[k]&&s.bTold[k]>=3)){let sum=0;const cand=[];
+      for(const i of L){if(!wild[i]||d[i]>0.05||s.pop[i]<300)continue;
+        const st=s.pol[i]?s.pols[s.pol[i]]:null,sed=s.sed?s.sed[i]:0;
+        const ctx=b.path==='commensal'?(s.farm[i]>0.5?1:0):b.path==='prey'?Math.max(0.8*s.herd[i],0.2*sed):
+          b.path==='directed'?(s.herd[i]>0.4?s.herd[i]*(0.5+0.5*Math.min(1,s.horse[i]+s.camel[i]+s.bst[BI.donkey][i]+(s.domL?s.domL[i]:0))):0):
+          (st&&st.kind==='state'&&st.cells>=10&&st.tier!=='Chiefdom'?1:0);
+        if(ctx<=0)continue;
+        // no one tames a second animal for a job one they already keep does well: no golden wolves where dogs guard the camp
+        const role=Object.keys(b.roles)[0];if(BEASTS.some((o,q)=>q!==k&&Object.keys(o.roles)[0]===role&&s.bst[q][i]>0.2)||(role==='ride'&&s.horse[i]>0.3)||(role==='pack'&&s.camel[i]>0.3))continue;
+        sum+=ctx;cand.push(i,ctx)}
+      if(sum>0&&r()<0.002*b.tame*Math.sqrt(sum)){let u=r()*sum,c=cand[0];for(let q=0;q<cand.length;q+=2){u-=cand[q+1];if(u<=0){c=cand[q];break}}
+        let near=false;ring(c,5,j=>{if(d[j]>0.05)near=true});if(!near)tameBeast(k,c)}}
     // herds grow toward what the land carries, die out where no one keeps them, and spread with keepers
     for(const i of L){let v=d[i];if(v<=0)continue;const c=beastCap(k,i);if(c<=0.01||s.pop[i]<1){d[i]=v<0.01?0:v*0.6;continue}v+=0.3*v*(1-v/c);d[i]=clamp(v,0,1)}
     if(b.path==='tamed')continue;const add=[];
@@ -275,9 +278,9 @@ function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
   linPass();beastEffects()}
 // the herds pass also carries horse lineages
 function linCarry(k,i,j){const s=S,a=s.linOf[k];if(!a||a[i]<0)return;const L=s.lins[a[i]];
-  if(a[j]<0||r_lt(0.3)){a[j]=a[i];
-    // far from home among another people, a lineage starts its own line
-    const ej=s.eth[j],fj=ej>=0?s.eths[ej].fam:-1;if(fj>=0&&fj!==L.fam&&L.cell>=0&&angDist(L.cell,j)>0.2&&r_lt(0.04)){const Lc=newLineage(k,L.id,j);a[j]=Lc.id}}}
+  const fresh=a[j]<0;if(fresh||r_lt(0.3)){a[j]=a[i];
+    // carried far from home to another people, a lineage starts its own line
+    const ej=s.eth[j],fj=ej>=0?s.eths[ej].fam:-1;if(fresh&&fj>=0&&fj!==L.fam&&L.cell>=0&&angDist(L.cell,j)>0.25&&r_lt(0.03)){const Lc=newLineage(k,L.id,j);a[j]=Lc.id}}}
 function r_lt(p){return S.r()<p}
 function tameBeast(k,i){const s=S,w=WD,b=BEASTS[k],d=s.bst[k];d[i]=Math.max(d[i],0.3);if(b.path!=='tamed')ring(i,1,j=>{if(w.land[j]&&beastCap(k,j)>0.05)d[j]=Math.max(d[j],0.15)});
   if(b.bred){const Ln=newLineage(b.k,-1,i);ring(i,1,j=>{if(d[j]>0)s.linOf[b.k][j]=Ln.id})}
@@ -286,7 +289,7 @@ function tameBeast(k,i){const s=S,w=WD,b=BEASTS[k],d=s.bst[k];d[i]=Math.max(d[i]
   const use=Object.keys(b.roles).map(r=>({hunt:'hunting',guard:'guarding camps',mouse:'keeping mice from the stores',meat:'meat and hides',ride:'riding',pack:'carrying loads',war:'war',courier:'carrying messages at speed',haul:'hauling',prestige:'the prestige of their lords',tsetse:'',desert:'',river:'',taiga:'',forest:''}[r])).filter(Boolean);
   const txt=`${cap(verb)}${use.length?`: ${use.slice(0,3).join(', ')}`:''}.`;
   if(first&&!b.real)altNote(b.k,i,`For the first time anywhere, ${verb}. ${cap(use.slice(0,3).join(', '))}${use.length?'.':''}`);
-  else chron('ideas',first?txt:`Independently, ${txt.charAt(0).toLowerCase()+txt.slice(1)}`,i,e?[RE(e)]:[])}
+  else{const n=s.bTold[k]=(s.bTold[k]||0)+1;if(n<=3)chron('ideas',first?txt:`Independently, ${txt.charAt(0).toLowerCase()+txt.slice(1)}`,i,e?[RE(e)]:[])}}
 // a road our world did not take: flagged in the chronicle and the checks
 function altNote(k,c,txt){const s=S;s.alt.push({y:s.year,k,cell:c,txt});const e=s.eth[c]>=0?s.eths[s.eth[c]]:null;chron('ideas',txt,c,e?[RE(e)]:[],'This did not happen in our world.')}
 // every ten years: lineages drift with how their keepers live; a lineage changed enough becomes a named breed
@@ -297,11 +300,13 @@ function linPass(){const s=S,w=WD;if(s.year-(s.linY??-1e9)<50)return;s.linY=s.ye
     // herders' half-wild herds grow small, hardy and hard to handle; stabled, fodder-fed stock grows big, docile and soft
     t.size+=g*(clamp(0.45+0.35*farm*state-0.25*past+0.15*war,0,1)-t.size);t.hardy+=g*(clamp(0.3+0.4*past+0.35*harsh-0.2*farm,0,1)-t.hardy);
     t.temper+=g*(clamp(0.35+0.45*farm-0.3*past,0,1)-t.temper);t.speed+=g*(clamp(0.4+0.25*past+0.25*war,0,1)-t.speed);
-    if(!L.told&&c>=6&&s.year-L.born>300){const P=L.parent>=0?s.lins[L.parent].t:{size:0.5,hardy:0.5,temper:0.35,speed:0.5};
+    if(!L.told&&L.parent>=0&&c>=10&&s.year-L.born>300&&(s.breedN?.[L.k]||0)<4){const P=s.lins[L.parent].t;
       const dv=Math.abs(t.size-P.size)+Math.abs(t.hardy-P.hardy)+Math.abs(t.temper-P.temper)+Math.abs(t.speed-P.speed);
       if(dv>0.3){L.told=true;let c0=-1;const a=s.linOf[L.k];for(const i of w.landIdx)if(a[i]===L.id&&s.pop[i]>=1){c0=i;break}if(c0<0)continue;
         const e=s.eths[s.eth[c0]];L.name=`${e?cap(placeWord(e.lang,s.r)):'Plains'} ${L.k==='horse'?'horse':BEASTS[BI[L.k]].one}`;L.eth=s.eth[c0];
         const d=[t.size>0.62?'big':t.size<0.38?'small':'',t.hardy>0.62?'hardy':t.hardy<0.38?'delicate':'',t.temper>0.6?'gentle':t.temper<0.3?'half-wild':'',t.speed>0.62?'swift':''].filter(Boolean);
+        const B0=L.k==='horse'?null:BEASTS[BI[L.k]];if(B0&&(B0.roles.mouse||(B0.roles.meat||0)<0.3&&!B0.roles.ride&&!B0.roles.war&&!B0.roles.hunt))continue;
+        s.breedN=s.breedN||{};s.breedN[L.k]=(s.breedN[L.k]||0)+1;
         chron('culture',`The ${L.k==='horse'?'horses':BEASTS[BI[L.k]].n} of the ${e?e.name:'herders'} have become a breed of their own, the ${L.name}${d.length?`: ${d.join(', ')}`:''}.`,c0,e?[RE(e)]:[])}}}}
 // what the animals do for their people, as province values the rest of the model reads
 function beastEffects(){const s=S,w=WD,L=w.landIdx;
@@ -310,6 +315,6 @@ function beastEffects(){const s=S,w=WD,L=w.landIdx;
       const q=Math.min(1,1.5*v);
       if(R.ride)mount=Math.max(mount,q*R.ride*(0.7+0.6*t.speed)*(0.7+0.6*t.temper));
       if(R.pack)pack=Math.max(pack,q*R.pack*(R.desert?1:0.6));
-      if(R.meat)meat+=q*R.meat*(0.7+0.6*t.size);if(R.hunt)hunt=Math.max(hunt,q*R.hunt);if(R.mouse)mouse=Math.max(mouse,q*R.mouse);
+      if(R.meat)meat+=q*R.meat*(0.7+0.6*t.size);if(R.hunt&&k>0)hunt=Math.max(hunt,q*R.hunt);if(R.mouse)mouse=Math.max(mouse,q*R.mouse);
       if(R.war)war=Math.max(war,q*R.war*(R.river?(w.rv[i]>0.3?1:0.2):1)*(0.7+0.6*t.size));if(R.courier)cour=Math.max(cour,q*R.courier)}
     s.mountX[i]=mount;s.packX[i]=pack;s.meatX[i]=Math.min(1.2,meat);s.huntX[i]=hunt;s.mouseX[i]=mouse;s.warX[i]=war;s.courX[i]=cour}}
