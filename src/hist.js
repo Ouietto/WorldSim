@@ -1447,11 +1447,12 @@ function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nb=w.nb;
     for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&w.land[j]){const v=0.8*x[j];if(v>m)m=v}}x[i]=m}}}
 // the exit option (Herbst, Scott): open land nearby lets subjects walk away; crowding or barren surroundings trap them (Carneiro)
 function exitPass(a0,b0){if(a0==null){a0=0;b0=1}
-  const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of LL){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,exPd=w.exPd;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
+  const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of LL){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,s_K=s.K;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
   for(let kk=Math.floor(a0*LL.length),ke=Math.floor(b0*LL.length);kk<ke;kk++){const i=LL[kk];if(s_pop[i]<1||w_sF[i]<0.1){s_circE[i]=w_circ[i];continue}
     const cx=w_cxA[i],cy=w_cyA[i];let tot=0,n=0;
     for(let dy=-3;dy<=3;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-3;dx<=3;dx++){if(!dx&&!dy)continue;const j=yy*W+(cx+dx+W)%W;n++;if(!w_land[j])continue;
-      const q=exQ[j],pd=exPd[j];tot+=q*Math.max(0,1-s_pop[j]/w_area[j]/pd)*(s_pol[j]?0.4:1)}}
+      // free room is measured against what the land feeds now (Carneiro: farmland already full at the farmers' own techniques)
+      const q=exQ[j];tot+=q*Math.max(0,1-s_pop[j]/Math.max(1,s_K[j]))*(s_pol[j]?0.4:1)}}
     const ex=tot/n,own=w_sF[i]+0.1;s_exit[i]=ex;
     s_circE[i]=clamp(Math.max(w_circ[i],1-1.6*ex/own),0,1)}
 }
