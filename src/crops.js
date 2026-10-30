@@ -172,7 +172,7 @@ function openPass(){const s=S,w=WD,L=w.landIdx,op=s.open,pop=s.pop,K=s.K,nb=w.nb
 // q: how much food the wild progenitors give: big-seeded grasses of the Mediterranean-climate hills far outyield teosinte or
 // goosefoot (Blumler 1998; Diamond 1997, ch. 8)
 const WILD=[
-  {k:'fc',q:1.0,n:'the Fertile Crescent',pk:'wheat',box:[31,39,34,48],t:2000,crop:'wheat and barley',anim:'sheep and goats',grain:1},
+  {k:'fc',q:1.0,n:'the Fertile Crescent',pk:'wheat',box:[31,39,34,48],t:2700,crop:'wheat and barley',anim:'sheep and goats',grain:1},
   {k:'yz',q:0.8,n:'the Yangtze',pk:'rice',box:[24,32,108,122],t:3500,crop:'rice',anim:'pigs',grain:1},
   {k:'yr',q:0.8,n:'the Yellow River',pk:'millet',box:[33,41,104,118],t:2200,crop:'millet',anim:'pigs and dogs',grain:1},
   {k:'ng',q:0.75,n:'the New Guinea highlands',pk:'yams',box:[-8,-3,138,148],t:2600,crop:'taro and bananas',anim:'pigs',grain:0},
