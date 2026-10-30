@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.7: the ancient Earth, emergent farming and animals)
+# Asabiya — history engine (v0.7.1: the ancient Earth, emergent farming and animals)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,14 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.7.1 adds:
+> - **The green Sahara and Arabia** and their drying (6500–1800 BCE), pushing herders onto the Nile, the Euphrates and the Sahel.
+> - **Sanctuary leagues:** cities sharing a revered sanctuary can league across the land between them, but only against a danger.
+> - **City-state warfare:** single-province cities make war, and taking a small realm's capital decides it.
+> - **Temple states:** great sanctuaries seed states and count as a monopoly of the sacred.
+> - Thinner sod on dry-winter monsoon grasslands; cord records for small states; about 30% faster.
+> - Ensemble check (32 histories): 56% of historical targets.
 >
 > v0.7 adds:
 > - **The ancient Earth:** histories start in 12,000 BCE on the low seas of the deglaciation. Shelves drown as the sea rises (Doggerland, Beringia, Sundaland, the Gulf), land bridges part, the last ice sheets retreat, and the Younger Dryas, 8.2 ka and 4.2 ka shifts strike on their real dates.
