@@ -60,9 +60,9 @@ function leaguePass(){
     if(o.league!=null){continue}
     const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
     const circ=S.circE[o.capital]||0;
-    if(inL&&r()<0.2*(1-0.8*circ)){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
+    if(inL&&r()<0.2*(1-0.3*circ)){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
     const free=kin.filter(p=>p.league==null);
-    if(free.length>=2&&r()<0.12*(1-0.8*circ)){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
+    if(free.length>=2&&r()<0.12*(1-0.3*circ)){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
       s.leagues.push(L);for(const q of L.members)s.pols[q].league=L.id;
       chron('diplomacy',`${L.members.length} cities of the ${e.name} swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],...L.members.map(q=>R_(s.pols[q]))],'Small cities of one people were safer together than alone against the kingdoms around them.');
       spot(`The ${L.name} is founded`,o.capital,[['league',L.id,L.name]])}}
