@@ -263,7 +263,7 @@ function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
         // no one tames a second animal for a job one they already keep does well: no golden wolves where dogs guard the camp
         const role=Object.keys(b.roles)[0];if(BEASTS.some((o,q)=>q!==k&&Object.keys(o.roles)[0]===role&&s.bst[q][i]>0.2)||(role==='ride'&&s.horse[i]>0.3)||(role==='pack'&&s.camel[i]>0.3))continue;
         sum+=ctx;cand.push(i,ctx)}
-      if(sum>0&&r()<0.002*b.tame*Math.sqrt(sum)){let u=r()*sum,c=cand[0];for(let q=0;q<cand.length;q+=2){u-=cand[q+1];if(u<=0){c=cand[q];break}}
+      if(sum>0&&r()<0.002*b.tame*(b.real||s.bFirst[k]?1:0.3)*Math.sqrt(sum)){let u=r()*sum,c=cand[0];for(let q=0;q<cand.length;q+=2){u-=cand[q+1];if(u<=0){c=cand[q];break}}
         let near=false;ring(c,5,j=>{if(d[j]>0.05)near=true});if(!near)tameBeast(k,c)}}
     // herds grow toward what the land carries, die out where no one keeps them, and spread with keepers
     for(const i of L){let v=d[i];if(v<=0)continue;const c=beastCap(k,i);if(c<=0.01||s.pop[i]<1){d[i]=v<0.01?0:v*0.6;continue}v+=0.3*v*(1-v/c);d[i]=clamp(v,0,1)}
@@ -300,7 +300,7 @@ function linPass(){const s=S,w=WD;if(s.year-(s.linY??-1e9)<50)return;s.linY=s.ye
     // herders' half-wild herds grow small, hardy and hard to handle; stabled, fodder-fed stock grows big, docile and soft
     t.size+=g*(clamp(0.45+0.35*farm*state-0.25*past+0.15*war,0,1)-t.size);t.hardy+=g*(clamp(0.3+0.4*past+0.35*harsh-0.2*farm,0,1)-t.hardy);
     t.temper+=g*(clamp(0.35+0.45*farm-0.3*past,0,1)-t.temper);t.speed+=g*(clamp(0.4+0.25*past+0.25*war,0,1)-t.speed);
-    if(!L.told&&L.parent>=0&&c>=10&&s.year-L.born>300&&(s.breedN?.[L.k]||0)<4){const P=s.lins[L.parent].t;
+    if(!L.told&&L.parent>=0&&c>=15&&s.year-L.born>300&&(s.breedN?.[L.k]||0)<3){const P=s.lins[L.parent].t;
       const dv=Math.abs(t.size-P.size)+Math.abs(t.hardy-P.hardy)+Math.abs(t.temper-P.temper)+Math.abs(t.speed-P.speed);
       if(dv>0.3){L.told=true;let c0=-1;const a=s.linOf[L.k];for(const i of w.landIdx)if(a[i]===L.id&&s.pop[i]>=1){c0=i;break}if(c0<0)continue;
         const e=s.eths[s.eth[c0]];L.name=`${e?cap(placeWord(e.lang,s.r)):'Plains'} ${L.k==='horse'?'horse':BEASTS[BI[L.k]].one}`;L.eth=s.eth[c0];

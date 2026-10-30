@@ -278,7 +278,7 @@ function computeK(){
     const mob=Math.min(1,s_horse[i])*(0.4+0.6*s_wheel[i]);
     const Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
-    const KhX=ar*0.8*s_meatX[i];
+    const KhX=ar*0.4*s_meatX[i];
     const irr=s_irrig[i]*rv;
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const T_=s.tk,hv=w_heavy[i],lc=w_leach[i];
