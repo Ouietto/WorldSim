@@ -154,6 +154,8 @@ const TONAL=new Set(['sinitic','tibetan','bantu','mande','thai']);
 function commNeed(k,o,c){const s=S,w=WD,T=s.tk;
   switch(k){
     case 'noScript':return T[TI.writing][c]<0.3;
+    // roads are built by organised labour: a levy of dense villages, with or without iron, coin or writing
+    case 'levy':return (o.levy||0)>0.35;
     // drum languages carry the tones of speech; forests and hills hide fires and slow runners
     case 'drums':{const e=s.eths[o.core];const tonal=!!(e&&e.lang&&TONAL.has(e.lang.style));return (w.forest0[c]>0.35||w.rough[c]>0.3)&&(tonal||s.r()<0.2)}
     case 'threat':return o.fortN>0||o.enemies.size>0||(o.raided||0)>0;
