@@ -243,6 +243,12 @@ function drawMap(){
       each(mx,my,(sx,sy)=>{ctx.fillStyle='#14202a';ctx.strokeStyle='#f5f3ec';ctx.lineWidth=1.5;
         if(isCap){ctx.fillRect(sx-3,sy-3,6,6);ctx.strokeRect(sx-3,sy-3,6,6)}else{ctx.beginPath();ctx.arc(sx,sy,2.5,0,7);ctx.fill();ctx.stroke()}
         if(ui.z>=2.6){ctx.lineWidth=3;ctx.strokeText(c.name,sx+6,sy);ctx.fillText(c.name,sx+6,sy)}})}}
+  // sacred sites: a gold triangle while people still gather there, a hollow one once it is buried and forgotten
+  if(cm!=='none'&&s.rits&&(m==='political'||m==='peoples'||m==='religion')&&ui.z>=1.4){
+    for(const R of s.rits){if(R.peak<0.3)continue;const [mx,my]=cellXY(R.cell);
+      each(mx,my,(sx,sy)=>{ctx.beginPath();ctx.moveTo(sx,sy-4);ctx.lineTo(sx+3.6,sy+2.6);ctx.lineTo(sx-3.6,sy+2.6);ctx.closePath();ctx.lineWidth=1.3;
+        if(R.alive){ctx.fillStyle='#b8862b';ctx.strokeStyle='#f5f3ec';ctx.fill();ctx.stroke()}else{ctx.strokeStyle='rgba(60,60,60,.7)';ctx.stroke()}
+        if(ui.z>=2.6){ctx.font=`italic 11px ${cssVar('--f-ui')}`;ctx.textAlign='left';ctx.lineWidth=3;ctx.strokeStyle='#f5f3ec';ctx.fillStyle=R.alive?'#6b4c12':'#666';ctx.strokeText(R.name,sx+6,sy);ctx.fillText(R.name,sx+6,sy)}})}}
   // labels
   const lab=[];
   if(m==='political'||m==='alliances'){for(const id of s.alive){const o=s.pols[id];if(o.cells>=6)lab.push([lonToMx(o.lx),(o.ly+0.5)*SC,o.base,o.cells,o.tier==='Empire'||o.tier==='Khaganate'])}}
@@ -742,7 +748,7 @@ mapCv.addEventListener('wheel',e=>{e.preventDefault();const r=mapCv.getBoundingC
 /* ---------- world building ---------- */
 function busy(on,txt){const b=$('busy');b.hidden=!on;if(txt)b.textContent=txt}
 function startHistory(){
-  P.hearthMode=$('hearthh').checked?'historical':'random';P.shuffleNames=$('shufn').checked;
+  P.hearthMode=$('hearthh').value;P.shuffleNames=$('shufn').checked;
   try{history.replaceState(null,'','#seed-'+($('hseed').value||'1').replace(/[^A-Za-z0-9]/g,''))}catch(e){}
   newHistory($('hseed').value||'1');
   ui.page=null;ui.stack=[];ui.lastChronKey='';ui.lastSpotObj=null;$('toast').hidden=true;ui.pausedAtEnd=false;ui.dirty=true;ui.ready=true;$('play').disabled=false;

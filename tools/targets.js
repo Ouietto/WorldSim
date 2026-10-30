@@ -4,6 +4,17 @@
 // Years are engine years: 1 CE is 1 and 1 BCE is 0, so B(n) is the year n BCE.
 const B=n=>1-n;
 module.exports=[
+  // where farming locks in on its own (emergent origins): domestication dates (Zeder 2011; Fuller 2007; Piperno 2011; Denham 2003;
+  // Manning et al. 2011; Smith 2006). Bands are wide: the dates themselves are argued over.
+  {k:'o_fc',g:'Farming origins',n:'Fertile Crescent (wheat, barley)',kind:'year',real:B(8500),lo:B(9500),hi:B(7500)},
+  {k:'o_yz',g:'Farming origins',n:'Yangtze (rice)',kind:'year',real:B(6500),lo:B(8000),hi:B(5000)},
+  {k:'o_yr',g:'Farming origins',n:'Yellow River (millet)',kind:'year',real:B(6500),lo:B(8000),hi:B(5500)},
+  {k:'o_ng',g:'Farming origins',n:'New Guinea (taro, bananas)',kind:'year',real:B(5500),lo:B(8000),hi:B(4000)},
+  {k:'o_ma',g:'Farming origins',n:'Mesoamerica (maize)',kind:'year',real:B(5000),lo:B(7000),hi:B(3000)},
+  {k:'o_an',g:'Farming origins',n:'Andes (potato, quinoa)',kind:'year',real:B(5000),lo:B(7000),hi:B(3500)},
+  {k:'o_sa',g:'Farming origins',n:'Sahel (sorghum, pearl millet)',kind:'year',real:B(2500),lo:B(4000),hi:B(1500)},
+  {k:'o_wa',g:'Farming origins',n:'West Africa (yams)',kind:'year',real:B(2500),lo:B(4000),hi:B(1000)},
+  {k:'o_ea',g:'Farming origins',n:'Eastern North America',kind:'year',real:B(2500),lo:B(3500),hi:B(1500)},
   // farming arrival (half the peopled provinces in a box farm) and forager holdouts (Zvelebil; Rowley-Conwy 2011; Crema et al. 2016)
   {k:'f_cEur',  g:'Farming frontier',n:'Central Europe (LBK)',kind:'year',real:B(5400),lo:B(5800),hi:B(4900)},
   {k:'f_brit',  g:'Farming frontier',n:'Britain',             kind:'year',real:B(4000),lo:B(4400),hi:B(3500)},

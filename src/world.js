@@ -44,7 +44,7 @@ const PDEF=[
 ['Ideas & faith','degrade','Soil exhaustion',0,3,0.05,1,'How fast overworked farmland loses fertility.'],
 ];
 const P={};for(const d of PDEF)P[d[1]]=d[6];
-P.hearthMode='historical';P.fitClimate=true;P.shuffleNames=false;
+P.hearthMode='emergent';P.fitClimate=true;P.shuffleNames=false;
 const CDEF=[
 ['tEq','Equator temperature (°C)',22,32,0.5,29],
 ['tGrad','Equator-to-pole drop (°C)',30,60,1,47],

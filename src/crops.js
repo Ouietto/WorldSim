@@ -161,3 +161,63 @@ function openPass(){const s=S,w=WD,L=w.landIdx,op=s.open,pop=s.pop,K=s.K,nb=w.nb
       op[i]=clamp(o,o0,1)}
     const f0=w.forest0[i];if(f0>0.3&&w.T[i]>20)s.malF[i]=0.55+0.45*clamp(1-s.forest[i]/f0,0,1)}
 }
+
+// ---------- the origins of farming ----------
+// Farming is not placed: it grows out of foragers' lives where four things meet (Bar-Yosef 1998; Richerson, Boyd & Bettinger
+// 2001; Smith 2001; Fuller 2007). Wild plants worth domesticating grow there (on Earth, the real ranges of the wild ancestors);
+// foragers settle down on rich, storable wild food; something squeezes them (crowding, a cold or dry spell, the demands of
+// feasts at a sacred site) so they start to tend and sow; and they keep at it without a break for the two to five thousand years
+// selection takes. A bad spell sends them back to the hunt and the selection slips; most attempts fail. Once the package is
+// complete it locks in and spreads with the farmers' children (the frontier in techStep and migrate).
+// q: how much food the wild progenitors give: big-seeded grasses of the Mediterranean-climate hills far outyield teosinte or
+// goosefoot (Blumler 1998; Diamond 1997, ch. 8)
+const WILD=[
+  {k:'fc',q:1.0,n:'the Fertile Crescent',pk:'wheat',box:[31,39,34,48],t:2000,crop:'wheat and barley',anim:'sheep and goats',grain:1},
+  {k:'yz',q:0.8,n:'the Yangtze',pk:'rice',box:[24,32,108,122],t:3500,crop:'rice',anim:'pigs',grain:1},
+  {k:'yr',q:0.8,n:'the Yellow River',pk:'millet',box:[33,41,104,118],t:2200,crop:'millet',anim:'pigs and dogs',grain:1},
+  {k:'ng',q:0.75,n:'the New Guinea highlands',pk:'yams',box:[-8,-3,138,148],t:2600,crop:'taro and bananas',anim:'pigs',grain:0},
+  {k:'ma',q:0.5,n:'the Balsas lowlands',pk:'maize',box:[16,21,-104,-96],t:3500,crop:'maize, beans and squash',anim:'turkeys and dogs',grain:1},
+  {k:'an',q:0.65,n:'the Andes',pk:'potato',box:[-18,-8,-78,-66],t:3400,crop:'potatoes and quinoa',anim:'llamas and guinea pigs',grain:0.6},
+  {k:'sa',q:0.5,n:'the Sahel',pk:'sorghum',box:[10,18,-10,35],t:2000,crop:'sorghum and pearl millet',anim:'cattle',grain:1},
+  {k:'wa',q:0.55,n:'the West African forest edge',pk:'yams',box:[5,10,-8,10],t:5000,crop:'yams and oil palm',anim:'goats',grain:0},
+  {k:'ea',q:0.45,n:'the Eastern Woodlands',pk:'sunflower',box:[33,40,-92,-82],t:3000,crop:'sunflowers and squash',anim:'dogs',grain:0.6}];
+function originsInit(){const s=S,w=WD;s.wildG=new Float32Array(N);s.sed=new Float32Array(N);s.cultv=new Float32Array(N);s.domst=new Float32Array(N);s.origins={};s.oriLog={};
+  if(!w.wildR){w.wildR=new Int8Array(N).fill(-1);w.wildW=new Float32Array(N);
+    if(w.isEarth)for(let i=0;i<N;i++){if(!w.land0[i])continue;const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;
+      WILD.forEach((R,k)=>{const [a,b,c,d]=R.box;if(la<a||la>b||lo<c||lo>d)return;
+        const e=Math.min(la-a,b-la,lo-c,d-lo),v=0.5+0.5*clamp(e/2,0,1);if(v>w.wildW[i]){w.wildW[i]=v;w.wildR[i]=k}})}}}
+function originsOn(){return WD.isEarth&&P.hearthMode==='emergent'}
+// every five years
+function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.year,agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
+  for(const i of L){const p=s.pop[i];if(p<1){s.sed[i]*=0.9;s.cultv[i]*=0.9;continue}
+    const la=Math.abs(w.lat[i])*57.2958,ri=w.wildR[i];
+    // farmers whose borrowed crops do poorly here take up the local wild plants too (secondary domestication: millet beside
+    // borrowed rice, sorghum beside wheat that fails in the summer rains)
+    if(s.farm[i]>0.5){s.sed[i]=1;if(ri<0||s.origins[WILD[ri].k])continue;const R=WILD[ri],C=CROPS[CI[R.pk]];
+      const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
+      let cv=s.cultv[i];cv=clamp(cv+0.05*pr*(1-cv)-0.01*(1-pr)*cv,0,1);s.cultv[i]=cv;let dm=s.domst[i];
+      if(cv>0.15)dm=Math.min(1,dm+15*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
+    const rich=clamp((s.Kf[i]/w.area[i]-0.1)/0.25,0,1);
+    // wild stands: big-seeded grasses store for years; roots and fruit keep poorly and invite less settling
+    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
+    s.wildG[i]=grain;
+    const cool=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0,nuts=w.forest0[i]*clamp((w.T[i]-4)/6,0,1)*clamp((24-w.T[i])/6,0,1);
+    const stor=Math.max(grain,0.8*cool,0.45*nuts);
+    const stress=Math.min(1,clamp(-s.evT[i]/2,0,1)+clamp((1-s.evP[i])*3,0,1)+clamp((0.85-s.wm[i])*2,0,1));
+    const tgt=rich*stor*(1-0.6*stress);let sd=s.sed[i];sd+=(tgt-sd)*(tgt>sd?0.02:0.05);s.sed[i]=sd;
+    let cv=s.cultv[i],dm=s.domst[i];
+    if(grain>0.1&&sd>0.35){const crowd=clamp((p/w.area[i]-0.15)/0.4,0,1),press=Math.min(1,crowd+0.7*stress+0.6*(s.ritW?s.ritW[i]:0));
+      cv+=0.03*sd*grain*press*(1-cv)-0.006*(1-press)*cv}
+    else cv-=0.05*cv;
+    s.cultv[i]=cv=clamp(cv,0,1);
+    if(ri>=0){const R=WILD[ri];if(cv>0.15)dm=Math.min(1,dm+5*cv*Math.min(1,1.5*grain)/R.t);else if(cv<0.1)dm=Math.max(0,dm-5*0.5/R.t);s.domst[i]=dm;
+      const A=agg[ri];if(sd>A.sed)A.sed=sd;if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}}}
+  WILD.forEach((R,k)=>{const A=agg[k],f=s.oriLog[R.k]||(s.oriLog[R.k]={});if(s.origins[R.k]||A.c<0)return;
+    const e=s.eth[A.c]>=0?s.eths[s.eth[A.c]]:null,nm=e?`the ${e.name}`:'foragers';
+    if(A.sed>0.6&&!f.sed){f.sed=y;chron('ideas',`In ${R.n}, ${nm} begin to live year-round in villages, living off stores of wild ${R.grain?'grain':'roots and fruit'}.`,A.c,e?[RE(e)]:[])}
+    if(A.cul>0.4&&!f.cul){f.cul=y;f.up=1;chron('ideas',`In ${R.n}, ${nm} begin to sow and tend the wild ${R.grain?'grasses':'plants'} they once only gathered.`,A.c,e?[RE(e)]:[])}
+    if(f.up&&A.cul<0.15){f.up=0;f.fail=(f.fail||0)+1;chron('ideas',`In ${R.n}, ${nm} abandon their plots and villages and go back to the hunt; what their sowing had bred slips back toward the wild.`,A.c,e?[RE(e)]:[])}
+    else if(!f.up&&A.cul>0.4){f.up=1;chron('ideas',`In ${R.n}, ${nm} take up sowing again in the old village sites.`,A.c,e?[RE(e)]:[])}
+    if(A.dom>=1){s.origins[R.k]={y,cell:A.c};
+      chron('ideas',`In ${R.n}, after ${f.cul?y-f.cul:'many'} years of sowing, the ${R.crop} of ${nm} no longer scatter their seed or grow wild: they need the farmer, and the farmer needs them.`,A.c,e?[RE(e)]:[],'Farming locks in: from here it spreads with the farmers\' children.');
+      s.hearths.push({kind:'farm',cell:A.c,year:y,done:false,crop:R.crop,anim:R.anim,grain:R.grain,pk:R.pk,origin:R.k})}})}

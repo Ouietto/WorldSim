@@ -249,7 +249,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         <label class="check"><input type="checkbox" id="fitc" checked><span>Anchor Earth's climate to the observed climate zones. Off runs on the climate model alone.</span></label>
         <label class="check"><input type="checkbox" id="shufn"><span>Shuffle sound families on Earth, so a Romance-sounding people might rise on the Yellow River.</span></label>
         <label class="check"><input type="checkbox" id="followc"><span>Follow major events: pan the map to them as they happen.</span></label>
-        <label class="check"><input type="checkbox" id="hearthh" checked><span>Historical hearths on Earth: farming, bronze, horses and seafaring start where and when they did. Off places them at random.</span></label>
+        <div class="field"><label for="hearthh">Origins of farming on Earth</label><select id="hearthh"><option value="emergent" selected>Emergent: grows from the wild ancestors' real ranges</option><option value="historical">Historical: starts where and when it did</option><option value="random">Random places</option></select></div>
         <div class="actions">
           <button class="btn" id="btn-world" type="button">Build world</button>
           <button class="btn" id="btn-rerun" type="button">Rerun history</button>
@@ -334,7 +334,7 @@ const PDEF=[
 ['Ideas & faith','degrade','Soil exhaustion',0,3,0.05,1,'How fast overworked farmland loses fertility.'],
 ];
 const P={};for(const d of PDEF)P[d[1]]=d[6];
-P.hearthMode='historical';P.fitClimate=true;P.shuffleNames=false;
+P.hearthMode='emergent';P.fitClimate=true;P.shuffleNames=false;
 const CDEF=[
 ['tEq','Equator temperature (°C)',22,32,0.5,29],
 ['tGrad','Equator-to-pole drop (°C)',30,60,1,47],
@@ -1254,7 +1254,7 @@ function newHistory(hseed){
   prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),Kpot:new Float32Array(N),stx:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
   for(const i of w.landIdx)s.adapt[i]=w.mal[i]*0.5;
   s.orb0=w.isEarth?null:(r()*23000);
-  cropsInit();landUseInit();herdInit();climInit();techMatrixInit();societyInit();
+  cropsInit();originsInit();landUseInit();herdInit();climInit();techMatrixInit();societyInit();
   for(const i of w.coastIdx)s.sail[i]=0.05;
   for(let k=0;k<s.AG.length;k++)s.AG[k]=gauss(r);
   climateStep();computeK();
@@ -1275,7 +1275,7 @@ function newHistory(hseed){
   for(const i of w.landIdx)if(s.eth[i]>=0){s.pop[i]=s.K[i]*0.55;s.lmFound[w.lm[i]]=1}
   for(let k=0;k<10;k++)ethPass(false);
   if(w.isEarth&&P.hearthMode!=='random'){
-    for(const hh of EARTH_HEARTHS){if(hh.y<s.start)continue;s.hearths.push(Object.assign({},hh,{cell:cellAt(hh.lat,hh.lon),year:hh.y,done:false,fixed:true}))}
+    for(const hh of EARTH_HEARTHS){if(hh.y<s.start||(hh.kind==='farm'&&P.hearthMode==='emergent'))continue;s.hearths.push(Object.assign({},hh,{cell:cellAt(hh.lat,hh.lon),year:hh.y,done:false,fixed:true}))}
   }else{
     const cand=[];for(const i of w.landIdx)if(w.sF[i]>0.45&&w.lmSize[w.lm[i]]>40)cand.push(i);
     const hs=[];
@@ -1386,7 +1386,7 @@ function computeK(){
     // cool temperate coasts are the richest foraging on Earth: salmon runs, shellfish, seals (Yesner 1980; the Jomon, the
     // Ertebolle and the Northwest Coast were among the densest forager peoples known)
     const la=Math.abs(w.lat[i])*57.3,cool=w_coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0;
-    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.8*cool+0.4*rv);
+    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.8*cool+0.4*rv)*(1+0.4*(s.sed?s.sed[i]:0))*(1+1.2*(s.wildG?s.wildG[i]:0));
     const dry=clamp(wm,0.3,1.6);
     let sh=Math.max(w_sH[i],0.5*s_domR[i],0.6*s_domL[i]);if(w_desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w_Pr[i]+cdP[i]-80)/350,0,0.7));if(w_desert[i])sh=Math.max(sh,0.25*s_camel[i]);
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
@@ -1557,7 +1557,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
       // farming is practised by everyone: a well-peopled province that has it refines it over generations,
       // instead of staying at the level of the thin chain of neighbours that brought it
       if(f===0&&t>0.3&&t<0.995&&!lowC)t+=0.004*(0.2+suit[f][i])*(1-t)
-      if(lowC&&t>0)t*=1-loss*(f===0?0.3:1);
+      if(lowC&&t>0)t*=1-loss*(f===0?0.3:1)*(1-0.6*s.ritW[i]);
       A[i]=t;
     }
     // irrigation: farmers on a river invent it where they must; in a desert valley even a thin population needs canals
@@ -1930,13 +1930,14 @@ function diplomacy(){
 /* ---------- faith ---------- */
 function foundReligion(o){
   const s=S,r=s.r,cells=polCells(o.id);if(!cells.length)return;
-  const c=pick(r,cells),L=langAt(c),e=s.eth[c]>=0?s.eths[s.eth[c]]:null;
+  const site=holySite(cells),c=site?site.cell:pick(r,cells),L=langAt(c),e=s.eth[c]>=0?s.eths[s.eth[c]]:null;
   const Rp=newRuler(L,null);Rp.epithet='';Rp.birth=s.year-(25+((r()*15)|0));Rp.death=Rp.birth+55+((r()*25)|0);
   const f=figFor(null,Rp,'prophet');f.pol=o.id;f.eth=s.eth[c];f.title=`Prophet of the ${e?e.name:'people'}`;f.died=Rp.death;
   const G=cap(L.lex.god),F=Rp.base;
   const name=pick(r,[`${G}ism`,`the Way of ${F}`,`the ${G} Covenant`,`the Faith of ${G}`,`${F}ism`,`the ${cap(L.lex.sun)} Path`]);
   const universal=r()<0.65;
-  if(s.city[c]<0){s.city[c]=s.cities.length;s.cities.push({name:cityWord(L,r),cell:c,born:s.year,eth:s.eth[c],peak:s.pop[c],holy:true})}
+  if(s.city[c]<0){s.city[c]=s.cities.length;s.cities.push({name:site?site.name:cityWord(L,r),cell:c,born:s.year,eth:s.eth[c],peak:s.pop[c],holy:true})}
+  if(site){site.faith=s.rels.length;chron('faith',`The new faith takes the ancient sanctuary of ${site.name} for its holy city; people have gathered there for ${s.year-site.born} years.`,c)}
   const R={id:s.rels.length,name,founder:f.id,born:s.year,origin:c,holy:c,pol:o.id,eth:s.eth[c],fam:e?e.fam:-1,kind:universal?'universal':'ethnic',miss:universal?0.35+0.65*r():0.15,cent:universal?0.3+0.4*r():0.1,holder:o.id,rgb:hsl(r()*360,0.55,0.48),parent:-1,kids:[],cells:0,pop:0,peak:0,alive:true,states:[],councils:0};
   s.rels.push(R);f.rel=R.id;
   s.rel[c]=R.id;for(let d=0;d<4;d++){const j=WD.nb[c*4+d];if(j>=0&&s.pop[j]>=1&&s.pol[j]===o.id)s.rel[j]=R.id}
@@ -2284,7 +2285,7 @@ function* politicsG(){
       // fortify threatened frontiers if the state is cohesive and can pay
       if(threat&&!horde&&o.S>0.45&&o.gate>0.7&&s_admin[o.capital]>0.3&&s_fort[i]<1)s_fort[i]=Math.min(1,s_fort[i]+0.006*fz*(1+s_roads[i]));
     }else{
-      sv+=fr?asR*0.6*sv*(1-sv):(0.3-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
+      sv+=fr?asR*0.6*sv*(1-sv):(0.3+0.25*s.ritW[i]-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
       if(pi>=1){const dens=pi/w_area[i],agr=s_farm[i]*s_sFc[i],past=s_herd[i]*Math.max(w_sH[i],w_desert[i]*s_camel[i]*0.6);
         // density threshold rescaled with population, which ran about 40% above historical estimates when it was set
         if(agr>0.35&&dens>3.2&&!w_nomad[i]&&localPop(i)>=FLOOR.chief*3*P.floor){
@@ -2331,9 +2332,12 @@ function ethPass(log){
   const md=new Float64Array(n).fill(2),far=new Int32Array(n).fill(-1);
   for(let k=0;k<L.length;k++){const i=L[k],e=s.eth[i];if(e<0||s.pop[i]<1)continue;const d=w.x3[i]*sx[e]+w.y3[i]*sy[e]+w.z3[i]*sz[e];if(d<md[e]){md[e]=d;far[e]=i}}
   const thr=P.splitDist*2*Math.PI/W;let made=0;
+  // a people that gathers at a shared sacred site stays one people longer, and its customs drift less
+  const rw=new Float64Array(n);if(s.ritW)for(let k=0;k<L.length;k++){const i=L[k],e=s.eth[i];if(e>=0&&s.pop[i]>=1)rw[e]+=s.ritW[i]}
+  for(let e=0;e<n;e++)rw[e]=cnt[e]?Math.min(1,2*rw[e]/cnt[e]):0;
   for(let e=0;e<n&&made<12;e++){
     if(cnt[e]<6||far[e]<0)continue;
-    if(Math.acos(clamp(md[e],-1,1))<=thr||s.r()>0.5)continue;
+    if(Math.acos(clamp(md[e],-1,1))<=thr*(1+rw[e])||s.r()>0.5)continue;
     const f=far[e],c=newEth(e);made++;
     for(let k=0;k<L.length;k++){const i=L[k];if(s.eth[i]!==e)continue;
       const df=w.x3[i]*w.x3[f]+w.y3[i]*w.y3[f]+w.z3[i]*w.z3[f],dc=w.x3[i]*sx[e]+w.y3[i]*sy[e]+w.z3[i]*sz[e];
@@ -2345,7 +2349,7 @@ function ethPass(log){
       chron('people',`The ${E[e].name} drift apart; in the ${dir} a new people, the ${E[c].name}, emerges.`,f,[RE(E[e]),RE(E[c])]);
     }
   }
-  for(const o of E)if(o.alive)for(let k=0;k<6;k++)o.cult[k]=clamp(o.cult[k]+gauss(s.r)*0.015,0,1);
+  for(let e=0;e<n;e++){const o=E[e];if(o.alive)for(let k=0;k<6;k++)o.cult[k]=clamp(o.cult[k]+gauss(s.r)*0.015*(1-0.6*rw[e]),0,1)}
 }
 function mixPass(){
   const s=S,w=WD,r=s.r,L=w.landIdx;const s_eth=s.eth,s_eth2=s.eth2,s_lab=s.lab,s_mix=s.mix,s_mixT=s.mixT,s_pop=s.pop,w_land=w.land,w_nb=w.nb;let born=0;
@@ -2434,7 +2438,7 @@ function step(){for(const _ of stepG());}
 const ymod=(y,n)=>((y%n)+n)%n;
 function* stepG(){
   const s=S;s.year++;
-  climateStep();if(WD.isEarth){if(s.year%5===0)eventPass();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
+  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if(s.r()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
@@ -2446,7 +2450,7 @@ function* stepG(){
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
   if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){ritualPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
@@ -2833,6 +2837,66 @@ function openPass(){const s=S,w=WD,L=w.landIdx,op=s.open,pop=s.pop,K=s.K,nb=w.nb
     const f0=w.forest0[i];if(f0>0.3&&w.T[i]>20)s.malF[i]=0.55+0.45*clamp(1-s.forest[i]/f0,0,1)}
 }
 
+// ---------- the origins of farming ----------
+// Farming is not placed: it grows out of foragers' lives where four things meet (Bar-Yosef 1998; Richerson, Boyd & Bettinger
+// 2001; Smith 2001; Fuller 2007). Wild plants worth domesticating grow there (on Earth, the real ranges of the wild ancestors);
+// foragers settle down on rich, storable wild food; something squeezes them (crowding, a cold or dry spell, the demands of
+// feasts at a sacred site) so they start to tend and sow; and they keep at it without a break for the two to five thousand years
+// selection takes. A bad spell sends them back to the hunt and the selection slips; most attempts fail. Once the package is
+// complete it locks in and spreads with the farmers' children (the frontier in techStep and migrate).
+// q: how much food the wild progenitors give: big-seeded grasses of the Mediterranean-climate hills far outyield teosinte or
+// goosefoot (Blumler 1998; Diamond 1997, ch. 8)
+const WILD=[
+  {k:'fc',q:1.0,n:'the Fertile Crescent',pk:'wheat',box:[31,39,34,48],t:2000,crop:'wheat and barley',anim:'sheep and goats',grain:1},
+  {k:'yz',q:0.8,n:'the Yangtze',pk:'rice',box:[24,32,108,122],t:3500,crop:'rice',anim:'pigs',grain:1},
+  {k:'yr',q:0.8,n:'the Yellow River',pk:'millet',box:[33,41,104,118],t:2200,crop:'millet',anim:'pigs and dogs',grain:1},
+  {k:'ng',q:0.75,n:'the New Guinea highlands',pk:'yams',box:[-8,-3,138,148],t:2600,crop:'taro and bananas',anim:'pigs',grain:0},
+  {k:'ma',q:0.5,n:'the Balsas lowlands',pk:'maize',box:[16,21,-104,-96],t:3500,crop:'maize, beans and squash',anim:'turkeys and dogs',grain:1},
+  {k:'an',q:0.65,n:'the Andes',pk:'potato',box:[-18,-8,-78,-66],t:3400,crop:'potatoes and quinoa',anim:'llamas and guinea pigs',grain:0.6},
+  {k:'sa',q:0.5,n:'the Sahel',pk:'sorghum',box:[10,18,-10,35],t:2000,crop:'sorghum and pearl millet',anim:'cattle',grain:1},
+  {k:'wa',q:0.55,n:'the West African forest edge',pk:'yams',box:[5,10,-8,10],t:5000,crop:'yams and oil palm',anim:'goats',grain:0},
+  {k:'ea',q:0.45,n:'the Eastern Woodlands',pk:'sunflower',box:[33,40,-92,-82],t:3000,crop:'sunflowers and squash',anim:'dogs',grain:0.6}];
+function originsInit(){const s=S,w=WD;s.wildG=new Float32Array(N);s.sed=new Float32Array(N);s.cultv=new Float32Array(N);s.domst=new Float32Array(N);s.origins={};s.oriLog={};
+  if(!w.wildR){w.wildR=new Int8Array(N).fill(-1);w.wildW=new Float32Array(N);
+    if(w.isEarth)for(let i=0;i<N;i++){if(!w.land0[i])continue;const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;
+      WILD.forEach((R,k)=>{const [a,b,c,d]=R.box;if(la<a||la>b||lo<c||lo>d)return;
+        const e=Math.min(la-a,b-la,lo-c,d-lo),v=0.5+0.5*clamp(e/2,0,1);if(v>w.wildW[i]){w.wildW[i]=v;w.wildR[i]=k}})}}}
+function originsOn(){return WD.isEarth&&P.hearthMode==='emergent'}
+// every five years
+function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.year,agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
+  for(const i of L){const p=s.pop[i];if(p<1){s.sed[i]*=0.9;s.cultv[i]*=0.9;continue}
+    const la=Math.abs(w.lat[i])*57.2958,ri=w.wildR[i];
+    // farmers whose borrowed crops do poorly here take up the local wild plants too (secondary domestication: millet beside
+    // borrowed rice, sorghum beside wheat that fails in the summer rains)
+    if(s.farm[i]>0.5){s.sed[i]=1;if(ri<0||s.origins[WILD[ri].k])continue;const R=WILD[ri],C=CROPS[CI[R.pk]];
+      const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
+      let cv=s.cultv[i];cv=clamp(cv+0.05*pr*(1-cv)-0.01*(1-pr)*cv,0,1);s.cultv[i]=cv;let dm=s.domst[i];
+      if(cv>0.15)dm=Math.min(1,dm+15*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
+    const rich=clamp((s.Kf[i]/w.area[i]-0.1)/0.25,0,1);
+    // wild stands: big-seeded grasses store for years; roots and fruit keep poorly and invite less settling
+    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
+    s.wildG[i]=grain;
+    const cool=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0,nuts=w.forest0[i]*clamp((w.T[i]-4)/6,0,1)*clamp((24-w.T[i])/6,0,1);
+    const stor=Math.max(grain,0.8*cool,0.45*nuts);
+    const stress=Math.min(1,clamp(-s.evT[i]/2,0,1)+clamp((1-s.evP[i])*3,0,1)+clamp((0.85-s.wm[i])*2,0,1));
+    const tgt=rich*stor*(1-0.6*stress);let sd=s.sed[i];sd+=(tgt-sd)*(tgt>sd?0.02:0.05);s.sed[i]=sd;
+    let cv=s.cultv[i],dm=s.domst[i];
+    if(grain>0.1&&sd>0.35){const crowd=clamp((p/w.area[i]-0.15)/0.4,0,1),press=Math.min(1,crowd+0.7*stress+0.6*(s.ritW?s.ritW[i]:0));
+      cv+=0.03*sd*grain*press*(1-cv)-0.006*(1-press)*cv}
+    else cv-=0.05*cv;
+    s.cultv[i]=cv=clamp(cv,0,1);
+    if(ri>=0){const R=WILD[ri];if(cv>0.15)dm=Math.min(1,dm+5*cv*Math.min(1,1.5*grain)/R.t);else if(cv<0.1)dm=Math.max(0,dm-5*0.5/R.t);s.domst[i]=dm;
+      const A=agg[ri];if(sd>A.sed)A.sed=sd;if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}}}
+  WILD.forEach((R,k)=>{const A=agg[k],f=s.oriLog[R.k]||(s.oriLog[R.k]={});if(s.origins[R.k]||A.c<0)return;
+    const e=s.eth[A.c]>=0?s.eths[s.eth[A.c]]:null,nm=e?`the ${e.name}`:'foragers';
+    if(A.sed>0.6&&!f.sed){f.sed=y;chron('ideas',`In ${R.n}, ${nm} begin to live year-round in villages, living off stores of wild ${R.grain?'grain':'roots and fruit'}.`,A.c,e?[RE(e)]:[])}
+    if(A.cul>0.4&&!f.cul){f.cul=y;f.up=1;chron('ideas',`In ${R.n}, ${nm} begin to sow and tend the wild ${R.grain?'grasses':'plants'} they once only gathered.`,A.c,e?[RE(e)]:[])}
+    if(f.up&&A.cul<0.15){f.up=0;f.fail=(f.fail||0)+1;chron('ideas',`In ${R.n}, ${nm} abandon their plots and villages and go back to the hunt; what their sowing had bred slips back toward the wild.`,A.c,e?[RE(e)]:[])}
+    else if(!f.up&&A.cul>0.4){f.up=1;chron('ideas',`In ${R.n}, ${nm} take up sowing again in the old village sites.`,A.c,e?[RE(e)]:[])}
+    if(A.dom>=1){s.origins[R.k]={y,cell:A.c};
+      chron('ideas',`In ${R.n}, after ${f.cul?y-f.cul:'many'} years of sowing, the ${R.crop} of ${nm} no longer scatter their seed or grow wild: they need the farmer, and the farmer needs them.`,A.c,e?[RE(e)]:[],'Farming locks in: from here it spreads with the farmers\' children.');
+      s.hearths.push({kind:'farm',cell:A.c,year:y,done:false,crop:R.crop,anim:R.anim,grain:R.grain,pk:R.pk,origin:R.k})}})}
+
 "use strict";
 /* ================= LAND USE, HERDS AND HORSEMEN =================
    The same land can be farmed or grazed. Each province's mix is set by what pays (crops, animals, soil and tools on hand),
@@ -3161,7 +3225,7 @@ const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1
    Inca resettlements, Byzantine themes, Ottoman timars. Settlers make the frontier hold and push it further, but land given
    for service tends to become land held by birth: a hereditary nobility that protects its own provinces and keeps much of
    their revenue. Rulers try to take it back; sometimes they succeed. */
-function societyInit(){const s=S;s.colony=new Float32Array(N);s.colonies=[];s.reforms=[]}
+function societyInit(){const s=S;s.colony=new Float32Array(N);s.colonies=[];s.reforms=[];s.rits=[];s.ritAt=new Int32Array(N).fill(-1);s.ritW=new Float32Array(N)}
 // every ten years
 function colonyPass(){
   const s=S,w=WD,r=s.r;
@@ -3332,6 +3396,44 @@ function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.mi
 // what a defeated state brings to the table on its own: walls, scribes, its own city and cohesion
 function selfHold(d){const s=S,c=d.capital,info=d.info||infoCap(d);
   return clamp(0.35*Math.min(1,info.rec)+0.25*(s.city[c]>=0?1:0)+0.25*Math.min(1,s.fort[c]*2)+0.25*d.S,0,1)}
+
+// ---------- sacred sites ----------
+// Long before cities, foragers and early farmers gathered at a few places, year after year, and built there: Gobekli Tepe's
+// pillars, the ring at Stonehenge, the earthworks of Poverty Point. Gathering keeps scattered bands one people: it renews
+// alliances, marriages, stories and skills (Johnson 1982 on scalar stress; Renfrew 1973; Dietrich et al. 2012). A site gains
+// standing with each generation that returns, and erodes when they stop: buried, overgrown, a fossil for later diggers.
+// Newcomers can take over a living site or rediscover a dead one; a site with enough standing can become a faith's holy city.
+const RIT_KIND=[['ring of standing stones','stones'],['circle of carved stone pillars','pillars'],['great earthen mound','mound'],['sacred grove and spring','grove'],['painted cave','cave'],['shell mound and feasting ground','shell mound']];
+function ritKind(c){const w=WD;if(w.rough[c]>0.45)return 4;if(w.coast[c]&&w.T[c]>8)return 5;if(w.forest0[c]>0.6)return 3;if(w.rough[c]>0.2)return 1;return w.T[c]<14?0:2}
+function ritName(r){return r.name}
+// every ten years
+function ritualPass(){const s=S,w=WD,r=s.r,y=s.year,L=w.landIdx;
+  // new gathering places where settled bands live close together and no site already draws them
+  for(let t=0;t<120;t++){const i=L[(r()*L.length)|0];if(s.pop[i]<1||s.ritW[i]>0.15)continue;const sd=s.sed?s.sed[i]:0,dens=s.pop[i]/w.area[i];
+    if(sd<0.45||dens<0.15)continue;if(r()<0.03*sd*Math.min(1,dens/0.6)){const L2=langAt(i),k=ritKind(i);
+      const R={id:s.rits.length,cell:i,eth:s.eth[i],name:cityWord(L2,r),kind:k,born:y,imp:0.08,peak:0.08,last:y,alive:true,fossil:false,told:false,keepers:s.eth[i]};
+      s.rits.push(R);s.ritAt[i]=R.id}}
+  s.ritW.fill(0);
+  for(const R of s.rits){const c=R.cell;
+    if(!w.land[c]){if(R.alive){R.alive=false;R.fossil=true;if(R.told)chron('nature',`The sea closes over the old ${RIT_KIND[R.kind][0]} at ${R.name}.`,c)}continue}
+    let att=0;const cnt=new Map();ring(c,4,j=>{const p=s.pop[j];if(p<1)return;att+=p*(0.4+0.6*(s.sed?s.sed[j]:1));const e=s.eth[j];if(e>=0)cnt.set(e,(cnt.get(e)||0)+p)});
+    let top=-1,tp=0;for(const [e,p] of cnt)if(p>tp){tp=p;top=e}
+    const a=clamp(att/25000,0,1);
+    if(R.alive){
+      if(a>0.08){R.imp=Math.min(1,R.imp+0.015*a*(1-R.imp)+0.004*a);R.last=y}else R.imp*=0.96;
+      if(R.imp>R.peak)R.peak=R.imp;
+      if(!R.told&&R.imp>0.35){R.told=true;const e=s.eths[top]||s.eths[R.eth];
+        chron('culture',`Every year the ${e?e.name:'peoples around'} gather at ${R.name}, where they have raised a ${RIT_KIND[R.kind][0]}. Feasts, marriages and old stories bind the scattered bands into one people.`,c,e?[RE(e)]:[])}
+      if(top>=0&&R.keepers>=0&&top!==R.keepers&&R.told&&tp>0.6*att&&y-(R.taken||-1e9)>300&&s.eths[top].name!==(s.eths[R.keepers]||{}).name){const e=s.eths[top],o=s.eths[R.keepers];R.taken=y;
+        chron('culture',`The ${e.name} take over the sacred ${RIT_KIND[R.kind][1]} of ${R.name}, once kept by the ${o?o.name:'others'}, and make its feasts their own.`,c,[RE(e)])}
+      if(top>=0)R.keepers=top;
+      if(R.imp<0.03&&y-R.last>200){R.alive=false;R.fossil=true;if(R.told||R.peak>0.3)chron('culture',`No one gathers at ${R.name} any more. Its ${RIT_KIND[R.kind][1]} are buried and forgotten, a puzzle for diggers yet unborn.`,c)}}
+    else if(R.fossil&&a>0.5&&r()<0.01){R.alive=true;R.fossil=false;R.imp=0.12;R.last=y;const e=s.eths[top];
+      if(R.peak>0.3&&e)chron('culture',`The ${e.name} find the old ${RIT_KIND[R.kind][1]} at ${R.name} and begin to gather there again.`,c,[RE(e)])}
+    if(R.alive&&R.imp>0.05){const cx=w.cxA[c],cy=w.cyA[c];ring(c,5,(j,dx,dy)=>{const v=R.imp*(1-Math.hypot(dx,dy)/6);if(v>s.ritW[j])s.ritW[j]=v})}}
+}
+// the most revered living site in a set of cells, for a new faith's holy city
+function holySite(cells){const s=S;let best=null;for(const c of cells){const k=s.ritAt[c];if(k<0)continue;const R=s.rits[k];if(R.alive&&R.imp>0.5&&(!best||R.imp>best.imp))best=R}return best}
 
 </script>
 <script>
@@ -3580,6 +3682,12 @@ function drawMap(){
       each(mx,my,(sx,sy)=>{ctx.fillStyle='#14202a';ctx.strokeStyle='#f5f3ec';ctx.lineWidth=1.5;
         if(isCap){ctx.fillRect(sx-3,sy-3,6,6);ctx.strokeRect(sx-3,sy-3,6,6)}else{ctx.beginPath();ctx.arc(sx,sy,2.5,0,7);ctx.fill();ctx.stroke()}
         if(ui.z>=2.6){ctx.lineWidth=3;ctx.strokeText(c.name,sx+6,sy);ctx.fillText(c.name,sx+6,sy)}})}}
+  // sacred sites: a gold triangle while people still gather there, a hollow one once it is buried and forgotten
+  if(cm!=='none'&&s.rits&&(m==='political'||m==='peoples'||m==='religion')&&ui.z>=1.4){
+    for(const R of s.rits){if(R.peak<0.3)continue;const [mx,my]=cellXY(R.cell);
+      each(mx,my,(sx,sy)=>{ctx.beginPath();ctx.moveTo(sx,sy-4);ctx.lineTo(sx+3.6,sy+2.6);ctx.lineTo(sx-3.6,sy+2.6);ctx.closePath();ctx.lineWidth=1.3;
+        if(R.alive){ctx.fillStyle='#b8862b';ctx.strokeStyle='#f5f3ec';ctx.fill();ctx.stroke()}else{ctx.strokeStyle='rgba(60,60,60,.7)';ctx.stroke()}
+        if(ui.z>=2.6){ctx.font=`italic 11px ${cssVar('--f-ui')}`;ctx.textAlign='left';ctx.lineWidth=3;ctx.strokeStyle='#f5f3ec';ctx.fillStyle=R.alive?'#6b4c12':'#666';ctx.strokeText(R.name,sx+6,sy);ctx.fillText(R.name,sx+6,sy)}})}}
   // labels
   const lab=[];
   if(m==='political'||m==='alliances'){for(const id of s.alive){const o=s.pols[id];if(o.cells>=6)lab.push([lonToMx(o.lx),(o.ly+0.5)*SC,o.base,o.cells,o.tier==='Empire'||o.tier==='Khaganate'])}}
@@ -4079,7 +4187,7 @@ mapCv.addEventListener('wheel',e=>{e.preventDefault();const r=mapCv.getBoundingC
 /* ---------- world building ---------- */
 function busy(on,txt){const b=$('busy');b.hidden=!on;if(txt)b.textContent=txt}
 function startHistory(){
-  P.hearthMode=$('hearthh').checked?'historical':'random';P.shuffleNames=$('shufn').checked;
+  P.hearthMode=$('hearthh').value;P.shuffleNames=$('shufn').checked;
   try{history.replaceState(null,'','#seed-'+($('hseed').value||'1').replace(/[^A-Za-z0-9]/g,''))}catch(e){}
   newHistory($('hseed').value||'1');
   ui.page=null;ui.stack=[];ui.lastChronKey='';ui.lastSpotObj=null;$('toast').hidden=true;ui.pausedAtEnd=false;ui.dirty=true;ui.ready=true;$('play').disabled=false;

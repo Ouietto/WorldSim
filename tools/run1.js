@@ -32,6 +32,7 @@ for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafri
 for(const k of ['writing','iron','coin','paper','gun'])out['t_'+k]=ft(k);
 out.t_horse=S.domFirst&&S.domFirst[0]?S.domFirst[0].y:null;out.s_pontic=pontic;
 for(const k of ['cEur','brit','scand','japan'])out['f_'+k]=fArr[k]??null;out.fs_pnw=END>=1500?+fShare('pnw').toFixed(3):null;out.fs_cape=END>=1500?+fShare('cape').toFixed(3):null;
+if(S.origins){for(const R of WILD)out['o_'+R.k]=S.origins[R.k]?S.origins[R.k].y:null;out.o_count=Object.keys(S.origins).length;out.x_rits=S.rits?S.rits.filter(R=>R.peak>0.35).length:null;out.x_oriLog=S.oriLog}
 out.p_m3000=pop[-2999]??null;out.p_1=pop[1]??null;out.p_1000=pop[1000]??null;out.p_1500=pop[1500]??null;
 out.b_m1000=big[-999]??null;out.b_1=big[1]??null;out.h_m1000=bigH[-999]??null;out.h_1=bigH[1]??null;
 const ch=S.chinaHist.filter(h=>h[0]>=-250);out.cUnity=ch.length?+(ch.filter(h=>h[1]>0.5).length/ch.length).toFixed(3):null;

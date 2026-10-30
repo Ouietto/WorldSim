@@ -138,7 +138,7 @@ function newHistory(hseed){
   prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),Kpot:new Float32Array(N),stx:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
   for(const i of w.landIdx)s.adapt[i]=w.mal[i]*0.5;
   s.orb0=w.isEarth?null:(r()*23000);
-  cropsInit();landUseInit();herdInit();climInit();techMatrixInit();societyInit();
+  cropsInit();originsInit();landUseInit();herdInit();climInit();techMatrixInit();societyInit();
   for(const i of w.coastIdx)s.sail[i]=0.05;
   for(let k=0;k<s.AG.length;k++)s.AG[k]=gauss(r);
   climateStep();computeK();
@@ -159,7 +159,7 @@ function newHistory(hseed){
   for(const i of w.landIdx)if(s.eth[i]>=0){s.pop[i]=s.K[i]*0.55;s.lmFound[w.lm[i]]=1}
   for(let k=0;k<10;k++)ethPass(false);
   if(w.isEarth&&P.hearthMode!=='random'){
-    for(const hh of EARTH_HEARTHS){if(hh.y<s.start)continue;s.hearths.push(Object.assign({},hh,{cell:cellAt(hh.lat,hh.lon),year:hh.y,done:false,fixed:true}))}
+    for(const hh of EARTH_HEARTHS){if(hh.y<s.start||(hh.kind==='farm'&&P.hearthMode==='emergent'))continue;s.hearths.push(Object.assign({},hh,{cell:cellAt(hh.lat,hh.lon),year:hh.y,done:false,fixed:true}))}
   }else{
     const cand=[];for(const i of w.landIdx)if(w.sF[i]>0.45&&w.lmSize[w.lm[i]]>40)cand.push(i);
     const hs=[];
@@ -270,7 +270,7 @@ function computeK(){
     // cool temperate coasts are the richest foraging on Earth: salmon runs, shellfish, seals (Yesner 1980; the Jomon, the
     // Ertebolle and the Northwest Coast were among the densest forager peoples known)
     const la=Math.abs(w.lat[i])*57.3,cool=w_coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0;
-    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.8*cool+0.4*rv);
+    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.8*cool+0.4*rv)*(1+0.4*(s.sed?s.sed[i]:0))*(1+1.2*(s.wildG?s.wildG[i]:0));
     const dry=clamp(wm,0.3,1.6);
     let sh=Math.max(w_sH[i],0.5*s_domR[i],0.6*s_domL[i]);if(w_desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w_Pr[i]+cdP[i]-80)/350,0,0.7));if(w_desert[i])sh=Math.max(sh,0.25*s_camel[i]);
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
@@ -441,7 +441,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
       // farming is practised by everyone: a well-peopled province that has it refines it over generations,
       // instead of staying at the level of the thin chain of neighbours that brought it
       if(f===0&&t>0.3&&t<0.995&&!lowC)t+=0.004*(0.2+suit[f][i])*(1-t)
-      if(lowC&&t>0)t*=1-loss*(f===0?0.3:1);
+      if(lowC&&t>0)t*=1-loss*(f===0?0.3:1)*(1-0.6*s.ritW[i]);
       A[i]=t;
     }
     // irrigation: farmers on a river invent it where they must; in a desert valley even a thin population needs canals
@@ -814,13 +814,14 @@ function diplomacy(){
 /* ---------- faith ---------- */
 function foundReligion(o){
   const s=S,r=s.r,cells=polCells(o.id);if(!cells.length)return;
-  const c=pick(r,cells),L=langAt(c),e=s.eth[c]>=0?s.eths[s.eth[c]]:null;
+  const site=holySite(cells),c=site?site.cell:pick(r,cells),L=langAt(c),e=s.eth[c]>=0?s.eths[s.eth[c]]:null;
   const Rp=newRuler(L,null);Rp.epithet='';Rp.birth=s.year-(25+((r()*15)|0));Rp.death=Rp.birth+55+((r()*25)|0);
   const f=figFor(null,Rp,'prophet');f.pol=o.id;f.eth=s.eth[c];f.title=`Prophet of the ${e?e.name:'people'}`;f.died=Rp.death;
   const G=cap(L.lex.god),F=Rp.base;
   const name=pick(r,[`${G}ism`,`the Way of ${F}`,`the ${G} Covenant`,`the Faith of ${G}`,`${F}ism`,`the ${cap(L.lex.sun)} Path`]);
   const universal=r()<0.65;
-  if(s.city[c]<0){s.city[c]=s.cities.length;s.cities.push({name:cityWord(L,r),cell:c,born:s.year,eth:s.eth[c],peak:s.pop[c],holy:true})}
+  if(s.city[c]<0){s.city[c]=s.cities.length;s.cities.push({name:site?site.name:cityWord(L,r),cell:c,born:s.year,eth:s.eth[c],peak:s.pop[c],holy:true})}
+  if(site){site.faith=s.rels.length;chron('faith',`The new faith takes the ancient sanctuary of ${site.name} for its holy city; people have gathered there for ${s.year-site.born} years.`,c)}
   const R={id:s.rels.length,name,founder:f.id,born:s.year,origin:c,holy:c,pol:o.id,eth:s.eth[c],fam:e?e.fam:-1,kind:universal?'universal':'ethnic',miss:universal?0.35+0.65*r():0.15,cent:universal?0.3+0.4*r():0.1,holder:o.id,rgb:hsl(r()*360,0.55,0.48),parent:-1,kids:[],cells:0,pop:0,peak:0,alive:true,states:[],councils:0};
   s.rels.push(R);f.rel=R.id;
   s.rel[c]=R.id;for(let d=0;d<4;d++){const j=WD.nb[c*4+d];if(j>=0&&s.pop[j]>=1&&s.pol[j]===o.id)s.rel[j]=R.id}
@@ -1168,7 +1169,7 @@ function* politicsG(){
       // fortify threatened frontiers if the state is cohesive and can pay
       if(threat&&!horde&&o.S>0.45&&o.gate>0.7&&s_admin[o.capital]>0.3&&s_fort[i]<1)s_fort[i]=Math.min(1,s_fort[i]+0.006*fz*(1+s_roads[i]));
     }else{
-      sv+=fr?asR*0.6*sv*(1-sv):(0.3-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
+      sv+=fr?asR*0.6*sv*(1-sv):(0.3+0.25*s.ritW[i]-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
       if(pi>=1){const dens=pi/w_area[i],agr=s_farm[i]*s_sFc[i],past=s_herd[i]*Math.max(w_sH[i],w_desert[i]*s_camel[i]*0.6);
         // density threshold rescaled with population, which ran about 40% above historical estimates when it was set
         if(agr>0.35&&dens>3.2&&!w_nomad[i]&&localPop(i)>=FLOOR.chief*3*P.floor){
@@ -1215,9 +1216,12 @@ function ethPass(log){
   const md=new Float64Array(n).fill(2),far=new Int32Array(n).fill(-1);
   for(let k=0;k<L.length;k++){const i=L[k],e=s.eth[i];if(e<0||s.pop[i]<1)continue;const d=w.x3[i]*sx[e]+w.y3[i]*sy[e]+w.z3[i]*sz[e];if(d<md[e]){md[e]=d;far[e]=i}}
   const thr=P.splitDist*2*Math.PI/W;let made=0;
+  // a people that gathers at a shared sacred site stays one people longer, and its customs drift less
+  const rw=new Float64Array(n);if(s.ritW)for(let k=0;k<L.length;k++){const i=L[k],e=s.eth[i];if(e>=0&&s.pop[i]>=1)rw[e]+=s.ritW[i]}
+  for(let e=0;e<n;e++)rw[e]=cnt[e]?Math.min(1,2*rw[e]/cnt[e]):0;
   for(let e=0;e<n&&made<12;e++){
     if(cnt[e]<6||far[e]<0)continue;
-    if(Math.acos(clamp(md[e],-1,1))<=thr||s.r()>0.5)continue;
+    if(Math.acos(clamp(md[e],-1,1))<=thr*(1+rw[e])||s.r()>0.5)continue;
     const f=far[e],c=newEth(e);made++;
     for(let k=0;k<L.length;k++){const i=L[k];if(s.eth[i]!==e)continue;
       const df=w.x3[i]*w.x3[f]+w.y3[i]*w.y3[f]+w.z3[i]*w.z3[f],dc=w.x3[i]*sx[e]+w.y3[i]*sy[e]+w.z3[i]*sz[e];
@@ -1229,7 +1233,7 @@ function ethPass(log){
       chron('people',`The ${E[e].name} drift apart; in the ${dir} a new people, the ${E[c].name}, emerges.`,f,[RE(E[e]),RE(E[c])]);
     }
   }
-  for(const o of E)if(o.alive)for(let k=0;k<6;k++)o.cult[k]=clamp(o.cult[k]+gauss(s.r)*0.015,0,1);
+  for(let e=0;e<n;e++){const o=E[e];if(o.alive)for(let k=0;k<6;k++)o.cult[k]=clamp(o.cult[k]+gauss(s.r)*0.015*(1-0.6*rw[e]),0,1)}
 }
 function mixPass(){
   const s=S,w=WD,r=s.r,L=w.landIdx;const s_eth=s.eth,s_eth2=s.eth2,s_lab=s.lab,s_mix=s.mix,s_mixT=s.mixT,s_pop=s.pop,w_land=w.land,w_nb=w.nb;let born=0;
@@ -1318,7 +1322,7 @@ function step(){for(const _ of stepG());}
 const ymod=(y,n)=>((y%n)+n)%n;
 function* stepG(){
   const s=S;s.year++;
-  climateStep();if(WD.isEarth){if(s.year%5===0)eventPass();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
+  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if(s.r()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
@@ -1330,7 +1334,7 @@ function* stepG(){
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
   if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){ritualPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
