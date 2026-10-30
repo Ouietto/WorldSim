@@ -1,1 +1,1 @@
-{"seeds": "1-32", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Run 53: ruler-set extraction, storehouses, labour levy, tribute without war (32 seeds)."}
+{"seeds": "1-32", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Run 54: run 53 without tribute by intimidation (32 seeds)."}
