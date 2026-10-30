@@ -81,7 +81,7 @@ function wildFor(w,sp,i,earth){const T=w.T[i],P=w.Pr[i],la=latOf(i),lo=lonOf(i),
 function capFor(sp,i){const s=S,w=WD,ps=s.past[i],T=w.T[i]+s.cdT[i],P=w.Pr[i];
   if(sp<=2&&w.tsetse[i])return 0;
   switch(sp){
-    case 0:return clamp(w.sH[i]*1.3,0,1)*(0.25+0.75*ps)*(T>-10?1:0);
+    case 0:{const t=s.linOf?linTraits('horse',i):null,hd=t?t.hardy:0.5;return clamp(w.sH[i]*1.3,0,1)*(0.25+0.75*ps)*(T>-10?1:0)*(T<0||P<300?0.6+0.8*hd:1)}
     case 1:return (w.desert[i]||P<450?0.9:0.25)*clamp((22-T)/8,0,1)*clamp((T+8)/6,0,1)*(0.3+0.7*ps);
     case 2:return (w.desert[i]||P<400?1:0.2)*clamp((T-14)/6,0,1)*(0.3+0.7*ps);
     case 3:return clamp((4-T)/6,0,1)*(Math.abs(latOf(i))>48?1:0);
@@ -94,9 +94,11 @@ function herdInit(){const s=S,w=WD;
   s.dom=HERDS.map(()=>new Float32Array(N));s.domP=HERDS.map(()=>new Float32Array(N));s.domFirst=HERDS.map(()=>null);s.domLog=[];s.dieoffs=[];
   s.domR=s.dom[3];s.domL=s.dom[4];
   for(const e of s.eths){if(e.ride==null)e.ride=0;if(e.xp==null)e.xp=0.3}
+  beastsInit()
 }
 const DOM_TXT=['tame the horse: first for meat and milk, soon for carts and riding','tame the two-humped camel; the cold deserts open to caravans','tame the one-humped camel; the hot deserts begin to open to caravans and raiders','tame the reindeer, and the taiga and tundra become pasture','tame the llama and alpaca: wool, dung for fields and fires, and pack trains along the mountain paths'];
 function domesticate(sp,i){const s=S,w=WD,d=s.dom[sp];d[i]=Math.max(d[i],0.3);ring(i,1,j=>{if(w.land[j]&&capFor(sp,j)>0.05)d[j]=Math.max(d[j],0.15)});
+  if(sp===0&&s.linOf){const Ln=newLineage('horse',-1,i);ring(i,1,j=>{if(d[j]>0)s.linOf.horse[j]=Ln.id})}
   const first=!s.domFirst[sp];if(first)s.domFirst[sp]={y:s.year,cell:i};s.domLog.push({y:s.year,sp,cell:i});
   if(sp===0)s.firstTech[4]=s.firstTech[4]||{y:s.year,cell:i};if(sp===1||sp===2)s.firstTech[18]=s.firstTech[18]||{y:s.year,cell:i};
   const e=s.eth[i]>=0?s.eths[s.eth[i]]:null;
@@ -116,8 +118,8 @@ function herdPass(){
     const add=[];
     for(const i of L){const v=d[i];if(v<0.12)continue;
       for(let k=0;k<4;k++){const j=nb[i*4+k];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=capFor(sp,j);if(c<0.03)continue;
-        const keen=0.25+0.75*Math.max(s.past[j],0.6*s.herd[j]);if(r()<0.6*keen)add.push(j,Math.min(c,0.25*v))}}
-    for(let k=0;k<add.length;k+=2)d[add[k]]=Math.max(d[add[k]],add[k+1])}
+        const keen=0.25+0.75*Math.max(s.past[j],0.6*s.herd[j]);if(r()<0.6*keen)add.push(j,Math.min(c,0.25*v),i)}}
+    for(let k=0;k<add.length;k+=3){d[add[k]]=Math.max(d[add[k]],add[k+1]);if(sp===0&&s.linOf)linCarry('horse',add[k+2],add[k])}}
   // a killing winter (dzud) or drought on the steppe
   if(r()<0.3){const i=L[(r()*L.length)|0];const hit=s.dom[0][i]>0.3||s.dom[1][i]>0.3||s.dom[3][i]>0.3;
     if(hit&&w.T[i]<10){const loss=0.35+0.3*r();ring(i,5,j=>{for(const sp of [0,1,3])s.dom[sp][j]*=1-loss});
@@ -125,7 +127,8 @@ function herdPass(){
       if(p&&p.kind==='horde'&&p.cells>=15){p.shock+=0.25;chron('nature',`A killing winter freezes the steppe: the ${p.full} loses ${Math.round(loss*100)}% of its herds.`,i,[R_(p)])}}}
   // what herds mean for everything else: riding, caravans, pack trains
   const hh=s.dom[0],bb=s.dom[1],dd2=s.dom[2];
-  for(const i of L){s.horse[i]=Math.min(1,1.5*hh[i]);s.camel[i]=Math.min(1,1.5*Math.max(bb[i],dd2[i]))}
+  beastPass();
+  for(const i of L){s.horse[i]=Math.min(1,Math.max(1.5*hh[i],s.mountX[i]));s.camel[i]=Math.min(1,Math.max(1.5*Math.max(bb[i],dd2[i]),s.packX[i]*(w.desert[i]||w.Pr[i]<400?0.7:0)))}
   ridePass();
 }
 // herds travel with migrating peoples
@@ -187,3 +190,126 @@ function steppeFront(i,ei){const w=WD,s=S;
     const ej=s.eth[j];if(ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)return 1;
     if(s.past[j]<0.3&&s.past[i]>0.55)return 1}
   return 0}
+
+// ---------- other animals: commensals, prey and partners, real and possible ----------
+// Animals came into human lives by three roads (Zeder 2012): drawn to camps and granaries (dogs, cats), managed as hunted
+// herds (sheep, cattle), or caught and bred on purpose (horses, donkeys). Some were only ever tamed, each one caught from the
+// wild: elephants, cheetahs, hawks. Whether a species can be domesticated depends on its temper, sociality and breeding
+// (Diamond 1997, ch. 9; Clutton-Brock 1999), and on whether people of the right kind live beside it. Many species that never
+// were could have been: eland and moose have been farmed in the 20th century, Belyaev's foxes tamed in decades, and the
+// Egyptians kept hyenas. Here every wild species has a chance, small or large, and any success is history taking another road.
+// path: commensal | prey | directed | tamed. tame: how readily it takes to people. bred: breeds in captivity.
+// Roles: hunt (foragers' yield), guard, mouse (granary losses), meat (pasture food), ride and pack (mobility, raids, caravans),
+// war (armies), courier (fast messages), tsetse (thrives where cattle and horses die). real: domesticated or tamed in our world.
+const BEASTS=[
+  {k:'dog',n:'dogs',one:'dog',path:'commensal',tame:1,bred:1,real:1,col:[150,120,90],roles:{hunt:1,guard:1,pack:0.25,war:0.2}},
+  {k:'cat',n:'cats',one:'cat',path:'commensal',tame:0.8,bred:1,real:1,col:[200,170,120],roles:{mouse:1},box:[[10,42,-15,70]],clim:(T,P)=>T>10&&P<1300},
+  {k:'donkey',n:'donkeys',one:'donkey',path:'directed',tame:0.7,bred:1,real:1,col:[150,140,130],roles:{pack:0.7,ride:0.25,desert:1},box:[[8,33,20,55]],clim:(T,P)=>T>14&&P<700},
+  {k:'elephant',n:'elephants',one:'elephant',path:'tamed',tame:0.45,bred:0,real:1,col:[120,120,130],roles:{war:1,haul:0.6},box:[[5,30,68,110],[28,37,-10,12]],clim:(T,P)=>T>14&&P>400},
+  {k:'guineafowl',n:'guineafowl',one:'guineafowl',path:'commensal',tame:0.9,bred:1,real:1,col:[90,90,110],roles:{meat:0.12},box:[[-25,16,-18,45]],clim:(T,P)=>T>18&&P>300},
+  {k:'eland',n:'eland',one:'eland',path:'prey',tame:0.3,bred:1,col:[190,150,90],roles:{meat:0.8,tsetse:1},box:[[-32,12,10,42]],clim:(T,P)=>T>14&&P>300&&P<1500},
+  {k:'zebra',n:'zebras',one:'zebra',path:'directed',tame:0.1,bred:1,col:[60,60,60],roles:{ride:0.8,pack:0.4,tsetse:1},box:[[-35,12,10,42]],clim:(T,P)=>T>12&&P>250&&P<1200},
+  {k:'gwolf',n:'golden wolves',one:'golden wolf',path:'commensal',tame:0.45,bred:1,col:[180,140,80],roles:{hunt:0.8,guard:1,war:0.3},box:[[5,35,-17,45]],clim:(T,P)=>T>14},
+  {k:'serval',n:'servals',one:'serval',path:'commensal',tame:0.4,bred:1,col:[210,160,60],roles:{mouse:0.9},box:[[-30,18,-18,45]],clim:(T,P)=>T>18&&P>400},
+  {k:'cheetah',n:'cheetahs',one:'cheetah',path:'tamed',tame:0.35,bred:0,breed:0.01,col:[220,180,90],roles:{hunt:0.8,war:0.15,prestige:1},box:[[-30,30,-18,50],[25,40,40,80]],clim:(T,P)=>T>12&&P<900},
+  {k:'hippo',n:'hippopotamuses',one:'hippopotamus',path:'prey',tame:0.03,bred:1,col:[110,90,110],roles:{meat:0.6,war:0.5,river:1},box:[[-30,32,-18,45]],clim:(T,P,rv)=>T>16&&rv>0.3},
+  {k:'ostrich',n:'ostriches',one:'ostrich',path:'prey',tame:0.3,bred:1,col:[110,100,90],roles:{meat:0.3,courier:1},box:[[-35,35,-18,60]],clim:(T,P)=>T>12&&P<700},
+  {k:'bison',n:'bison',one:'bison',path:'prey',tame:0.12,bred:1,col:[100,70,50],roles:{meat:1,haul:0.4},box:[[30,60,-115,-90]],clim:(T,P,rv,sH)=>sH>0.3},
+  {k:'moose',n:'moose',one:'moose',path:'directed',tame:0.12,bred:1,col:[90,80,60],roles:{ride:0.4,pack:0.6,taiga:1},box:[[48,70,-170,-50],[48,70,10,180]],clim:(T,P)=>T<6&&T>-10&&P>300},
+  {k:'peccary',n:'peccaries',one:'peccary',path:'prey',tame:0.35,bred:1,col:[120,100,90],roles:{meat:0.5},box:[[-30,30,-110,-35]],clim:(T,P)=>T>18&&P>600},
+  {k:'capybara',n:'capybaras',one:'capybara',path:'prey',tame:0.35,bred:1,col:[150,110,80],roles:{meat:0.5},box:[[-35,12,-82,-35]],clim:(T,P,rv)=>T>16&&rv>0.15},
+  {k:'tapir',n:'tapirs',one:'tapir',path:'directed',tame:0.18,bred:1,col:[70,70,80],roles:{pack:0.5,forest:1},box:[[-25,20,-95,-35]],clim:(T,P)=>T>20&&P>1200},
+  {k:'emu',n:'emus',one:'emu',path:'prey',tame:0.3,bred:1,col:[130,110,90],roles:{meat:0.4},box:[[-40,-10,112,155]],clim:(T,P)=>P<1000},
+  {k:'deer',n:'red deer',one:'red deer',path:'prey',tame:0.18,bred:1,col:[160,90,60],roles:{meat:0.6},box:[[35,62,-10,60]],clim:(T,P)=>T>2&&T<16&&P>400}];
+const BI=Object.fromEntries(BEASTS.map((b,k)=>[b.k,k]));
+function beastWild(w,b,i,earth){if(b.k==='dog')return 0;const T=w.T[i],P=w.Pr[i],la=latOf(i),lo=lonOf(i);
+  if(earth&&!b.box.some(([a,c,d,e])=>la>=a&&la<=c&&lo>=d&&lo<=e))return 0;return b.clim(T,P,w.rv[i],w.sH[i])?1:0}
+function beastsInit(){const s=S,w=WD,earth=w.isEarth;
+  if(!w.bwild){w.bwild=BEASTS.map(b=>{const a=new Uint8Array(N);for(let i=0;i<N;i++)if(w.land0?w.land0[i]:w.land[i])a[i]=beastWild(w,b,i,earth);return a});
+    if(!earth){const rr=mulberry32(hashStr('beasts:'+w.seed));BEASTS.forEach((b,k)=>{const keep=new Map();for(let i=0;i<N;i++){if(!w.bwild[k][i])continue;const lm=w.lm[i];if(!keep.has(lm))keep.set(lm,rr()<0.5);if(!keep.get(lm))w.bwild[k][i]=0}})}}
+  s.bst=BEASTS.map(()=>new Float32Array(N));s.bP=BEASTS.map(()=>new Float32Array(N));s.bFirst=BEASTS.map(()=>null);s.alt=[];
+  s.lins=[];s.linOf={};for(const b of BEASTS)if(b.bred)s.linOf[b.k]=new Int32Array(N).fill(-1);s.linOf.horse=new Int32Array(N).fill(-1);
+  s.mountX=new Float32Array(N);s.packX=new Float32Array(N);s.meatX=new Float32Array(N);s.huntX=new Float32Array(N);s.mouseX=new Float32Array(N);s.warX=new Float32Array(N);s.courX=new Float32Array(N);
+  // dogs came with the first peoples everywhere but Australia and Africa south of the Sahara (they reached Africa with herders,
+  // about 3500 BCE, and Australia with the dingo, about 1500 BCE)
+  if(earth){const d=s.bst[BI.dog];for(const i of w.landIdx){const la=latOf(i),lo=lonOf(i);if(s.eth[i]<0&&s.pop[i]<1){}
+      const africa=lo>-20&&lo<52&&la<30&&la>-36,aus=lo>110&&la<-9;if(!africa&&!aus)d[i]=0.5}
+    const L0=newLineage('dog',-1,null);for(const i of w.landIdx)if(d[i]>0)s.linOf.dog[i]=L0.id}
+}
+// lineages: each domestic population belongs to one, and lineages drift with how their keepers live
+function newLineage(k,parent,cell){const s=S,p=parent>=0?s.lins[parent]:null;
+  const L={id:s.lins.length,k,parent,born:s.year,cell,fam:cell!=null&&cell>=0&&s.eth[cell]>=0?s.eths[s.eth[cell]].fam:-1,eth:cell!=null&&cell>=0?s.eth[cell]:-1,
+    t:p?Object.assign({},p.t):{size:0.5,hardy:0.5,temper:0.35,speed:0.5},name:null,told:false,cells:0};
+  s.lins.push(L);return L}
+function linTraits(k,i){const s=S,a=s.linOf[k];if(!a||a[i]<0)return null;return s.lins[a[i]].t}
+function beastCap(k,i){const s=S,w=WD,b=BEASTS[k],T=w.T[i]+s.cdT[i],P=w.Pr[i];
+  if(b.k==='dog')return 0.8;
+  if(w.tsetse[i]&&!b.roles.tsetse&&['donkey','cat'].includes(b.k))return 0.1;
+  if(b.path==='tamed'){let near=0;ring(i,3,j=>{if(w.bwild[k][j])near=1});return near?0.6:0}
+  // bred animals live wherever their climate allows, not only where their wild kin did
+  const ok=b.clim(T,P,w.rv[i],w.sH[i])?1:0.25,tr=linTraits(b.k,i),hard=tr?tr.hardy:0.5;
+  return clamp(ok*(0.5+0.5*hard)+(ok<1?0.2*hard:0),0,1)}
+// every ten years
+function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
+  for(let k=0;k<BEASTS.length;k++){const b=BEASTS[k],d=s.bst[k],Pg=s.bP[k],wild=w.bwild[k];
+    if(b.k!=='dog')for(const i of L){if(!wild[i]||d[i]>0.05||s.pop[i]<300)continue;
+      const st=s.pol[i]?s.pols[s.pol[i]]:null,sed=s.sed?s.sed[i]:0;
+      const ctx=b.path==='commensal'?Math.max(s.farm[i]>0.5?1:0,sed*0.6):b.path==='prey'?Math.max(0.8*s.herd[i],0.5*sed):
+        b.path==='directed'?(s.herd[i]>0.4?s.herd[i]*(0.5+0.5*Math.min(1,s.horse[i]+s.camel[i]+s.bst[BI.donkey][i]+(s.domL?s.domL[i]:0))):0):
+        (st&&st.kind==='state'&&st.cells>=10&&st.tier!=='Chiefdom'?1:0);
+      if(ctx<=0)continue;
+      // no one tames a second animal for a job one they already keep does well: no golden wolves where dogs guard the camp
+      const role=Object.keys(b.roles)[0];if(BEASTS.some((o,q)=>q!==k&&o.roles[role]&&s.bst[q][i]>0.2)||(role==='ride'&&s.horse[i]>0.3)||(role==='pack'&&s.camel[i]>0.3))continue;
+      if(Pg[i]===0){let near=false;ring(i,5,j=>{if(d[j]>0.05)near=true});if(near)continue}
+      if(ctx<=0)continue;Pg[i]+=0.005*b.tame*ctx*(0.5+r());if(Pg[i]>=1){Pg[i]=0;tameBeast(k,i)}}
+    // herds grow toward what the land carries, die out where no one keeps them, and spread with keepers
+    for(const i of L){let v=d[i];if(v<=0)continue;const c=beastCap(k,i);if(c<=0.01||s.pop[i]<1){d[i]=v<0.01?0:v*0.6;continue}v+=0.3*v*(1-v/c);d[i]=clamp(v,0,1)}
+    if(b.path==='tamed')continue;const add=[];
+    for(const i of L){const v=d[i];if(v<0.12)continue;
+      for(let q=0;q<4;q++){const j=nb[i*4+q];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=beastCap(k,j);if(c<0.05)continue;if(r()<0.35)add.push(i,j,Math.min(c,0.3*v))}}
+    for(let q=0;q<add.length;q+=3){const i=add[q],j=add[q+1];d[j]=Math.max(d[j],add[q+2]);linCarry(b.k,i,j)}
+    // a tamed-only animal is now and then bred at last by its keepers
+    if(b.path==='tamed'&&b.breed&&s.bFirst[k]&&!s['bred_'+b.k]&&r()<b.breed){let c=-1;for(const i of L)if(d[i]>0.3){c=i;break}
+      if(c>=0){s['bred_'+b.k]=1;b.path='directed';s.linOf[b.k]=new Int32Array(N).fill(-1);const Ln=newLineage(b.k,-1,c);for(const i of L)if(d[i]>0.05)s.linOf[b.k][i]=Ln.id;
+        const e=s.eths[s.eth[c]];altNote(b.k,c,`For the first time anywhere, the keepers of the ${e?e.name:'court'} breed ${b.n} in captivity; no longer must every one be caught wild.`)}}}
+  linPass();beastEffects()}
+// the herds pass also carries horse lineages
+function linCarry(k,i,j){const s=S,a=s.linOf[k];if(!a||a[i]<0)return;const L=s.lins[a[i]];
+  if(a[j]<0||r_lt(0.3)){a[j]=a[i];
+    // far from home among another people, a lineage starts its own line
+    const ej=s.eth[j],fj=ej>=0?s.eths[ej].fam:-1;if(fj>=0&&fj!==L.fam&&L.cell>=0&&angDist(L.cell,j)>0.2&&r_lt(0.04)){const Lc=newLineage(k,L.id,j);a[j]=Lc.id}}}
+function r_lt(p){return S.r()<p}
+function tameBeast(k,i){const s=S,w=WD,b=BEASTS[k],d=s.bst[k];d[i]=Math.max(d[i],0.3);if(b.path!=='tamed')ring(i,1,j=>{if(w.land[j]&&beastCap(k,j)>0.05)d[j]=Math.max(d[j],0.15)});
+  if(b.bred){const Ln=newLineage(b.k,-1,i);ring(i,1,j=>{if(d[j]>0)s.linOf[b.k][j]=Ln.id})}
+  const first=!s.bFirst[k];if(first)s.bFirst[k]={y:s.year,cell:i};const e=s.eth[i]>=0?s.eths[s.eth[i]]:null,nm=e?`the ${e.name}`:'a people';
+  const verb=b.path==='tamed'?`${nm} catch and train wild ${b.n}`:b.path==='commensal'?`${b.n} come to live among ${nm}, and stay`:`${nm} tame the ${b.one}`;
+  const use=Object.keys(b.roles).map(r=>({hunt:'hunting',guard:'guarding camps',mouse:'keeping mice from the stores',meat:'meat and hides',ride:'riding',pack:'carrying loads',war:'war',courier:'carrying messages at speed',haul:'hauling',prestige:'the prestige of their lords',tsetse:'',desert:'',river:'',taiga:'',forest:''}[r])).filter(Boolean);
+  const txt=`${cap(verb)}${use.length?`: ${use.slice(0,3).join(', ')}`:''}.`;
+  if(first&&!b.real)altNote(b.k,i,`For the first time anywhere, ${verb}. ${cap(use.slice(0,3).join(', '))}${use.length?'.':''}`);
+  else chron('ideas',first?txt:`Independently, ${txt.charAt(0).toLowerCase()+txt.slice(1)}`,i,e?[RE(e)]:[])}
+// a road our world did not take: flagged in the chronicle and the checks
+function altNote(k,c,txt){const s=S;s.alt.push({y:s.year,k,cell:c,txt});const e=s.eth[c]>=0?s.eths[s.eth[c]]:null;chron('ideas',txt,c,e?[RE(e)]:[],'This did not happen in our world.')}
+// every ten years: lineages drift with how their keepers live; a lineage changed enough becomes a named breed
+function linPass(){const s=S,w=WD;if(s.year-(s.linY??-1e9)<50)return;s.linY=s.year;const n=s.lins.length,acc=new Float64Array(n*6);
+  const add=(id,i)=>{const o=id*6;acc[o]++;acc[o+1]+=s.past[i];acc[o+2]+=s.farm[i];const T=w.T[i];acc[o+3]+=(T<2||T>25||w.Pr[i]<300)?1:0;const p=s.pol[i]?s.pols[s.pol[i]]:null;acc[o+4]+=p&&p.enemies.size?1:0;acc[o+5]+=p&&p.kind==='state'?1:0};
+  for(const k in s.linOf){const a=s.linOf[k];for(const i of w.landIdx)if(a[i]>=0&&s.pop[i]>=1)add(a[i],i)}
+  for(const L of s.lins){const o=L.id*6,c=acc[o];L.cells=c;if(!c)continue;const past=acc[o+1]/c,farm=acc[o+2]/c,harsh=acc[o+3]/c,war=acc[o+4]/c,state=acc[o+5]/c,t=L.t,g=0.05;
+    // herders' half-wild herds grow small, hardy and hard to handle; stabled, fodder-fed stock grows big, docile and soft
+    t.size+=g*(clamp(0.45+0.35*farm*state-0.25*past+0.15*war,0,1)-t.size);t.hardy+=g*(clamp(0.3+0.4*past+0.35*harsh-0.2*farm,0,1)-t.hardy);
+    t.temper+=g*(clamp(0.35+0.45*farm-0.3*past,0,1)-t.temper);t.speed+=g*(clamp(0.4+0.25*past+0.25*war,0,1)-t.speed);
+    if(!L.told&&c>=6&&s.year-L.born>300){const P=L.parent>=0?s.lins[L.parent].t:{size:0.5,hardy:0.5,temper:0.35,speed:0.5};
+      const dv=Math.abs(t.size-P.size)+Math.abs(t.hardy-P.hardy)+Math.abs(t.temper-P.temper)+Math.abs(t.speed-P.speed);
+      if(dv>0.3){L.told=true;let c0=-1;const a=s.linOf[L.k];for(const i of w.landIdx)if(a[i]===L.id&&s.pop[i]>=1){c0=i;break}if(c0<0)continue;
+        const e=s.eths[s.eth[c0]];L.name=`${e?cap(placeWord(e.lang,s.r)):'Plains'} ${L.k==='horse'?'horse':BEASTS[BI[L.k]].one}`;L.eth=s.eth[c0];
+        const d=[t.size>0.62?'big':t.size<0.38?'small':'',t.hardy>0.62?'hardy':t.hardy<0.38?'delicate':'',t.temper>0.6?'gentle':t.temper<0.3?'half-wild':'',t.speed>0.62?'swift':''].filter(Boolean);
+        chron('culture',`The ${L.k==='horse'?'horses':BEASTS[BI[L.k]].n} of the ${e?e.name:'herders'} have become a breed of their own, the ${L.name}${d.length?`: ${d.join(', ')}`:''}.`,c0,e?[RE(e)]:[])}}}}
+// what the animals do for their people, as province values the rest of the model reads
+function beastEffects(){const s=S,w=WD,L=w.landIdx;
+  for(const i of L){let mount=0,pack=0,meat=0,hunt=0,mouse=0,war=0,cour=0;
+    for(let k=0;k<BEASTS.length;k++){const v=s.bst[k][i];if(v<0.05)continue;const R=BEASTS[k].roles,t=linTraits(BEASTS[k].k,i)||{size:0.5,speed:0.5,temper:0.5};
+      const q=Math.min(1,1.5*v);
+      if(R.ride)mount=Math.max(mount,q*R.ride*(0.7+0.6*t.speed)*(0.7+0.6*t.temper));
+      if(R.pack)pack=Math.max(pack,q*R.pack*(R.desert?1:0.6));
+      if(R.meat)meat+=q*R.meat*(0.7+0.6*t.size);if(R.hunt)hunt=Math.max(hunt,q*R.hunt);if(R.mouse)mouse=Math.max(mouse,q*R.mouse);
+      if(R.war)war=Math.max(war,q*R.war*(R.river?(w.rv[i]>0.3?1:0.2):1)*(0.7+0.6*t.size));if(R.courier)cour=Math.max(cour,q*R.courier)}
+    s.mountX[i]=mount;s.packX[i]=pack;s.meatX[i]=Math.min(1.2,meat);s.huntX[i]=hunt;s.mouseX[i]=mouse;s.warX[i]=war;s.courX[i]=cour}}

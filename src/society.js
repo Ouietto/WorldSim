@@ -161,7 +161,7 @@ function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
   const sound=Math.max(v('drums'),v('beacons'))+0.5*v('drumscript'),objects=v('khipu'),mem=v('griots');
   const runners=v('relays')*(1+0.5*s.roads[c]+0.4*Math.min(1,s.horse[c]));
   const rec=clamp(0.75*marks+0.55*objects+0.1*mem+0.3*v('drumscript'),0,1.5);
-  const spd=clamp(0.25*marks+0.45*runners+0.35*sound+0.15*Math.min(1,s.horse[c]),0,1.5);
+  const spd=clamp(0.25*marks+0.45*runners+0.35*sound+0.15*Math.min(1,s.horse[c])+0.15*(s.courX?s.courX[c]:0),0,1.5);
   const memo=clamp(0.5*marks+0.6*mem+0.25*objects,0,1.3);
   o.info={rec,spd,memo};o.leg=0.75+0.35*Math.min(1,rec);return o.info}
 
