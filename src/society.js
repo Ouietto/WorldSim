@@ -5,7 +5,7 @@ const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1
    Inca resettlements, Byzantine themes, Ottoman timars. Settlers make the frontier hold and push it further, but land given
    for service tends to become land held by birth: a hereditary nobility that protects its own provinces and keeps much of
    their revenue. Rulers try to take it back; sometimes they succeed. */
-function societyInit(){const s=S;s.colony=new Float32Array(N);s.colonies=[];s.reforms=[];s.rits=[];s.ritAt=new Int32Array(N).fill(-1);s.ritW=new Float32Array(N)}
+function societyInit(){const s=S;s.colony=new Float32Array(N);s.colonies=[];s.reforms=[];s.rits=[];s.ritAt=new Int32Array(N).fill(-1);s.ritW=new Float32Array(N);s.ritOf=new Int32Array(N).fill(-1)}
 // every ten years
 function colonyPass(){
   const s=S,w=WD,r=s.r;
@@ -53,7 +53,10 @@ function leaguePass(){
     // members stand together
     for(const a of L.members)for(const b of L.members)if(a!==b){const A=s.pols[a];if(!A.allies.includes(b)&&!A.enemies.has(b))A.allies.push(b)}}
   for(const id of s.alive){const o=s.pols[id];if(!isCityState(o))continue;const fam=s.eths[o.core]?s.eths[o.core].fam:-1;
-    const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&s.eths[p.core]&&s.eths[p.core].fam===fam)kin.push(p)}
+    // kin: cities of one language family, or of one sacred site whatever their tongue (Nippur for the cities of Sumer and Akkad,
+    // Delphi's amphictyony)
+    const site=s.ritOf?s.ritOf[o.capital]:-1;
+    const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&((s.eths[p.core]&&s.eths[p.core].fam===fam)||(site>=0&&s.ritOf[p.capital]===site)))kin.push(p)}
     if(o.league!=null){continue}
     const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
     const circ=S.circE[o.capital]||0;
@@ -193,7 +196,7 @@ function ritualPass(){const s=S,w=WD,r=s.r,y=s.year,L=w.landIdx;
     if(sd<0.45||dens<0.15)continue;if(r()<0.03*sd*Math.min(1,dens/0.6)){const L2=langAt(i),k=ritKind(i);
       const R={id:s.rits.length,cell:i,eth:s.eth[i],name:cityWord(L2,r),kind:k,born:y,imp:0.08,peak:0.08,last:y,alive:true,fossil:false,told:false,keepers:s.eth[i]};
       s.rits.push(R);s.ritAt[i]=R.id}}
-  s.ritW.fill(0);
+  s.ritW.fill(0);s.ritOf.fill(-1);
   for(const R of s.rits){const c=R.cell;
     if(!w.land[c]){if(R.alive){R.alive=false;R.fossil=true;if(R.told)chron('nature',`The sea closes over the old ${RIT_KIND[R.kind][0]} at ${R.name}.`,c)}continue}
     let att=0;const cnt=new Map();ring(c,4,j=>{const p=s.pop[j];if(p<1)return;att+=p*(0.4+0.6*(s.sed?s.sed[j]:1));const e=s.eth[j];if(e>=0)cnt.set(e,(cnt.get(e)||0)+p)});
@@ -210,7 +213,7 @@ function ritualPass(){const s=S,w=WD,r=s.r,y=s.year,L=w.landIdx;
       if(R.imp<0.03&&y-R.last>200){R.alive=false;R.fossil=true;if(R.told||R.peak>0.3)chron('culture',`No one gathers at ${R.name} any more. Its ${RIT_KIND[R.kind][1]} are buried and forgotten, a puzzle for diggers yet unborn.`,c)}}
     else if(R.fossil&&a>0.5&&r()<0.01){R.alive=true;R.fossil=false;R.imp=0.12;R.last=y;const e=s.eths[top];
       if(R.peak>0.3&&e)chron('culture',`The ${e.name} find the old ${RIT_KIND[R.kind][1]} at ${R.name} and begin to gather there again.`,c,[RE(e)])}
-    if(R.alive&&R.imp>0.05){const cx=w.cxA[c],cy=w.cyA[c];ring(c,5,(j,dx,dy)=>{const v=R.imp*(1-Math.hypot(dx,dy)/6);if(v>s.ritW[j])s.ritW[j]=v})}}
+    if(R.alive&&R.imp>0.05){const cx=w.cxA[c],cy=w.cyA[c];ring(c,5,(j,dx,dy)=>{const v=R.imp*(1-Math.hypot(dx,dy)/6);if(v>s.ritW[j]){s.ritW[j]=v;s.ritOf[j]=R.id}})}}
 }
 // the most revered living site in a set of cells, for a new faith's holy city
 function holySite(cells){const s=S;let best=null;for(const c of cells){const k=s.ritAt[c];if(k<0)continue;const R=s.rits[k];if(R.alive&&R.imp>0.5&&(!best||R.imp>best.imp))best=R}return best}

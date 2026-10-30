@@ -105,7 +105,7 @@ function domesticate(sp,i){const s=S,w=WD,d=s.dom[sp];d[i]=Math.max(d[i],0.3);ri
 function herdPass(){
   const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
   for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=w.wild[sp],Pg=s.domP[sp];
-    const rate=[0.003,0.003,0.0012,0.0015,0.005][sp];
+    const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own
     for(const i of L){const wv=wild[i];if(wv<0.2||d[i]>0.05||s.pop[i]<500)continue;let near=false;ring(i,6,j=>{if(d[j]>0.05)near=true});if(near){Pg[i]=0;continue}
       const keepers=sp===4?Math.max(s.herd[i],0.6*s.farm[i]):sp===3?Math.max(s.herd[i],0.5):s.herd[i];if(keepers<0.4)continue;
