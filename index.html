@@ -1203,8 +1203,6 @@ function ethDist(a,b){
 const R_=o=>['pol',o.id,o.full],RB=o=>['pol',o.id,o.base],RE=e=>['eth',e.id,e.name],RF=f=>['fig',f.id,f.name],RR=x=>['rel',x.id,x.name],RW=w=>['war',w.id,w.name],RPl=o=>['plague',o.id,o.name],RM=m=>['mig',m.id,m.name];
 function chron(t,txt,cell,refs,why){S.chron.push({y:S.year,t,txt,cell:cell==null?-1:cell,refs:refs||[],why:why||null});if(S.chron.length>30000)S.chron.splice(0,4000)}
 function spot(txt,cell,refs){S.spot.push({y:S.year,txt,cell,refs:refs||[]});if(S.spot.length>60)S.spot.shift()}
-// rough travel distance between two capitals in the same units as the reach h (about 2.5 per cell crossed)
-function tribDist(a,b){const w=WD;if(!w.cellA){let t=0,n=0;for(let i=0;i<w.land.length&&n<400;i+=97){const j=w.nb[i*4];if(j>=0){t+=angDist(i,j);n++}}w.cellA=t/Math.max(1,n)||0.01}return angDist(a.capital,b.capital)/w.cellA*2.5}
 function angDist(a,b){const w=WD;return Math.acos(clamp(w.x3[a]*w.x3[b]+w.y3[a]*w.y3[b]+w.z3[a]*w.z3[b],-1,1))}
 function seedTech(f,c,v,rad){const w=WD;const cx=w.cxA[c],cy=w.cyA[c];
   for(let dy=-rad;dy<=rad;dy++){const y=cy+dy;if(y<0||y>=H)continue;for(let dx=-rad;dx<=rad;dx++){const j=y*W+(cx+dx+W)%W;if(w.land[j])f[j]=Math.max(f[j],v*(dx||dy?0.85:1))}}}
@@ -1253,7 +1251,7 @@ function newHistory(hseed){
     firstTech:new Array(TECH.length).fill(null),lmFound:new Uint8Array(w.lmCount),regionFirst:{},medBest:{share:0,y:null,pol:0},chinaHist:[],medHist:[],farmCheck:null};
   const s=S;
   s.farm=tk[0];s.herd=tk[1];s.irrig=tk[2];s.metal=tk[3];s.horse=tk[4];s.sail=tk[5];s.admin=tk[6];s.wheel=tk[7];s.iron=tk[8];s.coin=tk[9];s.law=tk[10];s.roads=tk[11];s.nav=tk[12];s.caval=tk[13];s.paper=tk[14];s.crops=tk[15];s.gun=tk[16];s.ocean=tk[17];s.camel=tk[18];s.grain=tk[19];s.ard=tk[20];s.plough=tk[21];s.manure=tk[22];s.xcrops=tk[23];s.integ=new Float32Array(N);s.uni=new Float32Array(N);s.uniFam=new Int32Array(N).fill(-1);
-  prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),Kpot:new Float32Array(N),stx:new Float32Array(N),lure:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
+  prepEco(w);Object.assign(s,{forest:Float32Array.from(w.forest0),salt:new Float32Array(N),adapt:new Float32Array(N),dp:new Float32Array(N),car:new Float32Array(N),exit:new Float32Array(N),Kpot:new Float32Array(N),stx:new Float32Array(N),circE:Float32Array.from(w.circ),rp:new Float32Array(N),routes:[],carPairs:new Set(),cropX:new Set(),bfsPar:new Int32Array(N),bfsD:new Int16Array(N),bfsMark:new Int32Array(N),bfsStamp:0});
   for(const i of w.landIdx)s.adapt[i]=w.mal[i]*0.5;
   s.orb0=w.isEarth?null:(r()*23000);
   cropsInit();originsInit();landUseInit();herdInit();climInit();techMatrixInit();societyInit();
@@ -1763,7 +1761,7 @@ function succession(o){
   const pU=(0.06+0.25*Math.max(0,o.E/Et-1)+0.35*Math.max(0,0.6-(o.mandate==null?1:o.mandate)))*(1-0.35*mem);
   o.rulers.push({name:R0.name,base:R0.base,epithet:R0.epithet,from:R0.since,to:s.year,conq:R0.conq,fig:R0.fig,dyn:o.dyn});
   if(o.rulers.length>60)o.rulers.shift();
-  o.ruler=newRuler(L,o);if(o.kind==='state')o.prest=(o.prest||0)*0.6;
+  o.ruler=newRuler(L,o);
   const usurp=r()<pU;
   if(R0.fig!=null){const f=s.figs[R0.fig];f.died=s.year;deed(f,usurp?`Overthrown at ${s.year-R0.birth} by ${o.ruler.name}`:`Died at ${s.year-R0.birth}`);
     const fam=s.eths[o.core]?s.eths[o.core].fam:-1;
@@ -1771,7 +1769,7 @@ function succession(o){
       const w=R0.base.toLowerCase().replace(/[aeiou]+$/,'')+pick(r,['ar','or','an','er','ar']);
       s.famTitle[fam]={word:w,fig:f.id,from:o.id};
       chron('culture',`The name of ${f.name} outlives its bearer: rulers of the ${s.eths[fam].name} family of peoples will style themselves ${w}.`,o.capital,[RF(f),R_(o)])}}
-  if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)-0.2*s.lure[o.capital]+((o.prest||0)<0.05?0.15:0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);civilWar(o,true);return}
+  if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);civilWar(o,true);return}
   if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
       chron('war',`${o.ruler.name} seizes the throne of the ${o.full}; the House of ${old} falls.`,o.capital,[R_(o),RF(f)])}}
@@ -1854,7 +1852,7 @@ function attack(o,i,j,sea){
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
     s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:(w.tcost[j]||2)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
-    o.conq++;o.ruler.conq++;o.prest=(o.prest||0)+(o.kind==='horde'?0.02:0.004);
+    o.conq++;o.ruler.conq++;if(o.kind==='horde')o.prest=(o.prest||0)+0.02;
     if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004;d.mandate=Math.max(0,(d.mandate||1)-0.01);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA++;else war.gD++;war.lastGain=s.year;
         if(j===d.capital&&o.kind==='state'&&(d.cells<=2||d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
@@ -1875,7 +1873,7 @@ function decisive(o,d,war){
   // otherwise the loser keeps its own ruler and pays tribute
   const hO=o.hold??0.5,hD=d.kind==='state'?selfHold(d):0.2;
   const annex=d.cells<=0.15*o.cells||r()<clamp(0.1+1.1*(hO-0.7*hD)+((kin||idn)?0.2:0),0.05,0.9);
-  const n=d.cells,old=d.full;o.prest=(o.prest||0)+0.15;d.prest=(d.prest||0)*0.5;
+  const n=d.cells,old=d.full;
   if(annex){for(const i of polCells(d.id)){s.pol[i]=o.id;s.integ[i]=Math.min(s.integ[i],kin?0.4:0.12);s.dist[i]=Math.min(65534,(s.dist[d.capital]<65535?s.dist[d.capital]:4)+s.dist[i])}
     o.conq+=n;o.ruler.conq+=n;d.lastBy=o.id;
     if(n>=8){chron('war',`The capital of the ${old} falls, and with it the whole realm: the ${o.full} annexes all ${n} provinces.`,o.capital,[['pol',d.id,old],R_(o),RW(war)]);if(n>=25)spot(`The ${o.full} swallows the ${old}`,o.capital,[R_(o)])}}
@@ -1958,11 +1956,7 @@ function diplomacy(){
       if(power(o)>1.3*power(p)&&(p.raided||0)>3&&r()<0.15){p.over=id;o.tribs++;if(p.cells>=25)chron('diplomacy',`Worn down by raids, the ${p.full} agrees to pay tribute to the ${o.full}.`,p.capital,[R_(p),R_(o)])}}}
     o.raided=0;
     const y=s.year;if(o.over&&!o.overY)o.overY=y;if(!o.over)o.overY=0;
-    if(o.over&&o.kind==='state'){const ov=pols[o.over];if(ov&&ov.alive&&ov.kind==='state'&&y-o.overY>40&&power(ov)>3*power(o)&&tribDist(o,ov)<0.6*(ov.h||6)&&r()<0.01*Math.max(0.1,2*(ov.hold??0.5)-selfHold(o))*(s.eths[ov.core]&&s.eths[o.core]&&s.eths[ov.core].fam===s.eths[o.core].fam?2:1)){const n=o.cells,old=o.full;for(const c of polCells(o.id)){s.pol[c]=ov.id;s.integ[c]=Math.max(s.integ[c]*0.6,0.3);s.dist[c]=Math.min(65534,(s.dist[o.capital]<65535?s.dist[o.capital]:0)+s.dist[c]+4)}ov.tribs=Math.max(0,ov.tribs-1);o.over=0;if(n>=10)chron('diplomacy',`The ${ov.full} absorbs its long-time vassal, the ${old}.`,o.capital,[R_(ov),['pol',o.id,old]]);continue}}
-    // tribute is kept by fear: it fades with distance from the overlord, with its falling strength and its fading prestige,
-    // and a new ruler is the usual moment to stop paying (Hassig 1985 on the Aztec; Barfield 1989 on steppe tribute)
-    if(o.over&&o.kind==='state'){const ov=pols[o.over];if(ov&&ov.alive){const fD=clamp(tribDist(o,ov)/Math.max(4,ov.h||6)-0.6,0,2),pr=power(ov)/(power(o)+1e-9),fF=clamp((3-pr)/2.5,0,1),fP=clamp(1-2*(ov.prest||0),0,1);
-      if(r()<0.06*(fD+fF+0.6*fP)*(o.ruler&&y-(o.ruler.since||0)<5?2:1)){if(o.cells>=10)chron('diplomacy',`The ${o.full} stops sending tribute to the distant ${ov.full}, which can no longer make it pay.`,o.capital,[R_(o),R_(ov)],fD>fF?'The overlord was too far away to punish a refusal.':'The overlord had grown too weak, or too long without a victory, to be feared.');ov.tribs=Math.max(0,ov.tribs-1);o.over=0;continue}}}
+    if(o.over&&o.kind==='state'){const ov=pols[o.over];if(ov&&ov.alive&&ov.kind==='state'&&y-o.overY>40&&power(ov)>3*power(o)&&r()<0.01*Math.max(0.1,2*(ov.hold??0.5)-selfHold(o))*(s.eths[ov.core]&&s.eths[o.core]&&s.eths[ov.core].fam===s.eths[o.core].fam?2:1)){const n=o.cells,old=o.full;for(const c of polCells(o.id)){s.pol[c]=ov.id;s.integ[c]=Math.max(s.integ[c]*0.6,0.3);s.dist[c]=Math.min(65534,(s.dist[o.capital]<65535?s.dist[o.capital]:0)+s.dist[c]+4)}ov.tribs=Math.max(0,ov.tribs-1);o.over=0;if(n>=10)chron('diplomacy',`The ${ov.full} absorbs its long-time vassal, the ${old}.`,o.capital,[R_(ov),['pol',o.id,old]]);continue}}
     if(o.over){const ov=pols[o.over];if(!ov||!ov.alive||power(o)>power(ov)){if(ov&&ov.alive&&o.cells>=25)chron('diplomacy',`The ${o.full} stops paying tribute to the ${ov.full}.`,o.capital,[R_(o),R_(ov)]);if(ov)ov.tribs=Math.max(0,ov.tribs-1);o.over=0}}
   }
 }
@@ -2341,7 +2335,7 @@ function* politicsG(){
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
         else if(past>0.3&&dens>0.3&&(w_nomad[i]||w_desert[i])&&(fr||steppeFront(i,ei))){
           // riders organise far more readily than herders on foot; a rival clan is a weaker spur than a state
-          if(r()<P.nomad*0.0003*(fr?1:0.3)*(0.4+s_s[i])*(0.08+1.4*s_horse[i]+s_camel[i])*(0.4+1.8*s.lure[i])){
+          if(r()<P.nomad*0.0003*(fr?1:0.3)*(0.4+s_s[i])*(0.08+1.4*s_horse[i]+s_camel[i])){
             const id=newPolity(i,null,{kind:'horde'});
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&(w_nomad[j]||w_desert[j])&&pop[j]>=1&&r()<0.6){pol[j]=id;s_dist[j]=2}}}}
       }
@@ -2534,9 +2528,6 @@ function statecraft(o,c,y){
   const s=S,r=s.r;
   if(o.cplx==null){o.cplx=0.2;o.treas=0.3;o.ineq=0.25;o.warC=0}
   if(o.kind!=='state'){o.pT=o.pF=o.pQ=0;o.burden=0;return}
-  // prestige: a reputation for winning, which fades unless renewed; tribute flows to an overlord while it lasts
-  o.prest=(o.prest||0)*0.985;
-  if(o.over){const ov=s.pols[o.over];if(ov&&ov.alive){o.treas-=0.012;if(ov.kind==='state')ov.treas=Math.min(1,ov.treas+0.012*Math.min(1,3*o.pop/(ov.pop+1)));else ov.loot+=o.pop*0.0006}}
   // a state born this year has not yet collected its first taxes
   if(o.tax==null){o.pT=o.pF=0;o.pQ=o.pQ||0;o.burden=o.burden||0.6;if(!o.fac)o.fac=[0,0];return}
   const real=Math.max(1,o.cells-(o.wasteN||0));
@@ -2585,12 +2576,7 @@ function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nb=w.nb;
   // a caravan road carries the example of the state at its far end: salt, gold, scribes and envoys
   for(const i of L)if(s.car[i]>0.1)x[i]=Math.max(x[i],0.8*Math.min(1,s.car[i]))
   for(let k=0;k<6;k++){const fw=k%2===0;for(let a=0;a<L.length;a++){const i=L[fw?a:L.length-1-a];let m=x[i];
-    for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&w.land[j]){const v=0.8*x[j];if(v>m)m=v}}x[i]=m}}
-  // the lure of a rich neighbour: steppe empires grew in step with the farming states they raided and taxed, a mirror of their
-  // wealth (Barfield 1989, the 'shadow empire'; Kradin 2002). Settled wealth carries out across the open grassland
-  const lu=s.lure;for(const i of L){const p=s.pol[i],o=p?s.pols[p]:null;lu[i]=o&&o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'?clamp(s.pop[i]/w.area[i]/40,0,1)*clamp(o.cells/30,0.2,1):0}
-  for(let k=0;k<10;k++){const fw=k%2===0;for(let a=0;a<L.length;a++){const i=L[fw?a:L.length-1-a];let m=lu[i];
-    for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&w.land[j]){const v=(w.nomad[j]||w.desert[j]?0.88:0.7)*lu[j];if(v>m)m=v}}lu[i]=m}}}
+    for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&w.land[j]){const v=0.8*x[j];if(v>m)m=v}}x[i]=m}}}
 // the exit option (Herbst, Scott): open land nearby lets subjects walk away; crowding or barren surroundings trap them (Carneiro)
 function exitPass(a0,b0){if(a0==null){a0=0;b0=1}
   const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of LL){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,exPd=w.exPd;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
@@ -3679,7 +3665,7 @@ function tributePass(){const s=S,r=s.r,w=WD;
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||o.over||(o.hold??0)<0.35)continue;const po=power(o),Rn=o.ruler||{aggr:0.5};
     for(const [q] of o.nb){const d=s.pols[q];if(!d||!d.alive||d.kind!=='state'||d.over||d.league!=null||o.enemies.has(q)||o.allies.includes(q)||d.cells>o.cells)continue;
       const c=d.capital,hard=clamp(1.5*w.rough[c]+0.8*s.forest[c]+(w.tcost[c]>=5?0.3:0),0,1);if(hard<0.3)continue;
-      if(power(d)*3>po||tribDist(d,o)>0.8*(o.h||6))continue;if(r()<0.04*hard*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)*clamp(2*(o.prest||0),0,1)){d.over=id;o.tribs++;
+      if(power(d)*3>po)continue;if(r()<0.04*hard*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)){d.over=id;o.tribs++;
         if(d.cells>=3||o.cells>=10)chron('diplomacy',`Without a battle, the ${d.full} sends gifts and submits to the ${o.full}, paying tribute to keep its own ruler.`,d.capital,[R_(d),R_(o)],'A far stronger neighbour asked for tribute; across these mountains and forests, taking the land itself would have cost too much.')}}}}
 
 </script>
