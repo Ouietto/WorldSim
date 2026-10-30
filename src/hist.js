@@ -6,7 +6,7 @@ const TECH=[
  {k:'copper',n:'Bronze',era:2,pre:[0]},
  {k:'horse',n:'Horse riding',era:2,pre:[1]},
  {k:'sail',n:'Seafaring',era:1},
- {k:'writing',n:'Writing',era:2,pre:[0],em:{b:1/5000,pop:1.5e6,cells:2,urb:1}},
+ {k:'writing',n:'Writing',era:2,pre:[0,3],em:{b:1/5000,pop:1.5e6,cells:2,urb:1}},
  {k:'wheel',n:'Wheel and chariot',era:2,pre:[3],em:{b:1/5000,pop:1e6}},
  {k:'iron',n:'Ironworking',era:3,pre:[3,7,6],em:{b:1/12000,pop:3e6}},
  {k:'coin',n:'Coinage',era:4,pre:[6,8],em:{b:1/3600,pop:4e6}},
