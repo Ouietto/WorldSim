@@ -57,12 +57,17 @@ function leaguePass(){
     // Delphi's amphictyony)
     const site=s.ritOf?s.ritOf[o.capital]:-1;
     const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&((s.eths[p.core]&&s.eths[p.core].fam===fam)||(site>=0&&s.ritOf[p.capital]===site)))kin.push(p)}
+    // a shared sanctuary binds cities that do not touch: chiefs' lands between them do not stop the festival
+    if(site>=0&&s.rits[site].imp>0.7)for(const q of s.alive){const p=s.pols[q];if(q===id||!isCityState(p)||kin.includes(p)||p.enemies.has(id)||s.ritOf[p.capital]!==site)continue;if(angDist(o.capital,p.capital)<0.06)kin.push(p)}
     if(o.league!=null){continue}
     const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
     const circ=S.circE[o.capital]||0;
-    if(inL&&r()<0.2*(1-0.8*circ)){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
+    if(inL&&r()<0.2*(1-0.3*circ)){const L=s.leagues[inL.league];o.league=L.id;L.members.push(id);if(L.members.length<=6)chron('diplomacy',`The ${o.full} joins the ${L.name}.`,o.capital,[R_(o),['league',L.id,L.name]]);continue}
     const free=kin.filter(p=>p.league==null);
-    if(free.length>=2&&r()<0.12*(1-0.8*circ)){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
+    // cities league against a danger: a war on their hands or a much bigger neighbour at the gate (Renfrew & Cherry 1986)
+    const threat=o.enemies.size>0||[...o.nb.keys()].some(q=>{const t=s.pols[q];return t&&t.alive&&(t.kind==='horde'||t.cells>=3*Math.max(1,o.cells))});
+    if(!threat)continue;
+    if(free.length>=2&&r()<0.12*(1-0.3*circ)){const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} League`,members:[id,...free.slice(0,5).map(p=>p.id)],born:s.year,cell:o.capital,fam};
       s.leagues.push(L);for(const q of L.members)s.pols[q].league=L.id;
       chron('diplomacy',`${L.members.length} cities of the ${e.name} swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],...L.members.map(q=>R_(s.pols[q]))],'Small cities of one people were safer together than alone against the kingdoms around them.');
       spot(`The ${L.name} is founded`,o.capital,[['league',L.id,L.name]])}}
@@ -174,7 +179,7 @@ function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.mi
   // savanna kingdoms held by horsemen rather than scribes (Goody 1971)
   const force=clamp(0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
   const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c],0,1);
-  const R=o.rel>=0?s.rels[o.rel]:null,sacred=R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0;
+  const R=o.rel>=0?s.rels[o.rel]:null,sacred=Math.max(R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0,s.ritW?clamp((s.ritW[c]-0.3)/0.5,0,1):0);   // the god's house, or an old sanctuary at the capital
   o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.5*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
 // what a defeated state brings to the table on its own: walls, scribes, its own city and cohesion
 function selfHold(d){const s=S,c=d.capital,info=d.info||infoCap(d);
