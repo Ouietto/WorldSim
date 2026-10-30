@@ -37,8 +37,36 @@ function techMatrixInit(){
   TECH.length=TECH_BASE;for(const k of Object.keys(TI))delete TI[k];TECH.forEach((t,k)=>{TI[t.k]=k;const p=TPOS[t.k];if(p){t.row=p[0];t.col=p[1];t.tier=p[2]}});
   const s=S;s.genByRow=Array.from({length:NTR},()=>[]);s.genSlots=new Map();s.ages=[];s.ageCol=[];s.matrixLog=[];
   prepTechEnv(WD);
-  for(const e of s.eths)if(!e.trad)e.trad=new Float32Array(NTC).fill(0.15);
+  for(const e of s.eths){if(!e.trad)e.trad=new Float32Array(NTC).fill(0.15);if(!e.deep)e.deep=new Float32Array(NTC).fill(0.1)}
 }
+// Deep traditions: what a people has worked with for many generations (Arthur 2009 on "redomaining"; Lemonnier 1992 on
+// technical traditions). Children inherit them; they fade only slowly when unused. A deep tradition makes related new
+// techniques come easier and lets a people skip steps others must take: talking-drum peoples toward signalling machines,
+// weavers toward pattern and code. An affinity, never a destiny.
+function inheritTrad(e,p,p2){const m=(a,b)=>a&&b?a.map((v,k)=>(v+b[k])/2):a?Float32Array.from(a):null;
+  e.trad=m(p&&p.trad,p2&&p2.trad)||new Float32Array(NTC).fill(0.15);e.deep=m(p&&p.deep,p2&&p2.deep)||new Float32Array(NTC).fill(0.1)}
+const DEEP_TXT=['The {p} have become a people of animals: children ride and herd before they can read the sky, and every new way with beasts comes easily to them.',
+  'The {p} have become a people of water: canals, wells and boats are their inheritance, and new waterworks come easily to them.',
+  'The {p} have become a people of the wind: sails, kites and windbreaks are their craft, and new ways of using the wind come easily to them.',
+  'The {p} have become a people of fire: smiths and kiln-masters are honoured among them, and new work in metal and fire comes easily to them.',
+  'The {p} have become a people of living things: gardeners, breeders and healers, to whom new crops, cures and animals come easily.',
+  'The {p} have become a people of signs: keepers of words, numbers and omens, to whom new ways of recording and reckoning come easily.',
+  'The {p} have become a people of mechanism: drums, wheels and gears are their delight, and new contrivances come easily to them.'];
+// every ten years, for every living people: practice deepens tradition, disuse slowly erodes it
+function deepPass(){const s=S,w=WD,E=s.eths,n=E.length,acc=new Float64Array(n*NTC),pw=new Float64Array(n),env=w.techEnv;if(!env)return;
+  for(const i of w.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;const p=Math.sqrt(s.pop[i]);pw[e]+=p;const o=e*NTC;
+    let beasts=0;if(s.bst)for(let k=1;k<BEASTS.length;k++)beasts+=s.bst[k][i];
+    acc[o]+=p*clamp(0.6*env[0][i]*s.herd[i]+0.5*s.horse[i]+0.4*s.camel[i]+0.4*beasts,0,1);
+    acc[o+1]+=p*clamp(0.8*s.irrig[i]*w.rv[i]+0.5*s.sail[i]*w.coast[i],0,1);
+    acc[o+2]+=p*clamp(0.7*s.sail[i]*w.coast[i]+0.3*s.nav[i],0,1);
+    acc[o+3]+=p*clamp(0.6*s.metal[i]+0.5*s.iron[i],0,1);
+    acc[o+4]+=p*clamp(0.6*s.farm[i]+0.4*(s.cultv?s.cultv[i]:0)+0.2*beasts,0,1);
+    acc[o+5]+=p*clamp(0.7*s.admin[i]+0.4*(s.ritW?s.ritW[i]:0)+0.4*s.tk[TI.griots][i]+0.4*s.tk[TI.khipu][i],0,1);
+    acc[o+6]+=p*clamp(0.5*s.wheel[i]+0.6*s.tk[TI.drums][i]+0.3*s.tk[TI.relays][i],0,1)}
+  for(let e=0;e<n;e++){const P=E[e];if(!P.alive||!pw[e])continue;if(!P.deep)P.deep=new Float32Array(NTC).fill(0.1);
+    for(let k=0;k<NTC;k++){const v=acc[e*NTC+k]/pw[e],was=P.deep[k];P.deep[k]=v>was?was+0.01*(v-was):was+0.002*(v-was);
+      if(was<0.6&&P.deep[k]>=0.6&&P.pop>3e5){P.deepTold=P.deepTold||0;if(!(P.deepTold&(1<<k))){P.deepTold|=1<<k;let c=-1;for(const i of w.landIdx)if(s.eth[i]===e){c=i;break}
+        chron('culture',DEEP_TXT[k].replace('{p}',P.name),c,[RE(P)])}}}}}
 // what the land itself offers each column (static), averaged later over a state's provinces
 function prepTechEnv(w){
   if(w.techEnv)return;const env=Array.from({length:NTC},()=>new Float32Array(N));let wind=null;
@@ -94,11 +122,12 @@ function matrixPass(){
     const speed=P.invent*Math.min(3,Math.sqrt(o.pop/1e6))*(0.7+0.9*(o.cult||0))*synthMult();
     for(let ro=0;ro<NTR;ro++)for(let co=0;co<NTC;co++){
       if(Math.min(rl[ro],cl[co])<1)continue;
-      const t=Math.max(2,own[ro*NTC+co]+1);if(t<2||t>NTT||rowEx(ro,co)<t-1||colEx(co,ro)<t-1)continue;{
+      const dp=e&&e.deep?e.deep[co]:0.1,leap=dp>0.6?1:0;
+      const t=Math.max(2,own[ro*NTC+co]+1);if(t<2||t>NTT||rowEx(ro,co)<t-1-leap||colEx(co,ro)<t-1-leap)continue;{
         const key=ro*100+co*10+t;let real=false,known=false;
         for(let k=0;k<TECH.length;k++){const T=TECH[k];if(T.row===ro&&T.col===co&&T.tier===t){if(!T.gen)real=true;if(s.tk[k][c]>=0.5)known=true}}
         if(known)continue;
-        const colW=(0.3+0.7*aff[co])*(0.4+1.2*trad[co]);
+        const colW=(0.3+0.7*aff[co])*(0.4+1.2*trad[co])*(0.6+1.4*dp);
         const p=base/t*10*speed*colW*lean[ro]*(real?0.12:1);
         if(r()<p)inventGen(o,ro,co,t,key)}}
     // an alternate age: one column of might-have-been techniques far ahead of the rest

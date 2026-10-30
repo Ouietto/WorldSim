@@ -472,6 +472,7 @@ function renderPage(){
     h+=`<h3 class="sec">Words</h3><div class="lex"><span>homeland <b>${esc(L.place)}</b></span>${['god','sun','river','sea','mountain','mother','grain'].map(k=>`<span>${k} <b>${esc(L[k])}</b></span>`).join('')}</div>`;
     const states=s.alive.map(k=>s.pols[k]).filter(o=>o.core===id);
     const ec=e.alive?cellAt(e.la*180/Math.PI,e.lon*180/Math.PI):-1;
+    if(e.deep)h+=`<h3 class="sec">Deep traditions</h3><p class="note">What this people has worked with for generations. A deep tradition makes related new techniques come easier, and above 60% lets it skip steps others must take.</p><div class="bars">${TCOLS.map((c,j)=>bar(c[1],e.deep[j],1,'t')).join('')}</div>`;
     h+=`<h3 class="sec">Way of life</h3><div class="bars">${bar('Herding tradition',e.past??0.5,1,'t')}${bar('Riding',e.ride||0,1,'t')}${bar('War experience',e.xp??0.3,1,'t')}</div>${typeof rideTier==='function'?`<dl class="kv" style="margin-top:6px"><dt>Horsemanship</dt><dd>${cap(RIDE_TIERS[rideTier(e,ec)])}</dd></dl>`:''}`;
     h+=`<h3 class="sec">Today</h3><dl class="kv"><dt>Provinces</dt><dd>${e.cells}</dd><dt>Population</dt><dd>${fmtN(e.pop)} (peak ${fmtN(e.peak)})</dd><dt>States they lead</dt><dd>${states.length?states.slice(0,8).map(lp).join(', '):'none'}</dd></dl>`;
     h+=`<h3 class="sec">Chronicle</h3>`+chronList(chronFor(x=>refHas(x,'eth',id)));

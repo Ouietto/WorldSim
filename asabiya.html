@@ -1192,7 +1192,7 @@ function newEth(par,par2,lang){
   else{hue=(s.famN*137.508+20)%360;sat=0.55;lit=0.52;s.famN++}
   const e={id,name:lang.lex.people,lang,cult,fam:p?p.fam:id,parent:p?par:-1,parent2:p2?par2:-1,depth:p?p.depth+1:0,born:s.year,hue,sat,lit,rgb:hsl(hue,sat,lit),alive:true,cells:0,pop:0,peak:0,lon:0,la:0,kids:[]};
   if(p)p.kids.push(id);if(p2)p2.kids.push(id);
-  inheritPast(e,p,p2);inheritRide(e,p,p2);
+  inheritPast(e,p,p2);inheritRide(e,p,p2);inheritTrad(e,p,p2);
   s.eths.push(e);return id;
 }
 function ethDist(a,b){
@@ -1517,7 +1517,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
   const known=TECH.map((t,k)=>s_firstTech[k]||k===5?1:0);
   const NT=T.length,pop=s.pop,pol=s.pol,INST=TECH.map((t,k)=>k===6||k===9||k===10||k===11||k===14||t.k==='relays'||t.k==='khipu');
   for(let kk=Math.floor(a0*L.length),ke=Math.floor(b0*L.length);kk<ke;kk++){
-    const i=L[kk];if(s_pop[i]<1)continue;
+    const i=L[kk];if(s_pop[i]<1)continue;const ei=s_eth[i];
     let conn=s_pop[i];const pi=s_pol[i],po=pi?pols[pi]:null;
     for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0)conn+=s_pop[j]}
     const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
@@ -1551,6 +1551,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
             // crowded farmers next door settle the forager's land anyway, by boat too (Neolithic Britain: Brace et al. 2019)
             const sq=mj>=0&&s.K[mj]>0?clamp((pop[mj]/s.K[mj]-0.6)/0.4,0,1)*clamp(adv-0.5,0,1):0;
             k*=Math.max(clamp((adv-1)/5,0.03,1),0.6*sq)}
+          if(TECH[f].col!=null&&ei>=0&&s_eths[ei].deep)k*=0.85+0.45*s_eths[ei].deep[TECH[f].col];
           const cr=CARRY[f];if(cr){const nd=cr===1?Math.max(adm,0.6*mer):cr===2?Math.max(mer,0.5*adm):cr===3?adm:Math.max(adm,mer);k*=0.03+0.97*nd*(1+(same?0:prs))}
           const t0=t;t+=k*(m-t);
           // a fast change unsettles the old order: new scribes and clerks against the warrior nobility, felt as lost cohesion
@@ -2454,7 +2455,7 @@ function* stepG(){
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
   if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){ritualPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){ritualPass();deepPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
@@ -3261,8 +3262,36 @@ function techMatrixInit(){
   TECH.length=TECH_BASE;for(const k of Object.keys(TI))delete TI[k];TECH.forEach((t,k)=>{TI[t.k]=k;const p=TPOS[t.k];if(p){t.row=p[0];t.col=p[1];t.tier=p[2]}});
   const s=S;s.genByRow=Array.from({length:NTR},()=>[]);s.genSlots=new Map();s.ages=[];s.ageCol=[];s.matrixLog=[];
   prepTechEnv(WD);
-  for(const e of s.eths)if(!e.trad)e.trad=new Float32Array(NTC).fill(0.15);
+  for(const e of s.eths){if(!e.trad)e.trad=new Float32Array(NTC).fill(0.15);if(!e.deep)e.deep=new Float32Array(NTC).fill(0.1)}
 }
+// Deep traditions: what a people has worked with for many generations (Arthur 2009 on "redomaining"; Lemonnier 1992 on
+// technical traditions). Children inherit them; they fade only slowly when unused. A deep tradition makes related new
+// techniques come easier and lets a people skip steps others must take: talking-drum peoples toward signalling machines,
+// weavers toward pattern and code. An affinity, never a destiny.
+function inheritTrad(e,p,p2){const m=(a,b)=>a&&b?a.map((v,k)=>(v+b[k])/2):a?Float32Array.from(a):null;
+  e.trad=m(p&&p.trad,p2&&p2.trad)||new Float32Array(NTC).fill(0.15);e.deep=m(p&&p.deep,p2&&p2.deep)||new Float32Array(NTC).fill(0.1)}
+const DEEP_TXT=['The {p} have become a people of animals: children ride and herd before they can read the sky, and every new way with beasts comes easily to them.',
+  'The {p} have become a people of water: canals, wells and boats are their inheritance, and new waterworks come easily to them.',
+  'The {p} have become a people of the wind: sails, kites and windbreaks are their craft, and new ways of using the wind come easily to them.',
+  'The {p} have become a people of fire: smiths and kiln-masters are honoured among them, and new work in metal and fire comes easily to them.',
+  'The {p} have become a people of living things: gardeners, breeders and healers, to whom new crops, cures and animals come easily.',
+  'The {p} have become a people of signs: keepers of words, numbers and omens, to whom new ways of recording and reckoning come easily.',
+  'The {p} have become a people of mechanism: drums, wheels and gears are their delight, and new contrivances come easily to them.'];
+// every ten years, for every living people: practice deepens tradition, disuse slowly erodes it
+function deepPass(){const s=S,w=WD,E=s.eths,n=E.length,acc=new Float64Array(n*NTC),pw=new Float64Array(n),env=w.techEnv;if(!env)return;
+  for(const i of w.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;const p=Math.sqrt(s.pop[i]);pw[e]+=p;const o=e*NTC;
+    let beasts=0;if(s.bst)for(let k=1;k<BEASTS.length;k++)beasts+=s.bst[k][i];
+    acc[o]+=p*clamp(0.6*env[0][i]*s.herd[i]+0.5*s.horse[i]+0.4*s.camel[i]+0.4*beasts,0,1);
+    acc[o+1]+=p*clamp(0.8*s.irrig[i]*w.rv[i]+0.5*s.sail[i]*w.coast[i],0,1);
+    acc[o+2]+=p*clamp(0.7*s.sail[i]*w.coast[i]+0.3*s.nav[i],0,1);
+    acc[o+3]+=p*clamp(0.6*s.metal[i]+0.5*s.iron[i],0,1);
+    acc[o+4]+=p*clamp(0.6*s.farm[i]+0.4*(s.cultv?s.cultv[i]:0)+0.2*beasts,0,1);
+    acc[o+5]+=p*clamp(0.7*s.admin[i]+0.4*(s.ritW?s.ritW[i]:0)+0.4*s.tk[TI.griots][i]+0.4*s.tk[TI.khipu][i],0,1);
+    acc[o+6]+=p*clamp(0.5*s.wheel[i]+0.6*s.tk[TI.drums][i]+0.3*s.tk[TI.relays][i],0,1)}
+  for(let e=0;e<n;e++){const P=E[e];if(!P.alive||!pw[e])continue;if(!P.deep)P.deep=new Float32Array(NTC).fill(0.1);
+    for(let k=0;k<NTC;k++){const v=acc[e*NTC+k]/pw[e],was=P.deep[k];P.deep[k]=v>was?was+0.01*(v-was):was+0.002*(v-was);
+      if(was<0.6&&P.deep[k]>=0.6&&P.pop>3e5){P.deepTold=P.deepTold||0;if(!(P.deepTold&(1<<k))){P.deepTold|=1<<k;let c=-1;for(const i of w.landIdx)if(s.eth[i]===e){c=i;break}
+        chron('culture',DEEP_TXT[k].replace('{p}',P.name),c,[RE(P)])}}}}}
 // what the land itself offers each column (static), averaged later over a state's provinces
 function prepTechEnv(w){
   if(w.techEnv)return;const env=Array.from({length:NTC},()=>new Float32Array(N));let wind=null;
@@ -3318,11 +3347,12 @@ function matrixPass(){
     const speed=P.invent*Math.min(3,Math.sqrt(o.pop/1e6))*(0.7+0.9*(o.cult||0))*synthMult();
     for(let ro=0;ro<NTR;ro++)for(let co=0;co<NTC;co++){
       if(Math.min(rl[ro],cl[co])<1)continue;
-      const t=Math.max(2,own[ro*NTC+co]+1);if(t<2||t>NTT||rowEx(ro,co)<t-1||colEx(co,ro)<t-1)continue;{
+      const dp=e&&e.deep?e.deep[co]:0.1,leap=dp>0.6?1:0;
+      const t=Math.max(2,own[ro*NTC+co]+1);if(t<2||t>NTT||rowEx(ro,co)<t-1-leap||colEx(co,ro)<t-1-leap)continue;{
         const key=ro*100+co*10+t;let real=false,known=false;
         for(let k=0;k<TECH.length;k++){const T=TECH[k];if(T.row===ro&&T.col===co&&T.tier===t){if(!T.gen)real=true;if(s.tk[k][c]>=0.5)known=true}}
         if(known)continue;
-        const colW=(0.3+0.7*aff[co])*(0.4+1.2*trad[co]);
+        const colW=(0.3+0.7*aff[co])*(0.4+1.2*trad[co])*(0.6+1.4*dp);
         const p=base/t*10*speed*colW*lean[ro]*(real?0.12:1);
         if(r()<p)inventGen(o,ro,co,t,key)}}
     // an alternate age: one column of might-have-been techniques far ahead of the rest
@@ -4049,6 +4079,7 @@ function renderPage(){
     h+=`<h3 class="sec">Words</h3><div class="lex"><span>homeland <b>${esc(L.place)}</b></span>${['god','sun','river','sea','mountain','mother','grain'].map(k=>`<span>${k} <b>${esc(L[k])}</b></span>`).join('')}</div>`;
     const states=s.alive.map(k=>s.pols[k]).filter(o=>o.core===id);
     const ec=e.alive?cellAt(e.la*180/Math.PI,e.lon*180/Math.PI):-1;
+    if(e.deep)h+=`<h3 class="sec">Deep traditions</h3><p class="note">What this people has worked with for generations. A deep tradition makes related new techniques come easier, and above 60% lets it skip steps others must take.</p><div class="bars">${TCOLS.map((c,j)=>bar(c[1],e.deep[j],1,'t')).join('')}</div>`;
     h+=`<h3 class="sec">Way of life</h3><div class="bars">${bar('Herding tradition',e.past??0.5,1,'t')}${bar('Riding',e.ride||0,1,'t')}${bar('War experience',e.xp??0.3,1,'t')}</div>${typeof rideTier==='function'?`<dl class="kv" style="margin-top:6px"><dt>Horsemanship</dt><dd>${cap(RIDE_TIERS[rideTier(e,ec)])}</dd></dl>`:''}`;
     h+=`<h3 class="sec">Today</h3><dl class="kv"><dt>Provinces</dt><dd>${e.cells}</dd><dt>Population</dt><dd>${fmtN(e.pop)} (peak ${fmtN(e.peak)})</dd><dt>States they lead</dt><dd>${states.length?states.slice(0,8).map(lp).join(', '):'none'}</dd></dl>`;
     h+=`<h3 class="sec">Chronicle</h3>`+chronList(chronFor(x=>refHas(x,'eth',id)));

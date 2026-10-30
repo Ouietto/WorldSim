@@ -76,7 +76,7 @@ function newEth(par,par2,lang){
   else{hue=(s.famN*137.508+20)%360;sat=0.55;lit=0.52;s.famN++}
   const e={id,name:lang.lex.people,lang,cult,fam:p?p.fam:id,parent:p?par:-1,parent2:p2?par2:-1,depth:p?p.depth+1:0,born:s.year,hue,sat,lit,rgb:hsl(hue,sat,lit),alive:true,cells:0,pop:0,peak:0,lon:0,la:0,kids:[]};
   if(p)p.kids.push(id);if(p2)p2.kids.push(id);
-  inheritPast(e,p,p2);inheritRide(e,p,p2);
+  inheritPast(e,p,p2);inheritRide(e,p,p2);inheritTrad(e,p,p2);
   s.eths.push(e);return id;
 }
 function ethDist(a,b){
@@ -401,7 +401,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
   const known=TECH.map((t,k)=>s_firstTech[k]||k===5?1:0);
   const NT=T.length,pop=s.pop,pol=s.pol,INST=TECH.map((t,k)=>k===6||k===9||k===10||k===11||k===14||t.k==='relays'||t.k==='khipu');
   for(let kk=Math.floor(a0*L.length),ke=Math.floor(b0*L.length);kk<ke;kk++){
-    const i=L[kk];if(s_pop[i]<1)continue;
+    const i=L[kk];if(s_pop[i]<1)continue;const ei=s_eth[i];
     let conn=s_pop[i];const pi=s_pol[i],po=pi?pols[pi]:null;
     for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0)conn+=s_pop[j]}
     const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
@@ -435,6 +435,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
             // crowded farmers next door settle the forager's land anyway, by boat too (Neolithic Britain: Brace et al. 2019)
             const sq=mj>=0&&s.K[mj]>0?clamp((pop[mj]/s.K[mj]-0.6)/0.4,0,1)*clamp(adv-0.5,0,1):0;
             k*=Math.max(clamp((adv-1)/5,0.03,1),0.6*sq)}
+          if(TECH[f].col!=null&&ei>=0&&s_eths[ei].deep)k*=0.85+0.45*s_eths[ei].deep[TECH[f].col];
           const cr=CARRY[f];if(cr){const nd=cr===1?Math.max(adm,0.6*mer):cr===2?Math.max(mer,0.5*adm):cr===3?adm:Math.max(adm,mer);k*=0.03+0.97*nd*(1+(same?0:prs))}
           const t0=t;t+=k*(m-t);
           // a fast change unsettles the old order: new scribes and clerks against the warrior nobility, felt as lost cohesion
@@ -1338,7 +1339,7 @@ function* stepG(){
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
   if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){ritualPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){ritualPass();deepPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
