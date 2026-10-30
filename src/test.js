@@ -1,5 +1,5 @@
 const fs=require('fs'),zlib=require('zlib');
-const core=fs.readFileSync(__dirname+'/world.js','utf8')+fs.readFileSync(__dirname+'/climate.js','utf8')+fs.readFileSync(__dirname+'/lang.js','utf8')+fs.readFileSync(__dirname+'/hist.js','utf8')+fs.readFileSync(__dirname+'/tech.js','utf8')+fs.readFileSync(__dirname+'/society.js','utf8');
+const core=fs.readFileSync(__dirname+'/world.js','utf8')+fs.readFileSync(__dirname+'/climate.js','utf8')+fs.readFileSync(__dirname+'/lang.js','utf8')+fs.readFileSync(__dirname+'/hist.js','utf8')+fs.readFileSync(__dirname+'/crops.js','utf8')+fs.readFileSync(__dirname+'/herds.js','utf8')+fs.readFileSync(__dirname+'/tech.js','utf8')+fs.readFileSync(__dirname+'/society.js','utf8');
 const elev=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_elev.b64','utf8'),'base64'));
 const kg=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/koppen.b64','utf8'),'base64'));
 const climate=zlib.inflateSync(Buffer.from(fs.readFileSync(__dirname+'/earth_climate.b64','utf8'),'base64'));

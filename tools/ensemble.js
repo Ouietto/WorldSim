@@ -10,7 +10,7 @@
 // Results are cached by source contents, seed, end year and environment, so the baseline costs nothing the second time.
 const fs=require('fs'),path=require('path'),os=require('os'),crypto=require('crypto'),{spawn,execFileSync}=require('child_process');
 const ROOT=path.join(__dirname,'..'),TARGETS=require('./targets.js');
-const CORE=['world.js','climate.js','lang.js','hist.js','tech.js','society.js','earth_elev.b64','koppen.b64','earth_climate.b64'];
+const CORE=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','earth_elev.b64','koppen.b64','earth_climate.b64'];
 const arg=(k,d)=>{const i=process.argv.indexOf('--'+k);return i>0?process.argv[i+1]:d};
 const range=s=>s.split(',').flatMap(p=>{const m=p.match(/^(\d+)-(\d+)$/);if(!m)return[p];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(String(i));return a});
 const SEEDS=range(arg('seeds','1-16')),END=+arg('end',1500),JOBS=+arg('jobs',Math.max(1,os.cpus().length)),REF=arg('ref',null),LABEL=arg('label',null);
@@ -30,7 +30,7 @@ async function runAll(jobs){let next=0,done=0;const t0=Date.now();
     done++;process.stderr.write(`\r  ${done}/${jobs.length} runs done (${((Date.now()-t0)/60000).toFixed(1)} min)   `)}}));
   process.stderr.write('\n');return jobs.map(j=>JSON.parse(fs.readFileSync(j.cache,'utf8')))}
 
-const NEVER=1e9,applies=t=>!(t.at!=null&&t.at>END)&&!(t.kind==='year'&&t.hi>END)&&!(t.k.startsWith('s_')&&END<1500)&&!(['cUnity','medMax','ewShare'].includes(t.k)&&END<1),
+const NEVER=1e9,applies=t=>!(t.at!=null&&t.at>END)&&!(t.kind==='year'&&t.hi>END)&&!((t.k.startsWith('s_')||t.k.startsWith('fs_'))&&END<1500)&&!(['cUnity','medMax','ewShare'].includes(t.k)&&END<1),
   val=(r,t)=>{const v=r[t.k];return v==null?(t.kind==='year'?NEVER:null):v},inBand=(v,t)=>v!=null&&v!==NEVER&&v>=t.lo&&v<=t.hi,
   median=a=>{const s=a.filter(v=>v!=null).sort((x,y)=>x-y);if(!s.length)return null;const m=s.length>>1;return s.length%2?s[m]:(s[m-1]===NEVER||s[m]===NEVER?Math.max(s[m-1],s[m]):(s[m-1]+s[m])/2)},
   q=(a,p)=>{const s=a.filter(v=>v!=null).sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p*(s.length-1)+0.5))]:null},

@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const fmtN=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(n>=1e8?0:1)+'M':n>=1e3?Math.round(n/1e3)+'k':Math.round(n)+'';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const TYPES={rise:['Rise','#c08a2a'],war:['War','#b2452c'],fall:['Fall','#6e5a8c'],diplomacy:['Diplomacy','#4f7f6a'],faith:['Faith','#b0729a'],migration:['Migrations','#a0703a'],culture:['Culture','#4f78a8'],ideas:['Ideas','#3f8a5c'],plague:['Plague','#8a2f4a'],famine:['Famine','#9a7b45'],people:['Peoples','#3d7a99'],nature:['Nature & climate','#6f7d84']};
-const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Climate change'],['soil','Soil'],['forest','Forest'],['inequality','Inequality'],['lords','Lords'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['path','Paths of invention'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
+const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Climate change'],['soil','Soil'],['soiltype','Soil types'],['crops','Staple crops'],['landuse','Fields and pasture'],['herds','Herds'],['forest','Forest'],['inequality','Inequality'],['lords','Lords'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['path','Paths of invention'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
 const SPEEDS=[[5,'5'],[25,'25'],[100,'100'],[400,'400'],[1e9,'Max']];
 const ERA_COL=[[120,128,130],[118,150,86],[196,140,64],[150,96,72],[178,74,58],[122,84,150],[64,96,150],[40,130,140]];
 const GROUP_COL=[[40,140,70],[222,190,120],[206,170,90],[110,170,110],[90,120,170],[200,215,225]];
@@ -53,15 +53,18 @@ async function inflateB64(b64){
 /* ---------- base painting ---------- */
 const BCOL=[[0,0,0],[234,239,240],[170,175,158],[104,124,98],[121,145,96],[174,178,121],[196,186,137],[216,199,160],[188,177,112],[84,126,79]];
 function paintBase(){
-  const w=WD,c=document.createElement('canvas');c.width=HW;c.height=HH;const ctx=c.getContext('2d'),img=ctx.createImageData(HW,HH),d=img.data,e=w.eHi;
+  const w=WD,c=document.createElement('canvas');c.width=HW;c.height=HH;const ctx=c.getContext('2d'),img=ctx.createImageData(HW,HH),d=img.data,e0=w.eHi;
+  // the coast of the history's own time: low seas expose the shelves, and the last ice sheets lie white over the north
+  const sl=(S&&S.seaLvl!=null?S.seaLvl:w.seaLvl)||0,ice=S&&w.iceY?w.iceY:null,yr=S?S.year:0,e=e0;
   for(let y=0;y<HH;y++)for(let x=0;x<HW;x++){
-    const i=y*HW+x,v=e[i],xl=y*HW+(x+HW-1)%HW,yu=y>0?i-HW:i;
-    const sh=clamp(1+((e[xl]-v)*0.0011+(e[yu]-v)*0.0011)*(v>0?1:0.2),0.6,1.3);
+    const i=y*HW+x,v=e0[i]-sl,xl=y*HW+(x+HW-1)%HW,yu=y>0?i-HW:i;
+    const sh=clamp(1+((e[xl]-e0[i])*0.0011+(e[yu]-e0[i])*0.0011)*(v>0?1:0.2),0.6,1.3);
     let R,G,B;
     if(v<=0){const t=clamp(-v/5500,0,1);R=94-62*t;G=142-80*t;B=162-72*t;if(v>-200){R+=18;G+=14;B+=8}}
     else{const b=biomeOf(w.tHi[i],w.pHi[i]);[R,G,B]=BCOL[b];
       if(v>2200&&b!==1){const t=clamp((v-2200)/2600,0,1);R+=(158-R)*t;G+=(150-G)*t;B+=(140-B)*t}
-      if(v>4600&&w.tHi[i]<2){R=G=B=232}}
+      if(v>4600&&w.tHi[i]<2){R=G=B=232}
+      if(ice){const ci=((y/SC)|0)*W+((x/SC)|0);if(yr<ice[ci]){R=228;G=236;B=242}}}
     d[i*4]=R*sh;d[i*4+1]=G*sh;d[i*4+2]=B*sh;d[i*4+3]=255;
   }
   ctx.putImageData(img,0,0);
@@ -109,7 +112,15 @@ function buildOverlay(){
     let c=null,a=0;const p=s.pop[i];
     switch(m){
       case'lords':if(s.colony&&s.colony[i]>0.25){c=[245,200,90];a=230}else if(s.pol[i]&&s.pols[s.pol[i]].kind==='state'){c=ramp(s.pols[s.pol[i]].nob||0);a=170}break;
-      case'political':if(s.pol[i]){const o=s.pols[s.pol[i]];c=o.rgb;a=o.kind==='horde'?70:isWaste(i)?62:158}break;
+      case'political':if(s.pol[i]){const o=s.pols[s.pol[i]];const ov=o.over&&s.pols[o.over]&&s.pols[o.over].alive?s.pols[o.over]:null;
+        // tributaries take a paler, fainter version of their overlord's colour
+        if(ov&&o.kind==='state'){c=ov.rgb.map(v=>v*0.55+255*0.45);a=isWaste(i)?45:105}else{c=o.rgb;a=o.kind==='horde'?70:isWaste(i)?62:158}}break;
+      case'crops':if(s.crop&&s.crop[i]>=0&&s.farm[i]>0.3&&p>=1){c=CROP_RGB[s.crop[i]];a=190}break;
+      case'soiltype':if(w.soil&&w.T[i]>-9){c=SOIL_RGB[w.soil[i]];a=170}break;
+      case'landuse':if(s.past&&p>=1&&(s.farm[i]>0.1||s.herd[i]>0.1)){const f=s.past[i];c=[LU_F[0]+(LU_P[0]-LU_F[0])*f,LU_F[1]+(LU_P[1]-LU_F[1])*f,LU_F[2]+(LU_P[2]-LU_F[2])*f];a=w.nomad[i]?215:165}break;
+      case'herds':if(s.dom){let b=-1,bv=0.03,bc=null;for(let k=0;k<HERDS.length;k++)if(s.dom[k][i]>bv){bv=s.dom[k][i];b=k;bc=HERDS[k].col}
+        if(s.bst)for(let k=1;k<BEASTS.length;k++)if(s.bst[k][i]>Math.max(bv,0.05)&&!BEASTS[k].roles.mouse){bv=s.bst[k][i];b=99;bc=BEASTS[k].col}
+        if(b>=0){c=bc;a=60+180*Math.min(1,bv*1.5)}else{let wv=0;for(let k=0;k<HERDS.length;k++)wv=Math.max(wv,w.wild[k][i]);if(wv>0.2&&(i+((i/W)|0))%3===0){c=[120,110,95];a=110}}}break;
       case'soil':if((w.sF[i]>0.08&&s.farm[i]>0.3&&p>=1)||s.salt[i]>0.02){if(s.salt[i]>0.08){c=[235,235,225];a=60+190*Math.min(1,s.salt[i]*1.5)}else{c=ramp(clamp((s.fert[i]-0.3)/0.7,0,1));a=60+140*Math.min(1,w.sF[i]*2)}}break;
       case'forest':if(w.forest0[i]>0.05){const f=s.forest[i],lost=w.forest0[i]-f;if(lost>0.2&&f<0.25){c=[196,120,60];a=60+150*lost}else{c=[34,110,52];a=40+200*f}}break;
       case'inequality':if(s.pol[i]){const o=s.pols[s.pol[i]];if(o.kind==='state'&&o.ineq!=null){c=ramp(clamp((o.ineq-0.15)/0.75,0,1));a=isWaste(i)?60:190}}break;
@@ -233,6 +244,12 @@ function drawMap(){
       each(mx,my,(sx,sy)=>{ctx.fillStyle='#14202a';ctx.strokeStyle='#f5f3ec';ctx.lineWidth=1.5;
         if(isCap){ctx.fillRect(sx-3,sy-3,6,6);ctx.strokeRect(sx-3,sy-3,6,6)}else{ctx.beginPath();ctx.arc(sx,sy,2.5,0,7);ctx.fill();ctx.stroke()}
         if(ui.z>=2.6){ctx.lineWidth=3;ctx.strokeText(c.name,sx+6,sy);ctx.fillText(c.name,sx+6,sy)}})}}
+  // sacred sites: a gold triangle while people still gather there, a hollow one once it is buried and forgotten
+  if(cm!=='none'&&s.rits&&(m==='political'||m==='peoples'||m==='religion')&&ui.z>=1.4){
+    for(const R of s.rits){if(R.peak<0.3)continue;const [mx,my]=cellXY(R.cell);
+      each(mx,my,(sx,sy)=>{ctx.beginPath();ctx.moveTo(sx,sy-4);ctx.lineTo(sx+3.6,sy+2.6);ctx.lineTo(sx-3.6,sy+2.6);ctx.closePath();ctx.lineWidth=1.3;
+        if(R.alive){ctx.fillStyle='#b8862b';ctx.strokeStyle='#f5f3ec';ctx.fill();ctx.stroke()}else{ctx.strokeStyle='rgba(60,60,60,.7)';ctx.stroke()}
+        if(ui.z>=2.6){ctx.font=`italic 11px ${cssVar('--f-ui')}`;ctx.textAlign='left';ctx.lineWidth=3;ctx.strokeStyle='#f5f3ec';ctx.fillStyle=R.alive?'#6b4c12':'#666';ctx.strokeText(R.name,sx+6,sy);ctx.fillText(R.name,sx+6,sy)}})}}
   // labels
   const lab=[];
   if(m==='political'||m==='alliances'){for(const id of s.alive){const o=s.pols[id];if(o.cells>=6)lab.push([lonToMx(o.lx),(o.ly+0.5)*SC,o.base,o.cells,o.tier==='Empire'||o.tier==='Khaganate'])}}
@@ -262,7 +279,11 @@ function drawLegend(){
   const keys=list=>'<div class="keys">'+list.map(([c,l])=>`<span><i style="background:rgb(${c})"></i>${l}</span>`).join('')+'</div>';
   switch(m){
     case'lords':h=rampBox('Share of each state held by hereditary lords','crown','lords')+keys([[[245,200,90],'Soldier colony, recently planted']])+'<p style="margin:6px 0 0;opacity:.85">States settle soldiers on new frontiers. Over generations, land granted for service becomes land held by birth: lords defend their own provinces but keep much of the revenue.</p>';break;
-    case'political':h='Each colour is a state. Hatched, faint areas are nomad confederations; pale areas are wasteland a state only claims. Dotted tan lines are caravan routes. Red borders are war fronts; dark dashed lines are fortified frontiers; amber trails are peoples on the move. Click a state to open its page.';break;
+    case'political':h='Each colour is a state; tributaries are drawn in a paler shade of their overlord\'s colour. Hatched, faint areas are nomad confederations; pale areas are wasteland a state only claims. Dotted tan lines are caravan routes. Red borders are war fronts; dark dashed lines are fortified frontiers; amber trails are peoples on the move. Click a state to open its page.';break;
+    case'crops':h='The staple each farming people grows: the best of the crop packages that have reached it for its climate.'+keys(CROPS.map((C,k)=>[CROP_RGB[k],cap(C.n)]));break;
+    case'landuse':h='How each province uses its land, from fields to pasture. The mix follows what pays (crops, soil, tools, rain), the people\'s herding tradition, raids, and what the rulers want. Brighter: herders who move with their animals.'+keys([[LU_F,'Fields'],[LU_F.map((v,k)=>(v+LU_P[k])/2),'Mixed'],[LU_P,'Pasture']]);break;
+    case'herds':h='Domestic animals, by the most common. Each was tamed where its wild kin lived and spreads with its keepers; hard winters can kill herds off. Animals our world never tamed can be tamed here. Speckled: wild herds not yet tamed.'+keys([...HERDS.map(x=>[x.col,x.n]),...(s&&s.bFirst?BEASTS.filter((b,k)=>k>0&&s.bFirst[k]&&!b.roles.mouse).map(b=>[b.col,cap(b.n)]):[]),[[120,110,95],'Wild herds']]);break;
+    case'soiltype':h='Soils formed under long-standing climate and terrain. They set base fertility, how fast farming wears them out, and how readily irrigation poisons them.'+keys(SOILS.map((S_,k)=>[SOIL_RGB[k],S_.n]));break;
     case'soil':h=rampBox('Soil fertility (farmland only; worn-out soils are cool, fresh ones warm)','depleted','fresh')+keys([[[235,235,225],'Salt-poisoned fields']])+'<p style="margin:6px 0 0;opacity:.85">Crowded fields wear out unless rested, manured or rotated; floodplains renew each year; irrigation in dry lands slowly salts the soil.</p>';break;
     case'forest':h=keys([[[34,110,52],'Standing forest'],[[196,120,60],'Cleared or lost forest']])+'<p style="margin:6px 0 0;opacity:.85">Farmers clear forest to plant; smelting eats charcoal; abandoned land grows back. Stripped hillsides erode.</p>';break;
     case'inequality':h=rampBox('Inequality within each state','equal','extreme')+'<p style="margin:6px 0 0;opacity:.85">Crowding and long peace concentrate wealth, faster where the plough makes land the prize. War, revolution, collapse and plague level it.</p>';break;
@@ -393,12 +414,12 @@ function renderPage(){
   try{
   if(t==='cell'){
     const i=id,latd=(w.lat[i]*180/Math.PI).toFixed(1),lond=((w.cxA[i]+0.5)/W*360-180).toFixed(1);
-    if(!w.land[i]){h+=`<h2 class="name">Open sea</h2><p class="sub2">${latd}°, ${lond}° · depth ${Math.round(-w.elev[i])} m</p>`}
+    if(!w.land[i]){h+=`<h2 class="name">Open sea</h2><p class="sub2">${latd}°, ${lond}° · depth ${Math.round(-Math.min(w.elev[i],w.lvl?w.lvl[i]-(S?S.seaLvl:0):0))} m</p>`}
     else{
       const p=s.pol[i]?s.pols[s.pol[i]]:null,e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=s.rel[i]>=0?s.rels[s.rel[i]]:null,city=s.city[i]>=0?s.cities[s.city[i]]:null;
       h+=`<div class="kind">Province</div><h2 class="name">${city?esc(city.name):e?'Lands of the '+esc(e.name):'Empty land'}</h2><p class="sub2">${latd}°, ${lond}° · ${ERAS[eraOf(i)]}</p>`;
       h+=`<dl class="kv" style="margin-top:10px"><dt>State</dt><dd>${p?lp(p):'none'}</dd><dt>People</dt><dd>${e?le(e):'none'}</dd><dt>Faith</dt><dd>${R?lr(R):e?'folk religion':'–'}</dd><dt>Population</dt><dd>${fmtN(s.pop[i])} / ${fmtN(s.K[i])}</dd>${city?`<dt>City</dt><dd>${esc(city.name)}${p&&p.capital===i?' (capital)':''}, since ${fy(city.born)}</dd>`+(city.sacks&&city.sacks.length?`<dt>Sacked</dt><dd>${city.sacks.slice(-4).map(x=>fy(x.y)).join(', ')}${city.sacks.length>4?` and ${city.sacks.length-4} more`:''}</dd>`:''):''}</dl>`;
-      h+=`<h3 class="sec">Land</h3><dl class="kv"><dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.transh&&w.transh[i]>0.2&&s.herd[i]>0.3?`<dt>Herding</dt><dd>moves with the seasons</dd>`:''}${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
+      h+=`<h3 class="sec">Land</h3><dl class="kv">${w.soil?`<dt>Soil</dt><dd>${SOILS[w.soil[i]].n}</dd>`:''}${s.crop&&s.crop[i]>=0&&s.farm[i]>0.3?`<dt>Staple</dt><dd>${cap(CROPS[s.crop[i]].n)}${s.crop[i]===CI.potato&&s.tk[TI.chuno][i]>0.5?', freeze-dried':''}${s.crop[i]===CI.maize&&s.tk[TI.nixtamal][i]>0.5?', lime-soaked':''}</dd>`:''}${w.turf&&w.turf[i]>0.05?`<dt>Grass turf</dt><dd>${Math.round(s.open[i]*100)}% broken for fields</dd>`:''}${s.past&&s.pop[i]>=1?`<dt>Land use</dt><dd>${Math.round(s.past[i]*100)}% pasture</dd>`:''}${s.dom&&HERDS.some((x,k)=>s.dom[k][i]>0.05)?`<dt>Herds</dt><dd>${HERDS.filter((x,k)=>s.dom[k][i]>0.05).map(x=>{const L=x.k==='horse'&&s.linOf&&s.linOf.horse[i]>=0?s.lins[s.linOf.horse[i]]:null;return x.n.toLowerCase()+(L&&L.name?` (${L.name})`:'')}).join(', ')}</dd>`:''}${s.bst&&BEASTS.some((b,k)=>s.bst[k][i]>0.05)?`<dt>Animals</dt><dd>${BEASTS.filter((b,k)=>s.bst[k][i]>0.05).map(b=>{const a=s.linOf&&s.linOf[b.k];const L=a&&a[i]>=0?s.lins[a[i]]:null;return b.n+(L&&L.name?` (${L.name})`:'')+(b.path==='tamed'?', caught wild':'')}).join(', ')}</dd>`:''}<dt>Terrain</dt><dd>${BIOMES[w.biome[i]]}, ${Math.round(w.elev[i])} m</dd><dt>Climate</dt><dd>${w.T[i].toFixed(1)} °C, ${Math.round(w.Pr[i])} mm</dd><dt>Seasonal swing</dt><dd>${w.amp[i].toFixed(0)} °C</dd>${w.transh&&w.transh[i]>0.2&&s.herd[i]>0.3?`<dt>Herding</dt><dd>moves with the seasons</dd>`:''}${w.kgGrid&&w.kgGrid[i]?`<dt>Observed zone</dt><dd>${KG_CODES[w.kgGrid[i]]}</dd><dt>Model zone</dt><dd>${KG_GROUPS[simGroup(w.rawT[i],w.rawP[i],w.rawA[i])]}</dd>`:''}<dt>This year's rain</dt><dd>${Math.round((s.wm[i]-1)*100)>=0?'+':''}${Math.round((s.wm[i]-1)*100)}%</dd><dt>River</dt><dd>${w.rv[i]>0?(w.rv[i]>0.6?'major':'yes'):'no'}</dd><dt>Soil fertility</dt><dd>${(s.fert[i]*100).toFixed(0)}%</dd><dt>Immunity</dt><dd>${(s.immune[i]*100).toFixed(0)}%</dd><dt>Asabiya</dt><dd>${s.s[i].toFixed(2)}</dd></dl>`;
       h+=`<h3 class="sec">Ecology</h3><div class="bars">${w.sF[i]>0.08?bar('Soil fertility',s.fert[i],1,'t'):''}${w.forest0[i]>0.05?bar('Forest standing',s.forest[i]/w.forest0[i],1,'t'):''}${s.salt[i]>0.02?bar('Salt in the soil',s.salt[i],1):''}${w.mal[i]>0.05?bar('Fever burden',w.mal[i]*(1-s.adapt[i]),1):''}${w.oncho[i]>0.05?bar('River blindness',w.oncho[i],1):''}${bar('Disease pool',s.dp[i],1,'t')}${w.sF[i]>0.1?bar('Hemmed in (circumscription)',s.circE[i],1,'t'):''}${s.car[i]>0.1?bar('Caravan traffic',s.car[i],1,'t'):''}</div>`;
       h+=`<h3 class="sec">Known techniques</h3><div class="bars">${TECH.map((T,k)=>s.tk[k][i]>0.05?bar(T.n,s.tk[k][i],1,'t'):'').join('')||'<div class="note">Foraging only.</div>'}</div>`;
     }
@@ -420,6 +441,11 @@ function renderPage(){
       h+=`<h3 class="sec">Relations</h3><dl class="kv"><dt>Allies</dt><dd>${allies.length?allies.map(lp).join(', '):'none'}</dd><dt>At war with</dt><dd>${en.length?en.map(lp).join(', '):'no one'}</dd>${wars.length?`<dt>Wars</dt><dd>${wars.map(lw).join(', ')}</dd>`:''}${o.over&&s.pols[o.over]?`<dt>Pays tribute to</dt><dd>${lp(s.pols[o.over])}</dd>`:''}${tribs.length?`<dt>Tributaries</dt><dd>${tribs.map(lp).join(', ')}</dd>`:''}</dl>`;
       if(o.kind==='state'&&o.prep!=null){const hp=o.paysTo&&s.pols[o.paysTo];
         h+=`<h3 class="sec">Army and stores</h3><div class="bars">${bar('Readiness for war',o.prep,1)}${(o.merc||0)>0.02?bar('Hired soldiers',o.merc,1):''}${(o.gran||0)>0.02?bar('Granaries',o.gran,1,'t'):''}</div>${hp?`<dl class="kv" style="margin-top:6px"><dt>Buys peace from</dt><dd>${lp(hp)}</dd></dl>`:''}`}
+      if(o.kind==='state'&&o.info){const sys=['writing','alphabet','printing','drumscript','drums','beacons','khipu','griots','relays'].filter(k=>TI[k]!=null&&s.tk[TI[k]][c]>0.5).map(k=>TECH[TI[k]].n.toLowerCase());
+        h+=`<h3 class="sec">Communication</h3><div class="bars">${bar('Records',o.info.rec,1.5)}${bar('Speed',o.info.spd,1.5)}${bar('Memory',o.info.memo,1.3)}</div><p style="margin:6px 0 0;opacity:.85">${sys.length?cap(sys.join(', '))+'.':'Only the spoken message: no records, no relays, no keepers of memory.'}</p>`;
+        if(o.mono)h+=`<h3 class="sec">Hold over conquests</h3><div class="bars">${bar('Holding power',o.hold||0,1)}${bar('Force',o.mono.force,1,'t')}${bar('Records',o.mono.rec,1,'t')}${bar('Trade and cities',o.mono.econ,1,'t')}</div><p style="margin:6px 0 0;opacity:.85">${o.mono.sacred?'Holds the holy city of its faith. ':''}${o.empireY?`An empire since ${fy(o.empireY)}: it rules many cities directly.`:(o.hold||0)<0.4?'Conquered peers keep their own rulers and pay tribute, and break away when they can.':'Can annex and govern conquered cities.'}</p>`}
+      if(o.kind==='state'&&o.steppe!=null&&(o.steppe>0.15||o.dual||(o.pD||0)>0.05)){
+        h+=`<h3 class="sec">Steppe and sown</h3><div class="bars">${bar('Steppe lords at court',o.steppe,1,'t')}${(o.pD||0)>0.02?bar('Court split',o.pD,1):''}</div><p style="margin:6px 0 0;opacity:.85">${o.steppe>0.6?'Herding nobles dominate: conquest is for pasture and plunder.':o.steppe>0.4?'Herding lords and landed officials share the court uneasily.':'Landlords, merchants and officials dominate: conquest is for taxable farmland.'}${o.dual?' Herders and farmers are ruled under separate laws.':''}</p>`}
       if(o.kind==='state'&&((o.nob||0)>0.05||o.colN)){const rf=s.reforms.filter(x=>x.pol===o.id);
         h+=`<h3 class="sec">Land and lords</h3><div class="bars">${bar('Hereditary nobility',o.nob||0,1)}</div><dl class="kv" style="margin-top:6px">${o.colN?`<dt>Soldier colonies</dt><dd>${o.colN} planted</dd>`:''}<dt>Revenue kept by lords</dt><dd>${Math.round(45*(o.nob||0))}%</dd>${rf.length?`<dt>Attempts to reclaim land</dt><dd>${rf.filter(x=>x.ok).length} of ${rf.length} succeeded</dd>`:''}</dl>`}
       if(o.why){const W2=o.why;
@@ -445,6 +471,9 @@ function renderPage(){
     if(e.kids.length)h+=`<p class="lineage">Daughter peoples: ${e.kids.slice(0,16).map(k=>le(s.eths[k])).join(', ')}</p>`;
     h+=`<h3 class="sec">Words</h3><div class="lex"><span>homeland <b>${esc(L.place)}</b></span>${['god','sun','river','sea','mountain','mother','grain'].map(k=>`<span>${k} <b>${esc(L[k])}</b></span>`).join('')}</div>`;
     const states=s.alive.map(k=>s.pols[k]).filter(o=>o.core===id);
+    const ec=e.alive?cellAt(e.la*180/Math.PI,e.lon*180/Math.PI):-1;
+    if(e.deep)h+=`<h3 class="sec">Deep traditions</h3><p class="note">What this people has worked with for generations. A deep tradition makes related new techniques come easier, and above 60% lets it skip steps others must take.</p><div class="bars">${TCOLS.map((c,j)=>bar(c[1],e.deep[j],1,'t')).join('')}</div>`;
+    h+=`<h3 class="sec">Way of life</h3><div class="bars">${bar('Herding tradition',e.past??0.5,1,'t')}${bar('Riding',e.ride||0,1,'t')}${bar('War experience',e.xp??0.3,1,'t')}</div>${typeof rideTier==='function'?`<dl class="kv" style="margin-top:6px"><dt>Horsemanship</dt><dd>${cap(RIDE_TIERS[rideTier(e,ec)])}</dd></dl>`:''}`;
     h+=`<h3 class="sec">Today</h3><dl class="kv"><dt>Provinces</dt><dd>${e.cells}</dd><dt>Population</dt><dd>${fmtN(e.pop)} (peak ${fmtN(e.peak)})</dd><dt>States they lead</dt><dd>${states.length?states.slice(0,8).map(lp).join(', '):'none'}</dd></dl>`;
     h+=`<h3 class="sec">Chronicle</h3>`+chronList(chronFor(x=>refHas(x,'eth',id)));
   }else if(t==='rel'){
@@ -465,7 +494,7 @@ function renderPage(){
     if(f.rel>=0){const R=s.rels[f.rel];h+=`<p class="note">${esc(R.name)} later reached ${R.peak} provinces${R.states.length?` and was adopted by ${R.states.length} state${R.states.length>1?'s':''}`:''}.</p>`}
   }else if(t==='plague'){
     const o=s.outbreaks[id],e=s.eth[o.origin]>=0?s.eths[s.eth[o.origin]]:null;
-    h+=`<div class="kind">Epidemic${o.virgin?' · virgin soil':''}</div><h2 class="name">The ${esc(o.name)}</h2><p class="sub2">${fy(o.year)}${o.done?` – ${fy(o.end)}`:' · still spreading'}</p>`;
+    h+=`<div class="kind">Epidemic${o.virgin?' · virgin soil':''}${o.novel?' · new disease from forest animals':''}</div><h2 class="name">The ${esc(o.name)}</h2><p class="sub2">${fy(o.year)}${o.done?` – ${fy(o.end)}`:' · still spreading'}</p>`;
     h+=`<dl class="kv" style="margin-top:10px"><dt>Deaths</dt><dd>${fmtN(o.deaths)}</dd><dt>Provinces reached</dt><dd>${o.cells}</dd><dt>Virulence</dt><dd>${(o.vir*100).toFixed(0)}% a year among the unexposed</dd>${o.virgin&&o.from>=0?`<dt>Brought by</dt><dd>${le(s.eths[o.from])}</dd>`:''}</dl>`;
     h+=`<h3 class="sec">Spread</h3><canvas class="mini" id="plaguemap" width="${W*2}" height="${H*2}"></canvas><p class="note">Darker red reached later. The ring marks where it began.</p>`;
     const hit=(Array.isArray(o.hit)?o.hit:[...o.hit]).map(k=>s.pols[k]).filter(p=>p&&p.maxCells>=8).sort((a,b)=>b.maxCells-a.maxCells);
@@ -680,7 +709,7 @@ $('play').addEventListener('click',()=>setRunning(!ui.running));
 const CITY_SHOW=[['all','All cities'],['big','Capitals and large cities'],['caps','Capitals only'],['holy','Capitals and holy cities'],['none','None']];
 // map views: a few quick buttons and every layer in one grouped menu
 const QUICK=['political','peoples','religion','veg'];
-const MODE_GROUPS=[['Politics',['political','alliances','lords','unity','loyalty','inequality','circ']],['Peoples and ideas',['peoples','mixing','religion','knowledge','path','era']],['People and land',['density','capacity','asabiya','disease','soil','forest','niche','terrain']],['Climate',['ctemp','crain','cwind','veg','cchange','weather','climate']]];
+const MODE_GROUPS=[['Politics',['political','alliances','lords','unity','loyalty','inequality','circ']],['Peoples and ideas',['peoples','mixing','religion','knowledge','path','era']],['People and land',['density','capacity','crops','landuse','herds','asabiya','disease','soil','soiltype','forest','niche','terrain']],['Climate',['ctemp','crain','cwind','veg','cchange','weather','climate']]];
 const MODE_NAME=Object.fromEntries(MODES);MODE_NAME.veg='Biomes';
 $('modes').innerHTML=QUICK.map(k=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${MODE_NAME[k]}</button>`).join('')+`<label class="msel"><span>Map</span><select id="modesel" aria-label="Map view">${MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.filter(k=>MODE_NAME[k]).map(k=>`<option value="${k}"${k===ui.mode?' selected':''}>${MODE_NAME[k]}</option>`).join('')}</optgroup>`).join('')}</select></label><label class="msel"><span>Cities</span><select id="citysel" aria-label="Which cities to show">${CITY_SHOW.map(([k,l])=>`<option value="${k}"${k===ui.cities?' selected':''}>${l}</option>`).join('')}</select></label>`;
 function setMode(m){ui.mode=m;for(const x of $('modes').querySelectorAll('button'))x.setAttribute('aria-pressed',x.dataset.m===m);const sel=$('modesel');if(sel&&sel.value!==m)sel.value=m;drawLegend();ui.dirty=true}
@@ -721,7 +750,7 @@ mapCv.addEventListener('wheel',e=>{e.preventDefault();const r=mapCv.getBoundingC
 /* ---------- world building ---------- */
 function busy(on,txt){const b=$('busy');b.hidden=!on;if(txt)b.textContent=txt}
 function startHistory(){
-  P.hearthMode=$('hearthh').checked?'historical':'random';P.shuffleNames=$('shufn').checked;
+  P.hearthMode=$('hearthh').value;P.shuffleNames=$('shufn').checked;
   try{history.replaceState(null,'','#seed-'+($('hseed').value||'1').replace(/[^A-Za-z0-9]/g,''))}catch(e){}
   newHistory($('hseed').value||'1');
   ui.page=null;ui.stack=[];ui.lastChronKey='';ui.lastSpotObj=null;$('toast').hidden=true;ui.pausedAtEnd=false;ui.dirty=true;ui.ready=true;$('play').disabled=false;
@@ -785,6 +814,7 @@ function frame(t){
     if(ui.ready&&ui.running){const el=$('toast');el.innerHTML=`<span class="ty">${fy(sp.y)}</span> ${linkify(sp.txt,sp.refs)}`;el.hidden=false;ui.toastT=t+5000;ui.ringCell=sp.cell;ui.ringT=performance.now()+4000;if(ui.follow&&sp.cell>=0)centerOn(sp.cell)}}
   if(ui.toastT&&t>ui.toastT){$('toast').hidden=true;ui.toastT=0}
   if(ui.ringT&&performance.now()<ui.ringT)ui.dirty=true;
+  if(S&&baseCv&&S.seaVer!==ui.seaVer){ui.seaVer=S.seaVer;paintBase();ui.dirty=true}
   if(ui.dirty&&S&&baseCv&&t-ui.lastRender>110){ui.lastRender=t;ui.dirty=false;buildComp();drawMap();updateTop()}
   if(S&&t-ui.lastSide>700){ui.lastSide=t;
     if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='tech')renderTech();else if(ui.pane==='clim')renderClimate()}
@@ -835,6 +865,9 @@ function renderClimate(){const el=$('pane-clim'),s=S,w=WD;if(!s||!s.co2){el.inne
 function perihelionWord(p){const months=['late March','late April','late May','late June','late July','late August','late September','late October','late November','late December','late January','late February'];return'Earth is closest to the sun in '+months[Math.floor(((p+15)%360)/30)]}
 $('pane-clim').addEventListener('click',e=>{const b=e.target.closest('button[data-mode]');if(!b)return;setMode(b.dataset.mode);renderClimate()});
 /* ===== Technology tab: the matrix of techniques ===== */
+const LU_F=[96,165,80],LU_P=[222,176,96];
+const CROP_RGB=[[214,178,82],[120,190,120],[196,150,90],[190,110,70],[230,200,60],[150,110,170],[70,140,90],[220,140,60],[120,90,60]];
+const SOIL_RGB=[[200,215,225],[225,205,160],[90,130,190],[150,80,70],[150,150,140],[200,110,70],[150,170,130],[40,40,40],[120,95,70],[150,120,80]];
 const COL_RGB=[[150,110,70],[60,130,190],[120,180,200],[200,90,50],[80,160,80],[150,100,170],[110,110,120]];
 const COL_CSS=COL_RGB.map(c=>`rgb(${c})`);
 ui.tcell=null;

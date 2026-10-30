@@ -27,20 +27,23 @@ Histories are chaotic: dates such as the first iron or paper vary by about ±1,0
 
 Bands are wide on purpose: they describe a plausible history, not a replay of ours.
 
+The regional targets ask when one state, league or overlord's bloc first held 30% of a region's people. That comes later than the first small states, so the New World and West African dates follow the first regional hegemonies, not the first kingdoms.
+
 | Target | Real | Band | Notes and sources |
 |---|---|---|---|
 | Mesopotamia: first kingdom holding 30% of the region's people | 2600 BCE | 3200–2000 BCE | Early Dynastic kings of Kish and Uruk; Akkad about 2334 BCE (Van De Mieroop, *A History of the Ancient Near East*). |
 | Egypt | 3100 BCE | 3400–2700 BCE | Unification under the First Dynasty (Shaw, *Oxford History of Ancient Egypt*). |
 | Indus | 2600 BCE | 2900–2000 BCE | Mature Harappan phase (Possehl, *The Indus Civilization*). Whether it was one state is debated. |
 | Yellow River | 1900 BCE | 2200–1500 BCE | Erlitou, then Shang (Liu & Chen, *The Archaeology of China*). |
-| Mesoamerica | 500 BCE | 1200 BCE–300 CE | Olmec centres, Monte Albán, early Maya kingdoms. |
-| Central Andes | 200 BCE | 900 BCE–600 CE | Chavín horizon to Moche and Tiwanaku. |
+| Mesoamerica | 400 CE | 500 BCE–1100 CE | One power holding 30% of the region's people: Teotihuacan's sphere (about 200–550 CE); Monte Albán earlier at a smaller scale; the Aztec Triple Alliance much later. The first small states (Olmec, Maya, Zapotec) came earlier but held far less. |
+| Central Andes | 700 CE | 1 CE–1450 CE | One power holding 30% of the region's people: Wari and Tiwanaku (600–1000 CE), then the Inca. Moche and Nazca were regional. |
 | Western Europe | 50 BCE | 600 BCE–500 CE | Roman Gaul; the band allows earlier Celtic or later Frankish states. |
-| West Africa | 700 CE | 300–1100 CE | Ghana (Wagadu); Mali later (Levtzion, *Ancient Ghana and Mali*). |
+| West Africa | 900 CE | 300–1350 CE | Ghana (Wagadu) at its height; Mali by the 1250s (Levtzion, *Ancient Ghana and Mali*). |
 | Writing | 3200 BCE | 3500–2800 BCE | Uruk proto-cuneiform; Egyptian hieroglyphs. |
 | Iron | 1200 BCE | 1600–800 BCE | Widespread iron working in Anatolia and the Levant. |
 | Coinage | 600 BCE | 900–300 BCE | Lydia, about 630 BCE; Chinese spade money about the same time. |
 | Paper | 100 BCE | 400 BCE–300 CE | Early Han paper; Cai Lun's process 105 CE. |
+| Horse domesticated | 3500 BCE | 4000–2000 BCE | Botai horse use about 3500 BCE (Outram et al. 2009); the DOM2 lineage of all modern horses on the lower Volga–Don about 2200 BCE (Librado et al. 2021). |
 | Gunpowder | 1200 CE | 950–1400 CE | Song dynasty weapons. |
 | World population 3000 BCE | 30 M | 14–60 M | McEvedy & Jones (1978) 14 M; HYDE 3.2 and others higher. |
 | 1 CE | 230 M | 170–300 M | McEvedy & Jones 170 M; Durand 270–330 M; HYDE about 230 M. |
@@ -50,5 +53,8 @@ Bands are wide on purpose: they describe a plausible history, not a replay of ou
 | Largest state at 1 CE | 500 provinces | 300–800 | Han and Roman empires, 4.5–6 million km² (Taagepera 1979). |
 | China over half held by one state, after 250 BCE | 65% of the time | 45–85% | The engine's own China reference series (`CHINA_REF` in `world.js`). |
 | Mediterranean coastlands under one state at best | 95% | 50–100% | Rome; the band allows histories where no Rome appears but a large empire does. |
+| Pontic steppe black earth under farming states at 1000 BCE | about 0 | 0–25% | Cimmerian and Scythian herders held the steppe; Greek colonies and forest-steppe farmers were at its edges (Anthony, *The Horse, the Wheel, and Language*). |
 | Large empires wider than tall | 65% | 50–85% | Turchin, Adams & Hall (2006): Eurasian empires are elongated east–west. |
 | New Guinea, Congo interior, Amazon interior under kingdoms at 1500 CE | 0%, 15%, 0% | 0–10%, 0–35%, 0–10% | New Guinea and Amazonia had no kingdoms; the Kongo and Luba kingdoms reached the Congo basin's edges. |
+
+Not scored, but printed with each run (`x` in the JSON): the largest steppe confederation before 1 CE and when (the Xiongnu at their height held some 9 million km², Taagepera 1979), how many peoples were driven off their pastures into others (`pushed`), the first domestications of each herd animal, and whether any horses reached the Americas before ships did (there should be none).

@@ -5,7 +5,7 @@ const PDEF=[
 ['World','landFrac','Land share',0.2,0.5,0.01,0.33,'Share of the surface above sea level (generated worlds).',1],
 ['World','bands','Founding peoples',3,24,1,10,'Unrelated language families at the start (generated worlds).',1],
 ['World','hearths','Farming hearths',1,8,1,4,'Places where crops are first domesticated (random hearths).',1],
-['World','startYear','Start year',-12000,-4000,500,-9000,'Year the simulation begins.',1],
+['World','startYear','Start year',-12000,-4000,500,-12000,'Year the simulation begins.',1],
 ['Climate','climVar','Weather variability',0,2,0.05,1,'Size of year-to-year rainfall swings.'],
 ['Climate','climPersist','Wet and dry runs',0,0.95,0.01,0.8,'How long a wet or dry spell tends to last.'],
 ['Climate','volcano','Volcanic winters',0,3,0.1,1,'How often eruptions cool the world for a few years.'],
@@ -44,7 +44,7 @@ const PDEF=[
 ['Ideas & faith','degrade','Soil exhaustion',0,3,0.05,1,'How fast overworked farmland loses fertility.'],
 ];
 const P={};for(const d of PDEF)P[d[1]]=d[6];
-P.hearthMode='historical';P.fitClimate=true;P.shuffleNames=false;
+P.hearthMode='emergent';P.fitClimate=true;P.shuffleNames=false;
 const CDEF=[
 ['tEq','Equator temperature (°C)',22,32,0.5,29],
 ['tGrad','Equator-to-pole drop (°C)',30,60,1,47],
@@ -283,6 +283,32 @@ const REGIONS=[
 const NOSTATE=[{n:'New Guinea',box:[-10,-1,131,151]},{n:'Congo interior',box:[-5,4,15,28]},{n:'Amazon interior',box:[-10,0,-72,-52]}];
 const NOFARM=[{n:'Siberia',box:[55,75,60,180]},{n:'Australia',box:[-40,-11,113,154]},{n:'Northern North America',box:[52,72,-170,-55]},{n:'Southern Africa',box:[-35,-25,15,32]}];
 const CHINA_REF=[[-1600,0.25],[-1046,0.5],[-771,0.25],[-221,0.9],[220,0.45],[280,0.85],[304,0.45],[589,0.95],[907,0.35],[960,0.7],[1127,0.5],[1279,1],[1368,0.95],[1644,1],[1800,1]];
+// sea level against today's (m), Lambeck et al. 2014 (simplified): about -75 m at 12,000 BCE, near today's by 4000 BCE
+const SEA_LOW=-75,SEA_CURVE=[[-12000,-75],[-11000,-64],[-10000,-57],[-9500,-50],[-9000,-43],[-8000,-31],[-7000,-20],[-6500,-14],[-6000,-8],[-5000,-3],[-4000,-1],[-3000,0]];
+function seaLevelAt(y){const C=SEA_CURVE;if(y<=C[0][0])return C[0][1];for(let k=1;k<C.length;k++)if(y<=C[k][0]){const [a,va]=C[k-1],[b,vb]=C[k];return va+(vb-va)*(y-a)/(b-a)}return 0}
+// land list, coasts and landmasses from w.land (rebuilt when the sea takes a province)
+function shoreline(w){const land=w.land,nb=w.nb,landList=[],coastList=[],coast=new Uint8Array(N);
+  for(let i=0;i<N;i++)if(land[i]){landList.push(i);for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&!land[j]){coast[i]=1;break}}if(coast[i])coastList.push(i)}
+  w.landIdx=Int32Array.from(landList);w.coastIdx=Int32Array.from(coastList);w.coast=coast;
+  const lm=new Int32Array(N).fill(-1),lmSize=[],q=new Int32Array(N);
+  for(const s0 of landList){if(lm[s0]>=0)continue;const id=lmSize.length;let h=0,t=0;q[t++]=s0;lm[s0]=id;
+    while(h<t){const i=q[h++];for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(t)}
+  w.lm=lm;w.lmSize=lmSize;w.lmCount=lmSize.length}
+// sea links: coastal cell -> coastal cells across water within 6 sea steps
+function seaLanes(w){const land=w.land,coast=w.coast,nb=w.nb,lm=w.lm,q=new Int32Array(N);
+  const n8=(i,f)=>{const cx=i%W,cy=(i/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;f(yy*W+(cx+dx+W)%W)}}};
+  const ls=new Int32Array(N+1),lt=[],ld=[],seen=new Int32Array(N).fill(-1),qd=new Uint8Array(N);
+  for(let i=0;i<N;i++){ls[i]=lt.length;if(!coast[i])continue;
+    let h=0,t=0;const found=[];
+    for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&!land[j]&&seen[j]!==i){seen[j]=i;q[t++]=j;qd[j]=1}}
+    while(h<t){const c=q[h++],dc=qd[c];
+      n8(c,j=>{if(seen[j]===i)return;seen[j]=i;
+        if(land[j]){if(j!==i&&dc>=2&&coast[j])found.push([j,dc])}
+        else if(dc<6){qd[j]=dc+1;q[t++]=j}})}
+    found.sort((a,b)=>(lm[b[0]]!==lm[i])-(lm[a[0]]!==lm[i])||a[1]-b[1]);
+    for(const [j,d] of found.slice(0,10)){lt.push(j);ld.push(d)}
+  }
+  ls[N]=lt.length;w.ls=ls;w.lt=Int32Array.from(lt);w.ld=Uint8Array.from(ld)}
 function genWorld(o){
   const r=mulberry32(hashStr('world:'+o.seed));
   const eHi=new Float32Array(HW*HH);
@@ -319,14 +345,18 @@ function genWorld(o){
   if(o.kg&&o.fit&&!numericClimate){w.fitChanged=fitClimate(C.tHi,C.pHi,C.aHi,eHi,o.kg);w.fitted=true}
   w.tHi=C.tHi;w.pHi=C.pHi;w.aHi=C.aHi;
   const elev=new Float32Array(N),T=new Float32Array(N),Pr=new Float32Array(N),amp=new Float32Array(N),rough=new Float32Array(N),land=new Uint8Array(N);
+  // Earth is built at the low sea level of the last deglaciation; the history drowns the shelves as the sea rises (seaApply).
+  // lvl is the sea level (m) at which a province goes under: the elevation that half its ground stands above
+  const SL0=o.earth?SEA_LOW:0,lvl=new Float32Array(N),landNow=new Uint8Array(N),sub=new Float32Array(SC*SC);
   for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){
-    let se=0,se2=0,st=0,sp=0,sa=0,nl=0;
-    for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const k=(cy*SC+dy)*HW+cx*SC+dx,e=eHi[k];se+=e;se2+=e*e;st+=C.tHi[k];sp+=C.pHi[k];sa+=C.aHi[k];if(e>0)nl++}
+    let se=0,se2=0,st=0,sp=0,sa=0,nl=0,n0=0,q=0;
+    for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const k=(cy*SC+dy)*HW+cx*SC+dx,e=eHi[k];sub[q++]=e;se+=e;se2+=e*e;st+=C.tHi[k];sp+=C.pHi[k];sa+=C.aHi[k];if(e>SL0)nl++;if(e>0)n0++}
     const n=SC*SC,i=cy*W+cx,em=se/n;
+    sub.sort();lvl[i]=sub[n-Math.ceil(n/2)];landNow[i]=n0*2>=n?1:0;
     land[i]=nl*2>=n?1:0;elev[i]=land[i]?Math.max(em,5):Math.min(em,-5);T[i]=st/n;Pr[i]=Math.max(0,sp/n);amp[i]=sa/n;
     rough[i]=land[i]?clamp(Math.sqrt(Math.max(0,se2/n-em*em))/700+Math.max(0,em-1200)/3000,0,1):0;
   }
-  Object.assign(w,{elev,T,Pr,amp,rough,land,rawT,rawP,rawA});
+  Object.assign(w,{elev,T,Pr,amp,rough,land,rawT,rawP,rawA,lvl,landNow,land0:land.slice()});
   if(o.kg){const kgGrid=new Uint8Array(N);
     for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){const cnt=new Uint8Array(33);let best=0,bc=0;
       for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const c=o.kg[(cy*SC+dy)*HW+cx*SC+dx];if(c>=1&&c<=31){cnt[c]++;if(cnt[c]>bc){bc=cnt[c];best=c}}}
@@ -341,13 +371,7 @@ function genWorld(o){
   }
   const cosLat=new Float32Array(N);for(let i=0;i<N;i++)cosLat[i]=Math.max(0.2,Math.cos(lat[i]));
   Object.assign(w,{lat,area,x3,y3,z3,cosLon,sinLon,cxA,cyA,nb,cosLat});
-  const landList=[],coastList=[],coast=new Uint8Array(N);
-  for(let i=0;i<N;i++)if(land[i]){landList.push(i);for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&!land[j]){coast[i]=1;break}}if(coast[i])coastList.push(i)}
-  w.landIdx=Int32Array.from(landList);w.coastIdx=Int32Array.from(coastList);w.coast=coast;
-  const lm=new Int32Array(N).fill(-1),lmSize=[],q=new Int32Array(N);
-  for(const s0 of landList){if(lm[s0]>=0)continue;const id=lmSize.length;let h=0,t=0;q[t++]=s0;lm[s0]=id;
-    while(h<t){const i=q[h++];for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(t)}
-  w.lm=lm;w.lmSize=lmSize;w.lmCount=lmSize.length;
+  shoreline(w);const landList=Array.from(w.landIdx),coastList=Array.from(w.coastIdx),coast=w.coast,lm=w.lm,q=new Int32Array(N);
   // drainage
   const filled=new Float32Array(N),down=new Int32Array(N).fill(-1),vis=new Uint8Array(N),order=[],hk=[],hv=[];
   const hpush=(i,k)=>{let n=hk.length;hk.push(k);hv.push(i);while(n>0){const p=(n-1)>>1;if(hk[p]<=hk[n])break;[hk[p],hk[n]]=[hk[n],hk[p]];[hv[p],hv[n]]=[hv[n],hv[p]];n=p}};
@@ -394,30 +418,27 @@ function genWorld(o){
     const x0=Math.floor(gx),y0=Math.floor(gy),xa=(x0+AGW)%AGW,xb=(x0+1)%AGW,y1=Math.min(y0+1,AGH-1);
     wi[i*4]=y0*AGW+xa;wi[i*4+1]=y0*AGW+xb;wi[i*4+2]=y1*AGW+xa;wi[i*4+3]=y1*AGW+xb;wf[i*2]=gx-x0;wf[i*2+1]=gy-y0}
   w.wi=wi;w.wf=wf;
-  // sea links: coastal cell -> coastal cells across water within 6 sea steps
-  const ls=new Int32Array(N+1),lt=[],ld=[],seen=new Int32Array(N).fill(-1),qd=new Uint8Array(N);
-  for(let i=0;i<N;i++){ls[i]=lt.length;if(!coast[i])continue;
-    let h=0,t=0;const found=[];
-    for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&!land[j]&&seen[j]!==i){seen[j]=i;q[t++]=j;qd[j]=1}}
-    while(h<t){const c=q[h++],dc=qd[c];
-      n8(c,j=>{if(seen[j]===i)return;seen[j]=i;
-        if(land[j]){if(j!==i&&dc>=2&&coast[j])found.push([j,dc])}
-        else if(dc<6){qd[j]=dc+1;q[t++]=j}})}
-    found.sort((a,b)=>(lm[b[0]]!==lm[i])-(lm[a[0]]!==lm[i])||a[1]-b[1]);
-    for(const [j,d] of found.slice(0,10)){lt.push(j);ld.push(d)}
-  }
-  ls[N]=lt.length;w.ls=ls;w.lt=Int32Array.from(lt);w.ld=Uint8Array.from(ld);
+  seaLanes(w);
   if(w.isEarth){
-    w.regions=REGIONS.map(R=>{const cells=[];for(const i of landList){const la=lat[i]*180/Math.PI,lo=(cxA[i]+0.5)/W*360-180;if(la>=R.box[0]&&la<=R.box[1]&&lo>=R.box[2]&&lo<=R.box[3])cells.push(i)}return Object.assign({},R,{cells:Int32Array.from(cells)})});
+    // target regions are drawn on today's coasts, where the measurements are taken
+    const nowList=landList.filter(i=>landNow[i]);
+    w.regions=REGIONS.map(R=>{const cells=[];for(const i of nowList){const la=lat[i]*180/Math.PI,lo=(cxA[i]+0.5)/W*360-180;if(la>=R.box[0]&&la<=R.box[1]&&lo>=R.box[2]&&lo<=R.box[3])cells.push(i)}return Object.assign({},R,{cells:Int32Array.from(cells)})});
     const med=[],china=[];
-    for(const i of landList){const la=lat[i]*180/Math.PI,lo=(cxA[i]+0.5)/W*360-180;
+    for(const i of nowList){const la=lat[i]*180/Math.PI,lo=(cxA[i]+0.5)/W*360-180;
       if(la>=21&&la<=41&&lo>=100&&lo<=122)china.push(i);
       if(la>=30&&la<=46.5&&lo>=-10&&lo<=37){let near=false;const cx=cxA[i],cy=cyA[i];
         for(let dy=-2;dy<=2&&!near;dy++)for(let dx=-2;dx<=2;dx++){const yy=cy+dy;if(yy<0||yy>=H)continue;const j=yy*W+(cx+dx+W)%W;
-          if(land[j])continue;const la2=lat[j]*180/Math.PI,lo2=(cxA[j]+0.5)/W*360-180;
+          if(landNow[j])continue;const la2=lat[j]*180/Math.PI,lo2=(cxA[j]+0.5)/W*360-180;
           if(lo2>-5.6&&!(la2>40.8&&lo2>26.5)&&la2<46&&lo2<37){near=true;break}}
         if(near)med.push(i)}}
     w.medCells=Int32Array.from(med);w.chinaCells=Int32Array.from(china);
+    // the last ice sheets, as radial retreats from their final domes (simplified from Dyke 2004 for North America and
+    // Hughes et al. 2016 for Scandinavia): year each province comes out from under the ice
+    w.iceY=new Float32Array(N).fill(-1e9);
+    const ICE=[[59,-80,-6500,5500,16],[56,-127,-10000,2000,8],[64,17,-8000,4000,8]];
+    for(let i=0;i<N;i++){if(!land[i])continue;for(const [la0,lo0,y0,span,R] of ICE){const p0=la0*Math.PI/180,l0=lo0*Math.PI/180;
+      const d=Math.acos(clamp(Math.sin(lat[i])*Math.sin(p0)+Math.cos(lat[i])*Math.cos(p0)*(cosLon[i]*Math.cos(l0)+sinLon[i]*Math.sin(l0)),-1,1))*180/Math.PI;
+      if(d<=R*1.15)w.iceY[i]=Math.max(w.iceY[i],y0-span*d/R)}}
   }
   w.grade=gradeClimate(w,rawT,rawP,rawA);
   return w;

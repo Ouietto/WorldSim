@@ -5,7 +5,7 @@ const NOLEAGUE=typeof process!=="undefined"&&process.env&&process.env.NOLEAGUE?1
    Inca resettlements, Byzantine themes, Ottoman timars. Settlers make the frontier hold and push it further, but land given
    for service tends to become land held by birth: a hereditary nobility that protects its own provinces and keeps much of
    their revenue. Rulers try to take it back; sometimes they succeed. */
-function societyInit(){const s=S;s.colony=new Float32Array(N);s.colonies=[];s.reforms=[]}
+function societyInit(){const s=S;s.colony=new Float32Array(N);s.colonies=[];s.reforms=[];s.rits=[];s.ritAt=new Int32Array(N).fill(-1);s.ritW=new Float32Array(N);s.ritOf=new Int32Array(N).fill(-1)}
 // every ten years
 function colonyPass(){
   const s=S,w=WD,r=s.r;
@@ -53,7 +53,10 @@ function leaguePass(){
     // members stand together
     for(const a of L.members)for(const b of L.members)if(a!==b){const A=s.pols[a];if(!A.allies.includes(b)&&!A.enemies.has(b))A.allies.push(b)}}
   for(const id of s.alive){const o=s.pols[id];if(!isCityState(o))continue;const fam=s.eths[o.core]?s.eths[o.core].fam:-1;
-    const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&s.eths[p.core]&&s.eths[p.core].fam===fam)kin.push(p)}
+    // kin: cities of one language family, or of one sacred site whatever their tongue (Nippur for the cities of Sumer and Akkad,
+    // Delphi's amphictyony)
+    const site=s.ritOf?s.ritOf[o.capital]:-1;
+    const kin=[];for(const [q] of o.nb){const p=s.pols[q];if(p&&p.alive&&isCityState(p)&&!p.enemies.has(id)&&((s.eths[p.core]&&s.eths[p.core].fam===fam)||(site>=0&&s.ritOf[p.capital]===site)))kin.push(p)}
     if(o.league!=null){continue}
     const inL=kin.find(p=>p.league!=null&&!s.leagues[p.league].end);
     const circ=S.circE[o.capital]||0;
@@ -113,7 +116,8 @@ function stateMil(o){if(ABL.includes('prep'))return 1;return o.kind==='horde'?1:
 // once a year per state, after the accounts
 function militaryPass(o){
   const s=S,r=s.r,c=o.capital,atWar=o.enemies.size>0;
-  if(o.kind!=='state'){o.prep=1;o.merc=0;return}
+  if(o.kind!=='state'){const e=s.eths[o.core];o.prep=e&&e.xp!=null?Math.max(0.5,e.xp):0.8;o.merc=0;o.prest=(o.prest||0)*0.98;return}
+  if(o.prep==null){const e=s.eths[o.core];o.prep=e&&e.xp!=null?clamp(e.xp,0.2,1):0.6}
   if(o.prep==null)o.prep=0.6;
   // readiness rises in war and decays in peace; forts and frontier raids keep it up
   o.prep=atWar?o.prep+0.04*(1-o.prep):o.prep-0.006*(o.prep-0.35-0.3*Math.min(1,(o.fortN||0)/10)-(s.year-(o.raidY||-1e9)<10?0.3:0));
@@ -136,3 +140,80 @@ function militaryPass(o){
     if(h&&h.alive&&h.kind==='horde'&&power(h)>0.7*power(o)&&r()<0.15){o.paysTo=h.id;h.payers=(h.payers||0)+1;
       chron('diplomacy',`The ${o.full} buys peace from the ${h.full} with yearly gifts of silk, grain and silver.`,c,[R_(o),R_(h)],'Paying was cheaper than fighting horsemen who could not be caught.')}}
 }
+
+// ---------- communication: five media ----------
+// Marks (scripts, alphabets, notation), sound and light (talking drums, beacons), objects (knotted cords, tallies), memory
+// specialists (remembrancers) and runners (relay posts). Each serves records, speed or memory; paper and printing amplify
+// marks, roads and horses amplify runners. Sources: Innis 1950; Goody 1986; Urton 2003 (khipu); Finnegan 1970 (drum languages).
+const TONAL=new Set(['sinitic','tibetan','bantu','mande','thai']);
+function commNeed(k,o,c){const s=S,w=WD,T=s.tk;
+  switch(k){
+    case 'noScript':return T[TI.writing][c]<0.3;
+    // drum languages carry the tones of speech; forests and hills hide fires and slow runners
+    case 'drums':{const e=s.eths[o.core];const tonal=!!(e&&e.lang&&TONAL.has(e.lang.style));return (w.forest0[c]>0.35||w.rough[c]>0.3)&&(tonal||s.r()<0.2)}
+    case 'threat':return o.fortN>0||o.enemies.size>0||(o.raided||0)>0;
+    // a script meeting traders, sailors or foreigners outside the scribal class
+    case 'trade':return s.car[c]>0.1||(w.coast[c]&&s.sail[c]>0.5)||(o.cityPop||0)>0.2*o.pop;
+    case 'hasDrums':return T[TI.drums][c]>0.5}
+  return true}
+function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
+  const marks=Math.min(1.3,v('writing')+0.3*v('alphabet'))*(1+0.3*v('paper')+0.3*v('printing'));
+  const sound=Math.max(v('drums'),v('beacons'))+0.5*v('drumscript'),objects=v('khipu'),mem=v('griots');
+  const runners=v('relays')*(1+0.5*s.roads[c]+0.4*Math.min(1,s.horse[c]));
+  const rec=clamp(0.75*marks+0.55*objects+0.1*mem+0.3*v('drumscript'),0,1.5);
+  const spd=clamp(0.25*marks+0.45*runners+0.35*sound+0.15*Math.min(1,s.horse[c])+0.15*(s.courX?s.courX[c]:0),0,1.5);
+  const memo=clamp(0.5*marks+0.6*mem+0.25*objects,0,1.3);
+  o.info={rec,spd,memo};o.leg=0.75+0.35*Math.min(1,rec);return o.info}
+
+// ---------- monopolies and holding power ----------
+// Conquering a neighbour is easy; holding it is not. A centre holds a province that depends on something it monopolises:
+// force (a paid standing army), knowledge (scribes and records), the economy (trade, cities, metals) or the sacred (the god's
+// house). Peers with their own walls, scribes and gods break away at the first chance (Renfrew & Cherry 1986; Weber; Innis 1950).
+// Empire is not a technique: it is a state that has gathered enough of these to rule other cities directly.
+function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.min(1,info.rec);
+  // savanna kingdoms held by horsemen rather than scribes (Goody 1971)
+  const force=clamp(0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
+  const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c],0,1);
+  const R=o.rel>=0?s.rels[o.rel]:null,sacred=R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0;
+  o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.5*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}
+// what a defeated state brings to the table on its own: walls, scribes, its own city and cohesion
+function selfHold(d){const s=S,c=d.capital,info=d.info||infoCap(d);
+  return clamp(0.35*Math.min(1,info.rec)+0.25*(s.city[c]>=0?1:0)+0.25*Math.min(1,s.fort[c]*2)+0.25*d.S,0,1)}
+
+// ---------- sacred sites ----------
+// Long before cities, foragers and early farmers gathered at a few places, year after year, and built there: Gobekli Tepe's
+// pillars, the ring at Stonehenge, the earthworks of Poverty Point. Gathering keeps scattered bands one people: it renews
+// alliances, marriages, stories and skills (Johnson 1982 on scalar stress; Renfrew 1973; Dietrich et al. 2012). A site gains
+// standing with each generation that returns, and erodes when they stop: buried, overgrown, a fossil for later diggers.
+// Newcomers can take over a living site or rediscover a dead one; a site with enough standing can become a faith's holy city.
+const RIT_KIND=[['ring of standing stones','stones'],['circle of carved stone pillars','pillars'],['great earthen mound','mound'],['sacred grove and spring','grove'],['painted cave','cave'],['shell mound and feasting ground','shell mound']];
+function ritKind(c){const w=WD;if(w.rough[c]>0.45)return 4;if(w.coast[c]&&w.T[c]>8)return 5;if(w.forest0[c]>0.6)return 3;if(w.rough[c]>0.2)return 1;return w.T[c]<14?0:2}
+function ritName(r){return r.name}
+// every ten years
+function ritualPass(){const s=S,w=WD,r=s.r,y=s.year,L=w.landIdx;
+  // new gathering places where settled bands live close together and no site already draws them
+  for(let t=0;t<120;t++){const i=L[(r()*L.length)|0];if(s.pop[i]<1||s.ritW[i]>0.15)continue;const sd=s.sed?s.sed[i]:0,dens=s.pop[i]/w.area[i];
+    if(sd<0.45||dens<0.15)continue;if(r()<0.03*sd*Math.min(1,dens/0.6)){const L2=langAt(i),k=ritKind(i);
+      const R={id:s.rits.length,cell:i,eth:s.eth[i],name:cityWord(L2,r),kind:k,born:y,imp:0.08,peak:0.08,last:y,alive:true,fossil:false,told:false,keepers:s.eth[i]};
+      s.rits.push(R);s.ritAt[i]=R.id}}
+  s.ritW.fill(0);s.ritOf.fill(-1);
+  for(const R of s.rits){const c=R.cell;
+    if(!w.land[c]){if(R.alive){R.alive=false;R.fossil=true;if(R.told)chron('nature',`The sea closes over the old ${RIT_KIND[R.kind][0]} at ${R.name}.`,c)}continue}
+    let att=0;const cnt=new Map();ring(c,4,j=>{const p=s.pop[j];if(p<1)return;att+=p*(0.4+0.6*(s.sed?s.sed[j]:1));const e=s.eth[j];if(e>=0)cnt.set(e,(cnt.get(e)||0)+p)});
+    let top=-1,tp=0;for(const [e,p] of cnt)if(p>tp){tp=p;top=e}
+    const a=clamp(att/25000,0,1);
+    if(R.alive){
+      if(a>0.08){R.imp=Math.min(1,R.imp+0.015*a*(1-R.imp)+0.004*a);R.last=y}else R.imp*=0.96;
+      if(R.imp>R.peak)R.peak=R.imp;
+      if(!R.told&&R.imp>0.35){R.told=true;const e=s.eths[top]||s.eths[R.eth];
+        chron('culture',`Every year the ${e?e.name:'peoples around'} gather at ${R.name}, where they have raised a ${RIT_KIND[R.kind][0]}. Feasts, marriages and old stories bind the scattered bands into one people.`,c,e?[RE(e)]:[])}
+      if(top>=0&&R.keepers>=0&&top!==R.keepers&&R.told&&tp>0.6*att&&y-(R.taken||-1e9)>300&&s.eths[top].name!==(s.eths[R.keepers]||{}).name){const e=s.eths[top],o=s.eths[R.keepers];R.taken=y;
+        chron('culture',`The ${e.name} take over the sacred ${RIT_KIND[R.kind][1]} of ${R.name}, once kept by the ${o?o.name:'others'}, and make its feasts their own.`,c,[RE(e)])}
+      if(top>=0)R.keepers=top;
+      if(R.imp<0.03&&y-R.last>200){R.alive=false;R.fossil=true;if(R.told||R.peak>0.3)chron('culture',`No one gathers at ${R.name} any more. Its ${RIT_KIND[R.kind][1]} are buried and forgotten, a puzzle for diggers yet unborn.`,c)}}
+    else if(R.fossil&&a>0.5&&r()<0.01){R.alive=true;R.fossil=false;R.imp=0.12;R.last=y;const e=s.eths[top];
+      if(R.peak>0.3&&e)chron('culture',`The ${e.name} find the old ${RIT_KIND[R.kind][1]} at ${R.name} and begin to gather there again.`,c,[RE(e)])}
+    if(R.alive&&R.imp>0.05){const cx=w.cxA[c],cy=w.cyA[c];ring(c,5,(j,dx,dy)=>{const v=R.imp*(1-Math.hypot(dx,dy)/6);if(v>s.ritW[j]){s.ritW[j]=v;s.ritOf[j]=R.id}})}}
+}
+// the most revered living site in a set of cells, for a new faith's holy city
+function holySite(cells){const s=S;let best=null;for(const c of cells){const k=s.ritAt[c];if(k<0)continue;const R=s.rits[k];if(R.alive&&R.imp>0.5&&(!best||R.imp>best.imp))best=R}return best}

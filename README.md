@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.6.3: faster, and checked against history)
+# Asabiya — history engine (v0.7: the ancient Earth, emergent farming and animals)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,45 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.7 adds:
+> - **The ancient Earth:** histories start in 12,000 BCE on the low seas of the deglaciation. Shelves drown as the sea rises (Doggerland, Beringia, Sundaland, the Gulf), land bridges part, the last ice sheets retreat, and the Younger Dryas, 8.2 ka and 4.2 ka shifts strike on their real dates.
+> - **Emergent farming:** farming is no longer placed. Foragers settle on rich wild food in the real ranges of the wild ancestors, start to sow under crowding, cold or feasting demand, sometimes give up, and lock in after thousands of years of selection. Setup can switch back to historical or random hearths.
+> - **Sacred sites:** gathering places bind peoples, keep their memory, erode when abandoned, can be rediscovered, and can become a faith's holy city; city-states around one site can league.
+> - **Communication and holding power:** remembrancers, talking drums, beacons, knotted cords, relay posts, the alphabet, printing; states hold conquests by force, records, trade and the sacred; tributaries are drawn paler.
+> - **Institutions by need:** courts with cities take up writing and law, merchants coins and the alphabet; fast change strains cohesion.
+> - **The farming frontier:** foragers adopt farming only as far as it beats the wild; rich coasts hold out; narrow straits are crossed by boat. **Contact states:** outside the cradles, states form where a state's example, trade or threat reaches.
+> - **Animals:** commensal, prey and directed domestication plus tamed-only animals, real and never-were (eland, zebras, ostriches, moose, peccaries…), with jobs in riding, caravans, pasture, war and messages, and breeds that drift with their keepers.
+> - **Deep traditions:** peoples inherit what they have long worked with; it speeds related inventions and lets them skip steps.
+> - Ensemble check: 54% of historical targets across 16 histories.
+>
+> v0.6.5 adds:
+> - **Fields and pasture** (`src/herds.js`): each province mixes farming and herding by what pays, the people's herding tradition, raids and what its rulers want. Courts can split between steppe lords and landlords.
+> - **Real herds:** horses, two kinds of camel, reindeer and llamas are tamed where their wild ancestors lived, spread with herders and trade, and die off in hard winters. No horses reach the Americas before ships.
+> - **Riders and confederations:** riding skill and war experience belong to peoples and are inherited by states. Winning khans draw in other clans; beaten coalitions flee onto their neighbours.
+> - **Grass turf:** dense grassland turf is broken only slowly before heavy ploughs, so steppe provinces stay herding land.
+> - **Crops:** each crop has a latitude band that widens slowly where it is grown. Farmers pass on only crops they can grow; seed that is merely carried travels ten times slower.
+> - **Cities and writing:**
+>   - Towns of 25,000 count as cities even in sparse provinces; canals, trade, storable grain and walls draw people into them.
+>   - Writing grows from the accounts of those cities.
+> - **Irrigation and salt:** irrigation is invented where it is needed, in dry river valleys. Salt builds with intensive every-year cropping, not from the first canal.
+> - **Disease:** clearing warm forests can release new diseases; malaria rises with tropical clearing and falls with regrowth.
+> - **Climate fix:** history now measures climate change against a reference with the same vegetation albedo. This removes a false +1 °C warming that had made Bronze Age deserts and the steppe too wet.
+> - **Interface:**
+>   - Herds and Fields-and-pasture map layers.
+>   - A Cities filter on the map.
+>   - Steppe-and-sown and way-of-life sections on state and people pages.
+>   - Map import higher in Setup; sidebar tabs that wrap.
+> - **Model check on GitHub Actions** (`.github/workflows/ensemble.yml`): 16 histories in about 6 minutes. 50% of 27 targets are in band, against 37% for v0.6.4.
+>
+> v0.6.4 adds:
+> - **Crop packages** (`src/crops.js`): wheat and barley, rice, millet, sorghum, maize-beans-squash, potatoes and quinoa, yams and taro, the eastern North American crops, and cassava. Each has a climate niche, a yield, how well it stores, how easily it can be taxed, and how hard it is on the soil. Packages spread with farmers; each farm grows the best one that has reached it. Ocean contact exchanges them.
+> - **Processing and hand intensification:** freeze-dried potatoes (chuño) make Andean potatoes storable and taxable; lime-soaked maize feeds better; terraces and raised fields are invented independently wherever crowded farmers work slopes or wetlands.
+> - **Soil types** from climate and terrain (river silt, black earth, volcanic highland soils, acid forest soils, leached tropical soils, heavy clays, desert and mountain soils). They set fertility, how fast farming wears them out, salt risk and erosion. Steppe black earth is hard to farm until heavy ploughs. Farm suitability follows climate change.
+> - **A labour-tax route to the state:** storable staples, dense farming and irrigation let chiefs organize corvée without metal or horses.
+> - **Malaria** is absent from the Americas until ships bring it. **West African iron** has its own hearth (Nok, about 700 BCE).
+> - **Fixes:** BCE years skipped every pass scheduled on a non-zero remainder (JavaScript's negative `%`), so disease pools, caravan routes and the crop pass never ran before 1 CE. The regional check now counts leagues and overlords' blocs, and the largest state is reported apart from nomad confederations.
+> - **Map layers:** Staple crops, Soil types.
 >
 > v0.6.3 adds:
 > - **An ensemble check** (`tools/ensemble.js`, see `tools/VALIDATION.md`): runs many Earth histories in parallel, scores them against 25 historical targets (first states, inventions, population, empire sizes, stateless regions), and compares versions seed by seed.
