@@ -129,6 +129,11 @@ function herdPass(){
   const hh=s.dom[0],bb=s.dom[1],dd2=s.dom[2];
   beastPass();
   for(const i of L){s.horse[i]=Math.min(1,Math.max(1.5*hh[i],s.mountX[i]));s.camel[i]=Math.min(1,Math.max(1.5*Math.max(bb[i],dd2[i]),s.packX[i]*(w.desert[i]||w.Pr[i]<400?0.7:0)))}
+  // each pack animal has its own ground: llamas the high, broken Andes (Murra 1980); donkeys dry hills and scrub; pack horses
+  // and carts open, firm country; moose and tapirs where their kind lives. The best one at hand eases the climb (camels: deserts, in distBFS)
+  if(!s.pkT)s.pkT=new Float32Array(N);const lam=s.dom[4],don=s.bst?s.bst[BI.donkey]:null;
+  for(const i of L){const hi=w.elev[i]>1800||w.rough[i]>0.3,dry=w.Pr[i]<800;
+    s.pkT[i]=Math.min(1,Math.max(1.5*lam[i]*(hi?1:0.3),don?1.5*don[i]*(dry?1:0.35):0,0.6*s.packX[i],0.5*Math.min(1,s.horse[i])*(w.rough[i]<0.35&&s.forest[i]<0.5?1:0.3)))}
   ridePass();
 }
 // herds travel with migrating peoples
@@ -158,6 +163,12 @@ function ridePass(){
       const learn=(x,y,h)=>{if(y.ride>x.ride&&h>0.03)x.ride+=0.02*(y.ride-x.ride)};learn(ea,eb,hs[ea.id]/(ws[ea.id]||1));learn(eb,ea,hs[eb.id]/(ws[eb.id]||1));
       const pa=A.prep??0.6,pb=Bp.prep??0.6;if(pb>pa)A.prep=pa+0.02*(pb-pa);if(pa>pb)Bp.prep=pb+0.02*(pa-pb)}}
 }
+// riding as an instrument of rule: owning horses is not enough. Herders and chariot nobles use horses, but couriers,
+// tax collectors and garrisons that move at a gallop come only with real riding (mounted archers and later); Anthony 2007, Drews 2004
+function rideAdm(o,c){const r=rideOf(o),h=Math.min(1,S.horse[c]);if(h<=0||r<0.12)return 0;return h*(r<0.5?0.35*(r-0.12)/0.38:0.35+0.65*Math.min(1,(r-0.5)/0.25))}
+// one measure of record keeping, whatever the medium: script, knotted cords, drum language or trained memory
+function recPass(){const s=S,T=s.tk,wr=T[TI.writing],kh=T[TI.khipu],gr=T[TI.griots],dsc=T[TI.drumscript];if(!s.recK)s.recK=new Float32Array(N);
+  for(const i of WD.landIdx)s.recK[i]=Math.min(1,Math.max(wr[i],0.75*kh[i]+0.15*gr[i],0.4*dsc[i]))}
 function rideOf(o){const e=o&&o.core>=0?S.eths[o.core]:null;return e&&e.ride?e.ride:0}
 
 // ---------- coalitions: prestige, snowballs, collapse and dominoes ----------

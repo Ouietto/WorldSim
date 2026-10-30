@@ -133,7 +133,7 @@ function militaryPass(o){
   if(o.merc>0.01){o.treas-=0.02*o.merc;
     if(o.treas<-0.5&&o.merc>0.3){o.shock+=0.3;o.merc=0;if(o.cells>=15)chron('war',`Unpaid, the mercenaries of the ${o.full} turn on their employers.`,c,[R_(o)],'The treasury could no longer pay the soldiers it had hired.')}}
   // granaries: literate states store grain in good years
-  {const keep=Math.max(s.admin[c],s.tk[TI.khipu][c],s.ritW?0.7*s.ritW[c]:0);if(keep>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*keep*(1-(o.gran||0)))}
+  {const keep=Math.max(s.recK[c],s.ritW?0.7*s.ritW[c]:0);if(keep>0.3&&o.press<0.95)o.gran=Math.min(1,(o.gran||0)+0.02*keep*(1-(o.gran||0)))}
   if(o.gran>0.05)o.treas-=0.004*o.gran;
   if(o.granUse){o.gran=Math.max(0,o.gran-o.granUse/(0.04*o.pop+1));o.granUse=0}
   // paying for peace: a strong horde raiding a rich state
@@ -166,9 +166,10 @@ function commNeed(k,o,c){const s=S,w=WD,T=s.tk;
 function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
   const marks=Math.min(1.3,v('writing')+0.3*v('alphabet'))*(1+0.3*v('paper')+0.3*v('printing'));
   const sound=Math.max(v('drums'),v('beacons'))+0.5*v('drumscript'),objects=v('khipu'),mem=v('griots');
-  const runners=v('relays')*(1+0.5*s.roads[c]+0.4*Math.min(1,s.horse[c]));
+  // mounted couriers need riders, not just horses: a people that owns horses but has not learned to ride them sends runners
+  const rA=rideAdm(o,c),runners=v('relays')*(1+0.5*s.roads[c]+0.5*rA);
   const rec=clamp(0.75*marks+0.55*objects+0.1*mem+0.3*v('drumscript'),0,1.5);
-  const spd=clamp(0.25*marks+0.45*runners+0.35*sound+0.15*Math.min(1,s.horse[c])+0.15*(s.courX?s.courX[c]:0),0,1.5);
+  const spd=clamp(0.25*marks+0.45*runners+0.35*sound+0.3*rA+0.15*(s.courX?s.courX[c]:0),0,1.5);
   const memo=clamp(0.5*marks+0.6*mem+0.25*objects,0,1.3);
   o.info={rec,spd,memo};o.leg=0.75+0.35*Math.min(1,rec);return o.info}
 
@@ -179,7 +180,7 @@ function infoCap(o){const s=S,T=s.tk,c=o.capital,v=k=>T[TI[k]][c];
 // Empire is not a technique: it is a state that has gathered enough of these to rule other cities directly.
 function monopolies(o){const s=S,c=o.capital,info=o.info||infoCap(o),rec=Math.min(1,info.rec);
   // savanna kingdoms held by horsemen rather than scribes (Goody 1971)
-  const force=clamp(0.25*(o.levy||0)*Math.min(1,(o.ext??0.45)/0.45)+0.35*rec+0.35*Math.max(s.admin[c],0.7*Math.min(1,s.horse[c]))+0.3*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
+  const force=clamp(0.35*(o.levy||0)*Math.min(1,(o.ext??0.45)/0.45)+0.5*rideAdm(o,c)+0.4*(o.treas>0?Math.min(1,o.treas+0.5):0.2)*(o.prep??0.5)*2,0,1);
   const econ=clamp(0.6*Math.min(1,s.car[c])+1.5*(o.cityPop||0)/(o.pop+1)+0.3*s.coin[c]+0.4*Math.min(1,o.gran||0),0,1);
   const R=o.rel>=0?s.rels[o.rel]:null,sacred=Math.max(R&&R.holy!=null&&s.pol[R.holy]===o.id?1:0,s.ritW?clamp((s.ritW[c]-0.3)/0.5,0,1):0);   // the god's house, or an old sanctuary at the capital
   o.mono={force,rec,econ,sacred};o.hold=clamp((force+rec+econ+0.8*sacred)/3.2+0.15*Math.min(1,info.spd),0,1);return o.hold}

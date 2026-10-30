@@ -774,7 +774,7 @@ function distBFS(){
     for(const i of bk){pending--;if(s.dist[i]!==d)continue;const p=s.pol[i],horde=pols[p].kind==='horde';
       for(let k=0;k<4;k++){const j=w.nb[i*4+k];if(j<0||s.pol[j]!==p)continue;
         // built roads cut the climb most: stairways and switchbacks over the passes (the Inca roads, Hyslop 1984)
-        let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1);if(k<2)c*=w.cosLat[i];if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
+        let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(k<2)c*=w.cosLat[i];if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
         const nd=d+Math.max(1,Math.min(30,Math.round(c)));if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
       if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
     }
@@ -1029,11 +1029,12 @@ function culture(o){
 /* ---------- states, each year ---------- */
 function politics(){for(const _ of politicsG());}
 function* politicsG(){
-  const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nb=w.nb,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
+  if(!S.recK)recPass();
+  const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nb=w.nb,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
   const sampleNow=y%10===0;
   for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p],pp=pop[i];
-    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_admin[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom++;if(w_coast[i])o.coastN++;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN++;if(s_fort[i]>0.5)o.fortN++;
     o.cx+=w_cosLon[i];o.cy+=w_sinLon[i];o.yy+=w_cyA[i];if(pp>o.mp){o.mp=pp;o.mc=i}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]>200)o.front.push(i);
@@ -1064,7 +1065,7 @@ function* politicsG(){
     if(o.pop>o.maxPop)o.maxPop=o.pop;
     o.lx=Math.atan2(o.cy,o.cx);o.ly=o.yy/o.cells;
     const c=o.capital;
-    o.spc=clamp(0.9*Math.log10(Math.max(o.pop,1e3))-2.7+0.6*Math.log10(o.cells+1)+(o.tier==='Empire'||o.tier==='Khaganate'?1.6:o.tier==='Kingdom'||o.tier==='Khanate'?0.8:0)+s_admin[c]+0.8*s_law[c]+0.6*s_coin[c]+0.5*s_paper[c]+0.5*s_roads[c],0,10);
+    o.spc=clamp(0.9*Math.log10(Math.max(o.pop,1e3))-2.7+0.6*Math.log10(o.cells+1)+(o.tier==='Empire'||o.tier==='Khaganate'?1.6:o.tier==='Kingdom'||o.tier==='Khanate'?0.8:0)+s_recK[c]+0.8*s_law[c]+0.6*s_coin[c]+0.5*s_paper[c]+0.5*s_roads[c],0,10);
   }
   s.alive=next;
   // count island cells per state (needs this year's landmass of capital)
@@ -1086,14 +1087,14 @@ function* politicsG(){
     // reach: how fast orders travel and how much the centre can see (drums, beacons, relays, records, scripts); without any of it
     // a ruler cannot delegate far (Spencer 2010)
     if(o.kind==='state'){infoCap(o);monopolies(o)}
-    o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*Math.max(s_admin[c],0.6*Math.min(1,s_horse[c]+0.5*s_camel[c]))+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4:1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c])*(o.kind==='state'?0.55+0.45*Math.min(1.2,o.info.spd+0.5*o.info.rec):1);
+    o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s_recK[c]+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4*(1+0.8*rideAdm(o,c)):1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c])*(o.kind==='state'?0.55+0.45*Math.min(1.2,0.2+o.info.spd):1);
     const Et=etOf(o);
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq)),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
     statecraft(o,c,y);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
-    const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_admin[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
+    const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
@@ -1192,7 +1193,7 @@ function* politicsG(){
       sv+=fr?asR*sv*(1-sv):-decay*sv;sv+=0.004*infl*(o.ruler.char-0.5);if(ri>=0&&ri===o.rel)sv+=0.0015*(0.5+rels[ri].cent);
       s_s[i]=clamp(sv,0.02,1);
       // provinces settle into a realm only as fast as the centre can hold them (monopolies, records, speed)
-      if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_admin[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
+      if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
       if(cand>=0&&s_taken[i]!==y){const q=pol[cand];
         if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1){if(r()<P.raid*0.02*o.aggrM*o.gate){s.raidC[cand]=y;const t0=pop[cand]*0.03;pop[cand]-=t0;o.loot+=t0*0.5;displace(cand,0.02,o.id)}}
         else{const rate=q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i]));if(r()<rate*o.aggrM*o.gate)attack(o,i,cand,candSea)}}
@@ -1214,7 +1215,7 @@ function* politicsG(){
           // without bronze or canals (Flannery & Marcus 2012)
           const temple=clamp((s.ritW[i]-0.4)/0.4,0,1);
           const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rv[i])+0.5*temple,cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
-          if(r()<cg*P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_admin[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i]+0.6*temple)*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
+          if(r()<cg*P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_recK[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i]+0.6*temple)*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
             const id=newPolity(i,null);
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
         else if(past>0.3&&dens>0.3&&(w_nomad[i]||w_desert[i])&&(fr||steppeFront(i,ei))){
@@ -1372,7 +1373,7 @@ function* stepG(){
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
   if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){genCache();ritualPass();deepPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){genCache();ritualPass();deepPass();recPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
