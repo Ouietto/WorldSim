@@ -2773,7 +2773,10 @@ function cropsInit(){
     // is barely broken by hoes. Drier steppe grows sparse bunchgrass with bare ground between, easy to dig; wetter land grows
     // woods, which are cleared by axe and fire instead. Floodplains are open ground, stripped and silted by floods.
     w.turf=new Float32Array(N);w.soilDig=new Float32Array(N).fill(1);
-    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if(b===5||b===6)w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*w.rv[i]))}
+    // monsoon grasslands with dry winters (the loess of North China) grow bunchgrass, not a matted sod: the hoe farmers of
+    // Yangshao worked them from the start (Liu & Chen 2012)
+    const dryWinter=i=>{const k=w.kgGrid?w.kgGrid[i]:0;return k===15||k===16||k===26||k===27};
+    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if(b===5||b===6)w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*w.rv[i]))*(dryWinter(i)?0.25:1)}
     for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;w.soilDig[i]=so.dig;if(w.turf[i]>0.3)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
       // heavy wet clays belong to forest and savanna-clay soils, not to volcanic highlands, river silt or mountain soils
       if(!['forest','podzol','clay'].includes(so.k))w.heavy[i]=0}}
