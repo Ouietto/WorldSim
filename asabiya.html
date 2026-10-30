@@ -2488,7 +2488,7 @@ function* stepG(){
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
   if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){genCache();ritualPass();deepPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(s.year%10===0){genCache();ritualPass();deepPass();tributePass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
@@ -3659,11 +3659,14 @@ function holySite(cells){const s=S;let best=null;for(const c of cells){const k=s
 
 // every ten years: a much stronger neighbour can make a small realm pay tribute without a war, by gifts and threats; tribute
 // empires such as the Aztec Triple Alliance ruled mostly this way (Hassig 1985; Smith 2012)
-function tributePass(){const s=S,r=s.r;
-  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||o.over||(o.hold??0)<0.35||o.cells<3)continue;const po=power(o),Rn=o.ruler||{aggr:0.5};
-    for(const [q] of o.nb){const d=s.pols[q];if(!d||!d.alive||d.kind!=='state'||d.over||d.league!=null||o.enemies.has(q)||o.allies.includes(q)||d.cells*3>o.cells)continue;
-      if(power(d)*4>po)continue;if(r()<0.03*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)){d.over=id;o.tribs++;
-        if(d.cells>=3||o.cells>=20)chron('diplomacy',`Without a battle, the ${d.full} sends gifts and submits to the ${o.full}, paying tribute to keep its own ruler.`,d.capital,[R_(d),R_(o)],'A far stronger neighbour asked for tribute; refusing would have meant war.')}}}}
+function tributePass(){const s=S,r=s.r,w=WD;
+  // where conquest is costly (mountains, forest) a far stronger neighbour takes tribute instead of the land: hegemony, the
+  // usual form of rule in the highlands of Mesoamerica and the Andes before the Inca (Hassig 1985; Smith 2012)
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||o.over||(o.hold??0)<0.35)continue;const po=power(o),Rn=o.ruler||{aggr:0.5};
+    for(const [q] of o.nb){const d=s.pols[q];if(!d||!d.alive||d.kind!=='state'||d.over||d.league!=null||o.enemies.has(q)||o.allies.includes(q)||d.cells>o.cells)continue;
+      const c=d.capital,hard=clamp(1.5*w.rough[c]+0.8*s.forest[c]+(w.tcost[c]>=5?0.3:0),0,1);if(hard<0.3)continue;
+      if(power(d)*3>po)continue;if(r()<0.04*hard*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)){d.over=id;o.tribs++;
+        if(d.cells>=3||o.cells>=10)chron('diplomacy',`Without a battle, the ${d.full} sends gifts and submits to the ${o.full}, paying tribute to keep its own ruler.`,d.capital,[R_(d),R_(o)],'A far stronger neighbour asked for tribute; across these mountains and forests, taking the land itself would have cost too much.')}}}}
 
 </script>
 <script>
