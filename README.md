@@ -1,4 +1,4 @@
-# Asabiya — history engine (v0.7.1: the ancient Earth, emergent farming and animals)
+# Asabiya — history engine (v0.7.2: the ancient Earth, emergent farming and animals)
 
 > **This branch** rebuilds on the v0.5.2 model and adds:
 > - **Measured Earth climate:** NOAA-hosted GPCC/GHCN-CAMS 1981–2010 normals (`src/earth_climate.b64`, see `src/CLIMATE.md`).
@@ -21,6 +21,13 @@
 > - **Migrant pockets:** migrations leave small settlements along their route and scatter into several when they break up. **Seasonal pastures:** herders who can move between uplands and lowlands, or desert edge and wetter grass, feed more animals.
 > - **Soldier colonies and hereditary lords** (`src/society.js`): states settle soldiers on new frontiers, which holds and pushes them; land held for service becomes land held by birth, which protects provinces but keeps revenue; rulers try to take it back. **Lords** map layer.
 > - **City-states, leagues and daughter colonies:** walled cities stand as small states, band together in leagues with their kin, and crowded coastal cities found daughter cities overseas.
+>
+> v0.7.2 adds:
+> - **Rulers choose how hard to tax:** appetite, war and debt set the aim; records, officials and the labour levy cap it. Heavy taxes bring hunger, flight and revolt; light ones loyalty. State pages show it.
+> - **Storehouses and the labour levy** count toward holding power; temple and cord-keeping states build granaries.
+> - **Roads from organised labour**, not iron and coin; built roads cut mountain travel most.
+> - **Chiefdoms make war:** single-valley chiefs fight their neighbours, which is how the patchworks grow.
+> - Ensemble check (32 histories): 58% of historical targets.
 >
 > v0.7.1 adds:
 > - **The green Sahara and Arabia** and their drying (6500–1800 BCE), pushing herders onto the Nile, the Euphrates and the Sahel.

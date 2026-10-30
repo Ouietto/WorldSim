@@ -1,1 +1,1 @@
-{"seeds": "1-32", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Run 52: run 50 plus cord records for small states (32 seeds)."}
+{"seeds": "1-32", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Change this file on a claude/ branch to start an ensemble run on GitHub Actions. Results land on the ensemble-results branch. Back to run 56: hegemony pass off."}
