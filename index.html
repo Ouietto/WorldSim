@@ -3709,14 +3709,15 @@ const SW=W*2,SH=H*2,SN=SW*SH,subCv=document.createElement('canvas');subCv.width=
 const subCtx=subCv.getContext('2d'),subImg=subCtx.createImageData(SW,SH);
 let SUB=null;
 function prepSub(){
-  const w=WD,e=w.eHi,nb=new Int32Array(SN*9).fill(-1),wt=new Float32Array(SN*9),land=new Uint8Array(SN),HS=SC/2;
+  // the land mask follows the history's own sea level, so exposed shelves (Doggerland, Sundaland, Beringia) take map colours
+  const w=WD,e=w.eHi,nb=new Int32Array(SN*9).fill(-1),wt=new Float32Array(SN*9),land=new Uint8Array(SN),HS=SC/2,sl=(S&&S.seaLvl!=null?S.seaLvl:w.seaLvl)||0;
   const E=(x,y)=>e[clamp(Math.round(y),0,HH-1)*HW+((Math.round(x)%HW)+HW)%HW];
-  for(let sy=0;sy<SH;sy++)for(let sx=0;sx<SW;sx++){const q=sy*SW+sx;let nl=0;for(let dy=0;dy<HS;dy++)for(let dx=0;dx<HS;dx++)if(e[(sy*HS+dy)*HW+sx*HS+dx]>0)nl++;land[q]=nl*2>=HS*HS?1:0;if(!land[q])continue;
+  for(let sy=0;sy<SH;sy++)for(let sx=0;sx<SW;sx++){const q=sy*SW+sx;let nl=0;for(let dy=0;dy<HS;dy++)for(let dx=0;dx<HS;dx++)if(e[(sy*HS+dy)*HW+sx*HS+dx]>sl)nl++;land[q]=nl*2>=HS*HS?1:0;if(!land[q])continue;
     const cx=sx>>1,cy=sy>>1,px=(sx+0.5)*HS,py=(sy+0.5)*HS,es=E(px,py);let k=0;
     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++,k++){const yy=cy+dy;if(yy<0||yy>=H)continue;const xx=(cx+dx+W)%W,j=yy*W+xx;if(!w.land[j])continue;
       const ux=(sx+0.5)/2-(cx+dx+0.5),uy=(sy+0.5)/2-(cy+dy+0.5),g=Math.exp(-(ux*ux+uy*uy)/0.55);
       const qx=(cx+dx+0.5)*SC,qy=(cy+dy+0.5)*SC,ec=E(qx,qy);let mx=-1e9,wet=0;
-      for(const t of [0.25,0.5,0.75]){const v=E(px+(qx-px)*t,py+(qy-py)*t);if(v>mx)mx=v;if(v<=0)wet=1}
+      for(const t of [0.25,0.5,0.75]){const v=E(px+(qx-px)*t,py+(qy-py)*t);if(v>mx)mx=v;if(v<=sl)wet=1}
       const ridge=Math.max(0,mx-Math.max(es,ec));nb[q*9+k]=j;wt[q*9+k]=g*Math.exp(-ridge/350)*(wet?0.25:1)}}
   SUB={nb,wt,land,lab:new Int32Array(SN),rep:new Int32Array(SN)};
 }
@@ -4505,7 +4506,7 @@ function frame(t){
     if(ui.ready&&ui.running){const el=$('toast');el.innerHTML=`<span class="ty">${fy(sp.y)}</span> ${linkify(sp.txt,sp.refs)}`;el.hidden=false;ui.toastT=t+5000;ui.ringCell=sp.cell;ui.ringT=performance.now()+4000;if(ui.follow&&sp.cell>=0)centerOn(sp.cell)}}
   if(ui.toastT&&t>ui.toastT){$('toast').hidden=true;ui.toastT=0}
   if(ui.ringT&&performance.now()<ui.ringT)ui.dirty=true;
-  if(S&&baseCv&&S.seaVer!==ui.seaVer){ui.seaVer=S.seaVer;paintBase();ui.dirty=true}
+  if(S&&baseCv&&S.seaVer!==ui.seaVer){ui.seaVer=S.seaVer;paintBase();SUB=null;ui.dirty=true}
   if(ui.dirty&&S&&baseCv&&t-ui.lastRender>110){ui.lastRender=t;ui.dirty=false;buildComp();drawMap();updateTop()}
   if(S&&t-ui.lastSide>700){ui.lastSide=t;
     if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='tech')renderTech();else if(ui.pane==='clim')renderClimate()}
