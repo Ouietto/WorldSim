@@ -233,5 +233,5 @@ function tributePass(){const s=S,r=s.r,w=WD;
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||o.over||(o.hold??0)<0.35)continue;const po=power(o),Rn=o.ruler||{aggr:0.5};
     for(const [q] of o.nb){const d=s.pols[q];if(!d||!d.alive||d.kind!=='state'||d.over||d.league!=null||o.enemies.has(q)||o.allies.includes(q)||d.cells>o.cells)continue;
       const c=d.capital,hard=clamp(1.5*w.rough[c]+0.8*s.forest[c]+(w.tcost[c]>=5?0.3:0),0,1);if(hard<0.3)continue;
-      if(power(d)*3>po)continue;if(r()<0.04*hard*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)){d.over=id;o.tribs++;
+      if(power(d)*3>po||tribDist(d,o)>0.8*(o.h||6))continue;if(r()<0.04*hard*(0.5+Rn.aggr)*Math.min(1.5,(o.ext??0.45)/0.45)*clamp(2*(o.prest||0),0,1)){d.over=id;o.tribs++;
         if(d.cells>=3||o.cells>=10)chron('diplomacy',`Without a battle, the ${d.full} sends gifts and submits to the ${o.full}, paying tribute to keep its own ruler.`,d.capital,[R_(d),R_(o)],'A far stronger neighbour asked for tribute; across these mountains and forests, taking the land itself would have cost too much.')}}}}
