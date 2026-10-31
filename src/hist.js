@@ -1376,7 +1376,7 @@ function* stepG(){
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   yield* politicsG();
-  if(s.year%5===1)rallyPass();if(s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(s.year%2===0){frontierPass();transitionRaids()}
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}

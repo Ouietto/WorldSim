@@ -2544,7 +2544,7 @@ function* stepG(){
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   yield* politicsG();
-  if(s.year%5===1)rallyPass();if(s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(s.year%2===0){frontierPass();transitionRaids()}
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
@@ -3768,6 +3768,15 @@ function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass()
       // the frontier falls back: a recently taken, unwalled, unreconciled province is abandoned to the raiders
       if(s.integ[i]<0.12&&s.fort[i]<0.3&&i!==o.capital&&s.city[i]<0&&s.year-(s.taken[i]||-1e9)<300&&r()<0.5){s.pol[i]=0;
         if(o.cells>=20&&r()<0.05)chron('war',`Raiders from the ${s.eths[s.eth[best]]?s.eths[s.eth[best]].name:'hill tribes'} drive the settlers of the ${o.full} from a frontier province.`,i,[R_(o)])}}}}
+// the dangerous years: villages half-way to farming are tied to their fields and their stored grain but do not yet have the
+// farmers' numbers, and mobile neighbours raid them. Farming spreads in fits and starts, holding where settlers are many,
+// protected or lucky and collapsing elsewhere (the end of the LBK, Talheim; Britain after 3300 BCE; Shennan et al. 2013)
+function transitionRaids(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass();const R=s.rally;
+  for(const i of L){if(s.pol[i]||s.pop[i]<1)continue;const f=s.farm[i];if(f<0.2||f>0.8)continue;let bu=0;
+    for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j]||s.pol[j]||s.pop[j]<1||s.farm[j]>=0.2||s.eth[j]<0||s.eth[j]===s.eth[i])continue;
+      const E=s.eths[s.eth[j]],ride=E&&E.ride?E.ride:0,u=Math.pow(R[j]+1,0.75)*s.s[j]*milAt(j)*(1+1.5*ride)*(s.evP[j]<0.9?1.6:1);if(u>bu)bu=u}
+    if(!bu)continue;const Ud=Math.pow(2*(R[i]||s.pop[i])+1,0.75)*s.s[i]*milAt(i)*(1+2.5*s.fort[i])*(1+1.6*w.rough[i]),pw=clamp(bu/(bu+Ud),0,0.8);
+    if(r()<0.05*pw){s.pop[i]*=0.92;s.farm[i]=Math.max(0,f-0.08);s.raidC[i]=s.year}}}
 // can farmers settle among herders and foragers? only where they are protected, the land is nearly empty, or its people have
 // just been broken by drought or plague; otherwise the settlers are driven off (Anthony 2007 on the steppe; Shennan 2018)
 function settleOK(i,j){const s=S;const pj=s.pop[j];if(pj<1||s.farm[i]<0.5||s.farm[j]>=0.3||s.eth[j]===s.eth[i])return 1;
