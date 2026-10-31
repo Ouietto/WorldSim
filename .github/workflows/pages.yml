@@ -28,6 +28,8 @@ jobs:
         run: node src/climate.test.js
       - name: Build static site
         run: python3 src/build.py --output-dir _site
+      - name: Add test builds
+        run: if [ -d try ]; then cp -r try _site/try; fi
       - name: Upload site
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
