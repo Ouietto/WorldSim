@@ -462,6 +462,8 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
           // farm still passes the knowledge along
+          // farming is its crops: without a domesticated crop at hand there is only tending wild stands (see originsPass)
+          if(f===0&&!(s.pkAv&&s.pkAv[i]))k*=0.05;
           if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(s.Kf[i]/(1+1.2*(s.wildG?s.wildG[i]:0))+1);
             // gatherers of the wild ancestors are halfway to farming already
             
