@@ -415,6 +415,13 @@ function genWorld(o){
   // with a sizeable river about where the model was calibrated
   const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   w.down=down;w.acc=acc;w.rv=rv;
+  // floodplain: the share of a province's fine-grid land lying within 30 m of its lowest ground. A river farms only its floodplain:
+  // the Nile in Upper Egypt waters a strip a few miles wide (about a quarter of the province), the Delta and Sumer all of it.
+  // rvF = river size × floodplain share is what flood farming, silt and irrigation use; rv stays for boats, fish and maps
+  {const ffp=new Float32Array(N),rvF=new Float32Array(N),sl0=o.earth?SEA_LOW:0;for(const i of landList){const cx=i%W,cy=(i/W)|0;let mn=1e9,n=0,k=0;
+    for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const v=eHi[(cy*SC+dy)*HW+cx*SC+dx];if(v>sl0&&v<mn)mn=v}
+    for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const v=eHi[(cy*SC+dy)*HW+cx*SC+dx];if(v<=sl0)continue;n++;if(v<=mn+30)k++}
+    ffp[i]=n?k/n:1;rvF[i]=rv[i]*ffp[i]}w.ffp=ffp;w.rvF=rvF}
   // suitability
   const sF=new Float32Array(N),sH=new Float32Array(N),nomad=new Uint8Array(N),biome=new Uint8Array(N);
   for(const i of landList){
@@ -427,7 +434,7 @@ function genWorld(o){
     const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
     // flood farming needs a flood that comes at the right time: rivers of frozen-winter lands rise with the snowmelt in late
     // spring, drowning the crop, and leave salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
-    const irr=rv[i]*clamp((tw-14)/6,0,1)*clamp((t-amp[i]/2+8)/8,0.3,1);
+    const irr=w.rvF[i]*clamp((tw-14)/6,0,1)*clamp((t-amp[i]/2+8)/8,0.3,1);
     const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
     w.leach=w.leach||new Float32Array(N);w.leach[i]=leach;
     w.trop=w.trop||new Float32Array(N);w.trop[i]=elev[i]<1200?clamp((t-21)/3,0,1)*clamp((p-900)/600,0,1):0;

@@ -306,7 +306,7 @@ function computeK(){
     const Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
-    const irr=s_irrig[i]*rv;
+    const irr=s_irrig[i]*w.rvF[i];
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const hv=w_heavy[i],lc=w_leach[i];
     let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*tTer[i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*t26[i]*Math.max(lc,s_forest[i])+0.15*t28[i]*w_coast[i])*(1+rv*(0.25+2.2*s_irrig[i]));
@@ -332,7 +332,7 @@ function growth(){
     if(p<0.5){p=0;s_eth[i]=-1;s_eth2[i]=-1;s_rel[i]=-1}
     s_pop[i]=p;
     const pr=p/K,fm=s_farm[i];
-    if(fm>0.3&&w_sF[i]>0.1){const silt=clamp(w_rv[i]*1.5,0,0.8),lc=w_leach[i];
+    if(fm>0.3&&w_sF[i]>0.1){const silt=clamp(w.rvF[i]*1.5,0,0.8),lc=w_leach[i];
       if(pr>0.7)s_fert[i]=Math.max(0.3,s_fert[i]-dg*0.0012*(pr-0.7)*fm*(1+0.6*lc)*w_soilDrain[i]*s_cDrain[i]*(1-0.45*s_crops[i])*(1-0.5*s_manure[i])*(1-silt));
       s_fert[i]+=0.0025*(1-s_fert[i])*(1+0.6*s_herd[i]*w_sH[i]+(pr<0.5?1+lc:0));
       if(s_forest[i]<0.15&&w_rough[i]>0.3)s_fert[i]=Math.max(0.3,s_fert[i]-0.0003*w_soilErode[i]*w_rough[i]*fm);
@@ -1215,7 +1215,7 @@ function* politicsG(){
           // a great sanctuary organises labour and tribute: the temple towns of the Olmec, Chavin and Caral grew into states
           // without bronze or canals (Flannery & Marcus 2012)
           const temple=clamp((s.ritW[i]-0.4)/0.4,0,1);
-          const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rv[i])+0.5*temple,cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
+          const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rvF[i])+0.5*temple,cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
           if(r()<cg*P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_recK[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i]+0.6*temple)*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
             const id=newPolity(i,null);
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}

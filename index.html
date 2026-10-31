@@ -705,6 +705,13 @@ function genWorld(o){
   // with a sizeable river about where the model was calibrated
   const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   w.down=down;w.acc=acc;w.rv=rv;
+  // floodplain: the share of a province's fine-grid land lying within 30 m of its lowest ground. A river farms only its floodplain:
+  // the Nile in Upper Egypt waters a strip a few miles wide (about a quarter of the province), the Delta and Sumer all of it.
+  // rvF = river size × floodplain share is what flood farming, silt and irrigation use; rv stays for boats, fish and maps
+  {const ffp=new Float32Array(N),rvF=new Float32Array(N),sl0=o.earth?SEA_LOW:0;for(const i of landList){const cx=i%W,cy=(i/W)|0;let mn=1e9,n=0,k=0;
+    for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const v=eHi[(cy*SC+dy)*HW+cx*SC+dx];if(v>sl0&&v<mn)mn=v}
+    for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const v=eHi[(cy*SC+dy)*HW+cx*SC+dx];if(v<=sl0)continue;n++;if(v<=mn+30)k++}
+    ffp[i]=n?k/n:1;rvF[i]=rv[i]*ffp[i]}w.ffp=ffp;w.rvF=rvF}
   // suitability
   const sF=new Float32Array(N),sH=new Float32Array(N),nomad=new Uint8Array(N),biome=new Uint8Array(N);
   for(const i of landList){
@@ -717,7 +724,7 @@ function genWorld(o){
     const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
     // flood farming needs a flood that comes at the right time: rivers of frozen-winter lands rise with the snowmelt in late
     // spring, drowning the crop, and leave salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
-    const irr=rv[i]*clamp((tw-14)/6,0,1)*clamp((t-amp[i]/2+8)/8,0.3,1);
+    const irr=w.rvF[i]*clamp((tw-14)/6,0,1)*clamp((t-amp[i]/2+8)/8,0.3,1);
     const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
     w.leach=w.leach||new Float32Array(N);w.leach[i]=leach;
     w.trop=w.trop||new Float32Array(N);w.trop[i]=elev[i]<1200?clamp((t-21)/3,0,1)*clamp((p-900)/600,0,1):0;
@@ -1465,7 +1472,7 @@ function computeK(){
     const Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
-    const irr=s_irrig[i]*rv;
+    const irr=s_irrig[i]*w.rvF[i];
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const hv=w_heavy[i],lc=w_leach[i];
     let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*tTer[i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*t26[i]*Math.max(lc,s_forest[i])+0.15*t28[i]*w_coast[i])*(1+rv*(0.25+2.2*s_irrig[i]));
@@ -1491,7 +1498,7 @@ function growth(){
     if(p<0.5){p=0;s_eth[i]=-1;s_eth2[i]=-1;s_rel[i]=-1}
     s_pop[i]=p;
     const pr=p/K,fm=s_farm[i];
-    if(fm>0.3&&w_sF[i]>0.1){const silt=clamp(w_rv[i]*1.5,0,0.8),lc=w_leach[i];
+    if(fm>0.3&&w_sF[i]>0.1){const silt=clamp(w.rvF[i]*1.5,0,0.8),lc=w_leach[i];
       if(pr>0.7)s_fert[i]=Math.max(0.3,s_fert[i]-dg*0.0012*(pr-0.7)*fm*(1+0.6*lc)*w_soilDrain[i]*s_cDrain[i]*(1-0.45*s_crops[i])*(1-0.5*s_manure[i])*(1-silt));
       s_fert[i]+=0.0025*(1-s_fert[i])*(1+0.6*s_herd[i]*w_sH[i]+(pr<0.5?1+lc:0));
       if(s_forest[i]<0.15&&w_rough[i]>0.3)s_fert[i]=Math.max(0.3,s_fert[i]-0.0003*w_soilErode[i]*w_rough[i]*fm);
@@ -2374,7 +2381,7 @@ function* politicsG(){
           // a great sanctuary organises labour and tribute: the temple towns of the Olmec, Chavin and Caral grew into states
           // without bronze or canals (Flannery & Marcus 2012)
           const temple=clamp((s.ritW[i]-0.4)/0.4,0,1);
-          const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rv[i])+0.5*temple,cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
+          const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rvF[i])+0.5*temple,cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
           if(r()<cg*P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_recK[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i]+0.6*temple)*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
             const id=newPolity(i,null);
             for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
@@ -2805,8 +2812,8 @@ const SOILS=[
 ];
 const SOI=Object.fromEntries(SOILS.map((s,k)=>[s.k,k]));
 function soilFor(w,i){const T=w.T[i],P=w.Pr[i],la=Math.abs(w.lat[i]*180/Math.PI);
-  if(T<-6)return SOI.tundra;if(P<250&&w.rv[i]<0.35)return SOI.desert;
-  if(w.rv[i]>0.4&&w.elev[i]<1500)return SOI.alluvium;
+  if(T<-6)return SOI.tundra;if(P<250&&w.rvF[i]<0.35)return SOI.desert;
+  if(w.rvF[i]>0.3&&w.elev[i]<1500)return SOI.alluvium;
   if(w.elev[i]>1200&&T>6&&w.rough[i]>0.2&&la<35)return SOI.volcanic;
   if(w.rough[i]>0.5)return SOI.mountain;
   if(w.leach[i]>0.3)return SOI.tropical;
@@ -2816,7 +2823,7 @@ function soilFor(w,i){const T=w.T[i],P=w.Pr[i],la=Math.abs(w.lat[i]*180/Math.PI)
   return SOI.forest}
 // farm and pasture suitability for a climate (same rules as world generation), so they can follow climate change
 function suitFor(w,i,t,p){
-  const amp=w.amp[i],rv=w.rv[i],tw=t+amp/2,half=amp/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
+  const amp=w.amp[i],rv=w.rvF[i],tw=t+amp/2,half=amp/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
   const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
   const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
   const irr=rv*clamp((tw-14)/6,0,1)*clamp((t-amp/2+8)/8,0.3,1),el=w.elev[i];
@@ -2850,7 +2857,7 @@ function cropsInit(){
 }
 // a farming hearth: its package is the historical one on Earth, or whichever fits best elsewhere
 function hearthPackage(h,c){const w=WD;if(h.pk!=null)return CI[h.pk];
-  let best=0,bv=-1;CROPS.forEach((C,k)=>{if(C.introduced)return;const v=C.fit(w.T[c],w.Pr[c],w.rv[c],w.elev[c])*C.y;if(v>bv){bv=v;best=k}});return best}
+  let best=0,bv=-1;CROPS.forEach((C,k)=>{if(C.introduced)return;const v=C.fit(w.T[c],w.Pr[c],w.rvF[c],w.elev[c])*C.y;if(v>bv){bv=v;best=k}});return best}
 // the South American hearth also carries cassava, domesticated in the southwest Amazon
 // Crops are bred for the day length and season of their homeland; moving them far north or south takes centuries of selection.
 // Each crop's adapted band of latitude starts around its hearth and widens only where farmers grow it at the edge,
@@ -2870,7 +2877,7 @@ function cropPass(quiet){
     for(let d=0;d<4;d++){const j=nb[i*4+d];if(j<0||pop[j]<1)continue;if((pkAv[j]|g)!==pkAv[j]&&r()<0.12)pkAv[j]|=g;else if((pkAv[j]|c)!==pkAv[j]&&r()<0.012)pkAv[j]|=c}
     if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}}
   for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
-    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=w.rv[i],el=w.elev[i];
+    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=w.rvF[i],el=w.elev[i];
     const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
@@ -2967,12 +2974,12 @@ function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.yea
     // farmers whose borrowed crops do poorly here take up the local wild plants too (secondary domestication: millet beside
     // borrowed rice, sorghum beside wheat that fails in the summer rains)
     if(s.farm[i]>0.5){s.sed[i]=1;if(ri<0||s.origins[WILD[ri].k])continue;const R=WILD[ri],C=CROPS[CI[R.pk]];
-      const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
+      const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
       let cv=s.cultv[i];cv=clamp(cv+0.05*pr*(1-cv)-0.01*(1-pr)*cv,0,1);s.cultv[i]=cv;let dm=s.domst[i];
       if(cv>0.15)dm=Math.min(1,dm+15*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
     const rich=clamp((s.Kf[i]/w.area[i]-0.1)/0.25,0,1);
     // wild stands: big-seeded grasses store for years; roots and fruit keep poorly and invite less settling
-    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
+    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
     s.wildG[i]=grain;
     const cool=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0,nuts=w.forest0[i]*clamp((w.T[i]-4)/6,0,1)*clamp((24-w.T[i])/6,0,1);
     const stor=Math.max(grain,0.8*cool,0.45*nuts);

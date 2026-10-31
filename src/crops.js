@@ -35,8 +35,8 @@ const SOILS=[
 ];
 const SOI=Object.fromEntries(SOILS.map((s,k)=>[s.k,k]));
 function soilFor(w,i){const T=w.T[i],P=w.Pr[i],la=Math.abs(w.lat[i]*180/Math.PI);
-  if(T<-6)return SOI.tundra;if(P<250&&w.rv[i]<0.35)return SOI.desert;
-  if(w.rv[i]>0.4&&w.elev[i]<1500)return SOI.alluvium;
+  if(T<-6)return SOI.tundra;if(P<250&&w.rvF[i]<0.35)return SOI.desert;
+  if(w.rvF[i]>0.3&&w.elev[i]<1500)return SOI.alluvium;
   if(w.elev[i]>1200&&T>6&&w.rough[i]>0.2&&la<35)return SOI.volcanic;
   if(w.rough[i]>0.5)return SOI.mountain;
   if(w.leach[i]>0.3)return SOI.tropical;
@@ -46,7 +46,7 @@ function soilFor(w,i){const T=w.T[i],P=w.Pr[i],la=Math.abs(w.lat[i]*180/Math.PI)
   return SOI.forest}
 // farm and pasture suitability for a climate (same rules as world generation), so they can follow climate change
 function suitFor(w,i,t,p){
-  const amp=w.amp[i],rv=w.rv[i],tw=t+amp/2,half=amp/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
+  const amp=w.amp[i],rv=w.rvF[i],tw=t+amp/2,half=amp/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
   const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
   const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
   const irr=rv*clamp((tw-14)/6,0,1)*clamp((t-amp/2+8)/8,0.3,1),el=w.elev[i];
@@ -80,7 +80,7 @@ function cropsInit(){
 }
 // a farming hearth: its package is the historical one on Earth, or whichever fits best elsewhere
 function hearthPackage(h,c){const w=WD;if(h.pk!=null)return CI[h.pk];
-  let best=0,bv=-1;CROPS.forEach((C,k)=>{if(C.introduced)return;const v=C.fit(w.T[c],w.Pr[c],w.rv[c],w.elev[c])*C.y;if(v>bv){bv=v;best=k}});return best}
+  let best=0,bv=-1;CROPS.forEach((C,k)=>{if(C.introduced)return;const v=C.fit(w.T[c],w.Pr[c],w.rvF[c],w.elev[c])*C.y;if(v>bv){bv=v;best=k}});return best}
 // the South American hearth also carries cassava, domesticated in the southwest Amazon
 // Crops are bred for the day length and season of their homeland; moving them far north or south takes centuries of selection.
 // Each crop's adapted band of latitude starts around its hearth and widens only where farmers grow it at the edge,
@@ -100,7 +100,7 @@ function cropPass(quiet){
     for(let d=0;d<4;d++){const j=nb[i*4+d];if(j<0||pop[j]<1)continue;if((pkAv[j]|g)!==pkAv[j]&&r()<0.12)pkAv[j]|=g;else if((pkAv[j]|c)!==pkAv[j]&&r()<0.012)pkAv[j]|=c}
     if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}}
   for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
-    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=w.rv[i],el=w.elev[i];
+    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=w.rvF[i],el=w.elev[i];
     const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
@@ -197,12 +197,12 @@ function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.yea
     // farmers whose borrowed crops do poorly here take up the local wild plants too (secondary domestication: millet beside
     // borrowed rice, sorghum beside wheat that fails in the summer rains)
     if(s.farm[i]>0.5){s.sed[i]=1;if(ri<0||s.origins[WILD[ri].k])continue;const R=WILD[ri],C=CROPS[CI[R.pk]];
-      const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
+      const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
       let cv=s.cultv[i];cv=clamp(cv+0.05*pr*(1-cv)-0.01*(1-pr)*cv,0,1);s.cultv[i]=cv;let dm=s.domst[i];
       if(cv>0.15)dm=Math.min(1,dm+15*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
     const rich=clamp((s.Kf[i]/w.area[i]-0.1)/0.25,0,1);
     // wild stands: big-seeded grasses store for years; roots and fruit keep poorly and invite less settling
-    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rv[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
+    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
     s.wildG[i]=grain;
     const cool=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0,nuts=w.forest0[i]*clamp((w.T[i]-4)/6,0,1)*clamp((24-w.T[i])/6,0,1);
     const stor=Math.max(grain,0.8*cool,0.45*nuts);

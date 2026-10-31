@@ -1,1 +1,1 @@
-{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 66: real rivers recalibrated (threshold 3600) and flood timing (frozen-winter rivers flood in the growing season)."}
+{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 67: run 66 plus floodplain share: flood farming, silt and irrigation scale with the share of a province that is floodplain."}
