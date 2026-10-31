@@ -411,7 +411,9 @@ function genWorld(o){
   const acc=new Float32Array(N);
   for(const i of landList)acc[i]=Math.max(0,Pr[i]-200)*area[i]*1e-4*(T[i]<-9?0.2:1);
   for(let k=order.length-1;k>=0;k--){const i=order[k],d=down[i];if(d>=0&&land[d])acc[d]+=acc[i]}
-  const rv=new Float32Array(N),th=2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
+  // real courses gather water into fewer, larger channels than the old routing; the threshold keeps the share of provinces
+  // with a sizeable river about where the model was calibrated
+  const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   w.down=down;w.acc=acc;w.rv=rv;
   // suitability
   const sF=new Float32Array(N),sH=new Float32Array(N),nomad=new Uint8Array(N),biome=new Uint8Array(N);
@@ -423,7 +425,9 @@ function genWorld(o){
     const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
     // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
     const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
-    const irr=rv[i]*clamp((tw-14)/6,0,1);
+    // flood farming needs a flood that comes at the right time: rivers of frozen-winter lands rise with the snowmelt in late
+    // spring, drowning the crop, and leave salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
+    const irr=rv[i]*clamp((tw-14)/6,0,1)*clamp((t-amp[i]/2+8)/8,0.3,1);
     const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
     w.leach=w.leach||new Float32Array(N);w.leach[i]=leach;
     w.trop=w.trop||new Float32Array(N);w.trop[i]=elev[i]<1200?clamp((t-21)/3,0,1)*clamp((p-900)/600,0,1):0;

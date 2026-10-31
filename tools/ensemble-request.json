@@ -1,1 +1,1 @@
-{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 65: run 64 plus real river courses (Natural Earth centrelines burned into the drainage routing)."}
+{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 66: real rivers recalibrated (threshold 3600) and flood timing (frozen-winter rivers flood in the growing season)."}
