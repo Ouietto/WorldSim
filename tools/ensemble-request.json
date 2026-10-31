@@ -1,1 +1,1 @@
-{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 67: run 66 plus floodplain share: flood farming, silt and irrigation scale with the share of a province that is floodplain."}
+{"seeds": "1-64", "end": 1500, "env": "", "ref": "", "baseEnv": "", "note": "Run 68: run 67 with flood timing folded into usable flood water (also limits desert-river crops on the lower Volga)."}

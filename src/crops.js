@@ -49,7 +49,7 @@ function suitFor(w,i,t,p){
   const amp=w.amp[i],rv=w.rvF[i],tw=t+amp/2,half=amp/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
   const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
   const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
-  const irr=rv*clamp((tw-14)/6,0,1)*clamp((t-amp/2+8)/8,0.3,1),el=w.elev[i];
+  const irr=rv*clamp((tw-14)/6,0,1),el=w.elev[i];
   const leach=el<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv-0.55)*2.5,0,0.8)):0;
   const trop=el<1200?clamp((t-21)/3,0,1)*clamp((p-900)/600,0,1):0;
   const sF=Math.max(tS*pS,tS*irr*0.95)*(1-0.65*w.rough[i])*(el>3500?0.3:1)*(1-0.7*leach);
