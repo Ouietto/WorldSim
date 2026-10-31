@@ -415,6 +415,7 @@ function genWorld(o){
   // with a sizeable river about where the model was calibrated
   const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   w.down=down;w.acc=acc;w.rv=rv;
+  {const rr=new Float32Array(N);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);w.rainRisk=rr}
   // floodplain: the share of a province's fine-grid land lying within 30 m of its lowest ground. A river farms only its floodplain:
   // the Nile in Upper Egypt waters a strip a few miles wide (about a quarter of the province), the Delta and Sumer all of it.
   // rvF = river size × floodplain share is what flood farming, silt and irrigation use; rv stays for boats, fish and maps
@@ -424,6 +425,7 @@ function genWorld(o){
     // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
     // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
     ffp[i]=n?k/n:1;rvF[i]=rv[i]*ffp[i]*clamp((T[i]-amp[i]/2+8)/8,0.3,1)}w.ffp=ffp;w.rvF=rvF}
+  for(const i of landList)w.rainRisk[i]*=1-Math.min(1,2*w.rvF[i]);
   // suitability
   const sF=new Float32Array(N),sH=new Float32Array(N),nomad=new Uint8Array(N),biome=new Uint8Array(N);
   for(const i of landList){

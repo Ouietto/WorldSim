@@ -705,6 +705,7 @@ function genWorld(o){
   // with a sizeable river about where the model was calibrated
   const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   w.down=down;w.acc=acc;w.rv=rv;
+  {const rr=new Float32Array(N);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);w.rainRisk=rr}
   // floodplain: the share of a province's fine-grid land lying within 30 m of its lowest ground. A river farms only its floodplain:
   // the Nile in Upper Egypt waters a strip a few miles wide (about a quarter of the province), the Delta and Sumer all of it.
   // rvF = river size × floodplain share is what flood farming, silt and irrigation use; rv stays for boats, fish and maps
@@ -714,6 +715,7 @@ function genWorld(o){
     // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
     // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
     ffp[i]=n?k/n:1;rvF[i]=rv[i]*ffp[i]*clamp((T[i]-amp[i]/2+8)/8,0.3,1)}w.ffp=ffp;w.rvF=rvF}
+  for(const i of landList)w.rainRisk[i]*=1-Math.min(1,2*w.rvF[i]);
   // suitability
   const sF=new Float32Array(N),sH=new Float32Array(N),nomad=new Uint8Array(N),biome=new Uint8Array(N);
   for(const i of landList){
@@ -1485,7 +1487,9 @@ function computeK(){
     // heavy, wet temperate forest soils: hard to clear and work until iron axes and ploughs
     if(hv>0)Kfa*=1-0.7*hv*(1-Math.max(s_plough[i],0.4*s_iron[i]));
     // what full farming would feed here, against what the wild already feeds: the farmers' edge is numbers (Bocquet-Appel 2011)
-    s_Kpot[i]=Kfa;Kfa*=s_farm[i];
+    // rain-fed farming on the dry continental grasslands is a gamble: one dry year in three wipes out the crop, while herds can
+    // walk to grass. The Pontic and Kazakh steppes and the Great Plains stayed pastoral until iron ploughs and markets (Anthony 2007)
+    Kfa*=1-0.45*(w.rainRisk?w.rainRisk[i]:0);s_Kpot[i]=Kfa;Kfa*=s_farm[i];
     s_Kfa[i]=Kfa*(1+0.04*s_mouseX[i]);s_Kh[i]=Kh+KhX;s_Kf[i]=Kf;const ps=s_past[i];
     // the province's mix of fields and pasture, set by what pays, who lives there, raids and rulers (see herds.js)
     s_K[i]=Math.max(1,Kf,(1-ps)*(s_Kfa[i]+0.3*s_Kh[i]+0.2*Kf)+ps*(s_Kh[i]+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*t29[i]));
@@ -1624,7 +1628,8 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
           // farm still passes the knowledge along
-          if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(s.Kf[i]/(1+1.2*(s.wildG?s.wildG[i]:0))+1);   // gatherers of the wild ancestors are halfway to farming already
+          if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(Math.max(s.Kf[i]/(1+1.2*(s.wildG?s.wildG[i]:0)),s.past[i]>0.4?s.Kh[i]:0)+1);   // herders, too, take up the hoe only where it clearly feeds more than the herd (the steppe stayed pastoral: Anthony 2007)
+            // gatherers of the wild ancestors are halfway to farming already
             
             // crowded farmers next door settle the forager's land anyway, by boat too (Neolithic Britain: Brace et al. 2019)
             const sq=mj>=0&&s.K[mj]>0?clamp((pop[mj]/s.K[mj]-0.6)/0.4,0,1)*clamp(adv-0.5,0,1):0;
@@ -3755,7 +3760,8 @@ function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass()
       const u=Math.pow(R[j]+1,0.75)*s.s[j]*milAt(j)*(1+1.5*ride)*hungry*(1+0.6*s.herd[j]*w.sH[j]);if(u>bu){bu=u;best=j}}
     if(best<0)continue;o.tFront++;
     // a raid every few years where the tribes are strong; walls, garrisons and loyal settlers blunt it
-    const Ud=defense(i)*(0.5+s.integ[i]),pw=clamp((bu-Ud)/(bu+Ud)*1.6+0.1,0,0.7);
+    // a raid strikes before the army can come: what counts is the province's own people, walls and garrison, not the realm's strength
+    const Ud=Math.pow(s.pop[i]*2+1,0.75)*milAt(i)*(1+2.5*s.fort[i])*(1+1.6*w.rough[i])*(0.5+s.integ[i])*(0.6+0.8*o.S)*(0.7+0.6*(o.prep??0.6)),pw=clamp(bu/(bu+Ud),0,0.8);
     if(r()<0.06*pw){s.pop[i]*=0.96;s.integ[i]=Math.max(0,s.integ[i]-0.12);o.shock+=0.002;s.raidC[i]=s.year;o.raided=(o.raided||0)+1;o.raidY=s.year;
       // the frontier falls back: a recently taken, unwalled, unreconciled province is abandoned to the raiders
       if(s.integ[i]<0.12&&s.fort[i]<0.3&&i!==o.capital&&s.city[i]<0&&s.year-(s.taken[i]||-1e9)<300&&r()<0.5){s.pol[i]=0;

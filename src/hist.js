@@ -319,7 +319,9 @@ function computeK(){
     // heavy, wet temperate forest soils: hard to clear and work until iron axes and ploughs
     if(hv>0)Kfa*=1-0.7*hv*(1-Math.max(s_plough[i],0.4*s_iron[i]));
     // what full farming would feed here, against what the wild already feeds: the farmers' edge is numbers (Bocquet-Appel 2011)
-    s_Kpot[i]=Kfa;Kfa*=s_farm[i];
+    // rain-fed farming on the dry continental grasslands is a gamble: one dry year in three wipes out the crop, while herds can
+    // walk to grass. The Pontic and Kazakh steppes and the Great Plains stayed pastoral until iron ploughs and markets (Anthony 2007)
+    Kfa*=1-0.45*(w.rainRisk?w.rainRisk[i]:0);s_Kpot[i]=Kfa;Kfa*=s_farm[i];
     s_Kfa[i]=Kfa*(1+0.04*s_mouseX[i]);s_Kh[i]=Kh+KhX;s_Kf[i]=Kf;const ps=s_past[i];
     // the province's mix of fields and pasture, set by what pays, who lives there, raids and rulers (see herds.js)
     s_K[i]=Math.max(1,Kf,(1-ps)*(s_Kfa[i]+0.3*s_Kh[i]+0.2*Kf)+ps*(s_Kh[i]+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*t29[i]));
@@ -458,7 +460,8 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
           // farm still passes the knowledge along
-          if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(s.Kf[i]/(1+1.2*(s.wildG?s.wildG[i]:0))+1);   // gatherers of the wild ancestors are halfway to farming already
+          if(f===0&&t<0.5&&w.sF[i]>=0.1){const adv=s.Kpot[i]/(Math.max(s.Kf[i]/(1+1.2*(s.wildG?s.wildG[i]:0)),s.past[i]>0.4?s.Kh[i]:0)+1);   // herders, too, take up the hoe only where it clearly feeds more than the herd (the steppe stayed pastoral: Anthony 2007)
+            // gatherers of the wild ancestors are halfway to farming already
             
             // crowded farmers next door settle the forager's land anyway, by boat too (Neolithic Britain: Brace et al. 2019)
             const sq=mj>=0&&s.K[mj]>0?clamp((pop[mj]/s.K[mj]-0.6)/0.4,0,1)*clamp(adv-0.5,0,1):0;
