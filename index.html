@@ -1482,7 +1482,10 @@ function computeK(){
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
     if(w_turf[i]>0){const op=s_open[i],f1=0.04+0.08*s_iron[i]+0.6*s_plough[i];Kfa*=op+(1-op)*f1}
     Kfa*=1+0.07*t32[i]*Math.min(1,rv*3)+0.05*t33[i]*(envW?envW[i]:0.5)+0.06*g0[i]+0.04*g3[i];
-    Kfa*=(1-0.3*s_forest[i]*(1-clamp(0.5*s_metal[i]+0.7*s_iron[i],0,0.9)))*(1-0.6*s_salt[i])*(1-0.5*w_oncho[i]);
+    // fields are cleared land: standing forest yields only slash-and-burn garden plots, about half as much; bronze and iron
+    // axes make forest gardens and clearings bigger. Open parkland and grassland (the Fertile Crescent, the loess, the floodplains)
+    // can be farmed at once; the forests of Atlantic Europe, the Congo and the Amazon must first be cleared by many hands
+    Kfa*=(1-s_forest[i]*(0.55-0.35*clamp(0.5*s_metal[i]+0.7*s_iron[i],0,0.9)))*(1-0.6*s_salt[i])*(1-0.5*w_oncho[i]);
     if(w_T[i]<12)Kfa*=clamp(1+0.18*dT,0.4,1.35);
     // heavy, wet temperate forest soils: hard to clear and work until iron axes and ploughs
     if(hv>0)Kfa*=1-0.7*hv*(1-Math.max(s_plough[i],0.4*s_iron[i]));
