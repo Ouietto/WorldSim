@@ -54,7 +54,21 @@ const invSrc={beaten:0,drought:0,riches:0,people:0};
 // farmed = growing a staple. Knowing how to farm with no crop to grow (herders at the Cape, foragers on the Northwest Coast) is
 // not farming; it was counted as farming before run 76
 const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n++;if(S.farm[i]>0.5&&S.crop&&S.crop[i]>=0)f++}return n?f/n:0},fArr={};
+// sustained statehood (run 81): a region counts from the first decade after which a state, league or overlord's bloc holds 30%
+// of its people (and 100,000) in at least 15 of the next 20 decades; first appearance stays as r_. Mesopotamia's first
+// city-states: a state above chiefdom with its capital on the southern alluvium, held the same way
+const RS={};for(const R of WD.regions)RS[R.k]=[];const UR=[],alSet=new Set(WD.landIdx.filter(i=>LA(i)>=30.5&&LA(i)<=33.5&&LO(i)>=44&&LO(i)<=47.5));
+// Egypt (run 81, with Nein): the lower Nile from the Delta to the Fourth Cataract. Its first lasting kingdoms (a state above chiefdom
+// with its capital there, as for Mesopotamia's city-states) and the first lasting state holding two thirds of its people
+const NILE=WD.landIdx.filter(i=>LA(i)>=18.5&&LA(i)<=31.5&&LO(i)>=29&&LO(i)<=35),nlSet=new Set(NILE),UK=[],UE=[];
+const heldShare=(cells,sh)=>{const cnt=new Map();let tot=0;for(const i of cells){const pp=S.pop[i];tot+=pp;const p=S.pol[i];if(!p)continue;const o=S.pols[p],key=headOf(o);
+  if(key==='p'+o.id&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;cnt.set(key,(cnt.get(key)||0)+pp*(o.coord??1))}let best=0;for(const c of cnt.values())if(c>best)best=c;return tot>0&&best>=sh*tot&&best>=1e5};
+const headOf=o=>{if(o.over&&S.pols[o.over]&&S.pols[o.over].alive)return'p'+o.over;if(o.league!=null&&S.leagues&&S.leagues[o.league]&&!S.leagues[o.league].end)return'L'+o.league;return'p'+o.id};
+const held=R=>{const cnt=new Map();let tot=0;for(const i of R.cells){const pp=S.pop[i];tot+=pp;const p=S.pol[i];if(!p)continue;const o=S.pols[p],key=headOf(o);
+  if(key==='p'+o.id&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;cnt.set(key,(cnt.get(key)||0)+pp*(o.coord??1))}let best=0;for(const c of cnt.values())if(c>best)best=c;return tot>0&&best>=0.3*tot&&best>=1e5};
+const sus=a=>{for(let t=0;t<a.length;t++){if(!a[t][1])continue;const n=Math.min(20,a.length-t);if(n<5)return null;let k=0;for(let u=t;u<t+n;u++)if(a[u][1])k++;if(k>=0.75*n)return a[t][0]}return null};
 while(S.year<END){step();
+  if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)])}
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
   if(S.year>=-1000&&S.year%10===0){if(WAR.t0==null)WAR.t0=S.year;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||o.cells<3)continue;WAR.sy+=10;WAR.p+=o.pop;if(o.enemies.size)WAR.w+=o.pop}
@@ -66,7 +80,7 @@ while(S.year<END){step();
   if(marks.includes(S.year)){const st=S.stats[S.stats.length-1];pop[S.year]=Math.round(st.pop/1e6);big[S.year]=st.bcS??st.bc;bigH[S.year]=st.bcH??null;
     const d=o=>o?o.full+' '+o.cells+' at '+Math.round(WD.lat[o.capital]*180/Math.PI)+','+Math.round((WD.cxA[o.capital]+0.5)/W*360-180):null;who[S.year]={state:d(S.pols[st.bigS]),horde:d(S.pols[st.bigH])}}}
 const yr=v=>v?v.y:null,rf=k=>S.regionFirst[k]?S.regionFirst[k].y:null,ft=k=>yr(S.firstTech[TI[k]]);
-for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafrica'])out['r_'+k]=rf(k);
+for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafrica'])out['r_'+k]=rf(k);for(const k in RS)out['rs_'+k]=sus(RS[k]);out.rc_meso=sus(UR);out.rk_egypt=sus(UK);out.ru_egypt=sus(UE);
 for(const k of ['writing','iron','coin','paper','gun'])out['t_'+k]=ft(k);
 out.t_horse=S.domFirst&&S.domFirst[0]?S.domFirst[0].y:null;out.s_pontic=pontic;
 for(const k of ['cEur','brit','scand','japan'])out['f_'+k]=fArr[k]??null;out.fs_pnw=END>=1500?+fShare('pnw').toFixed(3):null;out.fs_cape=END>=1500?+fShare('cape').toFixed(3):null;

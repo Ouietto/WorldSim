@@ -391,6 +391,12 @@ function genWorld(o){
   while(hv.length){const i=hpop();order.push(i);n8(i,j=>{if(!vis[j]){vis[j]=1;filled[j]=Math.max(rElev[j],filled[i]+0.01);down[j]=i;hpush(j,filled[j])}})}
   // real courses: each chain flows from its higher end to its lower; the larger rivers are laid first, so a tributary ends where
   // it meets them. A pointer that would close a loop is dropped and the province keeps its routed outlet
+  // closed hollows (rivers and water switches): a second priority flood on the true heights (the burned courses aside) gives how
+  // far each province's hollow would have to fill before it spills (fillD, m)
+  const fillD=new Float32Array(N);{const fz=new Float32Array(N).fill(-1e9),vv=new Uint8Array(N);for(let i=0;i<N;i++)if(!land[i])vv[i]=1;
+    for(const i of coastList){fz[i]=elev[i];vv[i]=1;hpush(i,elev[i])}
+    while(hv.length){const i=hpop();n8(i,j=>{if(!vv[j]){vv[j]=1;fz[j]=Math.max(elev[j],fz[i]+0.01);hpush(j,fz[j])}})}
+    for(const i of landList)fillD[i]=fz[i]>-1e8?Math.max(0,fz[i]-elev[i]):0;w.fillZ=fz}
   if(RIV){const set=new Uint8Array(N),fd=Int32Array.from(down);
     // which end is the mouth: the end nearer the sea along the river network itself (tributaries reach it through the main
     // stream); averaged heights are no guide on flat ground (the White Nile rises in a province lower than Khartoum's)
@@ -404,12 +410,23 @@ function genWorld(o){
     // upper Niger rises beside the Senegal's headwaters, and through that small river its source end looked nearer the sea than
     // Timbuktu, so it ran backwards into the Senegal (and its middle course and inland delta went dry)
     const cRk=new Uint8Array(N).fill(99);for(const L of RIV)for(const c of L.cells)if(L.rank<cRk[c])cRk[c]=L.rank;
-    const rdR=new Map();const rdFor=rk=>{if(rdR.has(rk))return rdR.get(rk);const d=new Float32Array(N).fill(-1),hk2=[],hv2=[];
+    // two courses that touch at their upper ends (each end over 100 m above its course's other end) meet across a watershed,
+    // not at a confluence: such a link costs as much as 60 steps (the Logone's source beside the Sanaga's)
+    const hiE=new Uint8Array(N);for(const L of RIV){const a=L.cells[0],z=L.cells[L.cells.length-1];if(elev[a]>elev[z]+100)hiE[a]=1;else if(elev[z]>elev[a]+100)hiE[z]=1}
+    const cost=(i,j)=>(hiE[i]&&hiE[j]?60:0);
+    const dij=(rk,sinks)=>{const d=new Float32Array(N).fill(-1),hk2=[],hv2=[];
       const push=(c,k)=>{let n=hk2.length;hk2.push(k);hv2.push(c);while(n>0){const p=(n-1)>>1;if(hk2[p]<=hk2[n])break;[hk2[p],hk2[n]]=[hk2[n],hk2[p]];[hv2[p],hv2[n]]=[hv2[n],hv2[p]];n=p}};
       const pop=()=>{const tc=hv2[0],tk=hk2[0],lk=hk2.pop(),lv=hv2.pop();if(hk2.length){hk2[0]=lk;hv2[0]=lv;let n=0;for(;;){const l=2*n+1,rr=l+1;let m=n;if(l<hk2.length&&hk2[l]<hk2[m])m=l;if(rr<hk2.length&&hk2[rr]<hk2[m])m=rr;if(m===n)break;[hk2[m],hk2[n]]=[hk2[n],hk2[m]];[hv2[m],hv2[n]]=[hv2[n],hv2[m]];n=m}}return[tc,tk]};
       for(const L of RIV)for(const c of L.cells){let wt=!landNow[c];n8(c,j=>{if(!landNow[j])wt=true});if(wt)push(c,1+5*Math.max(0,cRk[c]-rk))}
-      const done=new Uint8Array(N);while(hv2.length){const [c,k]=pop();if(done[c])continue;done[c]=1;d[c]=k;for(const j of adj.get(c)||[])if(!done[j])push(j,k+1+5*Math.max(0,cRk[j]-rk))}
-      rdR.set(rk,d);return d};
+      for(const c of sinks)push(c,1+5*Math.max(0,cRk[c]-rk));
+      const done=new Uint8Array(N);while(hv2.length){const [c,k]=pop();if(done[c])continue;done[c]=1;d[c]=k;for(const j of adj.get(c)||[])if(!done[j])push(j,k+1+5*Math.max(0,cRk[j]-rk)+cost(c,j))}
+      return d};
+    // a course whose end lies deep in a dry closed hollow, touching only courses that lie wholly in the hollow too, ends there (the
+    // Chari in Lake Chad, the Amu Darya in the Aral). A wet hollow in the averaged heights is a gorge too narrow to see (the Congo's
+    // cuvette); a dry valley a long river runs on through is no end (the Nile at Qena)
+    const inChains=new Map();RIV.forEach((L,k)=>{for(const c of L.cells){if(!inChains.has(c))inChains.set(c,[]);inChains.get(c).push(k)}});const allIn=k=>RIV[k].cells.every(c=>fillD[c]>20);
+    const sinkC=[];RIV.forEach((L,k)=>{for(const c of [L.cells[0],L.cells[L.cells.length-1]]){if(!land[c]||fillD[c]<=20||Pr[c]>=700)continue;let out=false;n8(c,j=>{if(!isR[j])return;for(const q of inChains.get(j)||[])if(q!==k&&!allIn(q))out=true});if(!out)sinkC.push([c,L.rank])}});
+    const rdR=new Map();const rdFor=rk=>{if(rdR.has(rk))return rdR.get(rk);const d=dij(rk,sinkC.map(([c])=>c));rdR.set(rk,d);return d};
     const dir=swOn('rivers')?RIV.map(L=>{const D=rdFor(L.rank);let a=D[L.cells[0]],z=D[L.cells[L.cells.length-1]];if(a<0&&z<0){a=rd[L.cells[0]];z=rd[L.cells[L.cells.length-1]]}return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0}):
       RIV.map(L=>{const a=rd[L.cells[0]],z=rd[L.cells[L.cells.length-1]];return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0});
     for(let k=0;k<RIV.length;k++){const L=RIV[k];let c=L.cells.filter(i=>land[i]);if(c.length<2)continue;if(dir[k]===-1||(!dir[k]&&elev[c[0]]<elev[c[c.length-1]]))c=c.slice().reverse();
@@ -429,7 +446,12 @@ function genWorld(o){
   // real courses gather water into fewer, larger channels than the old routing; the threshold keeps the share of provinces
   // with a sizeable river about where the model was calibrated
   const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
-  w.down=down;w.acc=acc;w.rv=rv;
+  w.down=down;w.acc=acc;w.rv=rv;w.order=Int32Array.from(order);
+  // water switch: for each province in a hollow, the province beyond its rim that its water reaches first along the drainage
+  // (pour); the water pass holds a lake there when inflow beats evaporation
+  {const pour=new Int32Array(N).fill(-1),inH=i=>fillD[i]>1&&!(w.rvReal&&w.rvReal[i]);
+    for(const i of landList){if(!inH(i))continue;let j=down[i],k=0;while(j>=0&&land[j]&&inH(j)&&k<400){j=down[j];k++}pour[i]=j>=0&&land[j]?j:-1}
+    w.fillD=fillD;w.pour=pour}
   {const rr=new Float32Array(N);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);w.rainRisk=rr}
   // floodplain: the share of a province's fine-grid land lying within 30 m of its lowest ground. A river farms only its floodplain:
   // the Nile in Upper Egypt waters a strip a few miles wide (about a quarter of the province), the Delta and Sumer all of it.

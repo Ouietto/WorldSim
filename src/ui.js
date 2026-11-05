@@ -72,6 +72,8 @@ function paintBase(){
   ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;ctx.beginPath();
   for(let l=-60;l<=60;l+=30){const yy=(90-l)/180*HH;ctx.moveTo(0,yy);ctx.lineTo(HW,yy)}
   for(let l=-150;l<=180;l+=30){const xx=(l+180)/360*HW;ctx.moveTo(xx,0);ctx.lineTo(xx,HH)}ctx.stroke();
+  // water switch: lakes, painted by the share of each province under water
+  if(S&&S.lake){const cw=HW/W,chh=HH/H;for(const i of w.landIdx){const f=S.lake[i];if(f<0.05)continue;ctx.fillStyle=`rgba(70,120,170,${(0.35+0.6*f).toFixed(2)})`;ctx.fillRect((i%W)*cw,((i/W)|0)*chh,cw+0.5,chh+0.5)}}
   // rivers as smooth curves: each reach bends through its cell centre, from the midpoint with its main tributary to the midpoint with the cell downstream
   const up=new Int32Array(N).fill(-1),upv=new Float32Array(N);
   for(const i of w.landIdx){const j=w.down[i];if(j>=0&&w.rv[i]>upv[j]){upv[j]=w.rv[i];up[j]=i}}
@@ -784,6 +786,7 @@ $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
   ['rivers','Rivers run the right way','a river finds its mouth through rivers at least as large as itself, so the upper Niger reaches Timbuktu and the inland delta instead of running backwards into the Senegal.'],
+  ['water','Living water','rivers carry the rain of their own age, closed basins fill with lakes in wet times (the green Sahara\'s Lake Mega-Chad) and shrink in dry ones, the Sahara dries from the north and east first, and people leave drying land along its watercourses for land that can feed them.'],
   ['herds','Herders live on their herds','herds die in hard winters and droughts and take years to regrow; a family left with too few animals cannot rebuild alone.'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;

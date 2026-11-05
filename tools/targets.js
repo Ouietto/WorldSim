@@ -25,15 +25,23 @@ module.exports=[
   {k:'f_japan', g:'Farming frontier',n:'Western Japan (Yayoi)',kind:'year',real:B(900),lo:B(1200),hi:B(300)},
   {k:'fs_pnw',  g:'Farming frontier',n:'Pacific Northwest farmed at 1500',kind:'share',real:0,lo:0,hi:0.1},
   {k:'fs_cape', g:'Farming frontier',n:'Western Cape farmed at 1500',kind:'share',real:0,lo:0,hi:0.1},
-  // first state, league or overlord's bloc holding 30% of a region's people (the engine's region check)
-  {k:'r_meso',   g:'First states',  n:'Mesopotamia',  kind:'year',real:B(2600),lo:B(3200),hi:B(2000)},
-  {k:'r_egypt',  g:'First states',  n:'Egypt',        kind:'year',real:B(3100),lo:B(3400),hi:B(2700)},
-  {k:'r_indus',  g:'First states',  n:'Indus',        kind:'year',real:B(2600),lo:B(2900),hi:B(2000)},
-  {k:'r_nchina', g:'First states',  n:'Yellow River', kind:'year',real:B(1900),lo:B(2200),hi:B(1500)},
-  {k:'r_mesoam', g:'First states',  n:'Mesoamerica',  kind:'year',real:400,    lo:B(500), hi:1100},
-  {k:'r_andes',  g:'First states',  n:'Central Andes',kind:'year',real:700,    lo:0,      hi:1450},
-  {k:'r_europe', g:'First states',  n:'Western Europe',kind:'year',real:B(50), lo:B(600), hi:500},
-  {k:'r_wafrica',g:'First states',  n:'West Africa',  kind:'year',real:900,  lo:300,  hi:1350},
+  // first lasting state (run 81): the first decade after which a state, league or overlord's bloc holds 30% of a region's people
+  // (and 100,000) in at least 15 of the next 20 decades. A state that rises and falls back does not count yet
+  {k:'rs_meso',   g:'First states',  n:'Mesopotamia (a third of the people)',  kind:'year',real:B(2600),lo:B(3200),hi:B(2000)},
+  {k:'rc_meso',   g:'First states',  n:'Mesopotamia (city-states on the southern plain)',kind:'year',real:B(3500),lo:B(4000),hi:B(3000)},
+  // Egypt (with Nein): the lower Nile from the Delta to the Fourth Cataract. The Naqada-period kingdoms of Upper Egypt rose and fell
+  // before one state held the river (Narmer, about 3100 BCE)
+  {k:'rk_egypt',  g:'First states',  n:'Egypt (first kingdoms on the Nile)',kind:'year',real:B(3400),lo:B(3700),hi:B(3100)},
+  {k:'ru_egypt',  g:'First states',  n:'Egypt (one state holding two thirds of the Nile\'s people)',kind:'year',real:B(3100),lo:B(3300),hi:B(2700)},
+  {k:'rs_egypt',  g:'First states',  n:'Egypt (a third of the old box, lasting)',kind:'year',real:B(3100),lo:B(3400),hi:B(2700),cls:'context'},
+  {k:'rs_indus',  g:'First states',  n:'Indus',        kind:'year',real:B(2600),lo:B(2900),hi:B(2000)},
+  {k:'rs_nchina', g:'First states',  n:'Yellow River', kind:'year',real:B(1900),lo:B(2200),hi:B(1500)},
+  {k:'rs_mesoam', g:'First states',  n:'Mesoamerica',  kind:'year',real:400,    lo:B(500), hi:1100},
+  {k:'rs_andes',  g:'First states',  n:'Central Andes',kind:'year',real:700,    lo:0,      hi:1450},
+  {k:'rs_europe', g:'First states',  n:'Western Europe',kind:'year',real:B(50), lo:B(600), hi:500},
+  {k:'rs_wafrica',g:'First states',  n:'West Africa',  kind:'year',real:900,  lo:300,  hi:1350},
+  // first appearance, before run 81 (kept for comparison, not scored)
+  {k:'r_meso',   g:'First states',  n:'First seen: Mesopotamia',  kind:'year',real:B(2600),lo:B(3200),hi:B(2000),cls:'context'},  {k:'r_egypt',  g:'First states',  n:'First seen: Egypt',        kind:'year',real:B(3100),lo:B(3400),hi:B(2700),cls:'context'},  {k:'r_indus',  g:'First states',  n:'First seen: Indus',        kind:'year',real:B(2600),lo:B(2900),hi:B(2000),cls:'context'},  {k:'r_nchina', g:'First states',  n:'First seen: Yellow River', kind:'year',real:B(1900),lo:B(2200),hi:B(1500),cls:'context'},  {k:'r_mesoam', g:'First states',  n:'First seen: Mesoamerica',  kind:'year',real:400,    lo:B(500), hi:1100,cls:'context'},  {k:'r_andes',  g:'First states',  n:'First seen: Central Andes',kind:'year',real:700,    lo:0,      hi:1450,cls:'context'},  {k:'r_europe', g:'First states',  n:'First seen: Western Europe',kind:'year',real:B(50), lo:B(600), hi:500,cls:'context'},  {k:'r_wafrica',g:'First states',  n:'First seen: West Africa',  kind:'year',real:900,  lo:300,  hi:1350,cls:'context'},
   // first invention anywhere
   {k:'t_writing',g:'Techniques',n:'Writing',  kind:'year',real:B(3200),lo:B(3500),hi:B(2800)},
   {k:'t_iron',   g:'Techniques',n:'Iron',     kind:'year',real:B(1200),lo:B(1600),hi:B(800)},

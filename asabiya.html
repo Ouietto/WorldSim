@@ -684,6 +684,12 @@ function genWorld(o){
   while(hv.length){const i=hpop();order.push(i);n8(i,j=>{if(!vis[j]){vis[j]=1;filled[j]=Math.max(rElev[j],filled[i]+0.01);down[j]=i;hpush(j,filled[j])}})}
   // real courses: each chain flows from its higher end to its lower; the larger rivers are laid first, so a tributary ends where
   // it meets them. A pointer that would close a loop is dropped and the province keeps its routed outlet
+  // closed hollows (rivers and water switches): a second priority flood on the true heights (the burned courses aside) gives how
+  // far each province's hollow would have to fill before it spills (fillD, m)
+  const fillD=new Float32Array(N);{const fz=new Float32Array(N).fill(-1e9),vv=new Uint8Array(N);for(let i=0;i<N;i++)if(!land[i])vv[i]=1;
+    for(const i of coastList){fz[i]=elev[i];vv[i]=1;hpush(i,elev[i])}
+    while(hv.length){const i=hpop();n8(i,j=>{if(!vv[j]){vv[j]=1;fz[j]=Math.max(elev[j],fz[i]+0.01);hpush(j,fz[j])}})}
+    for(const i of landList)fillD[i]=fz[i]>-1e8?Math.max(0,fz[i]-elev[i]):0;w.fillZ=fz}
   if(RIV){const set=new Uint8Array(N),fd=Int32Array.from(down);
     // which end is the mouth: the end nearer the sea along the river network itself (tributaries reach it through the main
     // stream); averaged heights are no guide on flat ground (the White Nile rises in a province lower than Khartoum's)
@@ -693,7 +699,29 @@ function genWorld(o){
       for(const e of [c[0],c[c.length-1]])n8(e,j=>{if(isR[j]){link(e,j);link(j,e)}})}
     let fr=[];for(const L of RIV)for(const c of L.cells)if(rd[c]<0){let wt=!landNow[c];n8(c,j=>{if(!landNow[j])wt=true});if(wt){rd[c]=0;fr.push(c)}}
     for(let d=1;fr.length;d++){const nx=[];for(const c of fr)for(const j of adj.get(c)||[])if(rd[j]<0){rd[j]=d;nx.push(j)}fr=nx}
-    const dir=RIV.map(L=>{const a=rd[L.cells[0]],z=rd[L.cells[L.cells.length-1]];return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0});
+    // rivers switch: a river's mouth is found mainly through rivers at least as large as itself: each step into a smaller river costs more. The
+    // upper Niger rises beside the Senegal's headwaters, and through that small river its source end looked nearer the sea than
+    // Timbuktu, so it ran backwards into the Senegal (and its middle course and inland delta went dry)
+    const cRk=new Uint8Array(N).fill(99);for(const L of RIV)for(const c of L.cells)if(L.rank<cRk[c])cRk[c]=L.rank;
+    // two courses that touch at their upper ends (each end over 100 m above its course's other end) meet across a watershed,
+    // not at a confluence: such a link costs as much as 60 steps (the Logone's source beside the Sanaga's)
+    const hiE=new Uint8Array(N);for(const L of RIV){const a=L.cells[0],z=L.cells[L.cells.length-1];if(elev[a]>elev[z]+100)hiE[a]=1;else if(elev[z]>elev[a]+100)hiE[z]=1}
+    const cost=(i,j)=>(hiE[i]&&hiE[j]?60:0);
+    const dij=(rk,sinks)=>{const d=new Float32Array(N).fill(-1),hk2=[],hv2=[];
+      const push=(c,k)=>{let n=hk2.length;hk2.push(k);hv2.push(c);while(n>0){const p=(n-1)>>1;if(hk2[p]<=hk2[n])break;[hk2[p],hk2[n]]=[hk2[n],hk2[p]];[hv2[p],hv2[n]]=[hv2[n],hv2[p]];n=p}};
+      const pop=()=>{const tc=hv2[0],tk=hk2[0],lk=hk2.pop(),lv=hv2.pop();if(hk2.length){hk2[0]=lk;hv2[0]=lv;let n=0;for(;;){const l=2*n+1,rr=l+1;let m=n;if(l<hk2.length&&hk2[l]<hk2[m])m=l;if(rr<hk2.length&&hk2[rr]<hk2[m])m=rr;if(m===n)break;[hk2[m],hk2[n]]=[hk2[n],hk2[m]];[hv2[m],hv2[n]]=[hv2[n],hv2[m]];n=m}}return[tc,tk]};
+      for(const L of RIV)for(const c of L.cells){let wt=!landNow[c];n8(c,j=>{if(!landNow[j])wt=true});if(wt)push(c,1+5*Math.max(0,cRk[c]-rk))}
+      for(const c of sinks)push(c,1+5*Math.max(0,cRk[c]-rk));
+      const done=new Uint8Array(N);while(hv2.length){const [c,k]=pop();if(done[c])continue;done[c]=1;d[c]=k;for(const j of adj.get(c)||[])if(!done[j])push(j,k+1+5*Math.max(0,cRk[j]-rk)+cost(c,j))}
+      return d};
+    // a course whose end lies deep in a dry closed hollow, touching only courses that lie wholly in the hollow too, ends there (the
+    // Chari in Lake Chad, the Amu Darya in the Aral). A wet hollow in the averaged heights is a gorge too narrow to see (the Congo's
+    // cuvette); a dry valley a long river runs on through is no end (the Nile at Qena)
+    const inChains=new Map();RIV.forEach((L,k)=>{for(const c of L.cells){if(!inChains.has(c))inChains.set(c,[]);inChains.get(c).push(k)}});const allIn=k=>RIV[k].cells.every(c=>fillD[c]>20);
+    const sinkC=[];RIV.forEach((L,k)=>{for(const c of [L.cells[0],L.cells[L.cells.length-1]]){if(!land[c]||fillD[c]<=20||Pr[c]>=700)continue;let out=false;n8(c,j=>{if(!isR[j])return;for(const q of inChains.get(j)||[])if(q!==k&&!allIn(q))out=true});if(!out)sinkC.push([c,L.rank])}});
+    const rdR=new Map();const rdFor=rk=>{if(rdR.has(rk))return rdR.get(rk);const d=dij(rk,sinkC.map(([c])=>c));rdR.set(rk,d);return d};
+    const dir=swOn('rivers')?RIV.map(L=>{const D=rdFor(L.rank);let a=D[L.cells[0]],z=D[L.cells[L.cells.length-1]];if(a<0&&z<0){a=rd[L.cells[0]];z=rd[L.cells[L.cells.length-1]]}return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0}):
+      RIV.map(L=>{const a=rd[L.cells[0]],z=rd[L.cells[L.cells.length-1]];return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0});
     for(let k=0;k<RIV.length;k++){const L=RIV[k];let c=L.cells.filter(i=>land[i]);if(c.length<2)continue;if(dir[k]===-1||(!dir[k]&&elev[c[0]]<elev[c[c.length-1]]))c=c.slice().reverse();
       for(let j=0;j<c.length-1;j++)if(!set[c[j]]&&c[j]!==c[j+1]){down[c[j]]=c[j+1];set[c[j]]=1}}
     const st=new Uint8Array(N);
@@ -711,7 +739,12 @@ function genWorld(o){
   // real courses gather water into fewer, larger channels than the old routing; the threshold keeps the share of provinces
   // with a sizeable river about where the model was calibrated
   const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
-  w.down=down;w.acc=acc;w.rv=rv;
+  w.down=down;w.acc=acc;w.rv=rv;w.order=Int32Array.from(order);
+  // water switch: for each province in a hollow, the province beyond its rim that its water reaches first along the drainage
+  // (pour); the water pass holds a lake there when inflow beats evaporation
+  {const pour=new Int32Array(N).fill(-1),inH=i=>fillD[i]>1&&!(w.rvReal&&w.rvReal[i]);
+    for(const i of landList){if(!inH(i))continue;let j=down[i],k=0;while(j>=0&&land[j]&&inH(j)&&k<400){j=down[j];k++}pour[i]=j>=0&&land[j]?j:-1}
+    w.fillD=fillD;w.pour=pour}
   {const rr=new Float32Array(N);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);w.rainRisk=rr}
   // floodplain: the share of a province's fine-grid land lying within 30 m of its lowest ground. A river farms only its floodplain:
   // the Nile in Upper Egypt waters a strip a few miles wide (about a quarter of the province), the Delta and Sumer all of it.
@@ -1297,6 +1330,7 @@ const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,1
 
 function newHistory(hseed){
   const w=WD,r=mulberry32(hashStr('hist:'+hseed+':'+w.seed));
+  if(w.rv0){w.rv.set(w.rv0);w.rvF.set(w.rvF0)}
   seaReset(P.startYear);
   if(typeof TECH_BASE!=='undefined'&&TECH_BASE)TECH.length=TECH_BASE;
   const tk=TECH.map(()=>new Float32Array(N));
@@ -1409,8 +1443,15 @@ const HUMID=[
   ['the Sahara',11,27,-18,38,320,-5000,-3300],['Arabia',13,30,38,60,200,-6500,-4500],['the Near East',29,38,34,50,70,-4500,-3000],
   ['the Thar and the Indus lands',22,31,66,78,150,-3500,-1800],['the East African lakes',-3,12,30,45,120,-5000,-3000]];
 function humidFrac(y,a,b){if(y<-9900)return 0;const on=Math.min(1,(y+9900)/400);return on*(y<=a?1:y>=b?0:1-(y-a)/(b-a))}
-function humidRain(i,y){const w=WD,la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;let d=0;
-  for(const [,a,b,c,e,amp,t0,t1] of HUMID){const f=humidFrac(y,t0,t1);if(f<=0)continue;
+function humidRain(i,y){const w=WD,la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;let d=0;const WT=waterOn();
+  for(const [nm,a,b,c,e,amp,t0,t1] of HUMID){
+    // water switch: the Sahara dried from the north and east first and the south last (Kuper & Kropelin 2006; Shanahan et al. 2015):
+    // the eastern desert from about 5500 BCE, the Chad basin and the southern edge not until about 3000-2500 BCE
+    const sw=WT&&nm==='the Sahara',s0=sw?clamp(-5300+110*(25-la)-12*(lo-10),-6000,-3600):t0,s1=sw?s0+1300:t1;
+    const f=humidFrac(y,s0,s1);
+    // and the monsoon's gain reached south of the desert too, over the Sahel and the Chari and upper Nile catchments that fed Lake
+    // Mega-Chad and the Nile floods (rising from the equatorial forest edge to its full strength by 14 N, fading north of 24 N)
+    if(sw){if(f<=0)continue;const m=clamp((la-4)/10,0,1)*clamp((30-la)/6,0,1)*clamp(Math.min(lo-c,e-lo)/4,0,1);if(m>0)d=Math.max(d,amp*1.1*f*m);continue}if(f<=0)continue;
     const m=clamp(Math.min(la-a,b-la)/3,0,1)*clamp(Math.min(lo-c,e-lo)/4,0,1);if(m>0)d=Math.max(d,amp*f*m)}return d}
 // every fifty years on Earth: the humid period's rain is laid on the climate model's own change, and land and vegetation follow
 function humidStep(){const s=S,w=WD,y=s.year;if(!w.isEarth||!s.cdP0)return;if(y<-10000||y>-1700)return;
@@ -1473,17 +1514,117 @@ const rvAg=()=>WD.rvF,admOf=()=>S.recK||S.admin;
 // sums of generated techniques for the food and power rows, cached every ten years for the capacity pass
 function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=new Float32Array(N);s.genC3=new Float32Array(N)}
   const fill=(row,a)=>{a.fill(0);for(const k of s.genByRow[row]){const t=s.tk[k],tr=TECH[k].tier;for(const i of w.landIdx)a[i]+=t[i]*tr}};fill(0,s.genC0);fill(3,s.genC3)}
+// water switch: rivers carry the rain that falls now, not today's; closed basins hold lakes when more water flows in than
+// evaporates (Lake Mega-Chad, the Tenere lakes at Gobero, Lake Ptolemy; Drake & Bristow 2006); land that dries sends the people
+// it can no longer feed downstream along its water and on to the nearest land that can take them (the Nile, the Niger bend,
+// Lake Chad, the Sahel: Kuper & Kropelin 2006; Brooks 2006)
+const waterOn=()=>swOn('water');
+function waterPass(){
+  const s=S,w=WD,L=w.landIdx,ord=w.order,down=w.down,fd=w.fillD,area=w.area;if(!ord||!fd)return;
+  if(!w.rv0){w.rv0=w.rv.slice();w.rvF0=w.rvF.slice()}
+  // hollows: provinces lying below the level at which their hollow spills, joined to neighbours that fill to the same level (a
+  // neighbouring hollow with its own spill level is a separate basin: the Niger's inland delta is not the Saharan depression beyond it)
+  if(!w.bid){const bid=new Int32Array(N).fill(-1),cells=[],fz=w.fillZ;for(const i of L){if(bid[i]>=0||!(fd[i]>1))continue;const b=cells.length,q=[i],C=[];bid[i]=b;
+      while(q.length){const c=q.pop();C.push(c);const cx=c%W,cy=(c/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){const j=yy*W+(cx+dx+W)%W;if(bid[j]<0&&w.land[j]&&fd[j]>1&&Math.abs(fz[j]-fz[c])<2){bid[j]=b;q.push(j)}}}}
+      C.sort((a,b2)=>w.elev[a]-w.elev[b2]);cells.push(C)}
+    w.bid=bid;w.bcells=cells}
+  if(!s.lake){s.lake=new Float32Array(N);s.Kw=Float32Array.from(s.K);s.lakeMax=new Map();s.Pw=new Float32Array(N);s.dryW=new Uint8Array(N)}
+  // where the climate itself is drying: this half-century's rain under the last one's (a dry year is weather, not this)
+  for(const i of L){const P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i]);s.dryW[i]=s.Pw[i]>0&&P<0.97*s.Pw[i]?1:0;s.Pw[i]=P}
+  const bid=w.bid,BC=w.bcells,nb=BC.length,acc=new Float32Array(N),run=new Float32Array(N),runL=new Float32Array(N),accL=new Float32Array(N),pool=new Float64Array(nb),lake=s.lake;lake.fill(0);
+  // two measures of the water: the river size the model was calibrated on (rain above 200 mm), and what really runs off to fill a
+  // lake, rain less what the land gives back to the air (Turc-Pike: E = P / sqrt(1+(P/PET)^2); 400 mm of desert-edge rain yields
+  // about 8 mm, 1,000 mm under a temperate sky about 170)
+  const PET=i=>clamp(400+70*(w.T[i]+s.cdT[i]),300,2600);
+  for(const i of L){const T=w.T[i]+s.cdT[i],P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i]),E=PET(i);run[i]=Math.max(0,P-200)*area[i]*1e-4*(T<-9?0.2:1);
+    runL[i]=Math.max(0,P-P/Math.sqrt(1+(P/E)*(P/E)))*area[i]}
+  // a stream crossing dry land loses water into its bed and to the air, the smaller the stream the larger the share (up to 15% a
+  // province in true desert); great rivers lose little (the Nile)
+  const th0=w.isEarth?3600:2500,keep=new Float32Array(N);for(const i of L){const P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i]);keep[i]=1-0.15*clamp((400-P)/400,0,1)}
+  const flow=(src,dst,blk)=>{dst.set(src);for(let k=ord.length-1;k>=0;k--){const i=ord[k],d=down[i];if(d<0||!w.land[d])continue;const b=bid[i];
+      if(b>=0&&blk&&blk[b])continue;const a=dst[i];dst[d]+=a*(1-(1-keep[i])/(1+acc[i]/th0))}};
+  flow(run,acc,null);flow(runL,accL,null);
+  for(const i of L){const d=down[i];if(d<0||!w.land[d])continue;const bd=bid[d];if(bd>=0&&bid[i]!==bd)pool[bd]+=accL[i]}for(const i of L)if(bid[i]>=0)pool[bid[i]]+=runL[i];
+  // a hollow whose inflow evaporation can carry off holds a lake and lets nothing out; one that would overflow is a basin the river
+  // runs through by a gorge too narrow to see in 100 km averages (the Congo's cuvette, the Sichuan and Hungarian plains), and holds
+  // no lake; nor does one the sea has reached, or one in wet country
+  const shut=new Uint8Array(nb);let any=false;
+  for(let b=0;b<nb;b++){const B=BC[b],I=pool[b];if(I<=0)continue;let Ad=0,En=0,Pm=0,sea=false;
+    for(const c of B){if(!w.land[c]){sea=true;break}Ad+=area[c];const P=Math.max(0.3*w.Pr[c],w.Pr[c]+s.cdP[c]);Pm+=area[c]*P;En+=area[c]*Math.max(150,PET(c)-P)}
+    let thru=false;for(const c of B){if(w.rv0[c]<0.5)continue;const d=down[c];if(d>=0&&w.land[d]&&bid[d]!==b){thru=true;break}}
+    // a hollow a great river runs out of is part of its valley, never a lake (the Nile above Qena)
+    if(sea||thru||Pm/Math.max(1,Ad)>=900)continue;En/=Math.max(1,Ad);if(globalThis.LAKEDBG)LAKEDBG.push({b,key:B[0],I,Ad,En,Pm:Pm/Ad,n:B.length});
+    // a lake brims where inflow and evaporation are near balance: a hollow that could carry off less than about two thirds of its
+    // inflow is a river basin, not a lake. A brimming lake spills from its outlet (Mega-Chad into the Benue at its height)
+    let A=I/En;const A0=Math.min(A,Ad);if(A>=1.6*Ad)continue;
+    if(A>=Ad){for(const c of B)lake[c]=1}
+    else{shut[b]=1;any=true;for(const c of B){if(A<=0)break;const f=Math.min(1,A/area[c]);lake[c]=f;A-=f*area[c]}}
+    if(B.length<3)continue;const key=B[0],was=s.lakeMax.get(key)||0;if(A0>was)s.lakeMax.set(key,A0);
+    if(A0>=40000&&was<40000)chron('nature',`A great lake spreads across the ${regionName(key)}, some ${fmtK(Math.round(A0))} square kilometres of open water.`,key,[]);
+    else if(was>=40000&&A0<0.2*was&&!s['lakeGone'+key]){s['lakeGone'+key]=1;chron('nature',`The great lake of the ${regionName(key)} has shrunk to marsh and salt pans.`,key,[])}}
+  // then the water runs again, ending in the closed lakes
+  if(any)flow(run,acc,shut);
+  const th=w.isEarth?3600:2500,rv=w.rv,rvF=w.rvF,ffp=w.ffp;
+  for(const i of L){rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
+    rvF[i]=Math.min(1,rv[i]*(ffp?ffp[i]:1)*clamp((w.T[i]-w.amp[i]/2+8)/8,0.3,1)+0.5*Math.min(lake[i],1-lake[i]))}
+  s.Kw.set(s.K);s.seaVer++;
+}
+// every year, before hunger takes them: where the climate is drying (rain down since the last water pass) and the land holds more people than it can feed, they move
+// rather than starve: downstream along the drainage (up to eight provinces) or to a neighbour, wherever there is most room
+function followWater(){
+  const s=S,w=WD,L=w.landIdx,pop=s.pop,K=s.K,Kw=s.Kw,down=w.down,nb=w.nb,dry=s.dryW;if(!dry)return;
+  for(const i of L){const p=pop[i];if(!dry[i]||p<50||p<=1.02*K[i])continue;
+    let best=-1,bs=0,j=i;
+    for(let st=1;st<=8;st++){j=down[j];if(j<0||!w.land[j])break;const sp=(K[j]-pop[j])/(1+0.15*st);if(sp>bs){bs=sp;best=j}}
+    for(let d=0;d<4;d++){const q=nb[i*4+d];if(q<0||!w.land[q])continue;const sp=K[q]-pop[q];if(sp>bs){bs=sp;best=q}}
+    if(best<0)continue;const mv=Math.min(0.6*(p-K[i]),0.5*bs);if(mv<1)continue;moveFolk(i,best,mv);s.fwN=(s.fwN||0)+mv}
+}
+// people moving from one province to another bring their people, faith and ways, as in migrate()
+function moveFolk(i,j,mv){const s=S,T=s.tk,pj=s.pop[j];s.pop[i]-=mv;s.pop[j]+=mv;
+  if(pj<1||s.eth[j]<0){s.eth[j]=s.eth[i];s.eth2[j]=-1;s.rel[j]=s.rel[i];s.s[j]=s.s[i];s.adapt[j]=s.adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9)}
+  else if(s.eth[j]!==s.eth[i]){const sh=mv/(pj+mv);mixIn(j,s.eth[i],sh*0.6);if(s.eth2[j]===s.eth[i]&&s.mix[j]>0.5){const a=s.eth[j];s.eth[j]=s.eth2[j];s.eth2[j]=a;s.mix[j]=1-s.mix[j]}
+    for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}}
+// herds switch: herders live on their animals: sheep, goats and cattle, with horses and camels on top. s.hs is the herd against
+// what the province's pasture carries in a normal year (1). Herds regrow about a third of the gap a year when the grass allows,
+// more slowly once a family is down to its last animals (the point where it cannot rebuild alone varies from place to place:
+// Moritz et al. 2017, "No magic number"). They die when the grass or the winter forage gives out: a dry summer, or deep snow and
+// ice over the grass in a cold winter (dzud; a dry summer before a hard winter is the worst: Fernandez-Gimenez et al. 2012).
+// Herders who outnumber what their herds feed eat into their breeding stock. The winter is its own weather field, drawn from its
+// own random stream so the rains stay the same.
+const herdsOn=()=>swOn('herds');
+function herdYear(){
+  const s=S,w=WD,L=w.landIdx;
+  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
+  const g=s.WG,rW=s.rW;for(let k=0;k<g.length;k++)g[k]=0.3*g[k]+0.954*gauss(rW);
+  const dT=s.dT+s.gT+epochTemp(),wi=w.wi,wf=w.wf,hs=s.hs,lossA=s.hsLoss,dom=s.dom;
+  for(const i of L){lossA[i]=0;if(!(w.sH[i]>0.03||w.desert[i]))continue;
+    const T=w.T[i]+dT+s.cdT[i]+s.evT[i],cold=clamp((w.amp[i]/2-T-4)/10,0,1);
+    const F=Math.min(1.3,clamp(s.wm[i]*s.evP[i],0.3,1.6));
+    let dz=0;if(cold>0){const fx=wf[i*2],fy=wf[i*2+1],z=(g[wi[i*4]]*(1-fx)+g[wi[i*4+1]]*fx)*(1-fy)+(g[wi[i*4+2]]*(1-fx)+g[wi[i*4+3]]*fx)*fy;dz=cold*clamp((z-0.8)/1.6,0,0.85)}
+    const cap=F*(1-dz);let v=hs[i];
+    if(v>cap){const lost=(v-cap)*0.75;lossA[i]=lost/v;v-=lost}
+    else{const th=0.15+0.2*(((i*2654435761)>>>0)/4294967296);v+=0.3*v*(1-v/cap)*Math.min(1,v/th)}
+    const p=s.pop[i],K=s.K[i];if(p>K&&s.past[i]>0.5)v-=0.1*Math.min(1,p/K-1)*v;
+    hs[i]=clamp(v,0.02,1.6);
+    const ls=lossA[i];if(ls>0.25&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
+    if(s.past[i]>0.5&&p>=1){s.hzC++;if(ls>0.25)s.dzC++;if(cold>0.5){s.hzCc++;if(ls>0.25)s.dzCc++}}}
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='horde'||o.cells<15)continue;const ls=lossA[o.capital];if(ls<0.3)continue;
+    o.shock+=0.5*ls;chron('nature',`${dz0(o.capital)?'A killing winter buries the pastures':'Drought burns the pastures'}: the ${o.full} loses ${Math.round(ls*100)}% of its herds.`,o.capital,[R_(o)])}
+}
+// was the herd lost to the winter or to the summer?
+function dz0(i){const s=S,w=WD;return w.amp[i]/2-(w.T[i]+s.cdT[i])-4>0&&s.wm[i]>0.85}
 function computeK(){
   const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=admOf(),s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL,s_wheel=s.wheel,w_turf=w.turf,s_open=s.open,s_malF=s.malF;
   const Z=w.zeroN||(w.zeroN=new Float32Array(N)),s_evT=s.evT||Z,s_evP=s.evP,s_sed=s.sed||Z,s_wildG=s.wildG||Z,s_huntX=s.huntX||Z,s_meatX=s.meatX||Z,s_mouseX=s.mouseX||Z,w_iceY=w.iceY||w.noIce||(w.noIce=new Float32Array(N).fill(-1e9)),s_Kpot=s.Kpot,s_year=s.year,tTer=s.tk[TI.terrace],t26=s.tk[26],t28=s.tk[28],t29=s.tk[29],t32=s.tk[32],t33=s.tk[33],envW=w.techEnv?w.techEnv[2]:null,
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize;
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null,LK=waterOn()&&s.lake?s.lake:null;
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
-    if(s_farm[i]<0.3&&(k+s_year)%3!==0&&s_K[i]>0)continue;
+    if(s_farm[i]<0.3&&(k+s_year)%3!==0&&s_K[i]>0&&!(HS&&Math.abs(HS[i]-HSK[i])>0.08))continue;
+    if(HS)HSK[i]=HS[i];
     const T=w_T[i]+dT+cdT[i]+s_evT[i];
     if(T<-9||s_year<w_iceY[i]){s_K[i]=1;continue}
     const wm=s_wm[i]*s_evP[i],Pn=Math.max(0.3*w_Pr[i],w_Pr[i]+cdP[i])*wm,ar=w_area[i],rv=w_rv[i];
@@ -1491,13 +1632,17 @@ function computeK(){
     // cool temperate coasts are the richest foraging on Earth: salmon runs, shellfish, seals (Yesner 1980; the Jomon, the
     // Ertebolle and the Northwest Coast were among the densest forager peoples known)
     const cool=w_coast[i]?coolC[i]:0;
-    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.8*cool+0.4*rv)*(1+0.4*s_sed[i])*(1+1.2*s_wildG[i])*(1+0.15*s_huntX[i]);
+    const Kf=ar*0.1*npp/1000*(1+0.5*w_coast[i]+0.8*cool+0.4*rv+(LK?0.6*LK[i]:0))*(1+0.4*s_sed[i])*(1+1.2*s_wildG[i])*(1+0.15*s_huntX[i]);
     const dry=clamp(wm,0.3,1.6);
     let sh=Math.max(w_sH[i],0.5*s_domR[i],0.6*s_domL[i]);if(w_desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w_Pr[i]+cdP[i]-80)/350,0,0.7));if(w_desert[i])sh=Math.max(sh,0.25*s_camel[i]);
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
     const mob=Math.min(1,s_horse[i])*(0.4+0.6*s_wheel[i]);
-    let Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
+    // herds switch: what the herd itself can give (s.hs, below), which lags the grass by years after a crash
+    const KhB=HS?ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]):0;
+    let Kh=HS?KhB*Math.min(1.3,HS[i]):ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
     // herders follow the grass (default since run 79): crowded herds wear the grass down; s.grass is what the pasture itself would feed, whoever grazes it
+    // what herding gives in a normal year, which is what people weigh when they choose between fields and herds
+    if(HS)s.KhN[i]=KhB*(1-0.45*GZ[i])+ar*0.4*s_meatX[i];
     if(GZ){Kh*=1-0.45*GZ[i];s.grass[i]=ar*1.6*sh*Math.min(1.3,dry)*(1+0.25*w_transh[i])*(1-s_rp[i])*(1-0.45*GZ[i])}
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
@@ -2739,11 +2884,11 @@ function step(){for(const _ of stepG());}
 const ymod=(y,n)=>((y%n)+n)%n;
 function* stepG(){
   const s=S;s.year++;
-  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
+  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();if(herdsOn())herdYear();if(waterOn()&&(s.year%50===0||!s.lake))waterPass();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
-  computeK();growth();yield;migrate();seaHop();if(S.gzD)grazePass();
+  computeK();if(waterOn())followWater();growth();yield;migrate();seaHop();if(S.gzD)grazePass();
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   yield* politicsG();
@@ -3243,11 +3388,13 @@ function inheritPast(e,p,p2){e.past=p?clamp((p2?(p.past+p2.past)/2:p.past)+gauss
 // every ten years
 function landUsePass(){
   const s=S,w=WD,L=w.landIdx,past=s.past,pol=s.pol,pols=s.pols,eths=s.eths,y=s.year;
+  // (herds switch: people weigh herding by what a normal year gives, not by this year's herd after a die-off)
+  const KH=herdsOn()&&s.KhN?s.KhN:s.Kh;
   const sum=new Float64Array(eths.length),wt=new Float64Array(eths.length);
   for(const i of L){const p=s.pop[i];if(p<1||(s.farm[i]<0.1&&s.herd[i]<0.1))continue;
     // fields on dry, drought-prone land are a gamble that herds, which can move, are not
     const risk=1-0.4*clamp((550-w.Pr[i])/300,0,1)*(1-0.7*s.irrig[i]*rvAg()[i]);
-    const F=(s.Kfa[i]+0.3*s.Kh[i]+0.2*s.Kf[i])*risk,Hh=s.Kh[i]+0.4*s.Kf[i];if(F+Hh<=0)continue;
+    const F=(s.Kfa[i]+0.3*KH[i]+0.2*s.Kf[i])*risk,Hh=KH[i]+0.4*s.Kf[i];if(F+Hh<=0)continue;
     const e=s.eth[i]>=0?eths[s.eth[i]]:null,trad=e&&e.past!=null?e.past:0.5;
     // raided, open country is safer grazed than sown
     const raided=y-s.raidC[i]<30&&w.rough[i]<0.35?1:0;
@@ -3255,7 +3402,7 @@ function landUsePass(){
     const share=Fx=>1/(1+Math.exp(-(6*(Hh/(Fx+Hh)-0.5)+3*(trad-0.5)+0.8*raided+1.6*policy)));
     // on grassland, the broken fields and the unbroken turf are weighed apart: turf that hoes and ards cannot work is pasture
     let target;const tu=w.turf?w.turf[i]:0;
-    if(tu>0){const op=s.open[i],f1=0.04+0.08*s.iron[i]+0.6*s.plough[i],Fb=s.Kfa[i]/Math.max(0.01,op+(1-op)*f1),rest=0.3*s.Kh[i]+0.2*s.Kf[i];
+    if(tu>0){const op=s.open[i],f1=0.04+0.08*s.iron[i]+0.6*s.plough[i],Fb=s.Kfa[i]/Math.max(0.01,op+(1-op)*f1),rest=0.3*KH[i]+0.2*s.Kf[i];
       target=op*share((Fb+rest)*risk)+(1-op)*share((Fb*f1+rest)*risk)}
     else target=share(F);
     past[i]+=0.15*(target-past[i]);
@@ -3347,7 +3494,8 @@ function herdPass(){
         const keen=0.25+0.75*Math.max(s.past[j],0.6*s.herd[j]);if(r()<0.6*keen)add.push(j,Math.min(c,0.25*v),i)}}
     for(let k=0;k<add.length;k+=3){d[add[k]]=Math.max(d[add[k]],add[k+1]);if(sp===0&&s.linOf)linCarry('horse',add[k+2],add[k])}}
   // a killing winter (dzud) or drought on the steppe
-  if(r()<0.3){const i=L[(r()*L.length)|0];const hit=s.dom[0][i]>0.3||s.dom[1][i]>0.3||s.dom[3][i]>0.3;
+  // (herds switch: hard winters and droughts come from the weather instead, in herdYear)
+  if(!herdsOn()&&r()<0.3){const i=L[(r()*L.length)|0];const hit=s.dom[0][i]>0.3||s.dom[1][i]>0.3||s.dom[3][i]>0.3;
     if(hit&&w.T[i]<10){const loss=0.35+0.3*r();ring(i,5,j=>{for(const sp of [0,1,3])s.dom[sp][j]*=1-loss});
       const p=s.pol[i]?s.pols[s.pol[i]]:null;s.dieoffs.push({y,cell:i});
       if(p&&p.kind==='horde'&&p.cells>=15){p.shock+=0.25;chron('nature',`A killing winter freezes the steppe: the ${p.full} loses ${Math.round(loss*100)}% of its herds.`,i,[R_(p)])}}}
@@ -4067,6 +4215,8 @@ function paintBase(){
   ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;ctx.beginPath();
   for(let l=-60;l<=60;l+=30){const yy=(90-l)/180*HH;ctx.moveTo(0,yy);ctx.lineTo(HW,yy)}
   for(let l=-150;l<=180;l+=30){const xx=(l+180)/360*HW;ctx.moveTo(xx,0);ctx.lineTo(xx,HH)}ctx.stroke();
+  // water switch: lakes, painted by the share of each province under water
+  if(S&&S.lake){const cw=HW/W,chh=HH/H;for(const i of w.landIdx){const f=S.lake[i];if(f<0.05)continue;ctx.fillStyle=`rgba(70,120,170,${(0.35+0.6*f).toFixed(2)})`;ctx.fillRect((i%W)*cw,((i/W)|0)*chh,cw+0.5,chh+0.5)}}
   // rivers as smooth curves: each reach bends through its cell centre, from the midpoint with its main tributary to the midpoint with the cell downstream
   const up=new Int32Array(N).fill(-1),upv=new Float32Array(N);
   for(const i of w.landIdx){const j=w.down[i];if(j>=0&&w.rv[i]>upv[j]){upv[j]=w.rv[i];up[j]=i}}
@@ -4778,6 +4928,9 @@ $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
 // test switches (see swOn in world.js): one box each
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
+  ['rivers','Rivers run the right way','a river finds its mouth through rivers at least as large as itself, so the upper Niger reaches Timbuktu and the inland delta instead of running backwards into the Senegal.'],
+  ['water','Living water','rivers carry the rain of their own age, closed basins fill with lakes in wet times (the green Sahara\'s Lake Mega-Chad) and shrink in dry ones, the Sahara dries from the north and east first, and people leave drying land along its watercourses for land that can feed them.'],
+  ['herds','Herders live on their herds','herds die in hard winters and droughts and take years to regrow; a family left with too few animals cannot rebuild alone.'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
   box.innerHTML=SWITCHES.map(([k,n,d])=>`<label class="check"><input type="checkbox" data-sw="${k}"${swOn(k)?' checked':''}><span><b>${n}</b>: ${d}</span></label>`).join('');
