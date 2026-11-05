@@ -787,7 +787,6 @@ const SWITCHES=[
   ['graze','Herders follow the grass','clans move toward better grass within a few days\' ride; overgrazed pasture wears out.'],
   ['hordesplit','Confederations break into their parts','a dead khan\'s heirs keep only the home pastures, and lose even those if too few people are left; outlying chiefs ride off as new confederations; the rest go back to the clans.'],
   ['partition','Lords carve up fallen realms','a collapsing farming state\'s good farmland is split among its lords instead of going stateless.'],
-  ['seedsea','Seed crosses straits','the boats that carry farming know-how across a narrow strait carry the seed too (Britain, Japan, the islands).'],
   ['lateag','Late farming','crop rotation and early-ripening rice raise yields after the classical age.'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
