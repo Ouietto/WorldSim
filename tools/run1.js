@@ -78,7 +78,7 @@ out.diag=diag;
  out.d_warShare=WAR.p?+(WAR.w/WAR.p).toFixed(3):null;out.d_warsPerState=WAR.sy?+(ws.length/(WAR.sy/100)).toFixed(2):null;out.d_warLen=done.length?done[done.length>>1]:null;out.d_taken=+(WAR.taken/(span/100)).toFixed(0);
  const g={};for(const x of ws)if(x.goal)g[x.goal]=(g[x.goal]||0)+1;out.d_goals=g;
  // lifespans of confederations that reached 20+ provinces, born after 3000 BCE
- {const L=S.pols.filter(o=>o&&o.kind==='horde'&&o.maxCells>=20&&o.born>=-3000).map(o=>(o.alive?S.year:o.died)-o.born).sort((a,b)=>a-b);out.d_confN=L.length;out.d_confLife=L.length?L[L.length>>1]:null}if(S.gzD){out.d_clan=S.gzN;out.d_clanFar=S.gzFar}}
+ {const L=S.pols.filter(o=>o&&o.kind==='horde'&&o.maxCells>=20&&o.born>=-3000).map(o=>(o.alive?S.year:o.died)-o.born).sort((a,b)=>a-b);out.d_confN=L.length;out.d_confLife=L.length?L[L.length>>1]:null}if(S.gzD){out.d_clan=S.gzN;out.d_clanFar=S.gzFar}if(S.hs){out.d_dz=S.hzC?+(S.dzC/S.hzC).toFixed(4):null}}
 out.p_m3000=pop[-2999]??null;out.p_1=pop[1]??null;out.p_1000=pop[1000]??null;out.p_1500=pop[1500]??null;
 out.b_m1000=big[-999]??null;out.b_1=big[1]??null;out.h_m1000=bigH[-999]??null;out.h_1=bigH[1]??null;
 const ch=S.chinaHist.filter(h=>h[0]>=-250);out.cUnity=ch.length?+(ch.filter(h=>h[1]>0.5).length/ch.length).toFixed(3):null;

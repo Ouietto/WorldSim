@@ -298,17 +298,47 @@ const rvAg=()=>WD.rvF,admOf=()=>S.recK||S.admin;
 // sums of generated techniques for the food and power rows, cached every ten years for the capacity pass
 function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=new Float32Array(N);s.genC3=new Float32Array(N)}
   const fill=(row,a)=>{a.fill(0);for(const k of s.genByRow[row]){const t=s.tk[k],tr=TECH[k].tier;for(const i of w.landIdx)a[i]+=t[i]*tr}};fill(0,s.genC0);fill(3,s.genC3)}
+// herds switch: herders live on their animals: sheep, goats and cattle, with horses and camels on top. s.hs is the herd against
+// what the province's pasture carries in a normal year (1). Herds regrow about a third of the gap a year when the grass allows,
+// more slowly once a family is down to its last animals (the point where it cannot rebuild alone varies from place to place:
+// Moritz et al. 2017, "No magic number"). They die when the grass or the winter forage gives out: a dry summer, or deep snow and
+// ice over the grass in a cold winter (dzud; a dry summer before a hard winter is the worst: Fernandez-Gimenez et al. 2012).
+// Herders who outnumber what their herds feed eat into their breeding stock. The winter is its own weather field, drawn from its
+// own random stream so the rains stay the same.
+const herdsOn=()=>swOn('herds');
+function herdYear(){
+  const s=S,w=WD,L=w.landIdx;
+  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0}
+  const g=s.WG,rW=s.rW;for(let k=0;k<g.length;k++)g[k]=0.3*g[k]+0.954*gauss(rW);
+  const dT=s.dT+s.gT+epochTemp(),wi=w.wi,wf=w.wf,hs=s.hs,lossA=s.hsLoss,dom=s.dom;
+  for(const i of L){lossA[i]=0;if(!(w.sH[i]>0.03||w.desert[i]))continue;
+    const T=w.T[i]+dT+s.cdT[i]+s.evT[i],cold=clamp((w.amp[i]/2-T-4)/10,0,1);
+    const F=Math.min(1.3,clamp(s.wm[i]*s.evP[i],0.3,1.6));
+    let dz=0;if(cold>0){const fx=wf[i*2],fy=wf[i*2+1],z=(g[wi[i*4]]*(1-fx)+g[wi[i*4+1]]*fx)*(1-fy)+(g[wi[i*4+2]]*(1-fx)+g[wi[i*4+3]]*fx)*fy;dz=cold*clamp((z-0.8)/1.6,0,0.85)}
+    const cap=F*(1-dz);let v=hs[i];
+    if(v>cap){const lost=(v-cap)*0.75;lossA[i]=lost/v;v-=lost}
+    else{const th=0.15+0.2*(((i*2654435761)>>>0)/4294967296);v+=0.3*v*(1-v/cap)*Math.min(1,v/th)}
+    const p=s.pop[i],K=s.K[i];if(p>K&&s.past[i]>0.5)v-=0.1*Math.min(1,p/K-1)*v;
+    hs[i]=clamp(v,0.02,1.6);
+    const ls=lossA[i];if(ls>0.05&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
+    if(s.past[i]>0.5&&p>=1){s.hzC++;if(ls>0.25)s.dzC++}}
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='horde'||o.cells<15)continue;const ls=lossA[o.capital];if(ls<0.3)continue;
+    o.shock+=0.5*ls;chron('nature',`${dz0(o.capital)?'A killing winter buries the pastures':'Drought burns the pastures'}: the ${o.full} loses ${Math.round(ls*100)}% of its herds.`,o.capital,[R_(o)])}
+}
+// was the herd lost to the winter or to the summer?
+function dz0(i){const s=S,w=WD;return w.amp[i]/2-(w.T[i]+s.cdT[i])-4>0&&s.wm[i]>0.85}
 function computeK(){
   const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=admOf(),s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL,s_wheel=s.wheel,w_turf=w.turf,s_open=s.open,s_malF=s.malF;
   const Z=w.zeroN||(w.zeroN=new Float32Array(N)),s_evT=s.evT||Z,s_evP=s.evP,s_sed=s.sed||Z,s_wildG=s.wildG||Z,s_huntX=s.huntX||Z,s_meatX=s.meatX||Z,s_mouseX=s.mouseX||Z,w_iceY=w.iceY||w.noIce||(w.noIce=new Float32Array(N).fill(-1e9)),s_Kpot=s.Kpot,s_year=s.year,tTer=s.tk[TI.terrace],t26=s.tk[26],t28=s.tk[28],t29=s.tk[29],t32=s.tk[32],t33=s.tk[33],envW=w.techEnv?w.techEnv[2]:null,
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize;
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null;
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
-    if(s_farm[i]<0.3&&(k+s_year)%3!==0&&s_K[i]>0)continue;
+    if(s_farm[i]<0.3&&(k+s_year)%3!==0&&s_K[i]>0&&!(HS&&Math.abs(HS[i]-HSK[i])>0.08))continue;
+    if(HS)HSK[i]=HS[i];
     const T=w_T[i]+dT+cdT[i]+s_evT[i];
     if(T<-9||s_year<w_iceY[i]){s_K[i]=1;continue}
     const wm=s_wm[i]*s_evP[i],Pn=Math.max(0.3*w_Pr[i],w_Pr[i]+cdP[i])*wm,ar=w_area[i],rv=w_rv[i];
@@ -321,7 +351,8 @@ function computeK(){
     let sh=Math.max(w_sH[i],0.5*s_domR[i],0.6*s_domL[i]);if(w_desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w_Pr[i]+cdP[i]-80)/350,0,0.7));if(w_desert[i])sh=Math.max(sh,0.25*s_camel[i]);
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
     const mob=Math.min(1,s_horse[i])*(0.4+0.6*s_wheel[i]);
-    let Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
+    // herds switch: what the herd itself can give (s.hs, below), which lags the grass by years after a crash
+    let Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*(HS?Math.min(1.3,HS[i]):Math.min(1.3,dry))*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
     // herders follow the grass (default since run 79): crowded herds wear the grass down; s.grass is what the pasture itself would feed, whoever grazes it
     if(GZ){Kh*=1-0.45*GZ[i];s.grass[i]=ar*1.6*sh*Math.min(1.3,dry)*(1+0.25*w_transh[i])*(1-s_rp[i])*(1-0.45*GZ[i])}
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
@@ -1564,7 +1595,7 @@ function step(){for(const _ of stepG());}
 const ymod=(y,n)=>((y%n)+n)%n;
 function* stepG(){
   const s=S;s.year++;
-  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();hearthCheck();
+  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();if(herdsOn())herdYear();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}

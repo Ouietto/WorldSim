@@ -121,7 +121,8 @@ function herdPass(){
         const keen=0.25+0.75*Math.max(s.past[j],0.6*s.herd[j]);if(r()<0.6*keen)add.push(j,Math.min(c,0.25*v),i)}}
     for(let k=0;k<add.length;k+=3){d[add[k]]=Math.max(d[add[k]],add[k+1]);if(sp===0&&s.linOf)linCarry('horse',add[k+2],add[k])}}
   // a killing winter (dzud) or drought on the steppe
-  if(r()<0.3){const i=L[(r()*L.length)|0];const hit=s.dom[0][i]>0.3||s.dom[1][i]>0.3||s.dom[3][i]>0.3;
+  // (herds switch: hard winters and droughts come from the weather instead, in herdYear)
+  if(!herdsOn()&&r()<0.3){const i=L[(r()*L.length)|0];const hit=s.dom[0][i]>0.3||s.dom[1][i]>0.3||s.dom[3][i]>0.3;
     if(hit&&w.T[i]<10){const loss=0.35+0.3*r();ring(i,5,j=>{for(const sp of [0,1,3])s.dom[sp][j]*=1-loss});
       const p=s.pol[i]?s.pols[s.pol[i]]:null;s.dieoffs.push({y,cell:i});
       if(p&&p.kind==='horde'&&p.cells>=15){p.shock+=0.25;chron('nature',`A killing winter freezes the steppe: the ${p.full} loses ${Math.round(loss*100)}% of its herds.`,i,[R_(p)])}}}
