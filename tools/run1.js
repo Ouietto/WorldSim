@@ -26,15 +26,18 @@ const MR=[['Egypt',22,31.5,29,34],['Pontic-Caspian steppe',44,52,30,55],['Near E
 const mrName=new Array(N).fill('Other');for(const i of WD.landIdx){const la=LA(i),lo=LO(i);let n='Other';for(const b of MR)if(la>=b[1]&&la<=b[2]&&lo>=b[3]&&lo<=b[4]){n=b[0];break}
   if(n==='South America')n=WD.elev[i]>1500||lo<-76?'Andes and Pacific coast':'Lowland South America';mrName[i]=n}
 const MRN=MR.map(b=>b[0]).filter(n=>n!=='South America').concat(['Andes and Pacific coast','Lowland South America','Other']);
-const diag={};const snap=y=>{const rp={},cp={};for(const n of MRN)rp[n]=0;for(const i of WD.landIdx){const p=S.pop[i];if(p<1)continue;rp[mrName[i]]+=p;
-    if(S.farm[i]>0.5){const c=S.crop&&S.crop[i]>=0?CROPS[S.crop[i]].k:'none';cp[c]=(cp[c]||0)+p}}
-  for(const k in rp)rp[k]=+(rp[k]/1e6).toFixed(2);for(const k in cp)cp[k]=+(cp[k]/1e6).toFixed(2);diag[y]={reg:rp,crop:cp}};
+const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp[n]=0;for(const i of WD.landIdx){const p=S.pop[i];if(p<1)continue;rp[mrName[i]]+=p;
+    if(S.farm[i]>0.5){const c=S.crop&&S.crop[i]>=0?CROPS[S.crop[i]].k:'none';cp[c]=(cp[c]||0)+p;
+      if(S.cf){const g=mrName[i];fq[g]=(fq[g]||0)+p*S.cf[i];fw[g]=(fw[g]||0)+p}}}
+  for(const k in rp)rp[k]=+(rp[k]/1e6).toFixed(2);for(const k in cp)cp[k]=+(cp[k]/1e6).toFixed(2);diag[y]={reg:rp,crop:cp};
+  // cropping frequency (share of farmland cropped each year), farmer-weighted, when that switch is on
+  if(S.cf){const o={};for(const k in fq)o[k]=+(fq[k]/fw[k]).toFixed(2);diag[y].cf=o}};
 // steppe and migration dynamics after 3000 BCE, counted from the chronicle as it is written (it is trimmed when long)
 const DOM={inv:/break through the frontier/,dom:/abandon their pastures/,wall:/fortify its frontier/},dCnt={inv:0,dom:0,wall:0};let chI=0;
 const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n++;if(S.farm[i]>0.5)f++}return n?f/n:0},fArr={};
 while(S.year<END){step();
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt))dCnt[k]++}}
-  if(S.year===-2999||S.year===1)snap(S.year);
+  if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
   if(S.year%25===0)for(const k of ['cEur','brit','scand','japan'])if(fArr[k]==null&&fShare(k)>=0.5)fArr[k]=S.year;
   if(S.year%1000===0||S.year===1){sec[S.year]=(Date.now()-lap)/1000;lap=Date.now()}
   if(S.year%50===0&&S.year<=1)for(const k of S.alive){const o=S.pols[k];if(o.kind==='horde'&&(!hMax||o.cells>hMax.cells))hMax={cells:o.cells,y:S.year,at:Math.round(LA(o.capital))+','+Math.round(LO(o.capital))}}

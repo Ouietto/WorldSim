@@ -99,12 +99,14 @@ function variantReport(names,sets){
   const bad=base.rows.filter(r=>r.t.cls==='guard'&&r.inBand<0.9);S.slice(1).forEach((s,k)=>s.rows.forEach(r=>{if(r.t.cls==='guard'&&r.inBand<0.9)bad.push({t:r.t,inBand:r.inBand,v:names[k+1]})}));
   if(bad.length)L.push('','**Guards broken:** '+bad.map(b=>`${b.t.n} ${pct(b.inBand)}${b.v?' ('+b.v+')':''}`).join('; '));
   // diagnosis: where people are and what they eat, median millions per history
-  for(const y of [-2999,1]){if(y>END)continue;const regs=new Set();sets.forEach(rs=>rs.forEach(r=>r.diag&&r.diag[y]&&Object.keys(r.diag[y].reg).forEach(k=>regs.add(k))));if(!regs.size)continue;
+  for(const y of [-2999,1,1000]){if(y>END)continue;const regs=new Set();sets.forEach(rs=>rs.forEach(r=>r.diag&&r.diag[y]&&Object.keys(r.diag[y].reg).forEach(k=>regs.add(k))));if(!regs.size)continue;
     L.push('',`**People by region at ${y<=0?(1-y)+' BCE':y+' CE'}** (median, millions)`,'',`| Region | ${names.join(' | ')} |`,`|---|${names.map(()=>'---').join('|')}|`);
     for(const g of regs)L.push(`| ${g} | ${sets.map(rs=>{const m=median(rs.map(r=>r.diag&&r.diag[y]?r.diag[y].reg[g]:null));return m==null?'–':m.toFixed(1)}).join(' | ')} |`);
     const crops=new Set();sets.forEach(rs=>rs.forEach(r=>r.diag&&r.diag[y]&&Object.keys(r.diag[y].crop).forEach(k=>crops.add(k))));
     L.push('',`**Farmers by staple at ${y<=0?(1-y)+' BCE':y+' CE'}** (median, millions)`,'',`| Staple | ${names.join(' | ')} |`,`|---|${names.map(()=>'---').join('|')}|`);
-    for(const c of crops)L.push(`| ${c} | ${sets.map(rs=>{const m=median(rs.map(r=>r.diag&&r.diag[y]?(r.diag[y].crop[c]||0):null));return m==null?'–':m.toFixed(1)}).join(' | ')} |`)}
+    for(const c of crops)L.push(`| ${c} | ${sets.map(rs=>{const m=median(rs.map(r=>r.diag&&r.diag[y]?(r.diag[y].crop[c]||0):null));return m==null?'–':m.toFixed(1)}).join(' | ')} |`);
+    if(sets.some(rs=>rs.some(r=>r.diag&&r.diag[y]&&r.diag[y].cf))){L.push('',`**Cropping frequency at ${y<=0?(1-y)+' BCE':y+' CE'}** (median, share of farmland cropped per year; 1 = every year)`,'',`| Region | ${names.join(' | ')} |`,`|---|${names.map(()=>'---').join('|')}|`);
+      for(const g of regs)L.push(`| ${g} | ${sets.map(rs=>{const m=median(rs.map(r=>r.diag&&r.diag[y]&&r.diag[y].cf?r.diag[y].cf[g]??null:null));return m==null?'–':m.toFixed(2)}).join(' | ')} |`)}}
   if(sets[0][0]&&sets[0][0].d_invasions!=null){L.push('','**Steppe dynamics after 3000 BCE** (median per millennium; walls: total)','',`| | ${names.join(' | ')} |`,`|---|${names.map(()=>'---').join('|')}|`);
     for(const [k,lab] of [['d_invasions','Invasions through a frontier'],['d_dominoes','Beaten herders riding off (dominoes)'],['d_walls','Great walls begun']])L.push(`| ${lab} | ${sets.map(rs=>{const m=median(rs.map(r=>r[k]));return m==null?'–':+m.toFixed(1)}).join(' | ')} |`)}
   const tm=rs=>{const t=rs.map(r=>r.time.total).sort((a,b)=>a-b);return t[t.length>>1].toFixed(0)};

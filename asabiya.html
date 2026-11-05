@@ -1453,6 +1453,9 @@ function weather(){
 }
 // diminishing returns: each new farming technique adds less on top of the others (Boserup's intensification, Malthus's ceiling)
 const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
+// cropping frequency switches: cf (slow, farmers close a sixth of the gap to their ceiling per century under crowding) and cffast
+// (four times faster). New farmers start at long fallow (CF0); capacity scales with frequency against CFREF
+const CF0=0.25,CFREF=0.4,cfRate=()=>swOn('cffast')?0.006:swOn('cf')?0.0015:0;
 // farming reads the floodplain share (rvF), not the raw river; state capacity reads record keeping (writing, khipu, griots,
 // drum script), not writing alone
 const rvAg=()=>WD.rvF,admOf=()=>S.recK||S.admin;
@@ -1465,6 +1468,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
+  const CFR=cfRate();if(CFR&&!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice;
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -1487,7 +1491,22 @@ function computeK(){
     const irr=s_irrig[i]*w.rvF[i];
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const hv=w_heavy[i],lc=w_leach[i];
-    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*tTer[i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*t26[i]*Math.max(lc,s_forest[i])+0.15*t28[i]*w_coast[i])*(1+Math.min(1,w.rvF[i]/Math.max(w_sF[i],0.02))*(0.25+2.2*s_irrig[i]));
+    const fp=Math.min(1,w.rvF[i]/Math.max(w_sF[i],0.02));
+    // techniques that raise each harvest; with cropping frequency on, ards, ploughs, manure and terraces instead set how often the
+    // land can be cropped (below)
+    const xY=0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*t26[i]*Math.max(lc,s_forest[i])+0.15*t28[i]*w_coast[i];
+    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY+(CFR?0:0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*tTer[i]*w_terrFit[i]))*(1+fp*(0.25+2.2*s_irrig[i]));
+    if(CFR){
+      // cropping frequency (Boserup 1965): how often a field bears. Hoe farmers crop a plot a few years and leave it to bush for
+      // many; oxen and the ard allow a fallow every other year (the Mediterranean two-field round); manure and rotations, or the
+      // heavy plough on wet clays, allow cropping every year; bunded rice paddies keep their fertility without manure; flood silt
+      // renews river land every year, and canals in warm country give two harvests (Egypt, Sumer, the Yangtze). Leached tropical
+      // soils give out after two or three harvests (Sanchez 1976). Farmers move toward this ceiling only under crowding (growth)
+      const rice=s_crop[i]===riceK?1:0,warm=clamp((T-16)/6,0,1);
+      let cR=CF0+0.25*s_ard[i]*(1-0.6*hv)+0.25*s_plough[i]*hv+0.35*s_manure[i]*(0.5+0.5*Math.max(s_ard[i],s_plough[i]))+0.35*tTer[i]*w_terrFit[i];
+      cR=Math.max(cR,0.55*rice)*(1-0.6*lc);
+      const cF=0.6+0.4*s_irrig[i]+0.8*s_irrig[i]*warm*(0.4+0.6*rice);
+      s_cfMax[i]=(1-fp)*cR+fp*cF;Kfa*=s_cf[i]/CFREF}
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
     if(w_turf[i]>0){const op=s_open[i],f1=0.04+0.08*s_iron[i]+0.6*s_plough[i];Kfa*=op+(1-op)*f1}
@@ -1501,19 +1520,24 @@ function computeK(){
     // walk to grass. The Pontic and Kazakh steppes and the Great Plains stayed pastoral until iron ploughs and markets (Anthony 2007)
     Kfa*=1-0.45*(w.rainRisk?w.rainRisk[i]:0);
     // the potential is what farmers would get with real crops, even before the crops have arrived here
-    s_Kpot[i]=Kfa*(s_crop[i]>=0?1:1/0.35);Kfa*=s_farm[i];
+    s_Kpot[i]=Kfa*(s_crop[i]>=0?1:1/0.35)*(CFR?Math.max(1,CFREF/s_cf[i]):1);Kfa*=s_farm[i];
     s_Kfa[i]=Kfa*(1+0.04*s_mouseX[i]);s_Kh[i]=Kh+KhX;s_Kf[i]=Kf;const ps=s_past[i];
     // the province's mix of fields and pasture, set by what pays, who lives there, raids and rulers (see herds.js)
     s_K[i]=Math.max(1,Kf,(1-ps)*(s_Kfa[i]+0.3*s_Kh[i]+0.2*Kf)+ps*(s_Kh[i]+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*t29[i]));
   }
 }
 function growth(){
-  const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade;const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
+  const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade,CFR=cfRate();const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s_pop[i];if(p<=0)continue;const K=s_K[i];
     if(p<K)p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s_farm[i]+0.5*s_herd[i]));else{let ex=(p-K)*0.2;const gq=s_pol[i]?s_pols[s_pol[i]]:null;if(gq&&gq.gran>0.05&&gq.wet<-0.1){const sv=ex*0.6*gq.gran;ex-=sv;gq.granUse=(gq.granUse||0)+sv}p-=ex;if(!s_pol[i]&&p>1.2*K&&p>20000&&s_eth[i]>=0)pushPressure(s_eth[i],ex*0.35,i,0,null)}
     if(p<0.5){p=0;s_eth[i]=-1;s_eth2[i]=-1;s_rel[i]=-1}
     s_pop[i]=p;
     const pr=p/K,fm=s_farm[i];
+    // crowded farmers shorten the fallow toward what their soils and tools allow; when land is plentiful again they let it rest
+    // (Boserup 1965; after the Black Death arable went back to grass)
+    if(CFR&&fm>0.3){let c=s.cf[i];const m=s.cfMax[i];
+      if(c>m)c-=0.02*(c-m);else if(pr>0.7)c+=CFR*(m-c)*Math.min(1,(pr-0.7)/0.2);else if(pr<0.45&&c>CF0)c-=1.5*CFR*(c-CF0);
+      s.cf[i]=c}else if(CFR&&s.cf[i]>CF0)s.cf[i]-=0.01*(s.cf[i]-CF0);
     if(fm>0.3&&w_sF[i]>0.1){const silt=clamp(w.rvF[i]*1.5,0,0.8),lc=w_leach[i];
       if(pr>0.7)s_fert[i]=Math.max(0.3,s_fert[i]-dg*0.0012*(pr-0.7)*fm*(1+0.6*lc)*w_soilDrain[i]*s_cDrain[i]*(1-0.45*s_crops[i])*(1-0.5*s_manure[i])*(1-silt));
       s_fert[i]+=0.0025*(1-s_fert[i])*(1+0.6*s_herd[i]*w_sH[i]+(pr<0.5?1+lc:0));
