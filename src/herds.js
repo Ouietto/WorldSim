@@ -17,11 +17,13 @@ function inheritPast(e,p,p2){e.past=p?clamp((p2?(p.past+p2.past)/2:p.past)+gauss
 // every ten years
 function landUsePass(){
   const s=S,w=WD,L=w.landIdx,past=s.past,pol=s.pol,pols=s.pols,eths=s.eths,y=s.year;
+  // (herds switch: people weigh herding by what a normal year gives, not by this year's herd after a die-off)
+  const KH=herdsOn()&&s.KhN?s.KhN:s.Kh;
   const sum=new Float64Array(eths.length),wt=new Float64Array(eths.length);
   for(const i of L){const p=s.pop[i];if(p<1||(s.farm[i]<0.1&&s.herd[i]<0.1))continue;
     // fields on dry, drought-prone land are a gamble that herds, which can move, are not
     const risk=1-0.4*clamp((550-w.Pr[i])/300,0,1)*(1-0.7*s.irrig[i]*rvAg()[i]);
-    const F=(s.Kfa[i]+0.3*s.Kh[i]+0.2*s.Kf[i])*risk,Hh=s.Kh[i]+0.4*s.Kf[i];if(F+Hh<=0)continue;
+    const F=(s.Kfa[i]+0.3*KH[i]+0.2*s.Kf[i])*risk,Hh=KH[i]+0.4*s.Kf[i];if(F+Hh<=0)continue;
     const e=s.eth[i]>=0?eths[s.eth[i]]:null,trad=e&&e.past!=null?e.past:0.5;
     // raided, open country is safer grazed than sown
     const raided=y-s.raidC[i]<30&&w.rough[i]<0.35?1:0;
@@ -29,7 +31,7 @@ function landUsePass(){
     const share=Fx=>1/(1+Math.exp(-(6*(Hh/(Fx+Hh)-0.5)+3*(trad-0.5)+0.8*raided+1.6*policy)));
     // on grassland, the broken fields and the unbroken turf are weighed apart: turf that hoes and ards cannot work is pasture
     let target;const tu=w.turf?w.turf[i]:0;
-    if(tu>0){const op=s.open[i],f1=0.04+0.08*s.iron[i]+0.6*s.plough[i],Fb=s.Kfa[i]/Math.max(0.01,op+(1-op)*f1),rest=0.3*s.Kh[i]+0.2*s.Kf[i];
+    if(tu>0){const op=s.open[i],f1=0.04+0.08*s.iron[i]+0.6*s.plough[i],Fb=s.Kfa[i]/Math.max(0.01,op+(1-op)*f1),rest=0.3*KH[i]+0.2*s.Kf[i];
       target=op*share((Fb+rest)*risk)+(1-op)*share((Fb*f1+rest)*risk)}
     else target=share(F);
     past[i]+=0.15*(target-past[i]);

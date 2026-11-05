@@ -1,7 +1,6 @@
 {"seeds": "1-64", "end": 1500, "per": 4, "ref": "", "baseEnv": "",
  "variants": [
   {"name": "base", "env": ""},
-  {"name": "hordesplit", "env": "SW=hordesplit"},
-  {"name": "all", "env": "SW=graze,partition,wargoal,lateag,hordesplit"}
+  {"name": "herds", "env": "SW=herds"}
  ],
- "note": "Run 79 (diagnostics only, model unchanged since run 78): invasions by source; frontier states counted against any neighbouring herders, organised or not."}
+ "note": "Run 80: base now has grazing, partition, war goals, late farming and confederation breakup by default. herds: herders live on a herd stock that lags the grass; dzud and drought from the weather (a separate winter field); slow regrowth below a ruin threshold; land use weighs herding by a normal year."}

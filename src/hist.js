@@ -308,7 +308,7 @@ function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=ne
 const herdsOn=()=>swOn('herds');
 function herdYear(){
   const s=S,w=WD,L=w.landIdx;
-  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0}
+  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
   const g=s.WG,rW=s.rW;for(let k=0;k<g.length;k++)g[k]=0.3*g[k]+0.954*gauss(rW);
   const dT=s.dT+s.gT+epochTemp(),wi=w.wi,wf=w.wf,hs=s.hs,lossA=s.hsLoss,dom=s.dom;
   for(const i of L){lossA[i]=0;if(!(w.sH[i]>0.03||w.desert[i]))continue;
@@ -320,8 +320,8 @@ function herdYear(){
     else{const th=0.15+0.2*(((i*2654435761)>>>0)/4294967296);v+=0.3*v*(1-v/cap)*Math.min(1,v/th)}
     const p=s.pop[i],K=s.K[i];if(p>K&&s.past[i]>0.5)v-=0.1*Math.min(1,p/K-1)*v;
     hs[i]=clamp(v,0.02,1.6);
-    const ls=lossA[i];if(ls>0.05&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
-    if(s.past[i]>0.5&&p>=1){s.hzC++;if(ls>0.25)s.dzC++}}
+    const ls=lossA[i];if(ls>0.25&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
+    if(s.past[i]>0.5&&p>=1){s.hzC++;if(ls>0.25)s.dzC++;if(cold>0.5){s.hzCc++;if(ls>0.25)s.dzCc++}}}
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='horde'||o.cells<15)continue;const ls=lossA[o.capital];if(ls<0.3)continue;
     o.shock+=0.5*ls;chron('nature',`${dz0(o.capital)?'A killing winter buries the pastures':'Drought burns the pastures'}: the ${o.full} loses ${Math.round(ls*100)}% of its herds.`,o.capital,[R_(o)])}
 }
@@ -352,8 +352,11 @@ function computeK(){
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
     const mob=Math.min(1,s_horse[i])*(0.4+0.6*s_wheel[i]);
     // herds switch: what the herd itself can give (s.hs, below), which lags the grass by years after a crash
-    let Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*(HS?Math.min(1.3,HS[i]):Math.min(1.3,dry))*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
+    const KhB=HS?ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]):0;
+    let Kh=HS?KhB*Math.min(1.3,HS[i]):ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
     // herders follow the grass (default since run 79): crowded herds wear the grass down; s.grass is what the pasture itself would feed, whoever grazes it
+    // what herding gives in a normal year, which is what people weigh when they choose between fields and herds
+    if(HS)s.KhN[i]=KhB*(1-0.45*GZ[i])+ar*0.4*s_meatX[i];
     if(GZ){Kh*=1-0.45*GZ[i];s.grass[i]=ar*1.6*sh*Math.min(1.3,dry)*(1+0.25*w_transh[i])*(1-s_rp[i])*(1-0.45*GZ[i])}
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
