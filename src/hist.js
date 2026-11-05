@@ -815,8 +815,18 @@ function hordeBreakup(o){
   for(const i of cells){s.pop[i]*=0.96;lab[i]=0}
   o.E=0.7*etOf(o);o.shock=0.2;o.crises++;if(o.cplx!=null){o.cplx*=0.7;o.ineq=Math.max(0.2,o.ineq*0.7)}
   const rebels=news.map(k=>s.pols[k]);if(rebels.length&&!fall)declareWar(rebels,[o],`the ${o.base} succession war`,cells.length>=40,true);
+  // run 77: with a fallen house simply dissolving, beaten confederations stopped fleeing onto their neighbours (23.6 -> 0.2 a
+  // millennium) and invasions through a frontier nearly stopped (6.9 -> 0.4). A house too weak to keep a following, with heirs
+  // riding off around it, has lost the succession: its own people take their herds and ride away from the strongest heir, as
+  // the Northern Xiongnu did after the split of 48 CE (Barfield 1989), on the same terms as any beaten confederation (coalitionPass)
+  let fled=null;
+  if(fall&&rebels.length&&o.core>=0&&cp>3e4&&s.activeMigs.length<12){const by=rebels[0];let tot=0;for(const i of q){const take=s.pop[i]*0.6;s.pop[i]-=take;tot+=take}
+    startMigration({eth:o.core,pop:tot,cell:o.capital,dx:-dxWrap(o.capital,by.capital),dy:-(w.cyA[by.capital]-w.cyA[o.capital]),kind:'horde',pol:o,by,cause:'pushed'});fled=by}
+  // the breakup itself is no defeat: the next count of pastures lost to an enemy starts from what the house kept
+  if(!fall)o.c10=q.length;
   if(cells.length>=20){const nm=rebels.slice(0,3).map(p=>p.full),e=s.eths[o.core];
-    chron('war',`The ${o.full} falls apart: ${fall?'its house falls with it':`its khan keeps only the ${e?e.name+' ':''}home pastures`}.${nm.length?` ${nm.join(', ')}${rebels.length>3?' and others':''} ride off under their own chiefs.`:''}${freed?` ${freed} province${freed>1?'s scatter':' scatters'} back to ${freed>1?'their clans':'its clans'}.`:''}`,o.capital,[R_(o),...rebels.slice(0,3).map(RB)],why)}
+    chron('war',`The ${o.full} falls apart: ${fall?(fled?'its house is driven from its home pastures':'its house falls with it'):`its khan keeps only the ${e?e.name+' ':''}home pastures`}.${nm.length?` ${nm.join(', ')}${rebels.length>3?' and others':''} ride off under their own chiefs.`:''}${freed?` ${freed} province${freed>1?'s scatter':' scatters'} back to ${freed>1?'their clans':'its clans'}.`:''}`,o.capital,[R_(o),...rebels.slice(0,3).map(RB)],why)}
+  if(cells.length>=20&&fled)chron('migration',`Beaten by the ${fled.full}, the ${o.full} abandon their pastures and ride away with their herds.`,o.capital,[R_(o),R_(fled)],why);
 }
 function collapse(o){
   const s=S,w=WD;let lost=0;
