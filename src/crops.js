@@ -16,7 +16,7 @@ const CROPS=[
   {k:'potato',n:'potatoes and quinoa',anim:'llamas and guinea pigs',y:1.6,store:0.3,tax:0.35,drain:1.1,fit:(T,P,rv)=>trap(T,-1,4,15,22)*trap(P,250,450,1600,2600)},
   {k:'yams',n:'yams, taro and bananas',anim:'pigs and fowl',y:1.0,store:0.2,tax:0.15,drain:0.8,fit:(T,P,rv)=>trap(T,19,23,31,35)*trap(P,850,1300,4500,7000)},
   {k:'sunflower',n:'sunflowers, squash and goosefoot',anim:'dogs',y:0.6,store:0.7,tax:0.6,drain:0.8,fit:(T,P,rv)=>trap(T,4,9,19,25)*trap(P,500,750,1400,2000)},
-  {k:'cassava',n:'cassava',anim:'goats',y:1.4,store:0.25,tax:0.2,drain:0.7,fit:(T,P,rv)=>trap(T,18,22,31,35)*trap(P,500,900,3000,5000),introduced:1},
+  {k:'cassava',n:'cassava',anim:'goats',y:1.4,yS:0.9,store:0.25,tax:0.2,drain:0.7,fit:(T,P,rv)=>trap(T,18,22,31,35)*trap(P,500,900,3000,5000),introduced:1},
 ];
 const CI=Object.fromEntries(CROPS.map((c,k)=>[c.k,k]));
 // soils, assigned once from long-standing climate and terrain; fert multiplies farm yield, drain how fast farming wears it out,
@@ -58,7 +58,7 @@ function suitFor(w,i,t,p){
 function cropsInit(){
   const s=S,w=WD;
   if(!w.soil){w.soil=new Uint8Array(N);w.soilFert=new Float32Array(N).fill(1);w.soilDrain=new Float32Array(N).fill(1);w.soilSalt=new Float32Array(N).fill(1);w.soilErode=new Float32Array(N).fill(1);
-    w.terrFit=new Float32Array(N);for(const i of w.landIdx)w.terrFit[i]=Math.min(1,2*w.rough[i]+(w.Pr[i]>1000&&w.rv[i]>0.15&&w.rough[i]<0.1?0.6:0));
+    w.terrFit=new Float32Array(N);for(const i of w.landIdx)w.terrFit[i]=Math.min(1,2*w.rough[i]+(w.Pr[i]>1000&&rvAg()[i]>0.15&&w.rough[i]<0.1?0.6:0));
     w.sod=new Uint8Array(N);w.heavy0=Float32Array.from(w.heavy);
     // turf: grassland moist enough for a dense mat of roots but too dry for trees (the chernozem steppe, the tallgrass prairie)
     // is barely broken by hoes. Drier steppe grows sparse bunchgrass with bare ground between, easy to dig; wetter land grows
@@ -67,7 +67,7 @@ function cropsInit(){
     // monsoon grasslands with dry winters (the loess of North China) grow bunchgrass, not a matted sod: the hoe farmers of
     // Yangshao worked them from the start (Liu & Chen 2012)
     const dryWinter=i=>{const k=w.kgGrid?w.kgGrid[i]:0;return k===15||k===16||k===26||k===27};
-    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if(b===5||b===6)w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*w.rv[i]))*(dryWinter(i)?0.25:1)}
+    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if(b===5||b===6)w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*rvAg()[i]))*(dryWinter(i)?0.25:1)}
     for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;w.soilDig[i]=so.dig;if(w.turf[i]>0.3)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
       // heavy wet clays belong to forest and savanna-clay soils, not to volcanic highlands, river silt or mountain soils
       if(!['forest','podzol','clay'].includes(so.k))w.heavy[i]=0}}
@@ -90,7 +90,9 @@ function bandIn(k,c){const b=S.cBand,a=WD.alat[c];b[2*k]=Math.min(b[2*k],Math.ma
 function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
 // every ten years: packages spread with farmers and by sea, each farm grows its best package, and some learn to process it
 function cropPass(quiet){
-  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT;
+  // cassava switch: cassava yields about as much food per field as other staples (yS), not 40% more; it is starch with little
+  // protein, so its farmers still hunted and fished, and Amazonian numbers stayed low until late
+  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT,SWy=swOn('cassava'),SWr=swOn('river');
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
@@ -100,8 +102,9 @@ function cropPass(quiet){
     for(let d=0;d<4;d++){const j=nb[i*4+d];if(j<0||pop[j]<1)continue;if((pkAv[j]|g)!==pkAv[j]&&r()<0.12)pkAv[j]|=g;else if((pkAv[j]|c)!==pkAv[j]&&r()<0.012)pkAv[j]|=c}
     if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}}
   for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
-    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=w.rvF[i],el=w.elev[i];
-    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
+    // river switch: a crop's water from the flood is judged on the land actually farmed: in a desert valley all of it is floodplain
+    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=SWr?Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)):w.rvF[i],el=w.elev[i];
+    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*(SWy&&C.yS?C.yS:C.y)*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
       if(best===CI.potato){const pS=clamp((P-280)/450,0,1)*clamp((3400-P)/1600,0.25,1);b=Math.max(b,pS*rf*(1-0.7*w.leach[i]))}
@@ -116,7 +119,7 @@ function cropPass(quiet){
     if(best===CI.potato&&!s.firstTech[TI.chuno]&&el>2500&&P<1300&&T>-2&&T<14&&farm[i]>0.6&&pop[i]>2000&&r()<0.004){seedTech(chu,i,1,1);firstTech(TI.chuno,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     // Boserup: crowded farmers on slopes or in wetlands build terraces and raised fields
     // invented independently wherever crowding on slopes or wetlands demands it (Yemen, China, the Andes, Mesoamerica, New Guinea)
-    if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&w.rv[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>4&&r()<0.0006){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
+    if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&rvAg()[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>4&&r()<0.0006){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     if(best===CI.maize&&!s.firstTech[TI.nixtamal]&&farm[i]>0.7&&pop[i]>3000&&r()<0.0015){seedTech(nix,i,1,1);firstTech(TI.nixtamal,i,s.pol[i]?s.pols[s.pol[i]]:null)}}
   if(!quiet){for(let k=0;k<CROPS.length;k++){if(edge[k]&1)cB[2*k+1]+=0.025;if(edge[k]&2)cB[2*k]=Math.max(0,cB[2*k]-0.025)}openPass()}
 }
@@ -133,7 +136,7 @@ function climateSuit(){const s=S,w=WD;if(!w.sF0)return;
 // how much of a province's harvest a ruler can actually take: storable, visible staples, or labour service once
 // there are storehouses and roads to organize it (the Inca mit'a)
 function taxEff(i){const s=S,w=WD,crop=Math.max(cerealEff(i),0);
-  const labour=(0.1+0.3*s.roads[i]+0.25*s.admin[i])*(0.4+0.6*s.cStore[i])*Math.min(1,s.pop[i]/w.area[i]/10);
+  const labour=(0.1+0.3*s.roads[i]+0.25*admOf()[i])*(0.4+0.6*s.cStore[i])*Math.min(1,s.pop[i]/w.area[i]/10);
   return Math.max(crop,labour)}
 
 // first ocean contact between landmasses: each side gets the other's crops, and Old World fevers reach the Americas

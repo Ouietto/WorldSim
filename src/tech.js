@@ -57,11 +57,11 @@ function deepPass(){const s=S,w=WD,E=s.eths,n=E.length,acc=new Float64Array(n*NT
   for(const i of w.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;const p=Math.sqrt(s.pop[i]);pw[e]+=p;const o=e*NTC;
     let beasts=0;if(s.bst)for(let k=1;k<BEASTS.length;k++)beasts+=s.bst[k][i];
     acc[o]+=p*clamp(0.6*env[0][i]*s.herd[i]+0.5*s.horse[i]+0.4*s.camel[i]+0.4*beasts,0,1);
-    acc[o+1]+=p*clamp(0.8*s.irrig[i]*w.rv[i]+0.5*s.sail[i]*w.coast[i],0,1);
+    acc[o+1]+=p*clamp(0.8*s.irrig[i]*rvAg()[i]+0.5*s.sail[i]*w.coast[i],0,1);
     acc[o+2]+=p*clamp(0.7*s.sail[i]*w.coast[i]+0.3*s.nav[i],0,1);
     acc[o+3]+=p*clamp(0.6*s.metal[i]+0.5*s.iron[i],0,1);
     acc[o+4]+=p*clamp(0.6*s.farm[i]+0.4*(s.cultv?s.cultv[i]:0)+0.2*beasts,0,1);
-    acc[o+5]+=p*clamp(0.7*s.admin[i]+0.4*(s.ritW?s.ritW[i]:0)+0.4*s.tk[TI.griots][i]+0.4*s.tk[TI.khipu][i],0,1);
+    acc[o+5]+=p*clamp(0.7*admOf()[i]+0.4*(s.ritW?s.ritW[i]:0)+0.4*s.tk[TI.griots][i]+0.4*s.tk[TI.khipu][i],0,1);
     acc[o+6]+=p*clamp(0.5*s.wheel[i]+0.6*s.tk[TI.drums][i]+0.3*s.tk[TI.relays][i],0,1)}
   for(let e=0;e<n;e++){const P=E[e];if(!P.alive||!pw[e])continue;if(!P.deep)P.deep=new Float32Array(NTC).fill(0.1);
     for(let k=0;k<NTC;k++){const v=acc[e*NTC+k]/pw[e],was=P.deep[k];P.deep[k]=v>was?was+0.01*(v-was):was+0.002*(v-was);
@@ -89,7 +89,7 @@ function techAfford(o){
   for(let k=0;k<5;k++)a[k]/=cells.length;
   a[0]=clamp(a[0]+0.3*s.herd[c]+0.25*s.horse[c]+0.2*s.camel[c],0,1);
   a[3]=clamp(a[3]+0.25*s.metal[c]+0.2*s.iron[c],0,1);
-  a[5]=clamp(0.6*s.admin[c]+0.3*s.paper[c]+0.2*s.law[c],0,1);
+  a[5]=clamp(0.6*admOf()[c]+0.3*s.paper[c]+0.2*s.law[c],0,1);
   let urb=0;for(const i of cells)if(s.city[i]>=0)urb++;a[6]=clamp(0.3*s.wheel[c]+0.3*s.iron[c]+urb/cells.length*1.5,0,1);
   return a;
 }

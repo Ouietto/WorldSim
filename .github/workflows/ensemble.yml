@@ -1,6 +1,6 @@
 name: Ensemble check
 
-# Runs Earth histories for the model check in parallel, one seed per runner, and stores each result
+# Runs Earth histories for the model check in parallel, a few seeds per runner (one variant each), and stores each result
 # on the ensemble-results branch under cache/, named exactly as tools/ensemble.js names its cache files.
 # Start it by pushing a change to tools/ensemble-request.json on a working branch, or by hand from the Actions tab.
 # Fetch results locally with: git fetch origin ensemble-results && git --work-tree=reports checkout origin/ensemble-results -- cache && git reset -q cache
@@ -21,9 +21,8 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     outputs:
-      seeds: ${{ steps.p.outputs.seeds }}
+      jobs: ${{ steps.p.outputs.jobs }}
       end: ${{ steps.p.outputs.end }}
-      env: ${{ steps.p.outputs.env }}
       ref: ${{ steps.p.outputs.ref }}
       baseEnv: ${{ steps.p.outputs.baseEnv }}
     steps:
@@ -33,17 +32,20 @@ jobs:
           node -e '
             const r=require("./tools/ensemble-request.json");
             const range=s=>String(s).split(",").flatMap(p=>{const m=p.match(/^(\d+)-(\d+)$/);if(!m)return[p];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(String(i));return a});
-            const o={seeds:JSON.stringify(range(r.seeds||"1-16")),end:String(r.end??1500),env:r.env||"",ref:r.ref||"",baseEnv:r.baseEnv||""};
+            // each runner has 4 cores and a history needs about 325 MB, so one job runs "per" histories side by side
+            const seeds=range(r.seeds||"1-16"),per=Math.max(1,r.per||4),vars=r.variants||[{name:"base",env:r.env||""}],jobs=[];
+            for(const v of vars)for(let k=0;k<seeds.length;k+=per)jobs.push({name:String(v.name).replace(/[^A-Za-z0-9_-]/g,"_"),env:v.env||"",seeds:seeds.slice(k,k+per).join(","),base:v===vars[0]?1:0});
+            const o={jobs:JSON.stringify(jobs),end:String(r.end??1500),ref:r.ref||"",baseEnv:r.baseEnv||""};
             for(const [k,v] of Object.entries(o))require("fs").appendFileSync(process.env.GITHUB_OUTPUT,k+"="+v+"\n");'
 
   run:
     needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        seed: ${{ fromJSON(needs.plan.outputs.seeds) }}
+        job: ${{ fromJSON(needs.plan.outputs.jobs) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,16 +53,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run seed ${{ matrix.seed }}
+      - name: Run ${{ matrix.job.name }} seeds ${{ matrix.job.seeds }}
+        env:
+          VENV: ${{ matrix.job.env }}
         run: |
-          args=(--seeds "${{ matrix.seed }}" --end "${{ needs.plan.outputs.end }}" --jobs 2)
-          [ -n "${{ needs.plan.outputs.env }}" ] && args+=(--env "${{ needs.plan.outputs.env }}")
-          [ -n "${{ needs.plan.outputs.ref }}" ] && args+=(--ref "${{ needs.plan.outputs.ref }}")
-          [ -n "${{ needs.plan.outputs.baseEnv }}" ] && args+=(--base-env "${{ needs.plan.outputs.baseEnv }}")
+          args=(--seeds "${{ matrix.job.seeds }}" --end "${{ needs.plan.outputs.end }}" --jobs 4 --env "$VENV")
+          if [ "${{ matrix.job.base }}" = "1" ]; then
+            [ -n "${{ needs.plan.outputs.ref }}" ] && args+=(--ref "${{ needs.plan.outputs.ref }}")
+            [ -n "${{ needs.plan.outputs.baseEnv }}" ] && args+=(--base-env "${{ needs.plan.outputs.baseEnv }}")
+          fi
           node tools/ensemble.js "${args[@]}" > /dev/null
       - uses: actions/upload-artifact@v4
         with:
-          name: seed-${{ matrix.seed }}
+          name: r-${{ matrix.job.name }}-${{ strategy.job-index }}
           path: reports/cache/*.json
 
   collect:

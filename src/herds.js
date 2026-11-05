@@ -20,7 +20,7 @@ function landUsePass(){
   const sum=new Float64Array(eths.length),wt=new Float64Array(eths.length);
   for(const i of L){const p=s.pop[i];if(p<1||(s.farm[i]<0.1&&s.herd[i]<0.1))continue;
     // fields on dry, drought-prone land are a gamble that herds, which can move, are not
-    const risk=1-0.4*clamp((550-w.Pr[i])/300,0,1)*(1-0.7*s.irrig[i]*w.rv[i]);
+    const risk=1-0.4*clamp((550-w.Pr[i])/300,0,1)*(1-0.7*s.irrig[i]*rvAg()[i]);
     const F=(s.Kfa[i]+0.3*s.Kh[i]+0.2*s.Kf[i])*risk,Hh=s.Kh[i]+0.4*s.Kf[i];if(F+Hh<=0)continue;
     const e=s.eth[i]>=0?eths[s.eth[i]]:null,trad=e&&e.past!=null?e.past:0.5;
     // raided, open country is safer grazed than sown
@@ -52,7 +52,7 @@ function elitePass(o){
   if(was>=0.5&&o.steppe<0.5&&o.cells>=15&&o.steppeLogged!==1){o.steppeLogged=1;chron('state',`In the ${o.full}, the old horse lords lose ground to landlords, merchants and officials; the court turns from the herds to the fields.`,c,[R_(o)],'Taxing farmers paid better than grazing their land.')}
   if(was<0.5&&o.steppe>=0.5&&o.cells>=15&&o.steppeLogged!==2){o.steppeLogged=2;chron('state',`Steppe lords take the upper hand at the court of the ${o.full}.`,c,[R_(o)])}
   // a court torn between herders and farmers may rule them under separate laws
-  if(!o.dual&&o.pD>0.35&&s.admin[c]>0.4&&o.cells>=20&&r()<0.01){o.dual=1;chron('state',`The ${o.full} rules its herders and its farmers under separate laws, each with its own ministers.`,c,[R_(o)],'Two ways of life under one crown pulled the court apart; dual government eased the strain.')}
+  if(!o.dual&&o.pD>0.35&&admOf()[c]>0.4&&o.cells>=20&&r()<0.01){o.dual=1;chron('state',`The ${o.full} rules its herders and its farmers under separate laws, each with its own ministers.`,c,[R_(o)],'Two ways of life under one crown pulled the court apart; dual government eased the strain.')}
   if(o.dual)o.treas-=0.005;
 }
 

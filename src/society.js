@@ -29,7 +29,7 @@ function colonyPass(){
           o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
           if(o.colN===1&&real>=20)chron('state',`The ${o.full} settles veterans on conquered land at its frontier, granting them farms in return for service.`,j,[R_(o)],'Soldiers who farm the land they hold make a frontier that stays held.')}}}
     // land held for service becomes land held by birth; large, loosely governed realms breed lords of their own
-    const col=Math.min(1,(o.colN||0)/Math.max(4,real/15)),adm=s.admin[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
+    const col=Math.min(1,(o.colN||0)/Math.max(4,real/15)),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
     o.nob=clamp(o.nob+10*(0.0012*col*(1-0.7*adm)+0.0005*(1-adm)*Math.min(1,real/80))*(1-o.nob)-10*0.001*adm*o.nob,0,0.95);
     // a strong ruler with a well-run court may try to take the lands back
     if(o.nob>0.5&&real>=15&&r()<0.06*(o.nob-0.4)*(o.burden>0.9?2:1)){
