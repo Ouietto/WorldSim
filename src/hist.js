@@ -378,8 +378,9 @@ function growth(){
       // short of young women has fewer children; a shortage of men lowers births only a little (remarriage, polygyny)
       const b=i*6,p0=s_pop[i];let c0=CO[b],c1=CO[b+1],c2=CO[b+2],c3=CO[b+3],c4=CO[b+4],c5=CO[b+5];const T=c0+c1+c2+c3+c4+c5;
       if(T<=0){c0=0.156*p0;c1=0.164*p0;c2=c3=c4=c5=0.17*p0}else if(Math.abs(T-p0)>1e-4*p0){const f=p0/T;c0*=f;c1*=f;c2*=f;c3*=f;c4*=f;c5*=f}
-      if(p>0){const D=0.04*(c0+c1)+0.012*(c2+c3)+0.05*(c4+c5);let Bt=p-p0+D,ex=0;if(Bt<0){ex=-Bt;Bt=0}
-        const fw=(c2+0.4*c4)/(0.238*p0+1),mm=Math.min(1,0.6+0.4*(c3+0.5*c5)/(c2+0.5*c4+1)),Bb=Bt*clamp(fw,0.3,1.6)*mm;
+      if(p>0){const D=0.04*(c0+c1)+0.012*(c2+c3)+0.05*(c4+c5),dP=p-p0;let ex=0;
+        // births replace the dead (fertility follows child loss), and growth beyond that needs women of childbearing age
+        const fw=(c2+0.4*c4)/(0.238*p0+1),mm=Math.min(1,0.85+0.15*(c3+0.5*c5)/(c2+0.5*c4+1));let Bb=dP>0?D+dP*clamp(fw,0.3,1.6)*mm:D+dP;if(Bb<0){ex=-Bb;Bb=0}
         const a0=c0/15,a1=c1/15,a2=c2/20,a3=c3/20;
         c0+=0.488*Bb-0.04*c0-a0;c1+=0.512*Bb-0.04*c1-a1;c2+=a0-0.012*c2-a2;c3+=a1-0.012*c3-a3;c4+=a2-0.05*c4;c5+=a3-0.05*c5;
         if(ex>0){const sw=1.5*(c0+c1)+0.7*(c2+c3)+1.3*(c4+c5);if(sw>0){const kC=Math.min(0.9,ex*1.5/sw),kY=Math.min(0.9,ex*0.7/sw),kO=Math.min(0.9,ex*1.3/sw);c0*=1-kC;c1*=1-kC;c2*=1-kY;c3*=1-kY;c4*=1-kO;c5*=1-kO}}
@@ -1250,7 +1251,7 @@ function* politicsG(){
     // white, above = a youth bulge). Armies draw a share of them: most herders ride; farmers send what the levy reaches.
     // Every year at war costs a part of the army to battle, siege and camp fever (Scheidel 2007 on Roman losses); boys take
     // fifteen years to replace them
-    if(CO){o.mpR=o.pop>0?o.ym/(0.17*o.pop):1;o.army=o.ym*(o.kind==='horde'?0.5:0.06+0.3*(o.levy||0))*(o.coord??1);if(o.enemies.size)o.lossYM=(o.lossYM||0)+0.02*o.army;
+    if(CO){o.mpR=o.pop>0&&o.ym!=null?clamp(o.ym/(0.17*o.pop),0,2):1;o.army=(o.ym??0.17*o.pop)*(o.kind==='horde'?0.5:0.06+0.3*(o.levy||0))*(o.coord??1);if(o.enemies.size)o.lossYM=(o.lossYM||0)+0.02*o.army;
       if(o.kind==='state'&&o.mpR<0.75&&o.ineq!=null)o.ineq=Math.max(0.15,o.ineq-0.001)}
     // threat: raids by horsemen and wars against stronger enemies (Tilly; Zhao's horsemen, 307 BCE). It decays in peace
     if(SWt&&o.kind==='state'){let inp=0;if(y-(o.raidY||-1e9)<5){const h=pols[o.raidBy];inp+=h&&h.alive&&h.kind==='horde'?0.6:0.3}
