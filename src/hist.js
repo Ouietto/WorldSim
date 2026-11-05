@@ -288,7 +288,7 @@ const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
 // frequency against CFREF
 const CF0=0.25,CFREF=0.4,CFR=0.0015;
 // test switches (run 74). scale / scale2: scalar stress at two strengths. threat: frontier threat builds the state and its
-// horsemen. milpa: maize intercropping and hand-built fields in the Americas
+// horsemen
 const sclK=()=>swOn('scale2')?2:swOn('scale')?1:0;
 // cohort switch: six age and sex groups per province (girls, boys, young women, young men 15-34, older women, older men)
 const cohOn=()=>swOn('cohort'),cohArr=()=>{if(!cohOn())return null;if(!S.coh)S.coh=new Float32Array(N*6);return S.coh};
@@ -304,7 +304,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=swOn('graze')?(s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD)):null;const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,SWm=swOn('milpa'),SWl=swOn('lateag');
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=swOn('graze')?(s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD)):null;const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,SWl=swOn('lateag');
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -344,9 +344,9 @@ function computeK(){
       // quick-ripening rice brings a second rice crop to irrigated paddies off the floodplains (Champa rice in Song China, 1012)
       const rot=SWl?s_crops[i]:0;
       let cR=CF0+0.25*s_ard[i]*(1-0.6*hv)+0.25*s_plough[i]*hv+0.35*s_manure[i]*(0.5+0.5*Math.max(s_ard[i],s_plough[i]))+0.35*tTer[i]*w_terrFit[i]+0.15*rot*(0.5+0.5*Math.max(s_ard[i],s_plough[i]));
-      // milpa switch: maize, beans and squash grown together feed the soil (beans fix nitrogen), so Mesoamerican fields rest
+      // milpa (run 74): maize, beans and squash grown together feed the soil (beans fix nitrogen), so Mesoamerican fields rest
       // less than a lone grain's would (Zizumbo-Villarreal & Colunga-GarcíaMarín 2010)
-      cR=Math.max(cR,(0.55+0.6*rot*s_irrig[i]*warm)*rice,SWm&&s_crop[i]===maizeK?0.42:0)*(1-0.6*lc);
+      cR=Math.max(cR,(0.55+0.6*rot*s_irrig[i]*warm)*rice,s_crop[i]===maizeK?0.42:0)*(1-0.6*lc);
       const cF=0.6+0.4*s_irrig[i]+0.8*s_irrig[i]*warm*(0.12+0.88*rice);
       s_cfMax[i]=(1-fp)*cR+fp*cF;Kfa*=s_cf[i]/CFREF}
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);

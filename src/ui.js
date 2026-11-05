@@ -788,7 +788,6 @@ const SWITCHES=[
   ['hordesplit','Confederations break into their parts','a dead khan\'s heirs keep only the home pastures; outlying chiefs ride off as new confederations; the rest go back to the clans.'],
   ['partition','Lords carve up fallen realms','a collapsing farming state\'s good farmland is split among its lords instead of going stateless.'],
   ['lateag','Late farming','crop rotation and early-ripening rice raise yields after the classical age.'],
-  ['milpa','Milpa and hand-built fields','maize, beans and squash grown together, terraces and raised fields let the Americas farm more intensively.'],
   ['scale','Scalar stress','a polity can manage only as many people as its hierarchy, records and sanctuaries reach.'],
   ['scale2','Scalar stress, strong','the same at twice the strength (use one or the other).'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];

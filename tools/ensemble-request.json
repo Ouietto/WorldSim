@@ -1,10 +1,13 @@
 {"seeds": "1-64", "end": 1500, "per": 4, "ref": "", "baseEnv": "",
  "variants": [
   {"name": "base", "env": ""},
-  {"name": "scale", "env": "SW=scale"},
+  {"name": "cohort", "env": "SW=cohort"},
+  {"name": "wargoal", "env": "SW=wargoal"},
+  {"name": "graze", "env": "SW=graze"},
+  {"name": "hordesplit", "env": "SW=hordesplit"},
+  {"name": "partition", "env": "SW=partition"},
+  {"name": "lateag", "env": "SW=lateag"},
   {"name": "scale2", "env": "SW=scale2"},
-  {"name": "threat", "env": "SW=threat"},
-  {"name": "milpa", "env": "SW=milpa"},
-  {"name": "all", "env": "SW=scale,threat,milpa"}
+  {"name": "all", "env": "SW=cohort,wargoal,graze,hordesplit,partition,lateag,scale2"}
  ],
- "note": "Run 74: base with cropping frequency; scalar stress at two strengths, threat-driven state and riding, milpa and hand-built fields; each alone and together."}
+ "note": "Run 75: base with milpa default; cohorts, war goals, grazing herders, confederation breakup, partition by lords, late farming, strong scalar stress; each alone and all together."}
