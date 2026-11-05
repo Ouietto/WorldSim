@@ -57,6 +57,9 @@ function score(rs){const rows=[];for(const t of TARGETS){if(!applies(t))continue
 function scoreSE(rs){let x=12345;const R=()=>{x=(x*16807)%2147483647;return x/2147483647};const v=[];
   for(let b=0;b<200;b++){const s=Array.from({length:rs.length},()=>rs[Math.floor(R()*rs.length)]);v.push(score(s).score)}
   const m=v.reduce((a,b)=>a+b,0)/v.length;return Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(v.length-1))}
+function diffSE(A,B){let x=12345;const R=()=>{x=(x*16807)%2147483647;return x/2147483647};const v=[],n=Math.min(A.length,B.length);
+  for(let b=0;b<200;b++){const ix=Array.from({length:n},()=>Math.floor(R()*n));v.push(score(ix.map(i=>B[i])).score-score(ix.map(i=>A[i])).score)}
+  const m=v.reduce((a,b)=>a+b,0)/v.length;return Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(v.length-1))}
 const cor=(a,b)=>{const n=a.length;let ma=0,mb=0;for(let i=0;i<n;i++){ma+=a[i];mb+=b[i]}ma/=n;mb/=n;let sab=0,saa=0,sbb=0;for(let i=0;i<n;i++){const x=a[i]-ma,y=b[i]-mb;sab+=x*y;saa+=x*x;sbb+=y*y}return saa&&sbb?sab/Math.sqrt(saa*sbb):null};
 // how alike the same seed's history is in two versions (0 = unrelated), averaged over scored targets
 function pairing(A,B){const cs=[];for(const t of TARGETS){if(t.cls||!applies(t))continue;const a=A.map(r=>cval(r,t)),b=B.map(r=>cval(r,t));if(a.some(v=>v==null)||b.some(v=>v==null))continue;const c=cor(a,b);if(c!=null)cs.push(c)}
@@ -85,10 +88,10 @@ function report(A,B,nameA,nameB){
 function variantReport(names,sets){
   const L=[],S=sets.map(score),n=SEEDS.length,base=S[0],se=sets.map(scoreSE);
   L.push(`# Variant check: ${n} Earth histories to ${END<=0?(1-END)+' BCE':END+' CE'}`,'');
-  L.push('| Variant | Score | ± | Change | All 41 | Same-seed likeness |','|---|---|---|---|---|---|');
-  S.forEach((s,k)=>{const d=k?s.score-base.score:null,sd=k?Math.sqrt(se[k]**2+se[0]**2):null;
-    L.push(`| ${names[k]} | ${(s.score*100).toFixed(1)}% | ${(se[k]*100).toFixed(1)} | ${k?`${d>=0?'+':''}${(d*100).toFixed(1)}${Math.abs(d)>2*sd?(d>0?' ▲':' ▼'):''}`:''} | ${pct(s.old)} | ${k?(pairing(sets[0],sets[k])??0).toFixed(2):''} |`)});
-  L.push('',`Score is the share of scored targets in band (guards and context left out). A change is marked when it exceeds twice its noise.`,'');
+  L.push('| Variant | Score | ± | Change | ± change | All 41 | Same-seed likeness |','|---|---|---|---|---|---|---|');
+  S.forEach((s,k)=>{const d=k?s.score-base.score:null,sd=k?diffSE(sets[0],sets[k]):null;
+    L.push(`| ${names[k]} | ${(s.score*100).toFixed(1)}% | ${(se[k]*100).toFixed(1)} | ${k?`${d>=0?'+':''}${(d*100).toFixed(1)}${Math.abs(d)>2*sd?(d>0?' ▲':' ▼'):''}`:''} | ${k?(sd*100).toFixed(1):''} | ${pct(s.old)} | ${k?(pairing(sets[0],sets[k])??0).toFixed(2):''} |`)});
+  L.push('',`Score is the share of scored targets in band (guards and context left out). A change is marked when it exceeds twice its noise (paired bootstrap over the same seeds).`,'');
   L.push(`| Group | Target | Real | Band | Median ${names[0]} | ${names.map(x=>x).join(' | ')} |`,`|---|---|---|---|---|${names.map(()=>'---').join('|')}|`);
   for(let r=0;r<base.rows.length;r++){const t=base.rows[r].t,p0=base.rows[r].inBand;
     const cells=S.map((s,k)=>{const p=s.rows[r].inBand;if(!k)return pct(p);const sd=Math.sqrt((p0*(1-p0)+p*(1-p))/n)||0.01;const d=p-p0;return pct(p)+(Math.abs(d)>2*sd?(d>0?' ▲':' ▼'):'')+(` (${fmt(s.rows[r].med,t)})`)});
@@ -103,7 +106,7 @@ function variantReport(names,sets){
     L.push('',`**Farmers by staple at ${y<=0?(1-y)+' BCE':y+' CE'}** (median, millions)`,'',`| Staple | ${names.join(' | ')} |`,`|---|${names.map(()=>'---').join('|')}|`);
     for(const c of crops)L.push(`| ${c} | ${sets.map(rs=>{const m=median(rs.map(r=>r.diag&&r.diag[y]?(r.diag[y].crop[c]||0):null));return m==null?'–':m.toFixed(1)}).join(' | ')} |`)}
   if(sets[0][0]&&sets[0][0].d_invasions!=null){L.push('','**Steppe dynamics after 3000 BCE** (median per millennium; walls: total)','',`| | ${names.join(' | ')} |`,`|---|${names.map(()=>'---').join('|')}|`);
-    for(const [k,lab] of [['d_invasions','Invasions through a frontier'],['d_dominoes','Beaten herders riding off (dominoes)'],['d_walls','Great walls begun']])L.push(`| ${lab} | ${sets.map(rs=>{const m=median(rs.map(r=>r[k]));return m==null?'–':m}).join(' | ')} |`)}
+    for(const [k,lab] of [['d_invasions','Invasions through a frontier'],['d_dominoes','Beaten herders riding off (dominoes)'],['d_walls','Great walls begun']])L.push(`| ${lab} | ${sets.map(rs=>{const m=median(rs.map(r=>r[k]));return m==null?'–':+m.toFixed(1)}).join(' | ')} |`)}
   const tm=rs=>{const t=rs.map(r=>r.time.total).sort((a,b)=>a-b);return t[t.length>>1].toFixed(0)};
   L.push('',`Median run time (s): ${names.map((x,k)=>x+' '+tm(sets[k])).join(', ')}.`);
   return{md:L.join('\n'),scores:S.map(s=>s.score)}}
