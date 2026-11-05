@@ -2,11 +2,6 @@
  "variants": [
   {"name": "base", "env": ""},
   {"name": "hordesplit", "env": "SW=hordesplit"},
-  {"name": "graze", "env": "SW=graze"},
-  {"name": "partition", "env": "SW=partition"},
-  {"name": "wargoal", "env": "SW=wargoal"},
-  {"name": "lateag", "env": "SW=lateag"},
-  {"name": "four", "env": "SW=graze,partition,wargoal,lateag"},
   {"name": "all", "env": "SW=graze,partition,wargoal,lateag,hordesplit"}
  ],
- "note": "Run 78: seed crossing straits now default; breakup revised so a house too weak to keep its following flees from the strongest heir; the four neutral switches alone and together (run 77: together with seedsea +5.3 against +2.9 for seedsea alone)."}
+ "note": "Run 79 (diagnostics only, model unchanged since run 78): invasions by source; frontier states counted against any neighbouring herders, organised or not."}

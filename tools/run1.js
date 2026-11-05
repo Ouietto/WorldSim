@@ -33,8 +33,11 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
   // cropping frequency (share of farmland cropped each year), farmer-weighted, when that switch is on
   if(S.cf){const o={};for(const k in fq)o[k]=+(fq[k]/fw[k]).toFixed(2);diag[y].cf=o}
   // frontier horsemanship: riding skill of the peoples ruling farming states that border a steppe horde (people-weighted)
-  {let a=0,b=0,ar=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||!o.nb||o.farmN<0.5*o.cells)continue;let hd=false;for(const [q] of o.nb){const p=S.pols[q];if(p&&p.alive&&p.kind==='horde'){hd=true;break}}
-    if(!hd)continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
+  // (run 79: a state borders herders when one of its provinces touches a herding province outside it, held by a confederation or by
+  // clans; before, only states bordering an organised confederation counted, so the measure fell whenever the steppe was mostly clans)
+  {const hf=new Uint8Array(S.pols.length);for(const i of WD.landIdx){const q=S.pol[i];if(!q||hf[q])continue;for(let d=0;d<4;d++){const j=WD.nb[i*4+d];if(j<0||S.pol[j]===q||S.pop[j]<1||S.past[j]<=0.55)continue;const p=S.pol[j]?S.pols[S.pol[j]]:null;if(!p||p.kind==='horde'){hf[q]=1;break}}}
+  let a=0,b=0,ar=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||!o.nb||o.farmN<0.5*o.cells)continue;
+    if(!hf[id])continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
    diag[y].x={'Frontier states: riding skill':b?+(a/b).toFixed(2):null,'Frontier states: share with mounted archers':b?+(ar/b).toFixed(2):null}}
   // men of fighting age against the usual share, in states of 20+ provinces (cohort switch)
   // confederations: how many large ones, and how much of the steppe they hold
@@ -46,11 +49,13 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
 const WAR={w:0,p:0,sy:0,taken:0,t0:null};
 // steppe and migration dynamics after 3000 BCE, counted from the chronicle as it is written (it is trimmed when long)
 const DOM={inv:/break through the frontier/,dom:/abandon their pastures/,wall:/fortify its frontier/},dCnt={inv:0,dom:0,wall:0};let chI=0;
+// where each invasion came from: a beaten confederation fleeing, a confederation in drought or grown rich, or a people on the move
+const invSrc={beaten:0,drought:0,riches:0,people:0};
 // farmed = growing a staple. Knowing how to farm with no crop to grow (herders at the Cape, foragers on the Northwest Coast) is
 // not farming; it was counted as farming before run 76
 const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n++;if(S.farm[i]>0.5&&S.crop&&S.crop[i]>=0)f++}return n?f/n:0},fArr={};
 while(S.year<END){step();
-  {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt))dCnt[k]++}}
+  {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
   if(S.year>=-1000&&S.year%10===0){if(WAR.t0==null)WAR.t0=S.year;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||o.cells<3)continue;WAR.sy+=10;WAR.p+=o.pop;if(o.enemies.size)WAR.w+=o.pop}
     for(const i of WD.landIdx)if(S.taken[i]>S.year-10&&S.taken[i]<=S.year)WAR.taken++}
@@ -67,7 +72,7 @@ out.t_horse=S.domFirst&&S.domFirst[0]?S.domFirst[0].y:null;out.s_pontic=pontic;
 for(const k of ['cEur','brit','scand','japan'])out['f_'+k]=fArr[k]??null;out.fs_pnw=END>=1500?+fShare('pnw').toFixed(3):null;out.fs_cape=END>=1500?+fShare('cape').toFixed(3):null;
 if(S.origins){for(const R of WILD)out['o_'+R.k]=S.origins[R.k]?S.origins[R.k].y:null;out.o_count=Object.keys(S.origins).length;out.x_rits=S.rits?S.rits.filter(R=>R.peak>0.35).length:null;out.x_oriLog=S.oriLog}
 if(S.bFirst){out.x_beasts=BEASTS.map((b,k)=>S.bFirst[k]?b.k+' '+S.bFirst[k].y:null).filter(Boolean);out.x_alt=S.alt.map(a=>a.k+' '+a.y);out.x_breeds=S.lins.filter(L=>L.told).length}
-{const yrs=Math.max(1,END+3000)/1000;out.d_invasions=+(dCnt.inv/yrs).toFixed(2);out.d_dominoes=+(dCnt.dom/yrs).toFixed(2);out.d_walls=dCnt.wall}
+{const yrs=Math.max(1,END+3000)/1000;out.d_invasions=+(dCnt.inv/yrs).toFixed(2);for(const k in invSrc)out['d_inv_'+k]=+(invSrc[k]/yrs).toFixed(2);out.d_dominoes=+(dCnt.dom/yrs).toFixed(2);out.d_walls=dCnt.wall}
 out.diag=diag;
 {const ws=S.wars.filter(x=>!x.civil&&x.start>=-1000),done=ws.filter(x=>x.end).map(x=>x.end-x.start).sort((a,b)=>a-b),span=Math.max(1,S.year-(WAR.t0??-1000));
  out.d_warShare=WAR.p?+(WAR.w/WAR.p).toFixed(3):null;out.d_warsPerState=WAR.sy?+(ws.length/(WAR.sy/100)).toFixed(2):null;out.d_warLen=done.length?done[done.length>>1]:null;out.d_taken=+(WAR.taken/(span/100)).toFixed(0);
