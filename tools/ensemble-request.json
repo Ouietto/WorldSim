@@ -1,13 +1,7 @@
 {"seeds": "1-64", "end": 1500, "per": 4, "ref": "", "baseEnv": "",
  "variants": [
   {"name": "base", "env": ""},
-  {"name": "cassava", "env": "SW=cassava"},
-  {"name": "swidden", "env": "SW=swidden"},
-  {"name": "river", "env": "SW=river"},
-  {"name": "reck", "env": "SW=reck"},
-  {"name": "warc", "env": "SW=warc"},
-  {"name": "seacrop", "env": "SW=seacrop"},
-  {"name": "horse", "env": "SW=horse"},
-  {"name": "all", "env": "SW=cassava,swidden,river,reck,warc,seacrop,horse"}
+  {"name": "cf", "env": "SW=cf"},
+  {"name": "cffast", "env": "SW=cffast"}
  ],
- "note": "Run 72: new baseline (nature has its own random stream; first state needs 100,000 people; regional and staple diagnostics) and seven candidate fixes as switches, each alone and all together."}
+ "note": "Run 73: new base (cassava yield, floodplain river, record keeping, one horse term) and Boserup cropping frequency at two speeds."}
