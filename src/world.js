@@ -400,7 +400,18 @@ function genWorld(o){
       for(const e of [c[0],c[c.length-1]])n8(e,j=>{if(isR[j]){link(e,j);link(j,e)}})}
     let fr=[];for(const L of RIV)for(const c of L.cells)if(rd[c]<0){let wt=!landNow[c];n8(c,j=>{if(!landNow[j])wt=true});if(wt){rd[c]=0;fr.push(c)}}
     for(let d=1;fr.length;d++){const nx=[];for(const c of fr)for(const j of adj.get(c)||[])if(rd[j]<0){rd[j]=d;nx.push(j)}fr=nx}
-    const dir=RIV.map(L=>{const a=rd[L.cells[0]],z=rd[L.cells[L.cells.length-1]];return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0});
+    // rivers switch: a river's mouth is found mainly through rivers at least as large as itself: each step into a smaller river costs more. The
+    // upper Niger rises beside the Senegal's headwaters, and through that small river its source end looked nearer the sea than
+    // Timbuktu, so it ran backwards into the Senegal (and its middle course and inland delta went dry)
+    const cRk=new Uint8Array(N).fill(99);for(const L of RIV)for(const c of L.cells)if(L.rank<cRk[c])cRk[c]=L.rank;
+    const rdR=new Map();const rdFor=rk=>{if(rdR.has(rk))return rdR.get(rk);const d=new Float32Array(N).fill(-1),hk2=[],hv2=[];
+      const push=(c,k)=>{let n=hk2.length;hk2.push(k);hv2.push(c);while(n>0){const p=(n-1)>>1;if(hk2[p]<=hk2[n])break;[hk2[p],hk2[n]]=[hk2[n],hk2[p]];[hv2[p],hv2[n]]=[hv2[n],hv2[p]];n=p}};
+      const pop=()=>{const tc=hv2[0],tk=hk2[0],lk=hk2.pop(),lv=hv2.pop();if(hk2.length){hk2[0]=lk;hv2[0]=lv;let n=0;for(;;){const l=2*n+1,rr=l+1;let m=n;if(l<hk2.length&&hk2[l]<hk2[m])m=l;if(rr<hk2.length&&hk2[rr]<hk2[m])m=rr;if(m===n)break;[hk2[m],hk2[n]]=[hk2[n],hk2[m]];[hv2[m],hv2[n]]=[hv2[n],hv2[m]];n=m}}return[tc,tk]};
+      for(const L of RIV)for(const c of L.cells){let wt=!landNow[c];n8(c,j=>{if(!landNow[j])wt=true});if(wt)push(c,1+5*Math.max(0,cRk[c]-rk))}
+      const done=new Uint8Array(N);while(hv2.length){const [c,k]=pop();if(done[c])continue;done[c]=1;d[c]=k;for(const j of adj.get(c)||[])if(!done[j])push(j,k+1+5*Math.max(0,cRk[j]-rk))}
+      rdR.set(rk,d);return d};
+    const dir=swOn('rivers')?RIV.map(L=>{const D=rdFor(L.rank);let a=D[L.cells[0]],z=D[L.cells[L.cells.length-1]];if(a<0&&z<0){a=rd[L.cells[0]];z=rd[L.cells[L.cells.length-1]]}return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0}):
+      RIV.map(L=>{const a=rd[L.cells[0]],z=rd[L.cells[L.cells.length-1]];return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0});
     for(let k=0;k<RIV.length;k++){const L=RIV[k];let c=L.cells.filter(i=>land[i]);if(c.length<2)continue;if(dir[k]===-1||(!dir[k]&&elev[c[0]]<elev[c[c.length-1]]))c=c.slice().reverse();
       for(let j=0;j<c.length-1;j++)if(!set[c[j]]&&c[j]!==c[j+1]){down[c[j]]=c[j+1];set[c[j]]=1}}
     const st=new Uint8Array(N);
