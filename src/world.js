@@ -3,7 +3,8 @@
 const W=400,H=200,N=W*H,SC=4,HW=W*SC,HH=H*SC,AGW=40,AGH=20;
 // test switches: SW=a,b in the environment turns on candidate changes so the ensemble can test several at once against
 // the same code; in the browser none are on. A switch that wins is made the default and removed.
-const SWX=(typeof process!=="undefined"&&process.env&&process.env.SW||"").split(',').filter(Boolean),swOn=k=>SWX.includes(k);
+// test switches: experimental mechanics under trial, off by default. From SW=... in the test runner, or ?sw=a,b in the page address
+const SWX=((typeof process!=="undefined"&&process.env&&process.env.SW)||(()=>{try{return new URLSearchParams(location.search).get('sw')||''}catch(e){return ''}})()||"").split(',').map(x=>x.trim()).filter(Boolean),swOn=k=>SWX.includes(k);
 const PDEF=[
 ['World','landFrac','Land share',0.2,0.5,0.01,0.33,'Share of the surface above sea level (generated worlds).',1],
 ['World','bands','Founding peoples',3,24,1,10,'Unrelated language families at the start (generated worlds).',1],
