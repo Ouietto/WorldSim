@@ -304,7 +304,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,SWm=swOn('milpa'),SWl=swOn('lateag');
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=swOn('graze')?(s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD)):null;const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,SWm=swOn('milpa'),SWl=swOn('lateag');
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -321,7 +321,9 @@ function computeK(){
     let sh=Math.max(w_sH[i],0.5*s_domR[i],0.6*s_domL[i]);if(w_desert[i]&&cdP[i]>40)sh=Math.max(sh,clamp((w_Pr[i]+cdP[i]-80)/350,0,0.7));if(w_desert[i])sh=Math.max(sh,0.25*s_camel[i]);
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
     const mob=Math.min(1,s_horse[i])*(0.4+0.6*s_wheel[i]);
-    const Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
+    let Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
+    // graze switch: crowded herds wear the grass down; s.grass is what the pasture itself would feed, whoever grazes it
+    if(GZ){Kh*=1-0.45*GZ[i];s.grass[i]=ar*1.6*sh*Math.min(1.3,dry)*(1+0.25*w_transh[i])*(1-s_rp[i])*(1-0.45*GZ[i])}
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
     const irr=s_irrig[i]*w.rvF[i];
@@ -434,6 +436,31 @@ function migrate(){
       // fringe, not a farming people (the availability phase, Zvelebil 1986)
       for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}
   }
+}
+// graze switch: herders follow the grass, clan by clan (Khazanov 1984; Humphrey & Sneath 1999). Herds above what the grass
+// bears wear it down, and rested grass recovers in a few years. Every other year a herding clan hears of the grass within a
+// few days' ride, farther if it rides; if better grass per head keeps being reported in the same direction for some years
+// it moves there with its herds. Most moves are short; a run of wet years far off can pull clans a long way. Fields are not
+// grass: herders do not move into farmland or a farming state's provinces
+function grazePass(){
+  const s=S,w=WD,L=w.landIdx,r=s.r,D=s.gzD,G=s.grass,TG=s.gzT,A=s.gzA,T=s.tk,y=s.year;
+  for(let kk=0;kk<L.length;kk++){const i=L[kk],p=s.pop[i];if(!(s.past[i]>0.3)){if(D[i]>0)D[i]*=0.97;continue}
+    const pr=s.K[i]>1?p/s.K[i]:0;D[i]=clamp(D[i]+0.004*Math.max(0,pr-0.8)*s.past[i]-0.03*D[i]*(pr<0.7?1:0.3),0,1);
+    if((kk+y)&1||p<3000||s.past[i]<0.5||s.herd[i]<0.4||s.farm[i]>0.5)continue;
+    const q=s.pol[i],o=q?s.pols[q]:null;if(o&&o.kind==='state'&&!herdLed(o))continue;
+    const e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=2+Math.round(3*Math.min(1,s.horse[i])*(0.3+(e&&e.ride?e.ride:0))),own=G[i]/(p*s.past[i]+1);if(own<=0)continue;
+    const cx=w.cxA[i],cy=w.cyA[i];let best=-1,bg=0;
+    for(let t=0;t<4;t++){const dy=Math.round((r()*2-1)*R),yy=cy+dy;if(yy<0||yy>=H)continue;const dx=Math.round((r()*2-1)*R),j=yy*W+(cx+dx+W)%W;
+      if(j===i||!w.land[j]||s.farm[j]>0.5||G[j]<=0)continue;const qj=s.pol[j],oj=qj?s.pols[qj]:null;if(oj&&oj.kind==='state'&&!herdLed(oj))continue;
+      const gain=G[j]/(s.pop[j]*Math.max(0.3,s.past[j])+1)/own-1-0.06*Math.hypot(dx,dy)-(oj&&qj!==q?0.3:0);if(gain>bg){bg=gain;best=j}}
+    if(best>=0&&(TG[i]===best||(TG[i]>=0&&Math.abs(w.cxA[TG[i]]-w.cxA[best])+Math.abs(w.cyA[TG[i]]-w.cyA[best])<=1)))A[i]=0.7*A[i]+bg;else if(best>=0&&bg>A[i]){TG[i]=best;A[i]=0.5*bg}else A[i]*=0.7;
+    if(A[i]<0.6||TG[i]<0)continue;
+    const j=TG[i],mv=Math.min(p*0.3,Math.max(1500,p*0.12));if(mv>p*0.3)continue;TG[i]=-1;A[i]=0;
+    const pj=s.pop[j];s.pop[i]-=mv;s.pop[j]+=mv;
+    if(pj<1||s.eth[j]<0){s.eth[j]=s.eth[i];s.eth2[j]=-1;s.rel[j]=s.rel[i];s.s[j]=s.s[i];s.adapt[j]=s.adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9);if(s.past)s.past[j]=Math.max(s.past[j],0.6)}
+    else if(s.eth[j]!==s.eth[i]){const sh=mv/(pj+mv);mixIn(j,s.eth[i],sh*0.6);for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}
+    const far=Math.abs(((w.cxA[j]-cx+W*1.5)%W)-W/2)+Math.abs(w.cyA[j]-cy);s.gzN++;if(far>=4)s.gzFar++;
+    if(mv>=30000&&far>=4&&e)chron('migration',`A clan of the ${e.name} follows the rains to the ${dirWord(((w.cxA[j]-cx+W*1.5)%W)-W/2,w.cyA[j]-cy)}ern pastures with its herds, some ${fmtK(mv)} strong.`,j,[RE(e)])}
 }
 function virginSoil(tgt,src){
   const s=S,r=s.r;
@@ -1519,7 +1546,7 @@ function* stepG(){
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
-  computeK();growth();yield;migrate();seaHop();
+  computeK();growth();yield;migrate();seaHop();if(S.gzD)grazePass();
   if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   yield* politicsG();
