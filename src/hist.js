@@ -287,9 +287,9 @@ const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
 // overshot China's first state and the 3000 BCE population). New farmers start at long fallow (CF0); capacity scales with
 // frequency against CFREF
 const CF0=0.25,CFREF=0.4,CFR=0.0015;
-// test switches (run 74). scale / scale2: scalar stress at two strengths. threat: frontier threat builds the state and its
-// horsemen
-const sclK=()=>swOn('scale2')?2:swOn('scale')?1:0;
+// scalar stress at the strong setting (run 75: Egypt's first state 0 -> 16% in band, Yellow River 14 -> 33%, Indus 80 -> 91%;
+// score +2.1). threat switch (run 74, set aside): frontier threat builds the state and its horsemen
+const sclK=()=>2;
 // cohort switch: six age and sex groups per province (girls, boys, young women, young men 15-34, older women, older men)
 const cohOn=()=>swOn('cohort'),cohArr=()=>{if(!cohOn())return null;if(!S.coh)S.coh=new Float32Array(N*6);return S.coh};
 // farming reads the floodplain share (rvF), not the raw river; state capacity reads record keeping (writing, khipu, griots,

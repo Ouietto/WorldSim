@@ -780,7 +780,7 @@ $('btn-share').addEventListener('click',async()=>{const seed=($('hseed').value||
   const link=base+'#seed-'+seed,st=$('share-status');$('share-link').value=link;
   try{await navigator.clipboard.writeText(link);st.textContent='Link copied. It opens this exact history (with the default rules).'}catch(e){$('share-link').select();st.textContent='Copy the link above.'}});
 $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
-// test switches (see swOn in world.js): one box each; scale and scale2 are two strengths of one mechanic
+// test switches (see swOn in world.js): one box each
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
   ['wargoal','War goals','punitive campaigns against raiders and loose tribes, and shows of force that break a rival\'s realm, beside wars for provinces.'],
@@ -788,13 +788,11 @@ const SWITCHES=[
   ['hordesplit','Confederations break into their parts','a dead khan\'s heirs keep only the home pastures; outlying chiefs ride off as new confederations; the rest go back to the clans.'],
   ['partition','Lords carve up fallen realms','a collapsing farming state\'s good farmland is split among its lords instead of going stateless.'],
   ['lateag','Late farming','crop rotation and early-ripening rice raise yields after the classical age.'],
-  ['scale','Scalar stress','a polity can manage only as many people as its hierarchy, records and sanctuaries reach.'],
-  ['scale2','Scalar stress, strong','the same at twice the strength (use one or the other).'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
   box.innerHTML=SWITCHES.map(([k,n,d])=>`<label class="check"><input type="checkbox" data-sw="${k}"${swOn(k)?' checked':''}><span><b>${n}</b>: ${d}</span></label>`).join('');
   box.addEventListener('change',e=>{const k=e.target.dataset.sw;if(!k)return;const set=(x,on)=>{const i=SWX.indexOf(x);if(on&&i<0)SWX.push(x);if(!on&&i>=0)SWX.splice(i,1)};
-    set(k,e.target.checked);if(e.target.checked&&(k==='scale'||k==='scale2')){const o=k==='scale'?'scale2':'scale';set(o,false);const ob=box.querySelector(`[data-sw="${o}"]`);if(ob)ob.checked=false}
+    set(k,e.target.checked);
     try{const u=new URL(location.href);u.searchParams.delete('sw');let q=u.searchParams.toString();if(SWX.length)q=(q?q+'&':'')+'sw='+SWX.join(',');history.replaceState(null,'',u.pathname+(q?'?'+q:'')+u.hash)}catch(err){}
     setRunning(false);startHistory()})})();
 function readImage(file){return new Promise((res,rej)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{const c=document.createElement('canvas');c.width=HW;c.height=HH;const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(img,0,0,HW,HH);const d=x.getImageData(0,0,HW,HH).data;const g=new Float32Array(HW*HH);for(let i=0;i<g.length;i++)g[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)/255;URL.revokeObjectURL(url);res({g,w:img.naturalWidth,h:img.naturalHeight})};img.onerror=()=>rej(new Error('That file could not be read as an image.'));img.src=url})}
