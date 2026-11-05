@@ -16,7 +16,9 @@ const CROPS=[
   {k:'potato',n:'potatoes and quinoa',anim:'llamas and guinea pigs',y:1.6,store:0.3,tax:0.35,drain:1.1,fit:(T,P,rv)=>trap(T,-1,4,15,22)*trap(P,250,450,1600,2600)},
   {k:'yams',n:'yams, taro and bananas',anim:'pigs and fowl',y:1.0,store:0.2,tax:0.15,drain:0.8,fit:(T,P,rv)=>trap(T,19,23,31,35)*trap(P,850,1300,4500,7000)},
   {k:'sunflower',n:'sunflowers, squash and goosefoot',anim:'dogs',y:0.6,store:0.7,tax:0.6,drain:0.8,fit:(T,P,rv)=>trap(T,4,9,19,25)*trap(P,500,750,1400,2000)},
-  {k:'cassava',n:'cassava',anim:'goats',y:1.4,yS:0.9,store:0.25,tax:0.2,drain:0.7,fit:(T,P,rv)=>trap(T,18,22,31,35)*trap(P,500,900,3000,5000),introduced:1},
+  // cassava feeds about as many per field as other staples, not 40% more: it is starch with little protein, so its farmers
+  // still hunted and fished, and Amazonian numbers stayed low until late
+  {k:'cassava',n:'cassava',anim:'goats',y:0.9,store:0.25,tax:0.2,drain:0.7,fit:(T,P,rv)=>trap(T,18,22,31,35)*trap(P,500,900,3000,5000),introduced:1},
 ];
 const CI=Object.fromEntries(CROPS.map((c,k)=>[c.k,k]));
 // soils, assigned once from long-standing climate and terrain; fert multiplies farm yield, drain how fast farming wears it out,
@@ -90,9 +92,7 @@ function bandIn(k,c){const b=S.cBand,a=WD.alat[c];b[2*k]=Math.min(b[2*k],Math.ma
 function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
 // every ten years: packages spread with farmers and by sea, each farm grows its best package, and some learn to process it
 function cropPass(quiet){
-  // cassava switch: cassava yields about as much food per field as other staples (yS), not 40% more; it is starch with little
-  // protein, so its farmers still hunted and fished, and Amazonian numbers stayed low until late
-  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT,SWy=swOn('cassava'),SWr=swOn('river');
+  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT;
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
@@ -103,8 +103,8 @@ function cropPass(quiet){
     if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}}
   for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
     // river switch: a crop's water from the flood is judged on the land actually farmed: in a desert valley all of it is floodplain
-    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=SWr?Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)):w.rvF[i],el=w.elev[i];
-    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*(SWy&&C.yS?C.yS:C.y)*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
+    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)),el=w.elev[i];
+    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
       if(best===CI.potato){const pS=clamp((P-280)/450,0,1)*clamp((3400-P)/1600,0.25,1);b=Math.max(b,pS*rf*(1-0.7*w.leach[i]))}

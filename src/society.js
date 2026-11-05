@@ -14,7 +14,7 @@ function colonyPass(){
     if(o.nob==null)o.nob=0;
     const c=o.capital,real=Math.max(1,o.cells-(o.wasteN||0));
     // plant a colony on a recently taken, thinly settled frontier province
-    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.8*Math.min(1,o.warC||0)+0.4*(o.enemies.size?1:0))){
+    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0))){
       const j=o.front[(r()*o.front.length)|0];
       if(s.pol[j]===id&&s.colony[j]<0.3&&s.K[j]>s.pop[j]*1.4&&w.land[j]){
         const want=Math.min(0.012*o.pop,(s.K[j]-s.pop[j])*0.6);

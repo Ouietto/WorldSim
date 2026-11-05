@@ -1453,9 +1453,9 @@ function weather(){
 }
 // diminishing returns: each new farming technique adds less on top of the others (Boserup's intensification, Malthus's ceiling)
 const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
-// test switches (see swOn in world.js). river: farming reads the floodplain share, not the raw river. reck: state capacity reads
-// record keeping (writing, khipu, griots, drum script), not writing alone
-const rvAg=()=>swOn('river')?WD.rvF:WD.rv,admOf=()=>swOn('reck')&&S.recK?S.recK:S.admin;
+// farming reads the floodplain share (rvF), not the raw river; state capacity reads record keeping (writing, khipu, griots,
+// drum script), not writing alone
+const rvAg=()=>WD.rvF,admOf=()=>S.recK||S.admin;
 // sums of generated techniques for the food and power rows, cached every ten years for the capacity pass
 function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=new Float32Array(N);s.genC3=new Float32Array(N)}
   const fill=(row,a)=>{a.fill(0);for(const k of s.genByRow[row]){const t=s.tk[k],tr=TECH[k].tier;for(const i of w.landIdx)a[i]+=t[i]*tr}};fill(0,s.genC0);fill(3,s.genC3)}
@@ -1463,9 +1463,8 @@ function computeK(){
   const s=S,w=WD,L=w.landIdx,dT=s.dT+s.gT+epochTemp(),cdT=s.cdT,cdP=s.cdP;const s_K=s.K,s_adapt=s.adapt,s_admin=admOf(),s_ard=s.ard,s_camel=s.camel,s_crops=s.crops,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,s_wm=s.wm,s_xcrops=s.xcrops,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_area=w.area,w_coast=w.coast,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_mal=w.mal,w_oncho=w.oncho,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_techEnv=w.techEnv,w_transh=w.transh,w_trop=w.trop,s_crop=s.crop,s_cY=s.cY,w_soilFert=w.soilFert,s_sFc=s.sFc,w_terrFit=w.terrFit,w_sod=w.sod,s_lint=s.lint,s_pop=s.pop,s_Kfa=s.Kfa,s_Kh=s.Kh,s_Kf=s.Kf,s_past=s.past,s_domR=s.domR,s_domL=s.domL,s_wheel=s.wheel,w_turf=w.turf,s_open=s.open,s_malF=s.malF;
   const Z=w.zeroN||(w.zeroN=new Float32Array(N)),s_evT=s.evT||Z,s_evP=s.evP,s_sed=s.sed||Z,s_wildG=s.wildG||Z,s_huntX=s.huntX||Z,s_meatX=s.meatX||Z,s_mouseX=s.mouseX||Z,w_iceY=w.iceY||w.noIce||(w.noIce=new Float32Array(N).fill(-1e9)),s_Kpot=s.Kpot,s_year=s.year,tTer=s.tk[TI.terrace],t26=s.tk[26],t28=s.tk[28],t29=s.tk[29],t32=s.tk[32],t33=s.tk[33],envW=w.techEnv?w.techEnv[2]:null,
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
-  // river switch: the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver
-  // on the Volga), not to how big the river is
-  const SWr=swOn('river'),SWs=swOn('swidden');
+  // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
+  // not to how big the river is
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -1488,7 +1487,7 @@ function computeK(){
     const irr=s_irrig[i]*w.rvF[i];
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const hv=w_heavy[i],lc=w_leach[i];
-    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*tTer[i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*t26[i]*Math.max(lc,s_forest[i])+0.15*t28[i]*w_coast[i])*(1+(SWr?Math.min(1,w.rvF[i]/Math.max(w_sF[i],0.02)):rv)*(0.25+2.2*s_irrig[i]));
+    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+0.55*s_ard[i]*(1-0.6*hv)+0.7*s_plough[i]*hv+0.6*s_manure[i]+0.8*tTer[i]*w_terrFit[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*t26[i]*Math.max(lc,s_forest[i])+0.15*t28[i]*w_coast[i])*(1+Math.min(1,w.rvF[i]/Math.max(w_sF[i],0.02))*(0.25+2.2*s_irrig[i]));
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
     if(w_turf[i]>0){const op=s_open[i],f1=0.04+0.08*s_iron[i]+0.6*s_plough[i];Kfa*=op+(1-op)*f1}
@@ -1501,9 +1500,6 @@ function computeK(){
     // rain-fed farming on the dry continental grasslands is a gamble: one dry year in three wipes out the crop, while herds can
     // walk to grass. The Pontic and Kazakh steppes and the Great Plains stayed pastoral until iron ploughs and markets (Anthony 2007)
     Kfa*=1-0.45*(w.rainRisk?w.rainRisk[i]:0);
-    // swidden switch: on leached tropical soils a plot bears for two or three years and then lies fallow for ten or more, so the
-    // land feeds far fewer farmers than its first harvest suggests; river floodplains (varzea) are renewed by the flood
-    if(SWs)Kfa*=1-0.5*w_leach[i]*(1-Math.min(1,2*w.rvF[i]));
     // the potential is what farmers would get with real crops, even before the crops have arrived here
     s_Kpot[i]=Kfa*(s_crop[i]>=0?1:1/0.35);Kfa*=s_farm[i];
     s_Kfa[i]=Kfa*(1+0.04*s_mouseX[i]);s_Kh[i]=Kh+KhX;s_Kf[i]=Kf;const ps=s_past[i];
@@ -1540,7 +1536,7 @@ function growth(){
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){
-  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,SWc=swOn('seacrop');const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nb=w.nb,w_sF=w.sF,w_sH=w.sH;
+  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk;const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nb=w.nb,w_sF=w.sF,w_sH=w.sH;
   for(let kk=0;kk<L.length;kk++){
     const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
     const pr=p/s_K[i];if(pr<0.55)continue;
@@ -1554,7 +1550,7 @@ function migrate(){
     if(s_farm[i]>=0.5&&pj>=1&&s_farm[j]<0.3)mob*=settleOK(i,j);
     const mv=Math.min(p*mob*diff/(1+diff),p*0.3);
     s_pop[i]-=mv;s_pop[j]+=mv;
-    if(pj<1||s_eth[j]<0){s_eth[j]=s_eth[i];s_eth2[j]=-1;s_rel[j]=s_rel[i];s_s[j]=s_s[i];s_adapt[j]=s_adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9);if(SWc&&s.pkAv)s.pkAv[j]|=s.pkAv[i]}
+    if(pj<1||s_eth[j]<0){s_eth[j]=s_eth[i];s_eth2[j]=-1;s_rel[j]=s_rel[i];s_s[j]=s_s[i];s_adapt[j]=s_adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9)}
     else if(s_eth[j]!==s_eth[i]){const sh=mv/(pj+mv);mixIn(j,s_eth[i],sh*0.6);if(s_eth2[j]===s_eth[i]&&s_mix[j]>0.5){const a=s_eth[j];s_eth[j]=s_eth2[j];s_eth2[j]=a;s_mix[j]=1-s_mix[j]}
       // newcomers bring their ways in proportion to their numbers: a few farming families among foragers make a farming
       // fringe, not a farming people (the availability phase, Zvelebil 1986)
@@ -1586,12 +1582,10 @@ function seaHop(){
       s_pop[tgt]=Math.min(60+s_pop[i]*0.02,s_K[tgt]*0.5+1);s_eth[tgt]=s_eth[i];s_rel[tgt]=s_rel[i];s_s[tgt]=0.4;
       for(const f of s.tk)f[tgt]=Math.max(f[tgt],f[i]*0.8);s_admin[tgt]*=0.3;
       // seacrop switch: seafarers carry their seed grain and animals, not only their skills
-      if(swOn('seacrop')&&s.pkAv)s.pkAv[tgt]|=s.pkAv[i];
       const lm=w_lm[tgt];
       if(!s_lmFound[lm]){s_lmFound[lm]=1;if(w_lmSize[lm]>=4){const e=s_eths[s_eth[i]];chron('migration',`Seafarers of the ${e.name} reach an unpeopled ${w_lmSize[lm]>60?'land':'island'}.`,tgt,[RE(e)])}}
     }else if(s_eth[tgt]!==s_eth[i]){
       for(const f of s.tk)f[tgt]=Math.max(f[tgt],f[i]*0.5);
-      if(swOn('seacrop')&&s.pkAv&&s.farm[i]>0.5)s.pkAv[tgt]|=s.pkAv[i];
       if(s_ocean[i]>0.5&&w_lm[tgt]!==w_lm[i]){
         virginSoil(tgt,i);cropExchange(i,tgt);mixIn(tgt,s_eth[i],0.05);
         const e1=s_eths[s_eth[i]],e2=s_eths[s_eth[tgt]],key=e1.fam+':'+e2.fam;
@@ -1669,7 +1663,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
     }
     // irrigation: farmers on a river invent it where they must; in a desert valley even a thin population needs canals
     // (Samarra and Choga Mami, about 6000 BCE), in wetter lands only crowding drives it
-    if(!s_firstTech[2]||s_irrig[i]<0.5){if(s_farm[i]>0.8&&(swOn('river')?w.rvF[i]>0.15:w_rv[i]>0.25)&&w_Pr[i]<1000&&s_pop[i]/w_area[i]>4*clamp(w_Pr[i]/600,0.2,1)&&r()<0.0008*P.invent){seedTech(s.irrig,i,1,1);firstTech(2,i,po)}}
+    if(!s_firstTech[2]||s_irrig[i]<0.5){if(s_farm[i]>0.8&&w.rvF[i]>0.15&&w_Pr[i]<1000&&s_pop[i]/w_area[i]>4*clamp(w_Pr[i]/600,0.2,1)&&r()<0.0008*P.invent){seedTech(s.irrig,i,1,1);firstTech(2,i,po)}}
     const ri=s_rel[i];
     if(ri>=0){const R=rels[ri];
       let j=w_nb[i*4+((r()*4)|0)];
@@ -1818,7 +1812,7 @@ function newPolity(c,from,opt){
     origin:opt.origin||(from?{type:'rebellion',from:from.id}:{type:'emerged',people:e}),loot:0,cult:0.2,works:[],golds:[],goldStart:0,sample:[],succ:null,fortN:0,cityPop:0,island:false,assimT:0,conqDyn:!!opt.conqDyn,settledY:0,restores:opt.restores||0};
   o.ruler=newRuler(L,o);o.founderR=o.ruler;o.tier=tierOf(o);o.full=fullName(o);o.peak=o.full;
   if(from)from.kids.push(id);
-  if(from&&from.cplx!=null){o.cplx=from.cplx*0.55;o.ineq=from.ineq*0.85;o.treas=0.2;o.warC=0}
+  if(from&&from.cplx!=null){o.cplx=from.cplx*0.55;o.ineq=from.ineq*0.85;o.treas=0.2}
   s.pols.push(o);s.alive.push(id);s.pol[c]=id;s.dist[c]=0;s.integ[c]=Math.max(s.integ[c],0.7);o.mandate=1;
   // a new state in the heartland of a fallen great power may claim its name
   if(!opt.base&&o.kind==='state'){for(const F of s.fallen){if(s.year-F.died>900||F.restoredBy)continue;
@@ -1888,7 +1882,7 @@ function collapse(o){
   for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital){s.pol[i]=0;s.s[i]=0.3;lost++}
   if(o.maxCells>=20&&lost>=5)chron('fall',`The ${o.full} loses its grip; ${lost} provinces fall away into stateless hands.`,o.capital,[R_(o)],'Its asabiya had decayed below the point where it could hold together.');
 }
-function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+(swOn('horse')?ts*Math.min(1,s.horse[c])*(0.3+1.5*rideAtCell(c)):ts*(s.horse[c]*(0.3+(w.nomad[c]?0.9:0))+0.6*s.caval[c]*(w.nomad[c]?1:0.5)))+1.2*s.gun[c]+0.2*admOf()[c]+0.3*s.camel[c]*w.desert[c]+(s.warX?0.4*s.warX[c]:0)+(s.linOf&&!swOn('horse')?0.4*(((linTraits('horse',c)||{size:0.5}).size)-0.5)*s.horse[c]:0)}
+function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*Math.min(1,s.horse[c])*(0.3+1.5*rideAtCell(c))+1.2*s.gun[c]+0.2*admOf()[c]+0.3*s.camel[c]*w.desert[c]+(s.warX?0.4*s.warX[c]:0)}
 // horse switch: horses count in war once, by how well the people of the province ride them (riding tiers in herds.js)
 function rideAtCell(c){const e=S.eth[c]>=0?S.eths[S.eth[c]]:null;return e&&e.ride?e.ride:0}
 // what a field-taxing state can take: herds move, and a herding cell yields little grain to the tax collector
@@ -2607,15 +2601,13 @@ function isWaste(i,horde){const s=S,w=WD;if(s.pop[i]<1)return true;if(s.pop[i]/w
 // Tainter: complexity has rising upkeep; Goldstone: fiscal crisis; Turchin/Scheidel: the wealth pump and its levellers
 function statecraft(o,c,y){
   const s=S,r=s.r;
-  if(o.cplx==null){o.cplx=0.2;o.treas=0.3;o.ineq=0.25;o.warC=0}
+  if(o.cplx==null){o.cplx=0.2;o.treas=0.3;o.ineq=0.25}
   if(o.kind!=='state'){o.pT=o.pF=o.pQ=0;o.burden=0;return}
   // a state born this year has not yet collected its first taxes
   if(o.tax==null){o.pT=o.pF=0;o.pQ=o.pQ||0;o.burden=o.burden||0.6;if(!o.fac)o.fac=[0,0];return}
   const real=Math.max(1,o.cells-(o.wasteN||0));
-  o.warC*=0.995;
   // warc switch: years of war build the state that fights them (Tilly): tax offices, arsenals, standing troops
-  if(swOn('warc')&&o.enemies&&o.enemies.size)o.warC+=0.02;
-  const tgt=0.15+0.35*admOf()[c]+0.2*s.law[c]+0.2*s.roads[c]+0.15*s.paper[c]+0.3*Math.min(1,real/250)+0.1*Math.min(1,o.fortN/20)+0.2*Math.min(1,o.warC);
+  const tgt=0.15+0.35*admOf()[c]+0.2*s.law[c]+0.2*s.roads[c]+0.15*s.paper[c]+0.3*Math.min(1,real/250)+0.1*Math.min(1,o.fortN/20);
   o.cplx+=tgt>o.cplx?0.01*(tgt-o.cplx):0.0015*(tgt-o.cplx);
   const ledger=s.tk[27][c]>0.5;
   // ruling costs grow with people AND with land: every province needs officials, garrisons and messengers, so thinly peopled realms cost more than they pay
@@ -2825,7 +2817,9 @@ const CROPS=[
   {k:'potato',n:'potatoes and quinoa',anim:'llamas and guinea pigs',y:1.6,store:0.3,tax:0.35,drain:1.1,fit:(T,P,rv)=>trap(T,-1,4,15,22)*trap(P,250,450,1600,2600)},
   {k:'yams',n:'yams, taro and bananas',anim:'pigs and fowl',y:1.0,store:0.2,tax:0.15,drain:0.8,fit:(T,P,rv)=>trap(T,19,23,31,35)*trap(P,850,1300,4500,7000)},
   {k:'sunflower',n:'sunflowers, squash and goosefoot',anim:'dogs',y:0.6,store:0.7,tax:0.6,drain:0.8,fit:(T,P,rv)=>trap(T,4,9,19,25)*trap(P,500,750,1400,2000)},
-  {k:'cassava',n:'cassava',anim:'goats',y:1.4,yS:0.9,store:0.25,tax:0.2,drain:0.7,fit:(T,P,rv)=>trap(T,18,22,31,35)*trap(P,500,900,3000,5000),introduced:1},
+  // cassava feeds about as many per field as other staples, not 40% more: it is starch with little protein, so its farmers
+  // still hunted and fished, and Amazonian numbers stayed low until late
+  {k:'cassava',n:'cassava',anim:'goats',y:0.9,store:0.25,tax:0.2,drain:0.7,fit:(T,P,rv)=>trap(T,18,22,31,35)*trap(P,500,900,3000,5000),introduced:1},
 ];
 const CI=Object.fromEntries(CROPS.map((c,k)=>[c.k,k]));
 // soils, assigned once from long-standing climate and terrain; fert multiplies farm yield, drain how fast farming wears it out,
@@ -2899,9 +2893,7 @@ function bandIn(k,c){const b=S.cBand,a=WD.alat[c];b[2*k]=Math.min(b[2*k],Math.ma
 function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
 // every ten years: packages spread with farmers and by sea, each farm grows its best package, and some learn to process it
 function cropPass(quiet){
-  // cassava switch: cassava yields about as much food per field as other staples (yS), not 40% more; it is starch with little
-  // protein, so its farmers still hunted and fished, and Amazonian numbers stayed low until late
-  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT,SWy=swOn('cassava'),SWr=swOn('river');
+  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT;
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
@@ -2912,8 +2904,8 @@ function cropPass(quiet){
     if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}}
   for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
     // river switch: a crop's water from the flood is judged on the land actually farmed: in a desert valley all of it is floodplain
-    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=SWr?Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)):w.rvF[i],el=w.elev[i];
-    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*(SWy&&C.yS?C.yS:C.y)*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
+    const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)),el=w.elev[i];
+    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
       if(best===CI.potato){const pS=clamp((P-280)/450,0,1)*clamp((3400-P)/1600,0.25,1);b=Math.max(b,pS*rf*(1-0.7*w.leach[i]))}
@@ -3545,7 +3537,7 @@ function colonyPass(){
     if(o.nob==null)o.nob=0;
     const c=o.capital,real=Math.max(1,o.cells-(o.wasteN||0));
     // plant a colony on a recently taken, thinly settled frontier province
-    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.8*Math.min(1,o.warC||0)+0.4*(o.enemies.size?1:0))){
+    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0))){
       const j=o.front[(r()*o.front.length)|0];
       if(s.pol[j]===id&&s.colony[j]<0.3&&s.K[j]>s.pop[j]*1.4&&w.land[j]){
         const want=Math.min(0.012*o.pop,(s.K[j]-s.pop[j])*0.6);
