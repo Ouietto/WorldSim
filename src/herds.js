@@ -147,11 +147,14 @@ function inheritRide(e,p,p2){e.ride=p?((p2?(p.ride+p2.ride)/2:p.ride)||0)*0.9:0;
 function ridePass(){
   const s=S,eths=s.eths,n=eths.length,hs=new Float64Array(n),ws=new Float64Array(n),war=new Uint8Array(n),stateXp=new Float64Array(n).fill(-1);
   for(const i of WD.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;hs[e]+=s.pop[i]*s.horse[i];ws[e]+=s.pop[i]}
-  for(const id of s.alive){const o=s.pols[id];if(o.core==null||o.core<0)continue;if(o.enemies.size)war[o.core]=1;stateXp[o.core]=Math.max(stateXp[o.core],o.prep??0.6)}
+  const thr=new Float64Array(n),thrR=new Float64Array(n);
+  for(const id of s.alive){const o=s.pols[id];if(o.core==null||o.core<0)continue;if(o.enemies.size)war[o.core]=1;stateXp[o.core]=Math.max(stateXp[o.core],o.prep??0.6);
+    // threat switch: a people raided by horsemen learns to ride from them, as far as its horses allow
+    if(o.thr>0.05){thr[o.core]=Math.max(thr[o.core],o.thr);const h=s.pols[o.raidBy];if(h&&h.alive&&h.kind==='horde'){const he=eths[h.core];if(he)thrR[o.core]=Math.max(thrR[o.core],he.ride||0)}}}
   for(const e of eths){if(!e.alive||!ws[e.id])continue;const h=hs[e.id]/ws[e.id],was=e.ride||0;
     // riding skill grows over generations toward what a people's herds and way of life allow: herders far beyond farmers who own a few horses
-    const tgt=Math.min(1,1.2*h*(0.2+0.8*(e.past??0.5))+(war[e.id]?0.12*h:0));
-    e.ride=clamp(was+(tgt>was?0.012:0.006)*(tgt-was),0,1);
+    const tgt=Math.min(1,1.2*h*(0.2+0.8*(e.past??0.5))+(war[e.id]?0.12*h:0)+0.45*thr[e.id]*h);
+    e.ride=clamp(was+(tgt>was?0.012:0.006)*(tgt-was)+(thrR[e.id]>was?0.02*thr[e.id]*Math.min(1,4*h)*(thrR[e.id]-was):0),0,1);
     // experience: a people keeps what its state's armies learned, and loses it slowly in long peace without a state
     if(stateXp[e.id]>=0)e.xp+=0.05*(stateXp[e.id]-e.xp);else if(!war[e.id])e.xp-=0.003*e.xp;
     if(was<0.5&&e.ride>=0.5&&e.pop>200000&&!e.archers){e.archers=1;let c=-1;for(const i of WD.landIdx)if(s.eth[i]===e.id){c=i;break}

@@ -31,7 +31,11 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
       if(S.cf){const g=mrName[i];fq[g]=(fq[g]||0)+p*S.cf[i];fw[g]=(fw[g]||0)+p}}}
   for(const k in rp)rp[k]=+(rp[k]/1e6).toFixed(2);for(const k in cp)cp[k]=+(cp[k]/1e6).toFixed(2);diag[y]={reg:rp,crop:cp};
   // cropping frequency (share of farmland cropped each year), farmer-weighted, when that switch is on
-  if(S.cf){const o={};for(const k in fq)o[k]=+(fq[k]/fw[k]).toFixed(2);diag[y].cf=o}};
+  if(S.cf){const o={};for(const k in fq)o[k]=+(fq[k]/fw[k]).toFixed(2);diag[y].cf=o}
+  // frontier horsemanship: riding skill of the peoples ruling farming states that border a steppe horde (people-weighted)
+  {let a=0,b=0,ar=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||!o.nb||o.farmN<0.5*o.cells)continue;let hd=false;for(const [q] of o.nb){const p=S.pols[q];if(p&&p.alive&&p.kind==='horde'){hd=true;break}}
+    if(!hd)continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
+   diag[y].x={'Frontier states: riding skill':b?+(a/b).toFixed(2):null,'Frontier states: share with mounted archers':b?+(ar/b).toFixed(2):null}}};
 // steppe and migration dynamics after 3000 BCE, counted from the chronicle as it is written (it is trimmed when long)
 const DOM={inv:/break through the frontier/,dom:/abandon their pastures/,wall:/fortify its frontier/},dCnt={inv:0,dom:0,wall:0};let chI=0;
 const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n++;if(S.farm[i]>0.5)f++}return n?f/n:0},fArr={};
