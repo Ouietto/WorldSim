@@ -37,12 +37,18 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
     if(!hd)continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
    diag[y].x={'Frontier states: riding skill':b?+(a/b).toFixed(2):null,'Frontier states: share with mounted archers':b?+(ar/b).toFixed(2):null}}
   // men of fighting age against the usual share, in states of 20+ provinces (cohort switch)
+  // confederations: how many large ones, and how much of the steppe they hold
+  {let big=0,huge=0,n=0,h=0,hp=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='horde')continue;if(o.cells>=20)big++;if(o.cells>=60)huge++}
+   for(const i of WD.landIdx){const g=mrName[i];if((g==='Inner Asian steppe'||g==='Pontic-Caspian steppe')&&S.pop[i]>=1){n++;const o=S.pol[i]?S.pols[S.pol[i]]:null;if(o&&o.kind==='horde'){h++;hp+=S.pop[i]}}}
+   Object.assign(diag[y].x,{'Confederations of 20+ provinces':big,'Confederations of 60+ provinces':huge,'Steppe provinces held by confederations':n?+(h/n).toFixed(2):null})}
   if(S.coh){let a=0,b=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||o.cells<20||o.mpR==null)continue;a+=o.pop*o.mpR;b+=o.pop}diag[y].x['Large states: young men against normal']=b?+(a/b).toFixed(2):null}};
 // war after 1000 BCE: share of state-years at war (people-weighted, states of 3+ provinces), provinces changing hands
 const WAR={w:0,p:0,sy:0,taken:0,t0:null};
 // steppe and migration dynamics after 3000 BCE, counted from the chronicle as it is written (it is trimmed when long)
 const DOM={inv:/break through the frontier/,dom:/abandon their pastures/,wall:/fortify its frontier/},dCnt={inv:0,dom:0,wall:0};let chI=0;
-const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n++;if(S.farm[i]>0.5)f++}return n?f/n:0},fArr={};
+// farmed = growing a staple. Knowing how to farm with no crop to grow (herders at the Cape, foragers on the Northwest Coast) is
+// not farming; it was counted as farming before run 76
+const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n++;if(S.farm[i]>0.5&&S.crop&&S.crop[i]>=0)f++}return n?f/n:0},fArr={};
 while(S.year<END){step();
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt))dCnt[k]++}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
@@ -65,7 +71,9 @@ if(S.bFirst){out.x_beasts=BEASTS.map((b,k)=>S.bFirst[k]?b.k+' '+S.bFirst[k].y:nu
 out.diag=diag;
 {const ws=S.wars.filter(x=>!x.civil&&x.start>=-1000),done=ws.filter(x=>x.end).map(x=>x.end-x.start).sort((a,b)=>a-b),span=Math.max(1,S.year-(WAR.t0??-1000));
  out.d_warShare=WAR.p?+(WAR.w/WAR.p).toFixed(3):null;out.d_warsPerState=WAR.sy?+(ws.length/(WAR.sy/100)).toFixed(2):null;out.d_warLen=done.length?done[done.length>>1]:null;out.d_taken=+(WAR.taken/(span/100)).toFixed(0);
- const g={};for(const x of ws)if(x.goal)g[x.goal]=(g[x.goal]||0)+1;out.d_goals=g;if(S.gzD){out.d_clan=S.gzN;out.d_clanFar=S.gzFar}}
+ const g={};for(const x of ws)if(x.goal)g[x.goal]=(g[x.goal]||0)+1;out.d_goals=g;
+ // lifespans of confederations that reached 20+ provinces, born after 3000 BCE
+ {const L=S.pols.filter(o=>o&&o.kind==='horde'&&o.maxCells>=20&&o.born>=-3000).map(o=>(o.alive?S.year:o.died)-o.born).sort((a,b)=>a-b);out.d_confN=L.length;out.d_confLife=L.length?L[L.length>>1]:null}if(S.gzD){out.d_clan=S.gzN;out.d_clanFar=S.gzFar}}
 out.p_m3000=pop[-2999]??null;out.p_1=pop[1]??null;out.p_1000=pop[1000]??null;out.p_1500=pop[1500]??null;
 out.b_m1000=big[-999]??null;out.b_1=big[1]??null;out.h_m1000=bigH[-999]??null;out.h_1=bigH[1]??null;
 const ch=S.chinaHist.filter(h=>h[0]>=-250);out.cUnity=ch.length?+(ch.filter(h=>h[1]>0.5).length/ch.length).toFixed(3):null;
