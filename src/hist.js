@@ -631,7 +631,7 @@ function figScore(f){let s=f.conq*1.5+f.realm+f.deeds.length*4+(f.exc?5:0)+f.wor
 
 /* ---------- states ---------- */
 const FLOOR={chief:5e3,king:6e4,emp:6e5};
-function tierOf(o){const n=o.cells-(o.wasteN||0),p=o.pop;
+function tierOf(o){const n=o.cells-(o.wasteN||0),p=o.pop*(o.coord??1);   // governed people: scalar stress counts only those the ruler can reach
   if(o.kind==='horde')return n<6||p<2e4?'Clans':n<25||p<2e5?'Horde':'Confederation';
   const nom=o.nomF>0.5;
   // a narrow, crowded river kingdom is still a kingdom: size in people counts, not only in land
@@ -1392,7 +1392,7 @@ function regionPass(){
   // a tributary counts toward its overlord, a league city toward its league; chiefdoms count only inside a league or bloc
   const headOf=o=>{if(o.over&&s_pols[o.over]&&s_pols[o.over].alive)return['p',o.over];if(o.league!=null&&s.leagues&&s.leagues[o.league]&&!s.leagues[o.league].end)return['L',o.league];return['p',o.id]};
   for(const R of w.regions){if(s_regionFirst[R.k])continue;cnt.clear();let tot=0;for(const i of R.cells){const pp=s_pop[i];tot+=pp;const p=s_pol[i];if(!p)continue;const o=s_pols[p];
-      const [t,id]=headOf(o),solo=t==='p'&&id===o.id;if(solo&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;const key=t+id;cnt.set(key,(cnt.get(key)||0)+pp)}
+      const [t,id]=headOf(o),solo=t==='p'&&id===o.id;if(solo&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;const key=t+id;cnt.set(key,(cnt.get(key)||0)+pp*(o.coord??1))}
     let best=0,bk='';for(const [k,c] of cnt)if(c>best){best=c;bk=k}
     // and at least 100,000 people: a single walled town holding a third of an almost empty region is not yet its first state
     if(tot>0&&best>=0.3*tot&&best>=1e5){const L=bk[0]==='L',id=+bk.slice(1),o=L?null:s_pols[id];s_regionFirst[R.k]={y:s.year,pol:L?s.leagues[id].members[0]:id,name:L?s.leagues[id].name:o.full,kind:L?'league':o.kind}}}

@@ -1,7 +1,10 @@
 {"seeds": "1-64", "end": 1500, "per": 4, "ref": "", "baseEnv": "",
  "variants": [
   {"name": "base", "env": ""},
-  {"name": "cf", "env": "SW=cf"},
-  {"name": "cffast", "env": "SW=cffast"}
+  {"name": "scale", "env": "SW=scale"},
+  {"name": "scale2", "env": "SW=scale2"},
+  {"name": "threat", "env": "SW=threat"},
+  {"name": "milpa", "env": "SW=milpa"},
+  {"name": "all", "env": "SW=scale,threat,milpa"}
  ],
- "note": "Run 73: new base (cassava yield, floodplain river, record keeping, one horse term) and Boserup cropping frequency at two speeds."}
+ "note": "Run 74: base with cropping frequency; scalar stress at two strengths, threat-driven state and riding, milpa and hand-built fields; each alone and together."}
