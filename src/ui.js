@@ -785,8 +785,6 @@ $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
 // test switches (see swOn in world.js): one box each
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
-  ['rivers','Rivers run the right way','a river finds its mouth through rivers at least as large as itself, so the upper Niger reaches Timbuktu and the inland delta instead of running backwards into the Senegal.'],
-  ['water','Living water','rivers carry the rain of their own age, closed basins fill with lakes in wet times (the green Sahara\'s Lake Mega-Chad) and shrink in dry ones, the Sahara dries from the north and east first, and people leave drying land along its watercourses for land that can feed them.'],
   ['herds','Herders live on their herds','herds die in hard winters and droughts and take years to regrow; a family left with too few animals cannot rebuild alone.'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
