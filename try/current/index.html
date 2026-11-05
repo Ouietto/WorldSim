@@ -1462,9 +1462,9 @@ const intens=x=>1+3.2*(1-Math.exp(-x/3.2));
 // overshot China's first state and the 3000 BCE population). New farmers start at long fallow (CF0); capacity scales with
 // frequency against CFREF
 const CF0=0.25,CFREF=0.4,CFR=0.0015;
-// test switches (run 74). scale / scale2: scalar stress at two strengths. threat: frontier threat builds the state and its
-// horsemen. milpa: maize intercropping and hand-built fields in the Americas
-const sclK=()=>swOn('scale2')?2:swOn('scale')?1:0;
+// scalar stress at the strong setting (run 75: Egypt's first state 0 -> 16% in band, Yellow River 14 -> 33%, Indus 80 -> 91%;
+// score +2.1). threat switch (run 74, set aside): frontier threat builds the state and its horsemen
+const sclK=()=>2;
 // cohort switch: six age and sex groups per province (girls, boys, young women, young men 15-34, older women, older men)
 const cohOn=()=>swOn('cohort'),cohArr=()=>{if(!cohOn())return null;if(!S.coh)S.coh=new Float32Array(N*6);return S.coh};
 // farming reads the floodplain share (rvF), not the raw river; state capacity reads record keeping (writing, khipu, griots,
@@ -1479,7 +1479,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=swOn('graze')?(s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD)):null;const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,SWm=swOn('milpa'),SWl=swOn('lateag');
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=swOn('graze')?(s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD)):null;const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,SWl=swOn('lateag');
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -1519,9 +1519,9 @@ function computeK(){
       // quick-ripening rice brings a second rice crop to irrigated paddies off the floodplains (Champa rice in Song China, 1012)
       const rot=SWl?s_crops[i]:0;
       let cR=CF0+0.25*s_ard[i]*(1-0.6*hv)+0.25*s_plough[i]*hv+0.35*s_manure[i]*(0.5+0.5*Math.max(s_ard[i],s_plough[i]))+0.35*tTer[i]*w_terrFit[i]+0.15*rot*(0.5+0.5*Math.max(s_ard[i],s_plough[i]));
-      // milpa switch: maize, beans and squash grown together feed the soil (beans fix nitrogen), so Mesoamerican fields rest
+      // milpa (run 74): maize, beans and squash grown together feed the soil (beans fix nitrogen), so Mesoamerican fields rest
       // less than a lone grain's would (Zizumbo-Villarreal & Colunga-GarcíaMarín 2010)
-      cR=Math.max(cR,(0.55+0.6*rot*s_irrig[i]*warm)*rice,SWm&&s_crop[i]===maizeK?0.42:0)*(1-0.6*lc);
+      cR=Math.max(cR,(0.55+0.6*rot*s_irrig[i]*warm)*rice,s_crop[i]===maizeK?0.42:0)*(1-0.6*lc);
       const cF=0.6+0.4*s_irrig[i]+0.8*s_irrig[i]*warm*(0.12+0.88*rice);
       s_cfMax[i]=(1-fp)*cR+fp*cF;Kfa*=s_cf[i]/CFREF}
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
@@ -3067,7 +3067,7 @@ function bandIn(k,c){const b=S.cBand,a=WD.alat[c];b[2*k]=Math.min(b[2*k],Math.ma
 function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
 // every ten years: packages spread with farmers and by sea, each farm grows its best package, and some learn to process it
 function cropPass(quiet){
-  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT,SWm=swOn('milpa');
+  const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nb=w.nb,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT;
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
@@ -3094,7 +3094,7 @@ function cropPass(quiet){
     if(best===CI.potato&&!s.firstTech[TI.chuno]&&el>2500&&P<1300&&T>-2&&T<14&&farm[i]>0.6&&pop[i]>2000&&r()<0.004){seedTech(chu,i,1,1);firstTech(TI.chuno,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     // Boserup: crowded farmers on slopes or in wetlands build terraces and raised fields
     // invented independently wherever crowding on slopes or wetlands demands it (Yemen, China, the Andes, Mesoamerica, New Guinea)
-    if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&rvAg()[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>(SWm?2:4)&&r()<0.0006){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
+    if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&rvAg()[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>2&&r()<0.0006){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     if(best===CI.maize&&!s.firstTech[TI.nixtamal]&&farm[i]>0.7&&pop[i]>3000&&r()<0.0015){seedTech(nix,i,1,1);firstTech(TI.nixtamal,i,s.pol[i]?s.pols[s.pol[i]]:null)}}
   if(!quiet){for(let k=0;k<CROPS.length;k++){if(edge[k]&1)cB[2*k+1]+=0.025;if(edge[k]&2)cB[2*k]=Math.max(0,cB[2*k]-0.025)}openPass()}
 }
@@ -4754,7 +4754,7 @@ $('btn-share').addEventListener('click',async()=>{const seed=($('hseed').value||
   const link=base+'#seed-'+seed,st=$('share-status');$('share-link').value=link;
   try{await navigator.clipboard.writeText(link);st.textContent='Link copied. It opens this exact history (with the default rules).'}catch(e){$('share-link').select();st.textContent='Copy the link above.'}});
 $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
-// test switches (see swOn in world.js): one box each; scale and scale2 are two strengths of one mechanic
+// test switches (see swOn in world.js): one box each
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
   ['wargoal','War goals','punitive campaigns against raiders and loose tribes, and shows of force that break a rival\'s realm, beside wars for provinces.'],
@@ -4762,14 +4762,11 @@ const SWITCHES=[
   ['hordesplit','Confederations break into their parts','a dead khan\'s heirs keep only the home pastures; outlying chiefs ride off as new confederations; the rest go back to the clans.'],
   ['partition','Lords carve up fallen realms','a collapsing farming state\'s good farmland is split among its lords instead of going stateless.'],
   ['lateag','Late farming','crop rotation and early-ripening rice raise yields after the classical age.'],
-  ['milpa','Milpa and hand-built fields','maize, beans and squash grown together, terraces and raised fields let the Americas farm more intensively.'],
-  ['scale','Scalar stress','a polity can manage only as many people as its hierarchy, records and sanctuaries reach.'],
-  ['scale2','Scalar stress, strong','the same at twice the strength (use one or the other).'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
   box.innerHTML=SWITCHES.map(([k,n,d])=>`<label class="check"><input type="checkbox" data-sw="${k}"${swOn(k)?' checked':''}><span><b>${n}</b>: ${d}</span></label>`).join('');
   box.addEventListener('change',e=>{const k=e.target.dataset.sw;if(!k)return;const set=(x,on)=>{const i=SWX.indexOf(x);if(on&&i<0)SWX.push(x);if(!on&&i>=0)SWX.splice(i,1)};
-    set(k,e.target.checked);if(e.target.checked&&(k==='scale'||k==='scale2')){const o=k==='scale'?'scale2':'scale';set(o,false);const ob=box.querySelector(`[data-sw="${o}"]`);if(ob)ob.checked=false}
+    set(k,e.target.checked);
     try{const u=new URL(location.href);u.searchParams.delete('sw');let q=u.searchParams.toString();if(SWX.length)q=(q?q+'&':'')+'sw='+SWX.join(',');history.replaceState(null,'',u.pathname+(q?'?'+q:'')+u.hash)}catch(err){}
     setRunning(false);startHistory()})})();
 function readImage(file){return new Promise((res,rej)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{const c=document.createElement('canvas');c.width=HW;c.height=HH;const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(img,0,0,HW,HH);const d=x.getImageData(0,0,HW,HH).data;const g=new Float32Array(HW*HH);for(let i=0;i<g.length;i++)g[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)/255;URL.revokeObjectURL(url);res({g,w:img.naturalWidth,h:img.naturalHeight})};img.onerror=()=>rej(new Error('That file could not be read as an image.'));img.src=url})}
