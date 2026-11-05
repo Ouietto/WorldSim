@@ -1461,6 +1461,8 @@ const CF0=0.25,CFREF=0.4,CFR=0.0015;
 // test switches (run 74). scale / scale2: scalar stress at two strengths. threat: frontier threat builds the state and its
 // horsemen. milpa: maize intercropping and hand-built fields in the Americas
 const sclK=()=>swOn('scale2')?2:swOn('scale')?1:0;
+// cohort switch: six age and sex groups per province (girls, boys, young women, young men 15-34, older women, older men)
+const cohOn=()=>swOn('cohort'),cohArr=()=>{if(!cohOn())return null;if(!S.coh)S.coh=new Float32Array(N*6);return S.coh};
 // farming reads the floodplain share (rvF), not the raw river; state capacity reads record keeping (writing, khipu, griots,
 // drum script), not writing alone
 const rvAg=()=>WD.rvF,admOf=()=>S.recK||S.admin;
@@ -1536,9 +1538,23 @@ function computeK(){
   }
 }
 function growth(){
-  const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade;const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
+  const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade,CO=cohArr();const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s_pop[i];if(p<=0)continue;const K=s_K[i];
     if(p<K)p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s_farm[i]+0.5*s_herd[i]));else{let ex=(p-K)*0.2;const gq=s_pol[i]?s_pols[s_pol[i]]:null;if(gq&&gq.gran>0.05&&gq.wet<-0.1){const sv=ex*0.6*gq.gran;ex-=sv;gq.granUse=(gq.granUse||0)+sv}p-=ex;if(!s_pol[i]&&p>1.2*K&&p>20000&&s_eth[i]>=0)pushPressure(s_eth[i],ex*0.35,i,0,null)}
+    if(CO){
+      // cohorts: the year's net change (above) is met by births to the women there are; deaths fall on each age; children and
+      // young adults grow up. Losses from war, plague or flight since last year are spread over the ages first. A province
+      // short of young women has fewer children; a shortage of men lowers births only a little (remarriage, polygyny)
+      const b=i*6,p0=s_pop[i];let c0=CO[b],c1=CO[b+1],c2=CO[b+2],c3=CO[b+3],c4=CO[b+4],c5=CO[b+5];const T=c0+c1+c2+c3+c4+c5;
+      if(T<=0){c0=0.156*p0;c1=0.164*p0;c2=c3=c4=c5=0.17*p0}else if(Math.abs(T-p0)>1e-4*p0){const f=p0/T;c0*=f;c1*=f;c2*=f;c3*=f;c4*=f;c5*=f}
+      if(p>0){const D=0.04*(c0+c1)+0.012*(c2+c3)+0.05*(c4+c5);let Bt=p-p0+D,ex=0;if(Bt<0){ex=-Bt;Bt=0}
+        const fw=(c2+0.4*c4)/(0.238*p0+1),mm=Math.min(1,0.6+0.4*(c3+0.5*c5)/(c2+0.5*c4+1)),Bb=Bt*clamp(fw,0.3,1.6)*mm;
+        const a0=c0/15,a1=c1/15,a2=c2/20,a3=c3/20;
+        c0+=0.488*Bb-0.04*c0-a0;c1+=0.512*Bb-0.04*c1-a1;c2+=a0-0.012*c2-a2;c3+=a1-0.012*c3-a3;c4+=a2-0.05*c4;c5+=a3-0.05*c5;
+        if(ex>0){const sw=1.5*(c0+c1)+0.7*(c2+c3)+1.3*(c4+c5);if(sw>0){const kC=Math.min(0.9,ex*1.5/sw),kY=Math.min(0.9,ex*0.7/sw),kO=Math.min(0.9,ex*1.3/sw);c0*=1-kC;c1*=1-kC;c2*=1-kY;c3*=1-kY;c4*=1-kO;c5*=1-kO}}
+        p=c0+c1+c2+c3+c4+c5}
+      if(p<0.5){c0=c1=c2=c3=c4=c5=0}
+      CO[b]=c0;CO[b+1]=c1;CO[b+2]=c2;CO[b+3]=c3;CO[b+4]=c4;CO[b+5]=c5}
     if(p<0.5){p=0;s_eth[i]=-1;s_eth2[i]=-1;s_rel[i]=-1}
     s_pop[i]=p;
     const pr=p/K,fm=s_farm[i];
@@ -1878,7 +1894,7 @@ function succession(o){
   else o.gen++;
 }
 function etOf(o){const c=o.capital,s=S;return 0.02*(1+admOf()[c]+0.5*s.coin[c]+0.5*s.law[c])}
-const WHY_LABEL={pW:'taxes that took the peasants\' bread',pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pC:'more people than its chiefs and record-keepers could manage',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
+const WHY_LABEL={pW:'taxes that took the peasants\' bread',pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pC:'more people than its chiefs and record-keepers could manage',pY:'a swollen generation of young men without land or office',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
 function topCauses(why){return Object.entries(why).filter(e=>e[1]>0.08).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>WHY_LABEL[e[0]])}
 function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===id)out.push(i);return out}
 function civilWar(o,breakup){
@@ -1970,7 +1986,7 @@ function rideAtCell(c){const e=S.eth[c]>=0?S.eths[S.eth[c]]:null;return e&&e.rid
 // what a field-taxing state can take: herds move, and a herding cell yields little grain to the tax collector
 function cerealEff(i){return S.cTax[i]*(1-0.45*WD.leach[i])*(1-0.35*WD.trop[i])*(1-0.8*clamp((S.past[i]-0.45)/0.4,0,1))}
 const herdLed=o=>o&&o.kind==='state'&&(o.steppe||0)>0.5;
-function strength(o){const rd=rideOf(o);return o.kind==='horde'?(o.pop+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -2000,7 +2016,8 @@ function attack(o,i,j,sea){
   const tro=WD.trop[j]>0.5&&WD.trop[o.capital]<0.3?0.45:1;
   const pw2=tro*ub*(kin&&dpol.rel===o.rel?Math.min(0.9,pw*1.15+0.01):pw)*(o.kind==='state'?0.1+0.9*Math.pow(cerealEff(j),1.5):1);
   const eA=ecoD(j,o),pw3=pw2*Math.exp(-P.eco*(o.kind==='horde'?0.4:1.2)*Math.pow(Math.max(0,eA-0.4),1.3));
-  if(s.r()<pw3){
+  const win=s.r()<pw3,wid0=q?o.enemies.get(q):null,war0=wid0!=null?s.wars[wid0]:null;
+  if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
     s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:(w.tcost[j]||2)));
@@ -2008,9 +2025,21 @@ function attack(o,i,j,sea){
     o.conq++;o.ruler.conq++;if(o.kind==='horde')o.prest=(o.prest||0)+0.02;
     if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004;d.mandate=Math.max(0,(d.mandate||1)-0.01);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA++;else war.gD++;war.lastGain=s.year;
-        if(j===d.capital&&o.kind==='state'&&(d.cells<=2||d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
+        if(j===d.capital&&o.kind==='state'&&war.goal==='break'&&war.aSet.has(o.id))breakRealm(o,d,war);
+        else if(j===d.capital&&o.kind==='state'&&(d.cells<=2||d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
   }
+  // cohort switch: every engagement costs men on both sides, more for the side that loses; a taken province loses many of
+  // its young men (killed, fled or carried off), more in a punitive campaign
+  const CO=cohArr();if(CO){const dq=q?s.pols[q]:null;o.lossYM=(o.lossYM||0)+(o.army||0)*(win?0.005:0.012);if(dq)dq.lossYM=(dq.lossYM||0)+(dq.army||0)*(win?0.012:0.005);
+    if(win){const b=j*6+3,dl=CO[b]*(war0&&war0.goal==='punitive'?0.25:0.15);CO[b]-=dl;s.pop[j]=Math.max(0,s.pop[j]-dl)}}
 }
+// wargoal switch: a show of force. The victor storms the capital and leaves the realm in pieces rather than annexing it
+function breakRealm(o,d,war){
+  const s=S,n=d.cells,old=d.full;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);
+  let bc=-1,bp=-1;for(const i of polCells(d.id))if(s.pop[i]>bp){bp=s.pop[i];bc=i}
+  if(bc<0)return;d.capital=bc;d.shock+=0.8;d.mandate=0;
+  if(n>=8)chron('war',`The ${o.full} storms the capital of the ${old} and breaks its power: the realm falls apart among its lords.`,o.capital,[R_(o),['pol',d.id,old],RW(war)],'A show of force: the victor wanted a weak neighbour, not more provinces.');
+  if(polCells(d.id).length>=3)civilWar(d,true)}
 function raid(o,i,j){
   const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
@@ -2300,9 +2329,9 @@ function politics(){for(const _ of politicsG());}
 function* politicsG(){
   if(!S.recK)recPass();
   const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nb=w.nb,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
-  const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),SWp=swOn('partition');
-  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}}
-  for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p],pp=pop[i];
+  const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),SWp=swOn('partition'),CO=cohArr(),SWg=swOn('wargoal');
+  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
+  for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
     o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom++;if(w_coast[i])o.coastN++;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN++;if(s_fort[i]>0.5)o.fortN++;
     o.cx+=w_cosLon[i];o.cy+=w_sinLon[i];o.yy+=w_cyA[i];if(pp>o.mp){o.mp=pp;o.mc=i}
@@ -2352,7 +2381,7 @@ function* politicsG(){
     o.aggrM=Math.max(0.12,1+infl*(4*Rn.aggr-2)*0.6);
     const a=s_anom[c];o.wet=o.wet*0.92+a*0.08;
     o.loot*=0.9;
-    o.gate=clamp(0.5+1.1*(1-o.press)+(o.nomF>0.5||o.kind==='horde'?0.5:0.22)*a+Math.min(0.5,o.tribs*0.15)-(o.over?0.15:0)+Math.min(0.5,o.loot/(o.pop+1)*4)-Math.min(0.3,o.fortN*0.004),0.15,1.9);
+    o.gate=clamp(0.5+1.1*(1-o.press)+(o.nomF>0.5||o.kind==='horde'?0.5:0.22)*a+Math.min(0.5,o.tribs*0.15)-(o.over?0.15:0)+Math.min(0.5,o.loot/(o.pop+1)*4)-Math.min(0.3,o.fortN*0.004),0.15,1.9)*(CO?clamp((o.mpR??1)*(o.mpR??1),0.2,1.3):1);   // a ruler counts his young men before he picks a fight
     // reach: how fast orders travel and how much the centre can see (drums, beacons, relays, records, scripts); without any of it
     // a ruler cannot delegate far (Spencer 2010)
     if(o.kind==='state'){infoCap(o);monopolies(o)}
@@ -2361,6 +2390,12 @@ function* politicsG(){
     // builds new layers of office and records or splits; growth stalls at this threshold until records arrive (Shin et al. 2020)
     if(SCK&&o.kind==='state'){const mo=o.mono||{},inf=o.info||{rec:0};o.cap=15000*Math.exp(2.5*(o.cplx||0.2)+3.6*Math.min(1.5,inf.rec||0)+0.6*(mo.sacred||0)+(mo.force||0));
       o.scl=Math.max(0,Math.log(Math.max(1,o.pop)/o.cap));o.coord=Math.exp(-0.5*SCK*o.scl);o.tax*=o.coord}else{o.scl=0;o.coord=1}
+    // manpower (cohort switch): the men of fighting age against a settled population's usual share (1 = normal, below = bled
+    // white, above = a youth bulge). Armies draw a share of them: most herders ride; farmers send what the levy reaches.
+    // Every year at war costs a part of the army to battle, siege and camp fever (Scheidel 2007 on Roman losses); boys take
+    // fifteen years to replace them
+    if(CO){o.mpR=o.pop>0?o.ym/(0.17*o.pop):1;o.army=o.ym*(o.kind==='horde'?0.5:0.06+0.3*(o.levy||0))*(o.coord??1);if(o.enemies.size)o.lossYM=(o.lossYM||0)+0.02*o.army;
+      if(o.kind==='state'&&o.mpR<0.75&&o.ineq!=null)o.ineq=Math.max(0.15,o.ineq-0.001)}
     // threat: raids by horsemen and wars against stronger enemies (Tilly; Zhao's horsemen, 307 BCE). It decays in peace
     if(SWt&&o.kind==='state'){let inp=0;if(y-(o.raidY||-1e9)<5){const h=pols[o.raidBy];inp+=h&&h.alive&&h.kind==='horde'?0.6:0.3}
       if(o.enemies.size){let mx=0;const me=power(o)+1;for(const [q] of o.enemies){const e=pols[q];if(e&&e.alive)mx=Math.max(mx,power(e)/me)}inp+=Math.min(0.6,0.5*mx)}
@@ -2373,7 +2408,7 @@ function* politicsG(){
     statecraft(o,c,y);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pP=Math.max(0,o.press-0.85)*3,pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
-    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0);const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+o.shock;
+    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
     else if(o.cells>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl){if(o.kind==='horde'&&swOn('hordesplit'))hordeBreakup(o);else civilWar(o)}
@@ -2432,6 +2467,11 @@ function* politicsG(){
         const isHoly=Rl&&q===hp&&t.rel!==o.rel&&Rn.piety>0.6;if(isHoly)wt*=1+4*P.zeal;
         bw+=wt;if(wt>0&&r()*bw<wt){best=q;holy=isHoly}}
       if(best){const t=pols[best];const war=declareWar([o],[t],holy?`the Holy War for ${holyName(Rl)}`:null,holy,false,holy);
+        // wargoal switch: what the war is for. A strong state crushes a raiding or loosely organised neighbour to secure the
+        // frontier (Rome against the Dacians, Han against the Xiongnu); against a rival kingdom it may march on the capital to
+        // break it rather than take it (Assyria and Urartu, 714 BCE); otherwise it fights for provinces
+        if(SWg&&!holy){const pr=po/(power(t)+1),weak=t.tier==='Chiefdom'||t.tier==='Clans'||(t.kind==='horde'&&t.cells<25),raider=o.raidBy===best&&y-(o.raidY||-1e9)<15;
+          war.goal=pr>2&&(weak||raider)?'punitive':pr>1.3&&pr<4&&t.kind==='state'&&!weak&&r()<0.35?'break':'conquest'}
         const tot=war.a.concat(war.d).reduce((sm,k)=>sm+pols[k].cells,0);
         if(holy||tot>=150||(o.cells>=30&&t.cells>=30)){war.notable=true;
           const al=war.a.slice(1).map(k=>pols[k].base),dl=war.d.slice(1).map(k=>pols[k].base);
@@ -2442,7 +2482,9 @@ function* politicsG(){
   for(const wid of s.activeWars){const war=s_wars[wid];
     const aAlive=war.a.some(k=>pols[k].alive),dAlive=war.d.some(k=>pols[k].alive),yrs=y-war.start;
     const fresh=y-(war.lastGain||war.start);
-    if(!aAlive||!dAlive||r()<0.02+(fresh>8?0.08:0)+(yrs>40?0.1:0)){endWar(war);continue}
+    // exhausted sides make peace (cohort switch); punitive campaigns are short. A stalemate can still drag on for generations
+    const exA=CO&&(pols[war.a[0]].mpR??1)<0.85,exD=CO&&(pols[war.d[0]].mpR??1)<0.8;
+    if(!aAlive||!dAlive||r()<0.02+(fresh>8?0.08:0)+(yrs>40?0.1:0)+(exA?0.06:0)+(exD?0.06:0)+(war.goal==='punitive'&&yrs>4?0.12:0)){endWar(war);continue}
     still.push(wid)}
   s.activeWars=still;
   if(y%5===0)diplomacy();
@@ -2474,7 +2516,7 @@ function* politicsG(){
       if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
       if(cand>=0&&s_taken[i]!==y){const q=pol[cand];
         if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1){if(r()<P.raid*0.02*o.aggrM*o.gate){s.raidC[cand]=y;const t0=pop[cand]*0.03;pop[cand]-=t0;o.loot+=t0*0.5;displace(cand,0.02,o.id)}}
-        else{const rate=q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i]));if(r()<rate*o.aggrM*o.gate)attack(o,i,cand,candSea)}}
+        else{const wg=SWg&&q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(r()<rate*o.aggrM*o.gate)attack(o,i,cand,candSea)}}
       if(horde&&rcand>=0&&r()<P.raid*0.025*o.aggrM*o.gate*(1-0.8*s_fort[rcand]))raid(o,i,rcand);
       const c=o.core;
       if(ei>=0&&c>=0&&ei!==c&&pi>=1&&!o.conqDyn&&r()<P.assim*0.004*o.S*(1-0.8*ethDist(ei,c))*(ri>=0&&ri===o.rel?1.5:1))s_eth[i]=c;
