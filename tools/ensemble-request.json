@@ -1,12 +1,12 @@
 {"seeds": "1-64", "end": 1500, "per": 4, "ref": "", "baseEnv": "",
  "variants": [
   {"name": "base", "env": ""},
-  {"name": "cohort", "env": "SW=cohort"},
-  {"name": "wargoal", "env": "SW=wargoal"},
-  {"name": "graze", "env": "SW=graze"},
+  {"name": "seedsea", "env": "SW=seedsea"},
   {"name": "hordesplit", "env": "SW=hordesplit"},
+  {"name": "graze", "env": "SW=graze"},
   {"name": "partition", "env": "SW=partition"},
+  {"name": "wargoal", "env": "SW=wargoal"},
   {"name": "lateag", "env": "SW=lateag"},
-  {"name": "all", "env": "SW=cohort,wargoal,graze,hordesplit,partition,lateag"}
+  {"name": "all", "env": "SW=seedsea,hordesplit,graze,partition,wargoal,lateag"}
  ],
- "note": "Run 76: base with milpa and strong scalar stress by default; farmed now means growing a staple; confederation diagnostics. Each switch alone and all together."}
+ "note": "Run 77: seed crosses narrow straits (seedsea); confederation breakup with a smaller core that can fall; grazing, partition, war goals, late farming; cohort held pending the war-restraint decision."}
