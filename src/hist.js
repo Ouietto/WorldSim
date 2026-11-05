@@ -792,11 +792,17 @@ function civilWar(o,breakup){
 function hordeBreakup(o){
   const s=S,w=WD,id=o.id,cells=polCells(id);if(cells.length<2)return;
   const own=new Set(cells),lab=s.lab;for(const i of cells)lab[i]=0;
-  const lim=Math.max(3,1.5*(o.h||6)),q=[o.capital];lab[o.capital]=1;let h=0;
+  // the khan keeps his own people's pastures near the camp: the same reach a failing state keeps (run 76: a wider core let
+  // the house outlive every collapse; confederations born before 5000 BCE were still riding at 3000 BCE)
+  const lim=2,q=[o.capital];lab[o.capital]=1;let h=0;
   while(h<q.length){const i=q[h++];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&own.has(j)&&!lab[j]&&s.eth[j]===o.core&&s.dist[j]<=lim){lab[j]=1;q.push(j)}}}
   // a khan whose capital stands among subject peoples still keeps the camps around it
   if(q.length<3){h=0;while(h<q.length){const i=q[h++];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&own.has(j)&&!lab[j]&&s.dist[j]<=0.5*lim){lab[j]=1;q.push(j)}}}}
   const why='A confederation held together by one leader rarely outlives him.',news=[],pieces=[];let freed=0;
+  // the house itself must pass the same test as a rebel chief: too few people or pastures left to feed a following, and its
+  // camp goes back to the clans with the rest
+  let cp=0;for(const i of q)cp+=s.pop[i];const fall=cp<5e4||q.length<6;
+  if(fall)for(const i of q)lab[i]=0;
   for(const c0 of cells){if(lab[c0])continue;const comp=[c0];lab[c0]=2;let k=0,pp=0,best=c0,bp=-1;
     while(k<comp.length){const i=comp[k++];pp+=s.pop[i];if(s.pop[i]>bp){bp=s.pop[i];best=i}for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&own.has(j)&&!lab[j]){lab[j]=2;comp.push(j)}}}
     pieces.push({comp,pp,best})}
@@ -808,9 +814,9 @@ function hordeBreakup(o){
     else{for(const i of pc.comp){s.pol[i]=0;s.s[i]=Math.min(s.s[i],0.3)}freed+=pc.comp.length}}
   for(const i of cells){s.pop[i]*=0.96;lab[i]=0}
   o.E=0.7*etOf(o);o.shock=0.2;o.crises++;if(o.cplx!=null){o.cplx*=0.7;o.ineq=Math.max(0.2,o.ineq*0.7)}
-  const rebels=news.map(k=>s.pols[k]);if(rebels.length)declareWar(rebels,[o],`the ${o.base} succession war`,cells.length>=40,true);
+  const rebels=news.map(k=>s.pols[k]);if(rebels.length&&!fall)declareWar(rebels,[o],`the ${o.base} succession war`,cells.length>=40,true);
   if(cells.length>=20){const nm=rebels.slice(0,3).map(p=>p.full),e=s.eths[o.core];
-    chron('war',`The ${o.full} falls apart: its khan keeps only the ${e?e.name+' ':''}home pastures.${nm.length?` ${nm.join(', ')}${rebels.length>3?' and others':''} ride off under their own chiefs.`:''}${freed?` ${freed} province${freed>1?'s scatter':' scatters'} back to ${freed>1?'their clans':'its clans'}.`:''}`,o.capital,[R_(o),...rebels.slice(0,3).map(RB)],why)}
+    chron('war',`The ${o.full} falls apart: ${fall?'its house falls with it':`its khan keeps only the ${e?e.name+' ':''}home pastures`}.${nm.length?` ${nm.join(', ')}${rebels.length>3?' and others':''} ride off under their own chiefs.`:''}${freed?` ${freed} province${freed>1?'s scatter':' scatters'} back to ${freed>1?'their clans':'its clans'}.`:''}`,o.capital,[R_(o),...rebels.slice(0,3).map(RB)],why)}
 }
 function collapse(o){
   const s=S,w=WD;let lost=0;
