@@ -7,7 +7,6 @@
   {"name": "hordesplit", "env": "SW=hordesplit"},
   {"name": "partition", "env": "SW=partition"},
   {"name": "lateag", "env": "SW=lateag"},
-  {"name": "scale2", "env": "SW=scale2"},
-  {"name": "all", "env": "SW=cohort,wargoal,graze,hordesplit,partition,lateag,scale2"}
+  {"name": "all", "env": "SW=cohort,wargoal,graze,hordesplit,partition,lateag"}
  ],
- "note": "Run 75: base with milpa default; cohorts, war goals, grazing herders, confederation breakup, partition by lords, late farming, strong scalar stress; each alone and all together."}
+ "note": "Run 76: base with milpa and strong scalar stress by default; farmed now means growing a staple; confederation diagnostics. Each switch alone and all together."}
