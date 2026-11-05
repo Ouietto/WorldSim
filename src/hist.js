@@ -411,7 +411,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null,LK=s.lake||null;
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null,LK=s.lake||null,ARI=swOn('aridirr');
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -444,7 +444,11 @@ function computeK(){
     const fp=Math.min(1,w.rvF[i]/Math.max(w_sF[i],0.02));
     // techniques that raise each harvest; ards, ploughs, manure and terraces instead set how often the land can be cropped (below)
     const xY=0.8*s_metal[i]+0.9*s_iron[i]*(1-0.4*lc)+1.0*s_crops[i]+0.7*s_admin[i]+s_xcrops[i]*(0.25+0.8*lc+0.5*w_trop[i]+0.3*(1-w_sF[i]))+0.4*t26[i]*Math.max(lc,s_forest[i])+0.15*t28[i]*w_coast[i];
-    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*s_irrig[i]));
+    // aridirr switch: canals pay as much as the land is short of water (evaporation against rain): all of it on the Nile, the
+    // Tigris-Euphrates and the Indus, little in wet temperate Europe, where a floodplain is marsh and flood-prone forest; bunded
+    // rice keeps it, since a paddy is about holding water, not lacking it. Flood silt enriches valley soil everywhere
+    const AQ=ARI?(s_crop[i]===riceK?1:clamp((clamp(400+70*T,300,2600)-Pn/wm)/(0.6*clamp(400+70*T,300,2600)),0,1)):1;
+    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*s_irrig[i]*AQ));
     {
       // cropping frequency (Boserup 1965): how often a field bears. Hoe farmers crop a plot a few years and leave it to bush for
       // many; oxen and the ard allow a fallow every other year (the Mediterranean two-field round); manure and rotations, or the

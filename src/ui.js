@@ -785,6 +785,7 @@ $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
 // test switches (see swOn in world.js): one box each
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
+  ['aridirr','Canals where water is short','irrigation pays as much as the land is short of water: fully on the Nile, the Tigris and Euphrates and the Indus, little in wet temperate Europe; rice paddies keep it.'],
   ['herds','Herders live on their herds','herds die in hard winters and droughts and take years to regrow; a family left with too few animals cannot rebuild alone.'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
