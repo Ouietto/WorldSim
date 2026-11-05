@@ -1479,7 +1479,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=swOn('graze')?(s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD)):null;const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,SWl=swOn('lateag');
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize;
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -1497,7 +1497,7 @@ function computeK(){
     // horses and wagons let herders use the open grassland between the rivers, not only the valleys (Anthony 2007)
     const mob=Math.min(1,s_horse[i])*(0.4+0.6*s_wheel[i]);
     let Kh=ar*1.6*sh*Math.max(s_herd[i],s_domR[i],s_domL[i])*Math.min(1.3,dry)*(1+0.6*mob*clamp((w_sH[i]-0.2)/0.4,0,1))*(1+0.25*w_transh[i])*(1-s_rp[i]);
-    // graze switch: crowded herds wear the grass down; s.grass is what the pasture itself would feed, whoever grazes it
+    // herders follow the grass (default since run 79): crowded herds wear the grass down; s.grass is what the pasture itself would feed, whoever grazes it
     if(GZ){Kh*=1-0.45*GZ[i];s.grass[i]=ar*1.6*sh*Math.min(1.3,dry)*(1+0.25*w_transh[i])*(1-s_rp[i])*(1-0.45*GZ[i])}
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
@@ -1515,9 +1515,9 @@ function computeK(){
       // renews river land every year, and canals in warm rice country give two harvests (south China; Egypt and Sumer mostly one). Leached tropical
       // soils give out after two or three harvests (Sanchez 1976). Farmers move toward this ceiling only under crowding (growth)
       const rice=s_crop[i]===riceK?1:0,warm=clamp((T-16)/6,0,1);
-      // lateag switch: crop rotation lets rain-fed land bear two years in three (the three-field round of medieval Europe), and
+      // late farming (default since run 79): crop rotation lets rain-fed land bear two years in three (the three-field round of medieval Europe), and
       // quick-ripening rice brings a second rice crop to irrigated paddies off the floodplains (Champa rice in Song China, 1012)
-      const rot=SWl?s_crops[i]:0;
+      const rot=s_crops[i];
       let cR=CF0+0.25*s_ard[i]*(1-0.6*hv)+0.25*s_plough[i]*hv+0.35*s_manure[i]*(0.5+0.5*Math.max(s_ard[i],s_plough[i]))+0.35*tTer[i]*w_terrFit[i]+0.15*rot*(0.5+0.5*Math.max(s_ard[i],s_plough[i]));
       // milpa (run 74): maize, beans and squash grown together feed the soil (beans fix nitrogen), so Mesoamerican fields rest
       // less than a lone grain's would (Zizumbo-Villarreal & Colunga-GarcíaMarín 2010)
@@ -1613,7 +1613,7 @@ function migrate(){
       for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}
   }
 }
-// graze switch: herders follow the grass, clan by clan (Khazanov 1984; Humphrey & Sneath 1999). Herds above what the grass
+// herders follow the grass (default since run 79): herders follow the grass, clan by clan (Khazanov 1984; Humphrey & Sneath 1999). Herds above what the grass
 // bears wear it down, and rested grass recovers in a few years. Every other year a herding clan hears of the grass within a
 // few days' ride, farther if it rides; if better grass per head keeps being reported in the same direction for some years
 // it moves there with its herds. Most moves are short; a run of wet years far off can pull clans a long way. Fields are not
@@ -1919,7 +1919,7 @@ function succession(o){
       const w=R0.base.toLowerCase().replace(/[aeiou]+$/,'')+pick(r,['ar','or','an','er','ar']);
       s.famTitle[fam]={word:w,fig:f.id,from:o.id};
       chron('culture',`The name of ${f.name} outlives its bearer: rulers of the ${s.eths[fam].name} family of peoples will style themselves ${w}.`,o.capital,[RF(f),R_(o)])}}
-  if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);if(swOn('hordesplit'))hordeBreakup(o);else civilWar(o,true);return}
+  if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);hordeBreakup(o);return}
   if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
       chron('war',`${o.ruler.name} seizes the throne of the ${o.full}; the House of ${old} falls.`,o.capital,[R_(o),RF(f)])}}
@@ -1947,8 +1947,8 @@ function civilWar(o,breakup){
   const ids=sOK.map(c=>{const nid=newPolity(c,o,{kind:o.kind,origin:{type:'rebellion',from:id,why}});lab[c]=nid;q[t++]=c;return nid});
   while(h<t){const i=q[h++],l=lab[i];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&lab[j]===-2){lab[j]=l;q[t++]=j}}}
   const cut=[];for(const i of cells){const l=lab[i];if(l>0&&l!==id){s.pol[i]=l;s.s[i]=Math.min(1,s.s[i]+0.12)}else if(l===-2)cut.push(i);s.pop[i]*=0.94;lab[i]=0}
-  // partition switch: provinces cut off from both the capital and the rebels do not stay with the old ruler; their lords keep them
-  if(cut.length&&swOn('partition')&&o.kind==='state')partitionLands(o,cut,why);
+  // lords carve up fallen realms (default since run 79): provinces cut off from both the capital and the rebels do not stay with the old ruler; their lords keep them
+  if(cut.length&&o.kind==='state')partitionLands(o,cut,why);
   o.E=0.7*etOf(o);o.shock=0.2;o.crises++;if(o.cplx!=null){o.cplx*=breakup?0.7:0.85;o.ineq=Math.max(0.2,o.ineq*(breakup?0.7:0.88))}
   const rebels=ids.map(k=>s.pols[k]);
   for(const k of ids){const p=s.pols[k];p.rel=s.rel[p.capital]>=0?s.rel[p.capital]:o.rel}
@@ -1960,7 +1960,7 @@ function civilWar(o,breakup){
     const nm=names.length>1?names.slice(0,-1).join(', ')+' and '+names[names.length-1]:names[0];
     chron('war',`Civil war breaks the ${oldName}; ${nm} ${names.length>1?'break':'breaks'} away.`,o.capital,[['pol',o.id,oldName],...ids.map(k=>RB(s.pols[k])),RW(war)],why)}
 }
-// hordesplit switch: a confederation is its khan's personal network of chiefs (Barfield 1989; Khazanov 1984). When it breaks,
+// confederations break into their parts (default since run 79): a confederation is its khan's personal network of chiefs (Barfield 1989; Khazanov 1984). When it breaks,
 // the ruling clan keeps only its own people's pastures joined to the capital. Outlying pieces that can feed a following go
 // to the chiefs who held them and ride off as confederations of their own (one to three at most, the largest first); the
 // rest slip back to their clans, stateless. Nothing far-flung stays with the old khan.
@@ -2005,15 +2005,15 @@ function hordeBreakup(o){
 }
 function collapse(o){
   const s=S,w=WD;let lost=0;
-  if(o.kind==='horde'&&swOn('hordesplit')){hordeBreakup(o);return}
-  if(swOn('partition')&&o.kind==='state'){const away=[];for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital)away.push(i);
+  if(o.kind==='horde'){hordeBreakup(o);return}
+  if(o.kind==='state'){const away=[];for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital)away.push(i);
     const res=partitionLands(o,away,'Its asabiya had decayed below the point where it could hold together; its lords kept what they held.');
     if(o.maxCells>=20&&away.length>=5)chron('fall',`The ${o.full} loses its grip.${res.ids.length?` Its lords carve ${res.claimed} provinces into ${res.ids.length} realm${res.ids.length>1?'s':''}: ${res.ids.slice(0,4).map(k=>s.pols[k].full).join(', ')}${res.ids.length>4?' and others':''}.`:''}${res.freed?` ${res.freed} provinces of poor land fall away into stateless hands.`:''}`,o.capital,[R_(o),...res.ids.slice(0,4).map(k=>RB(s.pols[k]))],'Its asabiya had decayed below the point where it could hold together.');
     return}
   for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital){s.pol[i]=0;s.s[i]=0.3;lost++}
   if(o.maxCells>=20&&lost>=5)chron('fall',`The ${o.full} loses its grip; ${lost} provinces fall away into stateless hands.`,o.capital,[R_(o)],'Its asabiya had decayed below the point where it could hold together.');
 }
-// partition switch: farmland is worth claiming. When a farming state loses its grip, the lords, governors and garrison
+// lords carve up fallen realms (default since run 79): farmland is worth claiming. When a farming state loses its grip, the lords, governors and garrison
 // commanders who hold its provinces keep them as realms of their own: the successor kingdoms of the Carolingians, the
 // Zhou and the Abbasids (Wickham 2009; Kennedy 2004). Each joined piece of good farmland is split among a few lords, one per
 // half-dozen to dozen provinces; only poor land (desert, forest, thin pasture) and scraps too small to feed a lord's
@@ -2086,7 +2086,7 @@ function attack(o,i,j,sea){
   const CO=cohArr();if(CO){const dq=q?s.pols[q]:null;o.lossYM=(o.lossYM||0)+(o.army||0)*(win?0.005:0.012);if(dq)dq.lossYM=(dq.lossYM||0)+(dq.army||0)*(win?0.012:0.005);
     if(win){const b=j*6+3,dl=CO[b]*(war0&&war0.goal==='punitive'?0.25:0.15);CO[b]-=dl;s.pop[j]=Math.max(0,s.pop[j]-dl)}}
 }
-// wargoal switch: a show of force. The victor storms the capital and leaves the realm in pieces rather than annexing it
+// war goals (default since run 79): a show of force. The victor storms the capital and leaves the realm in pieces rather than annexing it
 function breakRealm(o,d,war){
   const s=S,n=d.cells,old=d.full;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);
   let bc=-1,bp=-1;for(const i of polCells(d.id))if(s.pop[i]>bp){bp=s.pop[i];bc=i}
@@ -2382,7 +2382,7 @@ function politics(){for(const _ of politicsG());}
 function* politicsG(){
   if(!S.recK)recPass();
   const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nb=w.nb,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
-  const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),SWp=swOn('partition'),CO=cohArr(),SWg=swOn('wargoal');
+  const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),CO=cohArr();
   for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
     o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
@@ -2464,7 +2464,7 @@ function* politicsG(){
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,sh:o.shock};o.psi=pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
-    else if(o.cells>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl){if(o.kind==='horde'&&swOn('hordesplit'))hordeBreakup(o);else civilWar(o)}
+    else if(o.cells>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl){if(o.kind==='horde')hordeBreakup(o);else civilWar(o)}
     else if(o.cells>=2&&o.S<(o.island?0.08:0.12)&&r()<0.02)collapse(o);
     if(o.kind==='horde'&&o.cells<=2&&y-o.born>30&&r()<0.03){for(const i of polCells(id)){pol[i]=0}continue}
     culture(o);
@@ -2520,10 +2520,10 @@ function* politicsG(){
         const isHoly=Rl&&q===hp&&t.rel!==o.rel&&Rn.piety>0.6;if(isHoly)wt*=1+4*P.zeal;
         bw+=wt;if(wt>0&&r()*bw<wt){best=q;holy=isHoly}}
       if(best){const t=pols[best];const war=declareWar([o],[t],holy?`the Holy War for ${holyName(Rl)}`:null,holy,false,holy);
-        // wargoal switch: what the war is for. A strong state crushes a raiding or loosely organised neighbour to secure the
+        // war goals (default since run 79): what the war is for. A strong state crushes a raiding or loosely organised neighbour to secure the
         // frontier (Rome against the Dacians, Han against the Xiongnu); against a rival kingdom it may march on the capital to
         // break it rather than take it (Assyria and Urartu, 714 BCE); otherwise it fights for provinces
-        if(SWg&&!holy){const pr=po/(power(t)+1),weak=t.tier==='Chiefdom'||t.tier==='Clans'||(t.kind==='horde'&&t.cells<25),raider=o.raidBy===best&&y-(o.raidY||-1e9)<15;
+        if(!holy){const pr=po/(power(t)+1),weak=t.tier==='Chiefdom'||t.tier==='Clans'||(t.kind==='horde'&&t.cells<25),raider=o.raidBy===best&&y-(o.raidY||-1e9)<15;
           war.goal=pr>2&&(weak||raider)?'punitive':pr>1.3&&pr<4&&t.kind==='state'&&!weak&&r()<0.35?'break':'conquest'}
         const tot=war.a.concat(war.d).reduce((sm,k)=>sm+pols[k].cells,0);
         if(holy||tot>=150||(o.cells>=30&&t.cells>=30)){war.notable=true;
@@ -2569,7 +2569,7 @@ function* politicsG(){
       if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
       if(cand>=0&&s_taken[i]!==y){const q=pol[cand];
         if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1){if(r()<P.raid*0.02*o.aggrM*o.gate){s.raidC[cand]=y;const t0=pop[cand]*0.03;pop[cand]-=t0;o.loot+=t0*0.5;displace(cand,0.02,o.id)}}
-        else{const wg=SWg&&q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(r()<rate*o.aggrM*o.gate)attack(o,i,cand,candSea)}}
+        else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(r()<rate*o.aggrM*o.gate)attack(o,i,cand,candSea)}}
       if(horde&&rcand>=0&&r()<P.raid*0.025*o.aggrM*o.gate*(1-0.8*s_fort[rcand]))raid(o,i,rcand);
       const c=o.core;
       if(ei>=0&&c>=0&&ei!==c&&pi>=1&&!o.conqDyn&&r()<P.assim*0.004*o.S*(1-0.8*ethDist(ei,c))*(ri>=0&&ri===o.rel?1.5:1))s_eth[i]=c;
@@ -2616,8 +2616,8 @@ function* politicsG(){
       // a ruler who cannot see, pay or reach a province does not keep it: its chiefs stop answering (prestige-goods chiefdoms,
       // Earle 1997). Only weakly integrated provinces of weakly holding states drift away.
       const hd=o.hold??0.5;if(hd<0.5&&s_integ[i]<0.35&&r()<0.04*(0.5-hd)*(1-s_integ[i]/0.35)*(1+dd(i)/(o.h||6))){
-        // partition switch: a governor who stops answering keeps good farmland as his own lordship
-        if(SWp&&s.pop[i]>=FLOOR.chief*P.floor*3&&s.farm[i]>0.5&&cerealEff(i)>=0.3){const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'A governor the court could not see or pay kept his province.'}});s_pol[i]=nid}
+        // lords carve up fallen realms (default since run 79): a governor who stops answering keeps good farmland as his own lordship
+        if(s.pop[i]>=FLOOR.chief*P.floor*3&&s.farm[i]>0.5&&cerealEff(i)>=0.3){const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'A governor the court could not see or pay kept his province.'}});s_pol[i]=nid}
         else s_pol[i]=0}}}
 }
 
@@ -4778,11 +4778,6 @@ $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
 // test switches (see swOn in world.js): one box each
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
-  ['wargoal','War goals','punitive campaigns against raiders and loose tribes, and shows of force that break a rival\'s realm, beside wars for provinces.'],
-  ['graze','Herders follow the grass','clans move toward better grass within a few days\' ride; overgrazed pasture wears out.'],
-  ['hordesplit','Confederations break into their parts','a dead khan\'s house keeps only its home pastures; outlying chiefs ride off as new confederations and the rest go back to the clans; a house left too weak is driven off and rides away with its herds.'],
-  ['partition','Lords carve up fallen realms','a collapsing farming state\'s good farmland is split among its lords instead of going stateless.'],
-  ['lateag','Late farming','crop rotation and early-ripening rice raise yields after the classical age.'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
   box.innerHTML=SWITCHES.map(([k,n,d])=>`<label class="check"><input type="checkbox" data-sw="${k}"${swOn(k)?' checked':''}><span><b>${n}</b>: ${d}</span></label>`).join('');
