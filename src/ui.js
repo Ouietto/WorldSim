@@ -783,11 +783,6 @@ $('followc').addEventListener('change',e=>{ui.follow=e.target.checked});
 // test switches (see swOn in world.js): one box each
 const SWITCHES=[
   ['cohort','Cohorts and manpower','girls, boys, young and older women and men in every province. Wars kill young men, who take a generation to replace; rulers short of men pick fewer fights.'],
-  ['wargoal','War goals','punitive campaigns against raiders and loose tribes, and shows of force that break a rival\'s realm, beside wars for provinces.'],
-  ['graze','Herders follow the grass','clans move toward better grass within a few days\' ride; overgrazed pasture wears out.'],
-  ['hordesplit','Confederations break into their parts','a dead khan\'s house keeps only its home pastures; outlying chiefs ride off as new confederations and the rest go back to the clans; a house left too weak is driven off and rides away with its herds.'],
-  ['partition','Lords carve up fallen realms','a collapsing farming state\'s good farmland is split among its lords instead of going stateless.'],
-  ['lateag','Late farming','crop rotation and early-ripening rice raise yields after the classical age.'],
   ['threat','Frontier threat','raids and stronger enemies build up the state and teach its people to ride.']];
 (function(){const box=$('sw-box');if(!box)return;
   box.innerHTML=SWITCHES.map(([k,n,d])=>`<label class="check"><input type="checkbox" data-sw="${k}"${swOn(k)?' checked':''}><span><b>${n}</b>: ${d}</span></label>`).join('');
