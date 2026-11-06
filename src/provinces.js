@@ -168,9 +168,16 @@ function fineFans(w,FR,D){
       const flat=clamp((250-s)/150,0,1),need=550-P,a=Math.min(0.6*flat*A,q/need);fan[k]=a/A;q=(q-a*need)*(5/6)}
     const d=D.down[k];if(d>=0)Q[d]+=q+R*A}
   return fan}
+/* lakes (Nein, 2026-11-06: the Great Lakes were farmland). Natural Earth's lakes (1:10 m; natural and salt lakes, reservoirs left
+   out), as each 25 km cell's share under water (src/earth_lake.b64). A cell at least half lake in country with 400 mm of rain or more
+   is open water the year round, a lake that brims and spills (Superior to Ontario, Ladoga, Baikal, Victoria, Tanganyika, Titicaca):
+   no province takes it, and its water is a unit of its own, an inland sea with shores, fish and boats. Lakes in dry country (Chad,
+   the Aral, Balkhash, the Great Salt Lake) are left to rise and fall with the water balance of their hollows (waterPass) */
+function fineLakes(w,lk){const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,m=new Uint8Array(NF);if(!lk)return m;
+  for(let k=0;k<NF;k++)if(lk[k]>=125&&lk[k]<=250&&w.pHi[k]>=400&&e[k]>SL0)m[k]=1;return m}
 function buildProvinces(w,o){
-  const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,count=o.count||26000,rMax=o.rMax||6,riverMin=o.riverMin??0.75;
-  const cls=new Uint8Array(NF);for(let k=0;k<NF;k++)cls[k]=e[k]>0?1:e[k]>SL0?2:0;
+  const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,count=o.count||26000,rMax=o.rMax||6,riverMin=o.riverMin??0.75,lakeW=fineLakes(w,o.lake);
+  const cls=new Uint8Array(NF);for(let k=0;k<NF;k++)cls[k]=lakeW[k]?0:e[k]>0?1:e[k]>SL0?2:0;
   const fy=k=>(k/HW)|0,fx=k=>k%HW,latF=new Float32Array(HH);for(let y=0;y<HH;y++)latF[y]=(90-(y+0.5)*180/HH)*Math.PI/180;
   const nb4=(k,f)=>{const x=fx(k),y=fy(k);f(y*HW+(x+1)%HW,0);f(y*HW+(x+HW-1)%HW,0);if(y>0)f(k-HW,1);if(y<HH-1)f(k+HW,1)};
   // what each fine cell can grow: plant growth from its own climate (the model's formula), flatness, floodplain
@@ -281,13 +288,15 @@ function buildProvinces(w,o){
    ground beside the rivers. Neighbours are lists: nbS/nbA (touching units; nbL the shared border in km) and snS/snA (touching
    at a corner too, for water spreading between seas). A great river runs between provinces: the banks share its size (rtS/rtA) */
 function provinceWorld(w,pid,o){o=o||{};
-  const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,D2R=Math.PI/180;
-  const cls=new Uint8Array(NF);for(let k=0;k<NF;k++)cls[k]=e[k]>0?1:e[k]>SL0?2:0;
+  const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,D2R=Math.PI/180,lakeW=fineLakes(w,o.lake);
+  const cls=new Uint8Array(NF);for(let k=0;k<NF;k++)cls[k]=lakeW[k]?0:e[k]>0?1:e[k]>SL0?2:0;
   const cOf=k=>((((k/HW)|0)/SC)|0)*W+(((k%HW)/SC)|0),latY=y=>(90-(y+0.5)*180/HH)*D2R;
   let np=0,stray=0;for(let k=0;k<NF;k++){if(!cls[k])continue;if(pid[k]<0)stray++;else if(pid[k]>=np)np=pid[k]+1}
-  const seaU=new Int32Array(NC).fill(-1);let n=np;
-  for(let k=0;k<NF;k++)if(!cls[k]||pid[k]<0){const c=cOf(k);if(seaU[c]<0)seaU[c]=n++}
-  const uid=new Int32Array(NF);for(let k=0;k<NF;k++)uid[k]=cls[k]&&pid[k]>=0?pid[k]:seaU[cOf(k)];
+  // open water: one unit per 100 km cell of sea, and one per 100 km cell of each lake's water apart from the sea's
+  const seaU=new Int32Array(NC).fill(-1),lakeU=new Int32Array(NC).fill(-1);let n=np;
+  for(let k=0;k<NF;k++)if(!cls[k]||pid[k]<0){const c=cOf(k),L=lakeU,S2=seaU,a=lakeW[k]?L:S2;if(a[c]<0)a[c]=n++}
+  const uid=new Int32Array(NF);for(let k=0;k<NF;k++)uid[k]=cls[k]&&pid[k]>=0?pid[k]:(lakeW[k]?lakeU:seaU)[cOf(k)];
+
   const fa=new Float32Array(HH);for(let y=0;y<HH;y++)fa[y]=(40075/HW)*(20004/HH)*Math.cos(latY(y));
   // the fine cells of each unit
   const cS=new Int32Array(n+1);for(let k=0;k<NF;k++)cS[uid[k]+1]++;for(let u=0;u<n;u++)cS[u+1]+=cS[u];
@@ -298,7 +307,7 @@ function provinceWorld(w,pid,o){o=o||{};
     for(let dy=-RR;dy<=RR;dy++){const yy=y+dy;if(yy<0||yy>=HH)continue;for(let dx=-RR;dx<=RR;dx++){const j=yy*HW+(x+dx+HW)%HW;if(!cls[j])continue;s+=e[j];s2+=e[j]*e[j];m++}}
     rel[k]=Math.sqrt(Math.max(0,s2/m-(s/m)*(s/m)))}
   const u={seed:w.seed,n,np,isProv:true,eHi:e,isEarth:w.isEarth,imported:w.imported,kgHi:w.kgHi,fitted:w.fitted,clim:w.clim,climateMeta:w.climateMeta,
-    fitChanged:w.fitChanged,tHi:w.tHi,pHi:w.pHi,aHi:w.aHi,grade:w.grade,coarse:w,pid,uid,cS,cA,nb:null};
+    fitChanged:w.fitChanged,tHi:w.tHi,pHi:w.pHi,aHi:w.aHi,grade:w.grade,coarse:w,pid,uid,cS,cA,nb:null,lakeHi:lakeW};
   const area=new Float32Array(n),T=new Float32Array(n),Pr=new Float32Array(n),amp=new Float32Array(n),elev=new Float32Array(n),rough=new Float32Array(n),
     land=new Uint8Array(n),lvl=new Float32Array(n),landNow=new Uint8Array(n),kgGrid=new Uint8Array(n),lat=new Float32Array(n),x3=new Float32Array(n),
     y3=new Float32Array(n),z3=new Float32Array(n),cosLon=new Float32Array(n),sinLon=new Float32Array(n),cxA=new Float32Array(n),cyA=new Float32Array(n),cosLat=new Float32Array(n);

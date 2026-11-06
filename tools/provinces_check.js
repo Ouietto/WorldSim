@@ -6,7 +6,7 @@ const core=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','t
 const B=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(path.join(SRC,f),'utf8'),'base64')));
 eval(core+`;(function(){const E=decodeEarth(B('earth_elev.b64'),B('koppen.b64'),B('earth_climate.b64'));
 let t0=Date.now();const w=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});const tW=Date.now()-t0;
-t0=Date.now();const pid=decodePid(B('earth_pid.b64')),u=provinceWorld(w,pid,{fp:B('earth_fp.b64')});const tU=Date.now()-t0;
+t0=Date.now();const pid=decodePid(B('earth_pid.b64')),u=provinceWorld(w,pid,{fp:B('earth_fp.b64'),lake:B('earth_lake.b64')});const tU=Date.now()-t0;
 console.log('grid world',tW,'ms; province world',tU,'ms;',u.np,'provinces,',u.n-u.np,'sea units, stray land cells',u.stray);
 const D2R=Math.PI/180,LA=(W0,i)=>W0.lat[i]/D2R,LO=(W0,i)=>(W0.cxA[i]+0.5)/W*360-180;
 const f=(x,d=0)=>typeof x==='number'?x.toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d}):x;

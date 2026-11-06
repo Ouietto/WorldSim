@@ -12,7 +12,7 @@ eval(core+`
 const E=decodeEarth(B('earth_elev.b64'),B('koppen.b64'),B('earth_climate.b64'));
 WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
 // WORLD=prov: the province world (src/earth_pid.b64) instead of the 100 km grid
-useWorld(process.env.WORLD==='prov'?provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64')}):WD);
+useWorld(process.env.WORLD==='prov'?provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64'),lake:B('earth_lake.b64')}):WD);
 for(const [k,v] of overrides)P[k]=v;
 const LA=i=>WD.lat[i]*180/Math.PI,LO=i=>(WD.cxA[i]+0.5)/W*360-180;
 // shares of land count each unit by the 100 km cells of land it stands for (the grid: one each)

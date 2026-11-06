@@ -24,6 +24,7 @@ def main():
             ("EARTH_CLIMATE_B64", "earth_climate.b64"),
             ("EARTH_PID_B64", "earth_pid.b64"),
             ("EARTH_FP_B64", "earth_fp.b64"),
+            ("EARTH_LAKE_B64", "earth_lake.b64"),
         )
     )
     page = (

@@ -793,7 +793,7 @@ function buildWorld(src){
     try{
       const fit=$('fitc').checked;P.fitClimate=fit;
       // provinces (Earth only): the province map instead of the 100 km grid
-      if(src==='earth'){WD=genWorld({seed:'Earth',earth:true,height:EARTH.height,kg:EARTH.kg,fit});if($('provc')&&$('provc').checked&&EARTH.pid)WD=provinceWorld(WD,EARTH.pid,{fp:EARTH.fp})}
+      if(src==='earth'){WD=genWorld({seed:'Earth',earth:true,height:EARTH.height,kg:EARTH.kg,fit});if($('provc')&&$('provc').checked&&EARTH.pid)WD=provinceWorld(WD,EARTH.pid,{fp:EARTH.fp,lake:EARTH.lake})}
       else if(src==='import'&&IMPORTED)WD=genWorld(Object.assign({seed:IMPORTED.name},IMPORTED));
       else WD=genWorld({seed:$('wseed').value||'atlas-7',landFrac:P.landFrac});
       useWorld(WD);SUB=null;ui.src=src;for(const b of $('src').children)b.setAttribute('aria-pressed',b.dataset.v===src);
@@ -876,7 +876,7 @@ async function boot(){
     busy(true,'Loading Earth…');
     const [e,k,c]=await Promise.all([inflateB64(EARTH_ELEV_B64),inflateB64(KOPPEN_B64),inflateB64(EARTH_CLIMATE_B64)]);
     EARTH=decodeEarth(e,k,c);
-    if(typeof EARTH_PID_B64!=='undefined'){const [pd,fp]=await Promise.all([inflateB64(EARTH_PID_B64),inflateB64(EARTH_FP_B64)]);EARTH.pid=decodePid(pd);EARTH.fp=fp}
+    if(typeof EARTH_PID_B64!=='undefined'){const [pd,fp,lk]=await Promise.all([inflateB64(EARTH_PID_B64),inflateB64(EARTH_FP_B64),typeof EARTH_LAKE_B64!=='undefined'?inflateB64(EARTH_LAKE_B64):null]);EARTH.pid=decodePid(pd);EARTH.fp=fp;EARTH.lake=lk}
     let seed=null;try{const m=/seed-([A-Za-z0-9]+)/.exec(location.hash||'');if(m)seed=m[1]}catch(err){}
     try{if(new URL(location.href).searchParams.get('world')==='prov'&&$('provc'))$('provc').checked=true}catch(err){}
     $('hseed').value=seed||String(Math.floor(Math.random()*1e6));

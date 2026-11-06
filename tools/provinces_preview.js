@@ -17,7 +17,7 @@ t0=Date.now();const ff=fineFloodplain(w,FR,fp);console.log('floodplain',((Date.n
 {const LAf=k=>90-(((k/HW)|0)+0.5)*180/HH,LOf=k=>((k%HW)+0.5)*360/HW-180;const R={nubia:[18.5,24,29,35],egyptValley:[24,30,30,33],delta:[30,31.6,29.5,32.5],smeso:[30,33.5,44,48],indus:[24,30,67,72],amu:[37,43,59,62],ganges:[23,28,78,89],yellowPlain:[34,38,113,119],nigerInland:[13,16,-6,-2],france:[43,51,-4,7],sahara:[20,28,0,20]};
   for(const [n,[a,b,c,d]] of Object.entries(R)){let s0=0,s1=0,m=0;for(let k=0;k<HW*HH;k++){if(w.eHi[k]<=SEA_LOW)continue;const la=LAf(k),lo=LOf(k);if(la<a||la>b||lo<c||lo>d)continue;m++;s0+=fp[k]===255?0:fp[k]/250;s1+=ff[k]}console.log('  floodplain',n.padEnd(12),'GFPLAIN',(s0/m).toFixed(3),'combined',(s1/m).toFixed(3))}}
 t0=Date.now();const fan=fineFans(w,FR,fineDrain(w,FR));console.log('fans',((Date.now()-t0)/1000).toFixed(1)+'s');
-t0=Date.now();const P=buildProvinces(w,{capC,fp,ff,fan,rivers:FR,count,alpha});
+t0=Date.now();const lake=B('earth_lake.b64'),P=buildProvinces(w,{capC,fp,ff,fan,lake,rivers:FR,count,alpha});
 console.log('provinces',P.np,'valley river cells',P.valley,'target people per province',Math.round(P.T),'built in',((Date.now()-t0)/1000).toFixed(1)+'s');
 const cs=Array.from(P.cap).sort((a,b)=>a-b),ar=Array.from(P.area).sort((a,b)=>a-b),q=(a,f)=>a[Math.floor(f*(a.length-1))];
 console.log('people per province (10/50/90%)',Math.round(q(cs,0.1)),Math.round(q(cs,0.5)),Math.round(q(cs,0.9)),'| area km2 (10/50/90%)',Math.round(q(ar,0.1)),Math.round(q(ar,0.5)),Math.round(q(ar,0.9)));
