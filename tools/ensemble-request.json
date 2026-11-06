@@ -1,6 +1,18 @@
-{"seeds": "1-64", "end": 1500, "per": 4, "ref": "", "baseEnv": "",
+{
+ "seeds": "1-64",
+ "end": 1500,
+ "per": 4,
+ "ref": "",
+ "baseEnv": "",
  "variants": [
-  {"name": "base", "env": ""},
-  {"name": "prov", "env": "WORLD=prov"}
+  {
+   "name": "base",
+   "env": ""
+  },
+  {
+   "name": "prov",
+   "env": "WORLD=prov"
+  }
  ],
- "note": "Run 82: the province world (about 30,900 provinces drawn from the 25 km land, equal people each, rivers between them, river size from half the grid's threshold) against the 100 km grid, both on the ported model (neighbour lists; the grid world gives the same histories as before). No recalibration yet."}
+ "note": "Run 83: the province world against the 100 km grid on the ported model (the grid gives the same histories as before). Provinces: spreading scaled to distance, crowding and state size counted per 100 km of land, dry-land floodplain as its own ground, river size from half the grid's threshold. No recalibration yet."
+}
