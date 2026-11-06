@@ -18,6 +18,8 @@ module.exports=[
   {k:'o_sa',g:'Farming origins',n:'Sahel (sorghum, pearl millet)',kind:'year',real:B(2500),lo:B(4000),hi:B(1500)},
   {k:'o_wa',g:'Farming origins',n:'West Africa (yams)',kind:'year',real:B(2500),lo:B(4000),hi:B(1000)},
   {k:'o_ea',g:'Farming origins',n:'Eastern North America',kind:'year',real:B(2500),lo:B(3500),hi:B(1500)},
+  // only with switch mehr: the Kachi-plain hearth (Mehrgarh, barley and zebu by about 7000 BCE; Jarrige 1995)
+  {k:'o_mh',g:'Farming origins',n:'Mehrgarh (barley, zebu) [switch mehr]',kind:'year',real:B(7000),lo:B(8000),hi:B(5500),cls:'context'},
   // farming arrival (half the peopled provinces in a box farm) and forager holdouts (Zvelebil; Rowley-Conwy 2011; Crema et al. 2016)
   {k:'f_cEur',  g:'Farming frontier',n:'Central Europe (LBK)',kind:'year',real:B(5400),lo:B(5800),hi:B(4900)},
   {k:'f_brit',  g:'Farming frontier',n:'Britain',             kind:'year',real:B(4000),lo:B(4400),hi:B(3500)},

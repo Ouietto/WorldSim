@@ -191,7 +191,10 @@ const WILD=[
   {k:'an',q:0.65,n:'the Andes',pk:'potato',box:[-18,-8,-78,-66],t:3400,crop:'potatoes and quinoa',anim:'llamas and guinea pigs',grain:0.6},
   {k:'sa',q:0.5,n:'the Sahel',pk:'sorghum',box:[10,18,-10,35],t:2000,crop:'sorghum and pearl millet',anim:'cattle',grain:1},
   {k:'wa',q:0.55,n:'the West African forest edge',pk:'yams',box:[5,10,-8,10],t:5000,crop:'yams and oil palm',anim:'goats',grain:0},
-  {k:'ea',q:0.45,n:'the Eastern Woodlands',pk:'sunflower',box:[33,40,-92,-82],t:3000,crop:'sunflowers and squash',anim:'dogs',grain:0.6}];
+  {k:'ea',q:0.45,n:'the Eastern Woodlands',pk:'sunflower',box:[33,40,-92,-82],t:3000,crop:'sunflowers and squash',anim:'dogs',grain:0.6},
+  // (switch mehr; Nein, 2026-11-06) wild barley on the fans below the Bolan and the Baluchistan hills, where Mehrgarh's people
+  // sowed barley and tamed zebu cattle by about 7000 BCE (Jarrige 1995; Fuller 2006)
+  {k:'mh',q:0.8,n:'the Kachi plain',pk:'wheat',box:[26.5,31,64.5,69.5],t:2700,crop:'barley and wheat',anim:'zebu cattle, sheep and goats',grain:1}].filter(R=>R.k!=='mh'||swOn('mehr'));
 function originsInit(){const s=S,w=WD;s.wildG=new Float32Array(N);s.sed=new Float32Array(N);s.cultv=new Float32Array(N);s.domst=new Float32Array(N);s.origins={};s.oriLog={};s.occ=null;
   if(!w.wildR){w.wildR=new Int8Array(N).fill(-1);w.wildW=new Float32Array(N);
     if(w.isEarth)for(let i=0;i<N;i++){if(!w.land0[i])continue;const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;
