@@ -1806,13 +1806,13 @@ function statecraft(o,c,y){
 function localPop(i){const w=WD,s=S;let t=s.pop[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0)t+=s.pop[j]}return t*1.8}
 // contact with states: a state's example, trade demand and threat reach a few provinces past its borders, fading with
 // distance; a strong state reaches further than a chiefdom. Outside the cradles, states form where this reaches.
-function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nbS=w.nbS,nbA=w.nbA,nD=w.hopK?w.nbD:null;
+function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nbS=w.nbS,nbA=w.nbA,nD=w.hopK?(w.dec08||(w.dec08=Float32Array.from(w.nbD,d=>Math.pow(0.8,d)))):null;
   for(const i of L){const p=s.pol[i];if(!p){x[i]=0;continue}const o=s.pols[p];
     x[i]=o.kind!=='state'?0.25:o.tier==='Chiefdom'||o.tier==='Clans'?0.2:clamp((o.spc||2)/7,0.25,1)}
   // a caravan road carries the example of the state at its far end: salt, gold, scribes and envoys
   for(const i of L)if(s.car[i]>0.1)x[i]=Math.max(x[i],0.8*Math.min(1,s.car[i]))
   for(let k=0;k<6;k++){const fw=k%2===0;for(let a=0;a<L.length;a++){const i=L[fw?a:L.length-1-a];let m=x[i];
-    for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&w.land[j]){const v=(nD?Math.pow(0.8,nD[d]):0.8)*x[j];if(v>m)m=v}}x[i]=m}}}
+    for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&w.land[j]){const v=(nD?nD[d]:0.8)*x[j];if(v>m)m=v}}x[i]=m}}}
 // the exit option (Herbst, Scott): open land nearby lets subjects walk away; crowding or barren surroundings trap them (Carneiro)
 function exitPass(a0,b0){if(a0==null){a0=0;b0=1}
   const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of LL){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,exPd=w.exPd;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
