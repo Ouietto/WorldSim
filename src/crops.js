@@ -99,7 +99,7 @@ function cropPass(quiet){
   const grow=s.pkGrow;
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0)b|=grow[j]}pkAv[i]=b}
   if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;
-    for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;if((pkAv[j]|g)!==pkAv[j]&&r()<0.12)pkAv[j]|=g;else if((pkAv[j]|c)!==pkAv[j]&&r()<0.012)pkAv[j]|=c}
+    for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;if((pkAv[j]|g)!==pkAv[j]&&r()<hopP(0.12,d))pkAv[j]|=g;else if((pkAv[j]|c)!==pkAv[j]&&r()<hopP(0.012,d))pkAv[j]|=c}
     if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}
     // the skin boats and dugouts that carry farming know-how over a narrow strait carry the seed too (the first
     // farmers of Britain came by boat from the continent with emmer and barley; Brace et al. 2019). Same crossings and odds

@@ -120,7 +120,7 @@ function herdPass(){
     const add=[];
     for(const i of L){const v=d[i];if(v<0.12)continue;
       for(let k=nbS[i];k<nbS[i+1];k++){const j=nbA[k];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=capFor(sp,j);if(c<0.03)continue;
-        const keen=0.25+0.75*Math.max(s.past[j],0.6*s.herd[j]);if(r()<0.6*keen)add.push(j,Math.min(c,0.25*v),i)}}
+        const keen=0.25+0.75*Math.max(s.past[j],0.6*s.herd[j]);if(r()<hopP(0.6*keen,k))add.push(j,Math.min(c,0.25*v),i)}}
     for(let k=0;k<add.length;k+=3){d[add[k]]=Math.max(d[add[k]],add[k+1]);if(sp===0&&s.linOf)linCarry('horse',add[k+2],add[k])}}
   // a killing winter (dzud) or drought on the steppe
   // (herds switch: hard winters and droughts come from the weather instead, in herdYear)
@@ -286,7 +286,7 @@ function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,y=s.ye
     for(const i of L){let v=d[i];if(v<=0)continue;const c=beastCap(k,i);if(c<=0.01||s.pop[i]<1){d[i]=v<0.01?0:v*0.6;continue}v+=0.3*v*(1-v/c);d[i]=clamp(v,0,1)}
     if(b.path==='tamed')continue;const add=[];
     for(const i of L){const v=d[i];if(v<0.12)continue;
-      for(let q=nbS[i];q<nbS[i+1];q++){const j=nbA[q];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=beastCap(k,j);if(c<0.05)continue;if(r()<0.35)add.push(i,j,Math.min(c,0.3*v))}}
+      for(let q=nbS[i];q<nbS[i+1];q++){const j=nbA[q];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=beastCap(k,j);if(c<0.05)continue;if(r()<hopP(0.35,q))add.push(i,j,Math.min(c,0.3*v))}}
     for(let q=0;q<add.length;q+=3){const i=add[q],j=add[q+1];d[j]=Math.max(d[j],add[q+2]);linCarry(b.k,i,j)}
     // a tamed-only animal is now and then bred at last by its keepers
     if(b.path==='tamed'&&b.breed&&s.bFirst[k]&&!s['bred_'+b.k]&&r()<b.breed){let c=-1;for(const i of L)if(d[i]>0.3){c=i;break}

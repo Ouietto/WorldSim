@@ -295,7 +295,12 @@ function provinceWorld(w,pid,o){o=o||{};
     [u.nbS,u.nbA,u.nbL]=csr(Array.from(P4.keys()),P4);[u.snS,u.snA]=csr(Array.from(P8),null);
     u.nbW=Float32Array.from(u.nbL,l=>l/(20004/H));
     // distance between neighbouring middles, in cell heights (100 km)
-    const D=new Float32Array(u.nbA.length);for(let v=0;v<n;v++)for(let q=u.nbS[v];q<u.nbS[v+1];q++){const j=u.nbA[q];D[q]=Math.acos(clamp(x3[v]*x3[j]+y3[v]*y3[j]+z3[v]*z3[j],-1,1))*6371/(20004/H)}u.nbD=D}
+    const D=new Float32Array(u.nbA.length);for(let v=0;v<n;v++)for(let q=u.nbS[v];q<u.nbS[v+1];q++){const j=u.nbA[q];D[q]=Math.max(0.05,Math.acos(clamp(x3[v]*x3[j]+y3[v]*y3[j]+z3[v]*z3[j],-1,1))*6371/(20004/H))}u.nbD=D;
+    // the model's spreading was set for steps of 100 km: across a province border, a chance per year of crossing becomes the chance
+    // of crossing that many times over the 100 km (hopK = 100 km / distance), and a flow between neighbours grows with the shared
+    // border and falls with the distance twice over (once for the gradient, once for the steps): nbE = border/distance^2, both in
+    // 100 km. A 100 km square of the grid gives 1 for both
+    u.hopK=Float32Array.from(D,d=>clamp(1/d,0.2,6));u.nbE=Float32Array.from(D,(d,q)=>clamp(u.nbW[q]/(d*d),0,6))}
   // home cell: the 100 km cell holding each unit's middle; hbS/hbA list the units at home in each cell (searches within a
   // radius go through these)
   {const hx=new Int16Array(n),hy=new Int16Array(n),cnt=new Int32Array(NC+1);

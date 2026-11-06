@@ -329,6 +329,9 @@ function gridLists(w){const nb=w.nb,S=new Int32Array(NC+1),A=[],Wt=[],Dt=[],S8=n
   S[NC]=A.length;S8[NC]=A8.length;w.nbS=S;w.nbA=Int32Array.from(A);w.nbW=Float32Array.from(Wt);w.nbD=Float32Array.from(Dt);w.snS=S8;w.snA=Int32Array.from(A8)}
 // the world the model runs on
 function useWorld(w){WD=w;N=w.n;let m=4;for(let i=0;i<w.n;i++)m=Math.max(m,w.nbS[i+1]-w.nbS[i]);if(NJ_.length<m){NJ_=new Int32Array(m);NC_=new Float64Array(m)}return w}
+// a chance per year of spreading to a neighbour, set for steps of 100 km, across edge e (provinces: as many 100 km steps' worth
+// as the distance holds; the grid: unchanged)
+function hopP(p,e){const k=WD.hopK;return k?1-Math.pow(1-Math.min(p,0.999),k[e]):p}
 // the unit at a place given in 100 km cells (x wraps; -1 beyond the top or bottom of the map): on provinces, the one holding the
 // cell's middle
 function uAt(x,y){if(y<0||y>=H)return -1;x=((x%W)+W)%W;const w=WD;return w&&w.uid?w.uid[(y*SC+(SC>>1))*HW+x*SC+(SC>>1)]:y*W+x}

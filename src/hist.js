@@ -548,26 +548,29 @@ function growth(){
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){
-  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk;const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
-  for(let kk=0;kk<L.length;kk++){
-    const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
-    const pr=p/s_K[i];if(pr<0.55)continue;
-    const j=rndNb(i,r());if(j<0||!w_land[j])continue;
-    const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)continue;
+  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null;const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
+  // a move from i toward neighbour j, sc of a 100 km step's flow
+  const one=(i,j,p,pr,sc)=>{if(j<0||!w_land[j])return;
+    const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)return;
     const ar=w_area[j],kE=Math.max(kj,ar*3*w_sF[j]*s_farm[i]*(1+0.6*s_metal[i]+0.6*s_iron[i]),ar*1.1*w_sH[j]*s_herd[i]);
-    const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)continue;
+    const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)return;
     let mob=mg*(0.08+0.25*s_herd[i]*w_sH[i]*(0.5+s_horse[i]));
     if(s_pol[j]&&s_pol[j]!==s_pol[i])mob*=0.4;
     else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)+2*Math.max(0,(o.ext??0.45)-0.7)}
     if(s_farm[i]>=0.5&&pj>=1&&s_farm[j]<0.3)mob*=settleOK(i,j);
-    const mv=Math.min(p*mob*diff/(1+diff),p*0.3);
+    const mv=Math.min(p*mob*diff/(1+diff)*sc,p*0.3*sc);
     s_pop[i]-=mv;s_pop[j]+=mv;
     if(pj<1||s_eth[j]<0){s_eth[j]=s_eth[i];s_eth2[j]=-1;s_rel[j]=s_rel[i];s_s[j]=s_s[i];s_adapt[j]=s_adapt[i];for(const f of T)f[j]=Math.max(f[j],f[i]*0.9)}
     else if(s_eth[j]!==s_eth[i]){const sh=mv/(pj+mv);mixIn(j,s_eth[i],sh*0.6);if(s_eth2[j]===s_eth[i]&&s_mix[j]>0.5){const a=s_eth[j];s_eth[j]=s_eth2[j];s_eth2[j]=a;s_mix[j]=1-s_mix[j]}
       // newcomers bring their ways in proportion to their numbers: a few farming families among foragers make a farming
       // fringe, not a farming people (the availability phase, Zvelebil 1986)
-      for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}
-  }
+      for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}};
+  for(let kk=0;kk<L.length;kk++){
+    const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
+    const pr=p/s_K[i];if(pr<0.55)continue;
+    // (on provinces people move toward every neighbour each year, each by its share of the flow: nbE/4 of a 100 km step's)
+    if(nbE){for(let e=w.nbS[i];e<w.nbS[i+1];e++){const q=s_pop[i];if(q<1)break;one(i,w.nbA[e],q,q/s_K[i],Math.min(1,nbE[e]/4))}continue}
+    one(i,rndNb(i,r()),p,pr,1)}
 }
 // herders follow the grass (default since run 79): herders follow the grass, clan by clan (Khazanov 1984; Humphrey & Sneath 1999). Herds above what the grass
 // bears wear it down, and rested grass recovers in a few years. Every other year a herding clan hears of the grass within a
@@ -641,7 +644,7 @@ function firstTech(k,cell,o){
   if(verb){chron('ideas',`Scholars and craftsmen of ${where} ${verb}${t.synth?', a path our own history never took':''}.`,cell,refs);if(k>=8)spot(`${t.n} first appears in ${where}`,cell,refs)}
 }
 function techStep(a0,b0){if(a0==null){a0=0;b0=1}
-  const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
+  const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nbE=w.nbE||null,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
   const suit=[w.sF,w.sH,rvAg(),null,w.sH];
   // drums carry where forest and hills hide fires and slow runners; beacons need hills in sight of each other
   if(!w.drumSuit){w.drumSuit=new Float32Array(N);w.beaconSuit=new Float32Array(N);for(const i of L){w.drumSuit[i]=clamp(Math.max(w.forest0[i],1.5*w.rough[i]),0,1);w.beaconSuit[i]=clamp(2*w.rough[i]+0.2,0,1)}}
@@ -659,7 +662,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
     // peopled neighbours and how closely each is in touch (east-west neighbours on the grid count fully, north-south ones by the
     // width of the shared side; provinces by the length of the shared border)
     const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+Math.sqrt(s_pop[i]*s_pop[j])/6000+s_car[i]+s_car[j])*pg;
-    let nn=0;for(let e=w_nbS[i];e<w_nbS[i+1];e++){const j=w_nbA[e];if(j>=0&&pop[j]>=1){NJ_[nn]=j;NC_[nn]=cti(j)*w_nbW[e];nn++}}
+    let nn=0;for(let e=w_nbS[i];e<w_nbS[i+1];e++){const j=w_nbA[e];if(j>=0&&pop[j]>=1){NJ_[nn]=j;NC_[nn]=w_nbE?Math.min(1,cti(j))*w_nbE[e]:cti(j)*w_nbW[e];nn++}}
     const lowC=conn<3000,noFarm=s_farm[i]<0.3&&s_herd[i]<0.3;
     // carriers: an institution is taken up by the people who need it, scribes by a court with cities to run, accounts by
     // merchants; a chiefdom beside a literate empire has no one to read (Goody 1986). A rival that beats you with it
@@ -673,7 +676,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         let m=0,same=0,mc=1,v,mj=-1;
         for(let q=0;q<nn;q++){const nj=NJ_[q];if((v=A[nj])>m){m=v;same=pi&&pol[nj]===pi;mc=NC_[q];mj=nj}}
         for(let q=ls0;q<lsE;q++){const raft=q>=ls1,j=w_lt[q];if(raft&&(w.ld[q]>2||w.lm[j]===w.lm[i]))continue;if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=raft?0.2:0.7;mj=j}}
-        if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
+        if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(w_nbE?6:1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
           // farm still passes the knowledge along
@@ -685,7 +688,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
             k*=Math.max(clamp((adv-1)/5,0.03,1),0.6*sq)}
           if(TECH[f].col!=null&&ei>=0&&s_eths[ei].deep)k*=0.85+0.45*s_eths[ei].deep[TECH[f].col];
           const cr=CARRY[f];if(cr){const nd=cr===1?Math.max(adm,0.6*mer):cr===2?Math.max(mer,0.5*adm):cr===3?adm:Math.max(adm,mer);k*=0.03+0.97*nd*(1+(same?0:prs))}
-          const t0=t;t+=k*(m-t);
+          const t0=t;t+=(w_nbE?Math.min(0.9,k):k)*(m-t);
           // a fast change unsettles the old order: new scribes and clerks against the warrior nobility, felt as lost cohesion
           if(cr&&pi){const dt=t-t0;if(dt>0.01)s.s[i]=Math.max(0.02,s.s[i]-3*dt*dt)}}
         if(INST[f]&&dark&&m<0.5)t*=pi?0.994:0.985;
@@ -784,7 +787,7 @@ function disease(){
     const spreadTo=j=>{s_infect[j]=3;s_ob[j]=o.id;nl.push(j);o.cells++;if(o.spread.length<4000)o.spread.push([s.year-o.year,j])};
     for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||s_pop[j]<1||s_infect[j]||s_immune[j]>0.95||s_ob[j]===o.id)continue;
       const dj=s_pop[j]/w_area[j];
-      if(r()<0.4*(1-s_immune[j])*Math.min(1,(dens+dj)/8+0.15)*(s_pol[j]===s_pol[i]?1:0.7))spreadTo(j)}
+      if(r()<hopP(0.4*(1-s_immune[j])*Math.min(1,(dens+dj)/8+0.15)*(s_pol[j]===s_pol[i]?1:0.7),d))spreadTo(j)}
     if(w_coast[i]&&s_sail[i]>0.5)for(let q=w_ls[i];q<w_ls[i+1];q++){const j=w_lt[q];if(s_pop[j]<1||s_infect[j]||s_immune[j]>0.95||s_ob[j]===o.id)continue;if(r()<0.06*(1-s_immune[j]))spreadTo(j)}
     s_infect[i]--;
     if(s_infect[i]===0){s_immune[i]=Math.max(s_immune[i],0.85);if(o.virgin)s_dp[i]=Math.max(s_dp[i],o.dp*0.6)}else nl.push(i);
@@ -1071,6 +1074,7 @@ function decisive(o,d,war){
     if(n>=8)chron('war',`With its capital taken, the ${old} submits and becomes a vassal of the ${o.full}.`,d.capital,[R_(d),R_(o),RW(war)])}
 }
 function distBFS(){
+  if(WD.hopK){distProv();return}
   const s=S,w=WD,pols=s.pols;s.dist.fill(65535);
   const B=[];for(let k=0;k<32;k++)B.push([]);let pending=0;
   for(const id of s.alive){const c=pols[id].capital;if(s.pol[c]===id){s.dist[c]=0;B[0].push(c);pending++}}
@@ -1085,6 +1089,16 @@ function distBFS(){
       if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
     }
   }
+}
+// the same on provinces: steps shorter than 100 km count their fraction (a search by the least cost so far, not in whole steps)
+function distProv(){
+  const s=S,w=WD,pols=s.pols,tf=P.terrain;s.dist.fill(65535);const df=s.distF&&s.distF.length===N?s.distF:(s.distF=new Float32Array(N));df.fill(1e9);const H2=mkHeap();
+  for(const id of s.alive){const c=pols[id].capital;if(s.pol[c]===id){df[c]=0;H2.push(0,c)}}
+  while(H2.size){const [d,i]=H2.pop();if(d>df[i])continue;s.dist[i]=Math.min(65534,Math.round(d));const p=s.pol[i],horde=pols[p].kind==='horde';
+    for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
+      let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
+      c=Math.min(30,c)*w.nbD[k];const nd=d+Math.max(0.1,c);if(nd<df[j]){df[j]=nd;H2.push(nd,j)}}
+    if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(nd<df[j]){df[j]=nd;H2.push(nd,j)}}}
 }
 /* wars and diplomacy */
 function declareWar(As,Ds,name,notable,civil,holy){
@@ -1792,13 +1806,13 @@ function statecraft(o,c,y){
 function localPop(i){const w=WD,s=S;let t=s.pop[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0)t+=s.pop[j]}return t*1.8}
 // contact with states: a state's example, trade demand and threat reach a few provinces past its borders, fading with
 // distance; a strong state reaches further than a chiefdom. Outside the cradles, states form where this reaches.
-function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nbS=w.nbS,nbA=w.nbA;
+function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nbS=w.nbS,nbA=w.nbA,nD=w.hopK?w.nbD:null;
   for(const i of L){const p=s.pol[i];if(!p){x[i]=0;continue}const o=s.pols[p];
     x[i]=o.kind!=='state'?0.25:o.tier==='Chiefdom'||o.tier==='Clans'?0.2:clamp((o.spc||2)/7,0.25,1)}
   // a caravan road carries the example of the state at its far end: salt, gold, scribes and envoys
   for(const i of L)if(s.car[i]>0.1)x[i]=Math.max(x[i],0.8*Math.min(1,s.car[i]))
   for(let k=0;k<6;k++){const fw=k%2===0;for(let a=0;a<L.length;a++){const i=L[fw?a:L.length-1-a];let m=x[i];
-    for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&w.land[j]){const v=0.8*x[j];if(v>m)m=v}}x[i]=m}}}
+    for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&w.land[j]){const v=(nD?Math.pow(0.8,nD[d]):0.8)*x[j];if(v>m)m=v}}x[i]=m}}}
 // the exit option (Herbst, Scott): open land nearby lets subjects walk away; crowding or barren surroundings trap them (Carneiro)
 function exitPass(a0,b0){if(a0==null){a0=0;b0=1}
   const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of LL){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,exPd=w.exPd;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
@@ -1815,7 +1829,7 @@ function poolPass(){
   const s=S,w=WD,L=w.landIdx,dp=s.dp,tmp=s.bfsPar;const s_car=s.car,s_city=s.city,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_herd=s.herd,s_pop=s.pop,s_rp=s.rp,s_sail=s.sail,w_area=w.area,w_coast=w.coast,w_land=w.land,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sH=w.sH;
   for(const i of L){if(s_pop[i]<1){dp[i]*=0.98;continue}
     const dens=s_pop[i]/w_area[i],tgt=Math.min(1,0.22*Math.log10(1+dens)+0.3*s_herd[i]*s_farm[i]+(s_city[i]>=0?0.2:0));
-    let m=dp[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||s_pop[j]<1)continue;const c=Math.min(1,Math.sqrt(s_pop[i]*s_pop[j])/20000+s_car[i]);m=Math.max(m,dp[j]*(0.9+0.08*c))}
+    let m=dp[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||s_pop[j]<1)continue;const c=Math.min(1,Math.sqrt(s_pop[i]*s_pop[j])/20000+s_car[i]);m=Math.max(m,dp[j]*(w.hopK?Math.pow(0.9+0.08*c,w.nbD[d]):0.9+0.08*c))}
     if(w_coast[i]&&s_sail[i]>0.5)for(let q=w_ls[i];q<w_ls[i+1];q++){const j=w_lt[q];if(s_pop[j]>=1)m=Math.max(m,dp[j]*0.92)}
     tmp[i]=Math.round(1000*(dp[i]+0.06*(Math.max(tgt,m)-dp[i])))}
   for(const i of L)dp[i]=tmp[i]/1000;
