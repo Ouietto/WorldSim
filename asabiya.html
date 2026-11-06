@@ -2291,11 +2291,13 @@ function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
   return Ud*(1+1.6*w.rough[j])*(1+2.5*s.fort[j])*(1+0.6*s.colony[j]+(q?0.3*(s.pols[q].nob||0)+(j===s.pols[q].capital&&s.pols[q].tier==='City-state'?0.4:0):0));
 }
 function displace(j,frac,byPol){const s=S;const p=s.pop[j]*frac;if(p<1)return 0;s.pop[j]-=p;pushPressure(s.eth[j],p,j,byPol,null);return p}
+// the cost of one step into newly taken land until the next distance search (provinces: as far as the two middles lie apart)
+function stepCost(i,j){const w=WD,c=w.tcost[j]||2;return w.szF?Math.max(1,Math.round(c*(cwL(i)+cwL(j))/2)):c}
 function attack(o,i,j,sea){
   const s=S,w=WD,q=s.pol[j];
   const di=dd(i);
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
-  if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+(w.tcost[j]||2))}return}
+  if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   let Ud=defense(j);
   if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
@@ -2316,7 +2318,7 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
-    s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:(w.tcost[j]||2)));
+    s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
     const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde')o.prest=(o.prest||0)+0.02*a;
     if(q&&s.city[j]>=0)sackCity(o,j,q);
@@ -2376,8 +2378,10 @@ function distBFS(){
   }
 }
 // the same on provinces: steps shorter than 100 km count their fraction (a search by the least cost so far, not in whole steps)
+// (costs kept in doubles: a single-precision table rounded some costs below the heap's key, and those provinces were never
+// reached, so they counted as cut off from the capital)
 function distProv(){
-  const s=S,w=WD,pols=s.pols,tf=P.terrain;s.dist.fill(65535);const df=s.distF&&s.distF.length===N?s.distF:(s.distF=new Float32Array(N));df.fill(1e9);const H2=mkHeap();
+  const s=S,w=WD,pols=s.pols,tf=P.terrain;s.dist.fill(65535);const df=s.distF&&s.distF.length===N&&s.distF instanceof Float64Array?s.distF:(s.distF=new Float64Array(N));df.fill(1e9);const H2=mkHeap();
   for(const id of s.alive){const c=pols[id].capital;if(s.pol[c]===id){df[c]=0;H2.push(0,c)}}
   while(H2.size){const [d,i]=H2.pop();if(d>df[i])continue;s.dist[i]=Math.min(65534,Math.round(d));const p=s.pol[i],horde=pols[p].kind==='horde';
     for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
@@ -3132,12 +3136,15 @@ function cellPopF(){const w=WD,G=cellPeople(),out=w._cp||(w._cp=new Float32Array
 function localPopF(){const w=WD,G=cellPeople(),out=w._lp||(w._lp=new Float32Array(w.n)),S_=w.gcS,A=w.gcA,Wt=w.gcW;
   for(const v of w.landIdx){let x=0;for(let q=S_[v];q<S_[v+1];q++){const c=A[q],cx=c%W,cy=(c/W)|0;
       x+=Wt[q]*(G[c]+G[cy*W+(cx+1)%W]+G[cy*W+(cx+W-1)%W]+(cy>0?G[c-W]:0)+(cy<H-1?G[c+W]:0))}out[v]=x*1.8}return out}
-// a polity born on provinces takes in what one born on the grid took (its cell and, each by chance pr, the four beside it): the
-// units within rad cells (100 km) of it, reached through units whose ground and people fit (ok), each by the same chance
+// a polity born on provinces takes in what one born on the grid took (its cell and, each by chance pr, the four beside it): of
+// the land within rad cells (100 km), reached through units whose ground and people fit (ok), it takes a share pr on average
+// (half to one and a half times that), nearest first, so that what it takes is all of one piece
 function grabNear(i,id,ok,pr,rad){const w=WD,s=S,r=s.r,dm=new Map([[i,0]]),q=[i],R=rad||1.05;
   for(let h=0;h<q.length;h++){const c=q[h],dc=dm.get(c);for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j<0||j===i||!w.land[j]||!ok(j))continue;
       const d=dc+w.nbD[e];if(d>R||(dm.has(j)&&dm.get(j)<=d))continue;if(!dm.has(j))q.push(j);dm.set(j,d)}}
-  for(const j of q){if(j===i)continue;if(pr>=1||r()<pr){s.pol[j]=id;s.dist[j]=Math.max(1,Math.round(2*dm.get(j)))}}}
+  const ord=q.slice(1).sort((a,b)=>dm.get(a)-dm.get(b));let A=0;for(const j of ord)A+=cw(j);
+  const T=pr>=1?A:A*pr*(0.5+r());let got=0;
+  for(const j of ord){if(got>=T)break;s.pol[j]=id;s.dist[j]=Math.max(1,Math.round(2*dm.get(j)));got+=cw(j)}}
 // contact with states: a state's example, trade demand and threat reach a few provinces past its borders, fading with
 // distance; a strong state reaches further than a chiefdom. Outside the cradles, states form where this reaches.
 function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nbS=w.nbS,nbA=w.nbA,nD=w.hopK?(w.dec08||(w.dec08=Float32Array.from(w.nbD,d=>Math.pow(0.8,d)))):null;

@@ -14,5 +14,5 @@
    "env": "WORLD=prov"
   }
  ],
- "note": "Run 84: the province world against the 100 km grid after the rule audit (the grid gives the same histories as before). Provinces: every per-unit chance, threshold, one-unit step and count made scale-free (chances per cell of land, strokes per km of front, people thresholds as a cell's worth, state means and tallies by area, a frontier as wide as a cell, cell-scale crowding for chiefdoms, towns and farming origins); shares of land in the scoring weighted by area. No recalibration yet."
+ "note": "Run 84 (relaunched): the province world against the 100 km grid after the rule audit (the grid gives the same histories as before). Provinces: every per-unit chance, threshold, one-unit step and count made scale-free (chances per cell of land, strokes per km of front, people thresholds as a cell's worth, state means and tallies by area, a frontier as wide as a cell, cell-scale crowding for chiefdoms, towns and farming origins); shares of land in the scoring weighted by area. Fixed: the province distance search lost provinces to single-precision rounding (they counted as cut off from their capital, so every state overreached), and founding grabs could leave pieces apart. No recalibration yet."
 }
