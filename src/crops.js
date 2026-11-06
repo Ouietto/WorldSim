@@ -69,7 +69,11 @@ function cropsInit(){
     // monsoon grasslands with dry winters (the loess of North China) grow bunchgrass, not a matted sod: the hoe farmers of
     // Yangshao worked them from the start (Liu & Chen 2012)
     const dryWinter=i=>{const k=w.kgGrid?w.kgGrid[i]:0;return k===15||k===16||k===26||k===27};
-    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if(b===5||b===6)w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*rvAg()[i]))*(dryWinter(i)?0.25:1)}
+    // (switch medturf; Nein, 2026-11-06: why the Mediterranean is so thinly farmed) summer-dry climates (Koppen Cs and Ds) grow
+    // annual grasses that die back each summer among shrubs and open oak woodland, not a perennial mat of roots: the wild cereals
+    // of the Fertile Crescent are such annuals, and the first farmers sowed among them (Zohary, Hopf & Weiss 2012; Blumler 1998)
+    const dryS=i=>{if(!swOn('medturf'))return false;const k=w.kgGrid?w.kgGrid[i]:0;return(k>=12&&k<=14)||(k>=22&&k<=25)};
+    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if((b===5||b===6)&&!dryS(i))w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*rvAg()[i]))*(dryWinter(i)?0.25:1)}
     for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;w.soilDig[i]=so.dig;if(w.turf[i]>0.3)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
       // heavy wet clays belong to forest and savanna-clay soils, not to volcanic highlands, river silt or mountain soils
       if(!['forest','podzol','clay'].includes(so.k))w.heavy[i]=0}}
