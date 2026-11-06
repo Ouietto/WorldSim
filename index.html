@@ -1557,7 +1557,7 @@ function climateStep(){
     let u=r(),K=EPOCH_KINDS[0];for(const k of EPOCH_KINDS){if(u<k.w){K=k;break}u-=k.w}
     const amp=K.amp[0]+r()*(K.amp[1]-K.amp[0]),dur=Math.round(K.dur[0]+r()*(K.dur[1]-K.dur[0]));
     const e={k:K.k,start:y,end:y+dur,amp,cell:-1,where:''};
-    if(K.k==='dry'){const L=WD.landIdx;let c=-1;const rad=10+r()*12;for(let t=0;t<200;t++){const i=L[(r()*L.length)|0];if(c<0&&pEq(i)>1000&&WD.T[i]>5)c=i}
+    if(K.k==='dry'){let c=-1;const rad=10+r()*12;for(let t=0;t<200;t++){const i=rLand(r);if(c<0&&pEq(i)>1000&&WD.T[i]>5)c=i}
       if(c<0)return;e.cell=c;e.cx=WD.cxA[c];e.cy=WD.cyA[c];e.rad=rad;e.where=regionName(c);
       chron('nature',`${K.start} ${e.where}; it will last for generations.`,c)}
     else chron('nature',K.start,-1);
@@ -2645,9 +2645,9 @@ function* politicsG(){
   for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.cA=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
     // on provinces every mean and tally over a realm's land is weighted by the land each holds (ci cells; the grid: 1 each),
-    // coasts and walled frontiers by their length
+    // coasts, walled frontiers and caravan routes by their length
     const ci=szF?1/szF[i]:1,li=szF?Math.sqrt(ci):1;
-    o.pop+=pp;o.K+=s_K[i];o.cells++;if(szF)o.cA+=ci;o.sS+=s_s[i]*ci;const di=dd(i);o.dS+=di*ci;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i]*ci;o.ig+=s_integ[i]*ci;const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN+=ci;if(w_heavy[i]>0.4)o.hvN+=ci;if(isWaste(i,o.kind==="horde"))o.wasteN+=ci;if(s_car[i]>0.3){const tl=1500*s_car[i]*ci;o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.K+=s_K[i];o.cells++;if(szF)o.cA+=ci;o.sS+=s_s[i]*ci;const di=dd(i);o.dS+=di*ci;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i]*ci;o.ig+=s_integ[i]*ci;const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN+=ci;if(w_heavy[i]>0.4)o.hvN+=ci;if(isWaste(i,o.kind==="horde"))o.wasteN+=ci;if(s_car[i]>0.3){const tl=1500*s_car[i]*li;o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom+=ci;if(w_coast[i])o.coastN+=li;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN+=ci;if(s_fort[i]>0.5)o.fortN+=li;
     o.cx+=w_cosLon[i]*ci;o.cy+=w_sinLon[i]*ci;o.yy+=w_cyA[i]*ci;{const pe=szF?pp*szF[i]:pp;if(pe>o.mp){o.mp=pe;o.mc=i}}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
@@ -2763,7 +2763,8 @@ function* politicsG(){
       const emP=em.pop*0.6*0.65,oPx=(em.urb?oP*(1+3*clamp((o.cityUrb||0)/(o.pop+1),0,0.8)):oP)*(o.scl&&REC_TK.has(k)?1+Math.min(2,2*o.scl):1);if(oPx<emP*0.5||(em.cells&&oC<em.cells)||(em.coast&&!w_coast[c]&&o.coastN<2)||(em.horse&&s_horse[c]<0.6)||(em.heavy&&(o.hvN||0)<3)||(em.need&&!commNeed(em.need,o,c)))continue;
       let ok=true;for(const p of T.pre)if(s_tk[p][c]<0.7){ok=false;break}if(!ok)continue;
       const fit=techFit(o,k),bos=em.press?clamp((o.press-0.7)*5,0,2):1;
-      if(r()<em.b*P.invent*Math.min(3,Math.sqrt(oPx/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5*synthRel():0.6+0.8*fit)){
+      // (switches wr3/wr6: writing three or six times as readily, for worlds whose first states come late)
+      if(r()<em.b*(k===6&&WRX?WRX:1)*P.invent*Math.min(3,Math.sqrt(oPx/emP))*(0.7+0.9*o.cult)*bos*(T.synth?fit*fit*2.5*synthRel():0.6+0.8*fit)){
         seedTech(s_tk[k],c,1,1);if(k===6)for(const i of L)if(pol[i]===id)s_admin[i]=Math.max(s_admin[i],0.35);
         firstTech(k,c,o)}}
     // faith
@@ -3125,6 +3126,7 @@ function frontBand(){const w=WD,s=S,L=w.landIdx,n=w.n,d=w._fb||(w._fb=new Float3
     if(f){d[i]=0;q.push(i)}}
   for(let h=0;h<q.length;h++){const c=q[h],dc=d[c];F[c]=1;for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j<0||!w.land[j])continue;const x=dc+w.nbD[e];if(x<=0.75&&x<d[j]){d[j]=x;q.push(j)}}}
   return F}
+const WRX=swOn('wr6')?6:swOn('wr3')?3:0;
 // the density of an amount held by the units (people, food), as the 100 km cells around each unit hold it: each cell's amount
 // over its land, seen by a unit as the area-weighted mean over the cells it covers
 function cellDensF(a,key){const w=WD,G=new Float64Array(NC),LA=new Float64Array(NC),S_=w.gcS,A=w.gcA,Wt=w.gcW,out=w['_cd'+key]||(w['_cd'+key]=new Float32Array(w.n));
@@ -3196,11 +3198,12 @@ function volcano(){
 }
 // caravan routes across deserts: need camels (or wind wagons), people at both ends, and demand
 function caravanPass(){
-  const s=S,w=WD,r=s.r,L=w.landIdx,par=s.bfsPar,dist=s.bfsD;
+  // (on provinces a crossing is measured in 100 km cells, not in steps: desert provinces are large)
+  const s=S,w=WD,r=s.r,L=w.landIdx,par=s.bfsPar,z=w.szF,dist=z?(s.bfsDF&&s.bfsDF.length===N?s.bfsDF:(s.bfsDF=new Float32Array(N))):s.bfsD;
   for(const i of L)if(s.car[i]>0)s.car[i]*=0.82;
   const arid=j=>w.land[j]&&(w.desert[j]||w.Pr[j]<300);
   const srcs=[];
-  for(let t=0;t<2500&&srcs.length<14;t++){const i=L[(r()*L.length)|0];if(arid(i)||!s.pol[i]||s.pop[i]/w.area[i]<1.5)continue;
+  for(let t=0;t<2500&&srcs.length<14;t++){const i=rLand(r);if(arid(i)||!s.pol[i]||s.pop[i]/w.area[i]<1.5)continue;
     if(s.camel[i]<0.5&&s.tk[25][i]<0.5)continue;let ok=false;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&arid(j))ok=true}if(ok)srcs.push(i)}
   const mark=s.bfsMark||(s.bfsMark=new Int32Array(N));
   for(const a of srcs){
@@ -3208,7 +3211,7 @@ function caravanPass(){
     const q=[a];mark[a]=st;par[a]=-1;dist[a]=0;let hit=-1;
     for(let h=0;h<q.length&&hit<0;h++){const i=q[h];if(dist[i]>70)break;
       for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j]||mark[j]===st)continue;
-        if(arid(j)){if(q.length<6000){mark[j]=st;par[j]=i;dist[j]=dist[i]+1;q.push(j)}}
+        if(arid(j)){if(q.length<6000){mark[j]=st;par[j]=i;dist[j]=dist[i]+(z?w.nbD[d]:1);q.push(j)}}
         else if(dist[i]>=8&&s.pop[j]/w.area[j]>1.5&&s.pol[j]!==s.pol[a]){par[j]=i;hit=j;break}}}
     if(hit<0)continue;
     const path=[];for(let c=hit,g=0;c>=0&&g<200;c=par[c],g++){path.push(c);if(c===a)break}
