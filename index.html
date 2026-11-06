@@ -3670,11 +3670,33 @@ function capFor(sp,i){const s=S,w=WD,ps=s.past[i],T=w.T[i]+s.cdT[i],P=w.Pr[i];
     case 3:return clamp((4-T)/6,0,1)*(Math.abs(latOf(i))>48?1:0);
     case 4:return clamp((w.elev[i]-1800)/1000,0,1)*clamp((P-150)/250,0,1)}
   return 0}
+/* Wild animals' ranges that move (switch wildanim; Nein, 2026-11-06: as the wild plants', nothing hardcoded). The boxes above
+   say only where each wild animal lived at the start (12,000 BCE). From there it spreads into neighbouring land its climate suits
+   (the same tests, on the century's climate: grass for horses, cold or hot deserts for camels, cold for reindeer, high ground for
+   llamas; each beast's own) at about P.wildAV km a year (2), dies back where the climate no longer suits it, holding on in
+   pockets of its first range, and is hunted out and crowded off by dense farming country (wild horses, aurochs, elephants); the
+   animals that live beside people (cats, guineafowl, servals, golden wolves) are not */
+const wildAOn=()=>swOn('wildanim');
+function climNow(i){const w=WD,s=S,T=w.T[i]+(s.cdT?s.cdT[i]:0),P=Math.max(0,w.Pr[i]+(s.cdP?s.cdP[i]:0)),tw=T+w.amp[i]/2;
+  const sH=clamp((tw-4)/10,0,1)*clamp((27-T)/7,0,1)*clamp((P-120)/180,0,1)*clamp((1100-P)/500,0.15,1)*(1-0.4*w.rough[i]);return{T,P,sH}}
+function nicheH(sp,i){const w=WD,{T,P,sH}=climNow(i),el=w.elev[i];if(T<-14)return 0;
+  switch(sp){case 0:return clamp((sH-0.25)/0.4,0,1)*clamp((16-T)/6,0,1)*(T>-8?1:0);
+    case 1:return (P<350?1:0)*clamp((18-T)/6,0,1)*clamp((T+6)/6,0,1);
+    case 2:return (P<300?1:0)*clamp((T-16)/5,0,1);
+    case 3:return clamp((3-T)/6,0,1)*(Math.abs(latOf(i))>50?1:0)*(P>150?1:0);
+    case 4:return clamp((el-2300)/800,0,1)*clamp((P-150)/250,0,1)*(T<16?1:0)}return 0}
+function nicheB(k,i){const w=WD,{T,P,sH}=climNow(i);return BEASTS[k].clim(T,P,w.rv[i],sH)?1:0}
+function animRange(o,niche,init,press){const w=WD,s=S,L=w.landIdx,v=P.wildAV??2,src=[];for(const i of L)if(o[i]>0)src.push(i);
+  for(const i of src){let cap=niche(i);if(press)cap*=1-0.9*clamp((s.pop[i]/w.area[i]-2)/10,0,1)*s.farm[i];
+    if(o[i]>cap+0.01){const fl=init[i]>0?0.05*init[i]:0;o[i]=Math.max(fl,cap+(o[i]-cap)*0.8);if(o[i]<1e-3)o[i]=0}}
+  for(const i of src){const oi=o[i];if(oi<0.05)continue;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||o[j]>=oi)continue;
+    const g=niche(j);if(g<0.15)continue;const t=Math.min(oi,g);if(t>o[j])o[j]+=(t-o[j])*Math.min(1,10*v/(100*w.nbD[e]))}}}
 function herdInit(){const s=S,w=WD;
   if(!w.wild){w.wild=HERDS.map((h,sp)=>{const a=new Float32Array(N);for(const i of w.landIdx)a[i]=wildFor(w,sp,i,w.isEarth);return a});
     if(!w.isEarth){// on invented worlds each animal lives on only some landmasses
       const rr=mulberry32(hashStr('wild:'+w.seed));HERDS.forEach((h,sp)=>{const keep=new Map();for(const i of w.landIdx){if(!w.wild[sp][i])continue;const lm=w.lm[i];if(!keep.has(lm))keep.set(lm,rr()<0.6);if(!keep.get(lm))w.wild[sp][i]=0}})}}
   s.dom=HERDS.map(()=>new Float32Array(N));s.domP=HERDS.map(()=>new Float32Array(N));s.domFirst=HERDS.map(()=>null);s.domLog=[];s.dieoffs=[];
+  s.wA=wildAOn()?HERDS.map((h,sp)=>Float32Array.from(w.wild[sp])):null;
   s.domR=s.dom[3];s.domL=s.dom[4];
   for(const e of s.eths){if(e.ride==null)e.ride=0;if(e.xp==null)e.xp=0.3}
   beastsInit()
@@ -3689,7 +3711,9 @@ function domesticate(sp,i){const s=S,w=WD,d=s.dom[sp];d[i]=Math.max(d[i],0.3);ri
 // every ten years: domestication, herd growth, spread with herders and trade, hard winters and droughts
 function herdPass(){
   const s=S,w=WD,r=s.r,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,y=s.year;
-  for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=w.wild[sp],Pg=s.domP[sp];
+  if(s.wA){HERDS.forEach((h,sp)=>animRange(s.wA[sp],i=>nicheH(sp,i),w.wild[sp],true));
+    BEASTS.forEach((b,k)=>{if(b.k!=='dog')animRange(s.bA[k],i=>nicheB(k,i),w.bwild[k],b.path!=='commensal')})}
+  for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=s.wA?s.wA[sp]:w.wild[sp],Pg=s.domP[sp];
     const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own
     for(const i of L){const wv=wild[i];if(wv<0.2||d[i]>0.05||pEq(i)<500)continue;let near=false;ring(i,6,j=>{if(d[j]>0.05)near=true});if(near){Pg[i]=0;continue}
@@ -3826,6 +3850,7 @@ function beastsInit(){const s=S,w=WD,earth=w.isEarth;
   if(!w.bwild){w.bwild=BEASTS.map(b=>{const a=new Uint8Array(N);for(let i=0;i<N;i++)if(w.land0?w.land0[i]:w.land[i])a[i]=beastWild(w,b,i,earth);return a});
     if(!earth){const rr=mulberry32(hashStr('beasts:'+w.seed));BEASTS.forEach((b,k)=>{const keep=new Map();for(let i=0;i<N;i++){if(!w.bwild[k][i])continue;const lm=w.lm[i];if(!keep.has(lm))keep.set(lm,rr()<0.5);if(!keep.get(lm))w.bwild[k][i]=0}})}}
   s.bst=BEASTS.map(()=>new Float32Array(N));s.bP=BEASTS.map(()=>new Float32Array(N));s.bFirst=BEASTS.map(()=>null);s.bTold={};s.alt=[];
+  s.bA=wildAOn()?BEASTS.map((b,k)=>Float32Array.from(w.bwild[k])):null;
   s.lins=[];s.linOf={};for(const b of BEASTS)if(b.bred)s.linOf[b.k]=new Int32Array(N).fill(-1);s.linOf.horse=new Int32Array(N).fill(-1);
   s.mountX=new Float32Array(N);s.packX=new Float32Array(N);s.meatX=new Float32Array(N);s.huntX=new Float32Array(N);s.mouseX=new Float32Array(N);s.warX=new Float32Array(N);s.courX=new Float32Array(N);
   // dogs came with the first peoples everywhere but Australia and Africa south of the Sahara (they reached Africa with herders,
@@ -3843,16 +3868,16 @@ function linTraits(k,i){const s=S,a=s.linOf[k];if(!a||a[i]<0)return null;return 
 function beastCap(k,i){const s=S,w=WD,b=BEASTS[k],T=w.T[i]+s.cdT[i],P=w.Pr[i];
   if(b.k==='dog')return 0.8;
   if(w.tsetse[i]&&!b.roles.tsetse&&['donkey','cat'].includes(b.k))return 0.1;
-  if(b.path==='tamed'){let near=0;ring(i,3,j=>{if(w.bwild[k][j])near=1});return near?0.6:0}
+  if(b.path==='tamed'){const wb=s.bA?s.bA[k]:w.bwild[k];let near=0;ring(i,3,j=>{if(wb[j]>0.2)near=1});return near?0.6:0}
   // bred animals live wherever their climate allows, not only where their wild kin did
   const ok=b.clim(T,P,w.rv[i],w.sH[i])?1:0.25,tr=linTraits(b.k,i),hard=tr?tr.hardy:0.5;
   return clamp(ok*(0.5+0.5*hard)+(ok<1?0.2*hard:0),0,1)}
 // every ten years
 function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,y=s.year;
-  for(let k=0;k<BEASTS.length;k++){const b=BEASTS[k],d=s.bst[k],Pg=s.bP[k],wild=w.bwild[k];
+  for(let k=0;k<BEASTS.length;k++){const b=BEASTS[k],d=s.bst[k],Pg=s.bP[k],wild=s.bA?s.bA[k]:w.bwild[k];
     // taming is a chance event: the more people of the right kind live beside the wild animal, the likelier it is each decade
     if(b.k!=='dog'&&!(s.bFirst[k]&&s.bTold[k]>=3)){let sum=0;const cand=[];
-      for(const i of L){if(!wild[i]||d[i]>0.05||pEq(i)<300)continue;
+      for(const i of L){if(!(wild[i]>0.2)||d[i]>0.05||pEq(i)<300)continue;
         const st=s.pol[i]?s.pols[s.pol[i]]:null,sed=s.sed?s.sed[i]:0;
         const ctx=b.path==='commensal'?(s.farm[i]>0.5?1:0):b.path==='prey'?Math.max(0.8*s.herd[i],0.2*sed):
           b.path==='directed'?(s.herd[i]>0.4?s.herd[i]*(0.5+0.5*Math.min(1,s.horse[i]+s.camel[i]+s.bst[BI.donkey][i]+(s.domL?s.domL[i]:0))):0):
