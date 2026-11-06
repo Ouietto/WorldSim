@@ -192,28 +192,46 @@ const WILD=[
   {k:'sa',q:0.5,n:'the Sahel',pk:'sorghum',box:[10,18,-10,35],t:2000,crop:'sorghum and pearl millet',anim:'cattle',grain:1},
   {k:'wa',q:0.55,n:'the West African forest edge',pk:'yams',box:[5,10,-8,10],t:5000,crop:'yams and oil palm',anim:'goats',grain:0},
   {k:'ea',q:0.45,n:'the Eastern Woodlands',pk:'sunflower',box:[33,40,-92,-82],t:3000,crop:'sunflowers and squash',anim:'dogs',grain:0.6}];
-function originsInit(){const s=S,w=WD;s.wildG=new Float32Array(N);s.sed=new Float32Array(N);s.cultv=new Float32Array(N);s.domst=new Float32Array(N);s.origins={};s.oriLog={};
+function originsInit(){const s=S,w=WD;s.wildG=new Float32Array(N);s.sed=new Float32Array(N);s.cultv=new Float32Array(N);s.domst=new Float32Array(N);s.origins={};s.oriLog={};s.occ=null;
   if(!w.wildR){w.wildR=new Int8Array(N).fill(-1);w.wildW=new Float32Array(N);
     if(w.isEarth)for(let i=0;i<N;i++){if(!w.land0[i])continue;const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180;
       WILD.forEach((R,k)=>{const [a,b,c,d]=R.box;if(la<a||la>b||lo<c||lo>d)return;
-        const e=Math.min(la-a,b-la,lo-c,d-lo),v=0.5+0.5*clamp(e/2,0,1);if(v>w.wildW[i]){w.wildW[i]=v;w.wildR[i]=k}})}}}
+        const e=Math.min(la-a,b-la,lo-c,d-lo),v=0.5+0.5*clamp(e/2,0,1);if(v>w.wildW[i]){w.wildW[i]=v;w.wildR[i]=k}})}}
+  if(wildOn()&&w.isEarth)wildInit()}
 function originsOn(){return WD.isEarth&&P.hearthMode==='emergent'}
+/* Wild ranges that move (switch wildmove; Nein, 2026-11-06: nothing in the simulation should be hardcoded). The boxes above say
+   only where each wild progenitor stood at the start, its refuge at 12,000 BCE. From there it spreads into neighbouring land whose
+   climate suits it (its crop's fit with the century's anomalies, at least 0.15) at about P.wildV km a year (0.5), and dies back where
+   the climate no longer suits it at all (fit under 0.05): the Sahel's grasses follow the rains north into the green Sahara and south again as it dries.
+   Each place's wild plant is the one standing thickest there (s.wildR, s.wildW). */
+const wildOn=()=>swOn('wildmove'),seedOn=()=>swOn('seedcarry');
+function wildInit(){const s=S,w=WD;s.occ=WILD.map(()=>new Float32Array(N));for(const i of w.landIdx){const k=w.wildR[i];if(k>=0)s.occ[k][i]=w.wildW[i]}
+  s.wildR=Int8Array.from(w.wildR);s.wildW=Float32Array.from(w.wildW)}
+function wildPass(){const s=S,w=WD,L=w.landIdx,v=P.wildV??0.5,R=s.wildR,Wt=s.wildW;R.fill(-1);Wt.fill(0);
+  WILD.forEach((Wd,k)=>{const o=s.occ[k],C=CROPS[CI[Wd.pk]],fit=i=>1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]);
+    const src=[];for(const i of L)if(o[i]>0)src.push(i);
+    // (in its refuge a plant holds on in pockets, a twentieth of its old stand, through any spell)
+    for(const i of src)if(fit(i)<0.05){const fl=w.wildR[i]===k?0.05*w.wildW[i]:0;o[i]=Math.max(fl,o[i]*0.9);if(o[i]<1e-3)o[i]=0}
+    for(const i of src){const oi=o[i];if(oi<0.05)continue;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||o[j]>=oi||fit(j)<0.15)continue;
+      o[j]+=(oi-o[j])*Math.min(1,5*v/(100*w.nbD[e]))}}
+    for(const i of L)if(o[i]>Wt[i]){Wt[i]=o[i];R[i]=k}})}
 // every five years
 function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.year,agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
+  if(s.occ)wildPass();const WR=s.occ?s.wildR:w.wildR,WW=s.occ?s.wildW:w.wildW;
   // on provinces crowding and wild plenty are judged over the 100 km cell, as on the grid: the first village to sow is the one
   // with the best stands and the most neighbours, not the smallest valley-floor province
   const cD=w.szF?cellDensF(s.pop,'pop'):null,cK=w.szF?cellDensF(s.Kf,'kf'):null;
   for(const i of L){const p=s.pop[i];if(p<1){s.sed[i]*=0.9;s.cultv[i]*=0.9;continue}
-    const la=Math.abs(w.lat[i])*57.2958,ri=w.wildR[i];
+    const la=Math.abs(w.lat[i])*57.2958,ri=WR[i];
     // farmers whose borrowed crops do poorly here take up the local wild plants too (secondary domestication: millet beside
     // borrowed rice, sorghum beside wheat that fails in the summer rains)
     if(s.farm[i]>0.5){s.sed[i]=1;if(ri<0||s.origins[WILD[ri].k])continue;const R=WILD[ri],C=CROPS[CI[R.pk]];
-      const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
+      const g=WW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
       let cv=s.cultv[i];cv=clamp(cv+0.05*pr*(1-cv)-0.01*(1-pr)*cv,0,1);s.cultv[i]=cv;let dm=s.domst[i];
       if(cv>0.15)dm=Math.min(1,dm+15*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
     const rich=clamp(((cK?cK[i]:s.Kf[i]/w.area[i])-0.1)/0.25,0,1);
     // wild stands: big-seeded grasses store for years; roots and fruit keep poorly and invite less settling
-    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
+    let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=WW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
     s.wildG[i]=grain;
     const cool=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0,nuts=w.forest0[i]*clamp((w.T[i]-4)/6,0,1)*clamp((24-w.T[i])/6,0,1);
     const stor=Math.max(grain,0.8*cool,0.45*nuts);

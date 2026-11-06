@@ -548,7 +548,7 @@ function growth(){
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){
-  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null;const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
+  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn();const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
   // a move from i toward neighbour j, sc of a 100 km step's flow
   const one=(i,j,p,pr,sc)=>{if(j<0||!w_land[j])return;
     const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)return;
@@ -564,7 +564,13 @@ function migrate(){
     else if(s_eth[j]!==s_eth[i]){const sh=mv/(pj+mv);mixIn(j,s_eth[i],sh*0.6);if(s_eth2[j]===s_eth[i]&&s_mix[j]>0.5){const a=s_eth[j];s_eth[j]=s_eth2[j];s_eth2[j]=a;s_mix[j]=1-s_mix[j]}
       // newcomers bring their ways in proportion to their numbers: a few farming families among foragers make a farming
       // fringe, not a farming people (the availability phase, Zvelebil 1986)
-      for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}};
+      for(const f of T)if(f[i]*0.9>f[j])f[j]+=(f[i]*0.9-f[j])*Math.min(1,1.5*sh)}
+    // (switch seedcarry; Nein, 2026-11-06) people who sow wild plants take their seed and their selection with them: the stand
+    // they tend takes root where they settle if the climate there suits it (with wildmove), and their sowing and the progress of
+    // their selection mix into the newcomers' place by their numbers, as their ways do
+    if(SEEDS&&s.cultv&&s.cultv[i]>0.05){const WR=s.occ?s.wildR:w.wildR,k=WR[i];if(k>=0){const sh=pj<1?1:mv/(pj+mv),cv=s.cultv[i];
+      if(s.occ){const o=s.occ[k];if(o[j]<o[i])o[j]+=(o[i]-o[j])*Math.min(1,2*sh*cv)}
+      const rj=WR[j];if(rj===k||rj<0){s.cultv[j]+=(cv-s.cultv[j])*sh;s.domst[j]+=(s.domst[i]-s.domst[j])*sh}}}};
   for(let kk=0;kk<L.length;kk++){
     const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
     const pr=p/s_K[i];if(pr<0.55)continue;
