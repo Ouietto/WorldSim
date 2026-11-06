@@ -144,9 +144,9 @@ function fineFloodplain(w,FR,fp){
   const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,isL=k=>e[k]>SL0,f=new Float32Array(NF),share=[0.6,0.4,0.2];
   for(let k=0;k<NF;k++){if(!isL(k))continue;let g=fp&&fp[k]!==255?fp[k]/250:0;
     if(FR){const x=k%HW,y=(k/HW)|0;let best=1e9,rvB=0,rkB=99,ds=9;
-      for(let dy=-2;dy<=2;dy++){const yy=y+dy;if(yy<0||yy>=HH)continue;for(let dx=-2;dx<=2;dx++){const j=yy*HW+((x+dx)%HW+HW)%HW;if(!FR.on[j]||FR.rv[j]<0.3&&FR.rk[j]>3)continue;const dd=Math.max(Math.abs(dx),Math.abs(dy));if(dd<ds||(dd===ds&&e[j]<best)){ds=dd;best=e[j];rvB=FR.rv[j];rkB=FR.rk[j]}}}
+      for(let dy=-2;dy<=2;dy++){const yy=y+dy;if(yy<0||yy>=HH)continue;for(let dx=-2;dx<=2;dx++){const j=yy*HW+((x+dx)%HW+HW)%HW;if(!FR.on[j]||FR.rv[j]<0.2&&FR.rk[j]>3)continue;const dd=Math.max(Math.abs(dx),Math.abs(dy));if(dd<ds||(dd===ds&&e[j]<best)){ds=dd;best=e[j];rvB=FR.rv[j];rkB=FR.rk[j]}}}
       if(ds<=2){let s=0;for(const j of [y*HW+(x+1)%HW,y*HW+(x+HW-1)%HW,k-HW,k+HW])if(j>=0&&j<NF&&isL(j))s=Math.max(s,Math.abs(e[j]-e[k]));
-        const a=clamp((25-s)/20,0,1)*clamp((20-(e[k]-best))/15,0,1)*(rvB>=0.3?clamp((rvB-0.25)/0.25,0,1):0.5)*clamp((600-w.pHi[k])/300,0,1);g=Math.max(g,a*share[ds])}}
+        const a=clamp((25-s)/20,0,1)*clamp((20-(e[k]-best))/15,0,1)*(rvB>=0.2?clamp((rvB-0.1)/0.4,0,1):0.5)*clamp((600-w.pHi[k])/300,0,1);g=Math.max(g,a*share[ds])}}
     f[k]=g}
   return f}
 function buildProvinces(w,o){
@@ -184,6 +184,12 @@ function buildProvinces(w,o){
   for(let k=0;k<NF;k++)if(cls[k]===1)wsum[((fy(k)/SC)|0)*W+((fx(k)/SC)|0)]+=wt[k];
   const ratios=[];for(let c=0;c<NC;c++)if(wsum[c]>0&&capC[c]>0)ratios.push(capC[c]/wsum[c]);ratios.sort((a,b)=>a-b);const rho=ratios.length?ratios[ratios.length>>1]:1;
   for(let k=0;k<NF;k++){if(!cls[k])continue;const c=((fy(k)/SC)|0)*W+((fx(k)/SC)|0);cap[k]=cls[k]===1&&capC[c]>0&&wsum[c]>0?capC[c]*wt[k]/wsum[c]:wt[k]*rho*0.5}
+  // in dry country a river's floodplain is the only farmland, often narrower than a 25 km cell (the Nile above the Delta, the
+  // Indus in Sindh): it is ground of its own, never a line between provinces. Provinces of the desert around do not reach into
+  // it, nor valley provinces out (grp: the ground a province may grow over; 3 for a dry valley: under 400 mm of rain, river cells
+  // and cells at least a fifth floodplain)
+  const grp=Uint8Array.from(cls);let valley=0;
+  if(o.ff)for(let k=0;k<NF;k++){if(cls[k]!==1||w.pHi[k]>=400)continue;if(river[k]||o.ff[k]>=0.2){river[k]=0;grp[k]=3;valley++}}
   const stepCost=(a,b,ns)=>(ns?1:Math.cos(latF[fy(a)]))*(1+Math.abs(e[b]-e[a])/150+slope[b]/600);
   const pid=new Int32Array(NF).fill(-1);
   const heap=mkHeap;
@@ -226,11 +232,13 @@ function buildProvinces(w,o){
     const dist=new Float32Array(NF).fill(Infinity),own=new Int32Array(NF).fill(-1),H2=heap();
     for(let p=0;p<np;p++)if(seed[p]>=0){dist[seed[p]]=0;own[seed[p]]=p;H2.push(0,seed[p])}
     while(H2.size){const [d,k]=H2.pop();if(d>dist[k])continue;const p=own[k];
-      nb4(k,(j,ns)=>{if(river[j]||cls[j]!==cls[k])return;const nd=d+stepCost(k,j,ns)*mult[p];if(nd<dist[j]&&nd<=rMax*2*mult[p]){dist[j]=nd;own[j]=p;H2.push(nd,j)}})}
+      nb4(k,(j,ns)=>{if(river[j]||grp[j]!==grp[k])return;const nd=d+stepCost(k,j,ns)*mult[p];if(nd<dist[j]&&nd<=rMax*2*mult[p]){dist[j]=nd;own[j]=p;H2.push(nd,j)}})}
     for(const k of order)if(own[k]>=0)pid[k]=own[k];
     pCap=new Array(np).fill(0);for(const k of order)if(pid[k]>=0)pCap[pid[k]]+=cap[k];
     for(let p=0;p<np;p++){if(pCap[p]<=0)continue;mult[p]*=clamp(Math.pow(pCap[p]/T,0.25),0.8,1.25)}}
   // a cell left unclaimed (beyond every seed's reach after evening out) joins its claimed neighbour
+  for(let pass=0;pass<20;pass++){let left=0;for(const k of order){if(pid[k]>=0)continue;let b=-1;nb4(k,j=>{if(b<0&&pid[j]>=0&&grp[j]===grp[k]&&!river[j])b=pid[j]});if(b>=0)pid[k]=b;else left++}if(!left)break}
+  // anything still unclaimed (a valley cell no seed reached) joins any neighbour of its own kind of land
   for(let pass=0;pass<20;pass++){let left=0;for(const k of order){if(pid[k]>=0)continue;let b=-1;nb4(k,j=>{if(b<0&&pid[j]>=0&&cls[j]===cls[k]&&!river[j])b=pid[j]});if(b>=0)pid[k]=b;else left++}if(!left)break}
   for(const k of order)if(pid[k]<0){pid[k]=np++;pCap.push(cap[k])}
   // river cells go to the bank province beside them holding the fewest people
@@ -238,7 +246,7 @@ function buildProvinces(w,o){
   // renumber, dropping provinces left empty
   const map=new Int32Array(np).fill(-1);let n2=0;for(let k=0;k<NF;k++){const p=pid[k];if(p<0)continue;if(map[p]<0)map[p]=n2++;pid[k]=map[p]}
   const pc=new Float64Array(n2),pa=new Float64Array(n2),pn=new Int32Array(n2);for(let k=0;k<NF;k++){const p=pid[k];if(p<0)continue;pc[p]+=cap[k];pa[p]+=area[k];pn[p]++}
-  return{pid,np:n2,cap:pc,area:pa,cells:pn,river,cls,T,total}
+  return{pid,np:n2,cap:pc,area:pa,cells:pn,river,cls,T,total,valley}
 }
 /* ---------- the province world ----------
    The world the model runs on, rebuilt from a province map: units 0..np-1 are the provinces, np..n-1 the open sea (one unit per
