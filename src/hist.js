@@ -128,6 +128,10 @@ const EARTH_HEARTHS=[
  {kind:'sail',lat:23.5,lon:120.5,y:-3000},
  {kind:'ard',lat:33,lon:44,y:-4300},
 ];
+// when the first people reached the land each founding stock peoples, where it is recent: the Americas' game had met human hunters
+// only a few thousand years before 12,000 BCE (Monte Verde about 14,500 years ago; Dillehay et al. 2015); everywhere else, tens
+// of thousands (the naive-fauna hunting in herds.js, switch wildanim)
+const SEED_ARRIVE={nam:-14000,sam:-13000};
 const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,110,'sino'],[5,105,'aus'],[-25,134,'pama'],[60,100,'alt'],[40,-100,'nam'],[-10,-60,'sam']];
 
 function newHistory(hseed){
@@ -156,16 +160,16 @@ function newHistory(hseed){
   for(const i of w.coastIdx)s.sail[i]=0.05;
   for(let k=0;k<s.AG.length;k++)s.AG[k]=gauss(r);
   climateStep();computeK();
-  const seeds=[],macs=[];
+  const seeds=[],macs=[],keys=[];
   if(w.isEarth){
     const pool=MACRO_KEYS.slice();for(let i=pool.length-1;i>0;i--){const j=(r()*(i+1))|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
-    EARTH_SEEDS.forEach(([la,lo,mac],k)=>{let c=cellAt(la,lo);if(!w.land[c]){for(let kk=1;kk<15&&!w.land[c];kk++)c=cellAt(la,lo+kk*0.9)}if(w.land[c]){seeds.push(c);macs.push(P.shuffleNames?pool[k%pool.length]:mac)}})}
+    EARTH_SEEDS.forEach(([la,lo,mac],k)=>{let c=cellAt(la,lo);if(!w.land[c]){for(let kk=1;kk<15&&!w.land[c];kk++)c=cellAt(la,lo+kk*0.9)}if(w.land[c]){seeds.push(c);macs.push(P.shuffleNames?pool[k%pool.length]:mac);keys.push(mac)}})}
   else{let sep=0.38;
     for(let t=0;t<20000&&seeds.length<P.bands;t++){if(t%4000===3999)sep*=0.7;
       const i=rLand(r);if(w.T[i]<4||w.Pr[i]<350||w.lmSize[w.lm[i]]<20)continue;
       if(seeds.every(j=>angDist(i,j)>sep)){seeds.push(i);macs.push(MACRO_KEYS[(seeds.length-1+((r()*MACRO_KEYS.length)|0))%MACRO_KEYS.length])}}}
   const q=s.q;let h=0,t=0;
-  seeds.forEach((i,k)=>{const mac=macs[k];s.eth[i]=newEth(-1,-1,makeLang(r,pick(r,MACROS[mac]),mac));q[t++]=i});
+  seeds.forEach((i,k)=>{const mac=macs[k];s.eth[i]=newEth(-1,-1,makeLang(r,pick(r,MACROS[mac]),mac));if(keys[k]&&SEED_ARRIVE[keys[k]]!=null)s.eths[s.eth[i]].arrive=SEED_ARRIVE[keys[k]];q[t++]=i});
   while(h<t){const i=q[h++];
     const iced=j=>w.iceY&&w.iceY[j]>s.start;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}}
     if(w.coast[i]){ring(i,3,j=>{if(w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}})}

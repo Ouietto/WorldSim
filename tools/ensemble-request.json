@@ -6,17 +6,17 @@
  "baseEnv": "",
  "variants": [
   {
-   "name": "base",
-   "env": ""
-  },
-  {
    "name": "prov",
    "env": "WORLD=prov"
   },
   {
-   "name": "prov-nofan",
-   "env": "WORLD=prov SW=nofan"
+   "name": "prov-wild",
+   "env": "WORLD=prov SW=wildmove"
+  },
+  {
+   "name": "prov-wild-seed",
+   "env": "WORLD=prov SW=wildmove,seedcarry"
   }
  ],
- "note": "Run 87: piedmont and alluvial-fan farmland on provinces (Nein, 2026-11-06). In dry country, hill streams water the fans and plains at the mountain foot (runoff from each 25 km cell by Fu's Budyko curve, run down the fine drainage, each dry, gentle cell watering what it can before passing on the rest); watered fan land counts with the floodplain (rvF), and the province map now keeps fan and dry-valley patches as provinces of their own (31,325 provinces). Seed 1: wheat is farmed at Kerman 5181 BCE (before: 2436), Herat 4512 (2106), Mehrgarh's plain 3753 (never by 2000), the Indus with wheat by 4068 (before: rice, 2013). prov-nofan: the same map without fan water. Province defaults from run 86 (farming at 0.7, writing x6). The Iranian plateau is now watched (not scored)."
+ "note": "Run 88: wild plant ranges that follow the climate (wildmove: the hearth boxes are only where each wild progenitor stood at 12,000 BCE; from there it spreads into land its climate suits at about 0.5 km a year, thickens there, and dies back where the climate no longer suits it) and seed-carrying migrants (seedcarry: people who sow take their seed and selection with them). Seed 1: the Sahel's sorghum follows the rains north into the green Sahara and south as it dries; sowing never lapses and sorghum is domesticated in 1620 BCE (without: 340 BCE). Run 87: fans 42.7% against 43.8% without fan water (not significant); the Iranian plateau's first states 28% in band with fans, 13% without."
 }

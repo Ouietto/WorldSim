@@ -1411,6 +1411,10 @@ const EARTH_HEARTHS=[
  {kind:'sail',lat:23.5,lon:120.5,y:-3000},
  {kind:'ard',lat:33,lon:44,y:-4300},
 ];
+// when the first people reached the land each founding stock peoples, where it is recent: the Americas' game had met human hunters
+// only a few thousand years before 12,000 BCE (Monte Verde about 14,500 years ago; Dillehay et al. 2015); everywhere else, tens
+// of thousands (the naive-fauna hunting in herds.js, switch wildanim)
+const SEED_ARRIVE={nam:-14000,sam:-13000};
 const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,110,'sino'],[5,105,'aus'],[-25,134,'pama'],[60,100,'alt'],[40,-100,'nam'],[-10,-60,'sam']];
 
 function newHistory(hseed){
@@ -1439,16 +1443,16 @@ function newHistory(hseed){
   for(const i of w.coastIdx)s.sail[i]=0.05;
   for(let k=0;k<s.AG.length;k++)s.AG[k]=gauss(r);
   climateStep();computeK();
-  const seeds=[],macs=[];
+  const seeds=[],macs=[],keys=[];
   if(w.isEarth){
     const pool=MACRO_KEYS.slice();for(let i=pool.length-1;i>0;i--){const j=(r()*(i+1))|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
-    EARTH_SEEDS.forEach(([la,lo,mac],k)=>{let c=cellAt(la,lo);if(!w.land[c]){for(let kk=1;kk<15&&!w.land[c];kk++)c=cellAt(la,lo+kk*0.9)}if(w.land[c]){seeds.push(c);macs.push(P.shuffleNames?pool[k%pool.length]:mac)}})}
+    EARTH_SEEDS.forEach(([la,lo,mac],k)=>{let c=cellAt(la,lo);if(!w.land[c]){for(let kk=1;kk<15&&!w.land[c];kk++)c=cellAt(la,lo+kk*0.9)}if(w.land[c]){seeds.push(c);macs.push(P.shuffleNames?pool[k%pool.length]:mac);keys.push(mac)}})}
   else{let sep=0.38;
     for(let t=0;t<20000&&seeds.length<P.bands;t++){if(t%4000===3999)sep*=0.7;
       const i=rLand(r);if(w.T[i]<4||w.Pr[i]<350||w.lmSize[w.lm[i]]<20)continue;
       if(seeds.every(j=>angDist(i,j)>sep)){seeds.push(i);macs.push(MACRO_KEYS[(seeds.length-1+((r()*MACRO_KEYS.length)|0))%MACRO_KEYS.length])}}}
   const q=s.q;let h=0,t=0;
-  seeds.forEach((i,k)=>{const mac=macs[k];s.eth[i]=newEth(-1,-1,makeLang(r,pick(r,MACROS[mac]),mac));q[t++]=i});
+  seeds.forEach((i,k)=>{const mac=macs[k];s.eth[i]=newEth(-1,-1,makeLang(r,pick(r,MACROS[mac]),mac));if(keys[k]&&SEED_ARRIVE[keys[k]]!=null)s.eths[s.eth[i]].arrive=SEED_ARRIVE[keys[k]];q[t++]=i});
   while(h<t){const i=q[h++];
     const iced=j=>w.iceY&&w.iceY[j]>s.start;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}}
     if(w.coast[i]){ring(i,3,j=>{if(w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}})}
@@ -3539,6 +3543,8 @@ function wildPass(){const s=S,w=WD,L=w.landIdx,v=P.wildV??0.5,R=s.wildR,Wt=s.wil
     for(const i of src)if(fit(i)<0.05){const fl=w.wildR[i]===k?0.05*w.wildW[i]:0;o[i]=Math.max(fl,o[i]*0.9);if(o[i]<1e-3)o[i]=0}
     for(const i of src){const oi=o[i];if(oi<0.05)continue;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||o[j]>=oi||fit(j)<0.15)continue;
       o[j]+=(oi-o[j])*Math.min(1,5*v/(100*w.nbD[e]))}}
+    // a thin stand where the climate suits it thickens (a tenth of the gap in five years)
+    for(const i of src)if(o[i]>0&&o[i]<1&&fit(i)>=0.15)o[i]+=0.1*o[i]*(1-o[i]);
     for(const i of L)if(o[i]>Wt[i]){Wt[i]=o[i];R[i]=k}})}
 // every five years
 function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.year,agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
@@ -3686,11 +3692,29 @@ function nicheH(sp,i){const w=WD,{T,P,sH}=climNow(i),el=w.elev[i];if(T<-14)retur
     case 3:return clamp((3-T)/6,0,1)*(Math.abs(latOf(i))>50?1:0)*(P>150?1:0);
     case 4:return clamp((el-2300)/800,0,1)*clamp((P-150)/250,0,1)*(T<16?1:0)}return 0}
 function nicheB(k,i){const w=WD,{T,P,sH}=climNow(i);return BEASTS[k].clim(T,P,w.rv[i],sH)?1:0}
-function animRange(o,niche,init,press){const w=WD,s=S,L=w.landIdx,v=P.wildAV??2,src=[];for(const i of L)if(o[i]>0)src.push(i);
+/* Naive game (Nein, 2026-11-06). Animals that have met human hunters for only a few thousand years (the Americas' at 12,000 BCE)
+   have not learnt to fear them, and the big, slow-breeding ones are hunted down faster than they breed: a decade's take is up to three
+   times a stand's vulnerability where hunters are as thick as one to ten km2 (hunters range over the land next to theirs, at half their numbers), times how naive the game
+   still is, how vulnerable the animal is
+   (vul: 1 for horses and elephants, under a half for bison and caribou, none for animals that live beside people), and a factor
+   drawn for each animal in each history (lognormal, sd 0.8). Naivety belongs to the animals: the Americas' game starts naive,
+   less so the longer people have hunted it (exp(-years since the founding peoples arrived / 5000)), learns wariness where hunted
+   (the same time scale), and carries its naivety as it spreads; the Old World's game is wary. A range already shrunk by drying holds fewer refuges and goes first;
+   whether a pocket survives is left to the draw: in a few histories horses outlast the hunters (Martin 1984; Barnosky et al. 2004) */
+function animRange(o,niche,init,press,vul,fv,nv){const w=WD,s=S,L=w.landIdx,v=P.wildAV??2,src=[],lrn=Math.exp(-10/5000);for(const i of L)if(o[i]>0)src.push(i);
   for(const i of src){let cap=niche(i);if(press)cap*=1-0.9*clamp((s.pop[i]/w.area[i]-2)/10,0,1)*s.farm[i];
-    if(o[i]>cap+0.01){const fl=init[i]>0?0.05*init[i]:0;o[i]=Math.max(fl,cap+(o[i]-cap)*0.8);if(o[i]<1e-3)o[i]=0}}
+    if(nv&&nv[i]>0.01){let d=s.pop[i]/w.area[i];for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j>=0&&w.land[j])d=Math.max(d,0.5*s.pop[j]/w.area[j])}
+      if(d>0.005){if(vul)o[i]*=1-Math.min(0.9,(P.naiveK??3)*nv[i]*vul*fv*clamp(d/0.1,0,3));nv[i]*=lrn}}
+    // a stand below what its land carries breeds back up (a third a decade at most), one above it dies back
+    if(o[i]>cap+0.01){const fl=init[i]>0?0.05*init[i]:0;o[i]=Math.max(fl,cap+(o[i]-cap)*0.8)}else if(cap>0.01&&o[i]<cap)o[i]+=0.3*o[i]*(1-o[i]/cap);if(o[i]<1e-3)o[i]=0}
   for(const i of src){const oi=o[i];if(oi<0.05)continue;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||o[j]>=oi)continue;
-    const g=niche(j);if(g<0.15)continue;const t=Math.min(oi,g);if(t>o[j])o[j]+=(t-o[j])*Math.min(1,10*v/(100*w.nbD[e]))}}}
+    const g=niche(j);if(g<0.15)continue;const t=Math.min(oi,g);if(t>o[j]){const add=(t-o[j])*Math.min(1,10*v/(100*w.nbD[e]));if(nv)nv[j]=(nv[j]*o[j]+nv[i]*add)/(o[j]+add);o[j]+=add}}}}
+// at the start: everything an animal's climate allowed that it could walk to from where it lived (horses across Beringia into the
+// Americas, steppe bison into Eurasia); naive-game hunting and the climate take it from there
+function fillRange(o,niche){const w=WD,q=[];for(const i of w.landIdx)if(o[i]>0)q.push(i);
+  for(let h=0;h<q.length;h++){const i=q[h];for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||o[j]>0)continue;const g=niche(j);if(g<0.15)continue;o[j]=g;q.push(j)}}}
+// (camelids, caribou, bison, deer, tapirs, capybaras and peccaries came through the Americas' extinctions; horses did not)
+const HVUL=[1,0.8,0.8,0.1,0.05];
 function herdInit(){const s=S,w=WD;
   if(!w.wild){w.wild=HERDS.map((h,sp)=>{const a=new Float32Array(N);for(const i of w.landIdx)a[i]=wildFor(w,sp,i,w.isEarth);return a});
     if(!w.isEarth){// on invented worlds each animal lives on only some landmasses
@@ -3711,8 +3735,13 @@ function domesticate(sp,i){const s=S,w=WD,d=s.dom[sp];d[i]=Math.max(d[i],0.3);ri
 // every ten years: domestication, herd growth, spread with herders and trade, hard winters and droughts
 function herdPass(){
   const s=S,w=WD,r=s.r,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,y=s.year;
-  if(s.wA){HERDS.forEach((h,sp)=>animRange(s.wA[sp],i=>nicheH(sp,i),w.wild[sp],true));
-    BEASTS.forEach((b,k)=>{if(b.k!=='dog')animRange(s.bA[k],i=>nicheB(k,i),w.bwild[k],b.path!=='commensal')})}
+  if(s.wA){if(!s.wAfill){s.wAfill=1;HERDS.forEach((h,sp)=>fillRange(s.wA[sp],i=>nicheH(sp,i)));BEASTS.forEach((b,k)=>{if(b.k!=='dog')fillRange(s.bA[k],i=>nicheB(k,i))});
+      s.fvH=HERDS.map(()=>Math.exp(0.8*gauss(r)));s.fvB=BEASTS.map(()=>Math.exp(0.8*gauss(r)));
+      // the Americas' game (west of 30 W): naive by how long the founding peoples of the north (nam) and south (sam) had hunted it
+      const n0=i=>{if(!w.isEarth||lonOf(i)>-30)return 0;const a=SEED_ARRIVE[latOf(i)>12?'nam':'sam'];return Math.exp(-Math.max(0,s.start-a)/5000)};
+      const mk=a=>{const nv=new Float32Array(N);for(const i of w.landIdx)if(a[i]>0)nv[i]=n0(i);return nv};s.nvH=s.wA.map(mk);s.nvB=s.bA.map(mk)}
+    HERDS.forEach((h,sp)=>animRange(s.wA[sp],i=>nicheH(sp,i),w.wild[sp],true,HVUL[sp],s.fvH[sp],s.nvH[sp]));
+    BEASTS.forEach((b,k)=>{if(b.k!=='dog')animRange(s.bA[k],i=>nicheB(k,i),w.bwild[k],b.path!=='commensal',b.vul||0,s.fvB[k],s.nvB[k])})}
   for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=s.wA?s.wA[sp]:w.wild[sp],Pg=s.domP[sp];
     const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own
@@ -3826,23 +3855,23 @@ function steppeFront(i,ei){const w=WD,s=S;
 const BEASTS=[
   {k:'dog',n:'dogs',one:'dog',path:'commensal',tame:1,bred:1,real:1,col:[150,120,90],roles:{hunt:1,guard:1,pack:0.25,war:0.2}},
   {k:'cat',n:'cats',one:'cat',path:'commensal',tame:0.8,bred:1,real:1,col:[200,170,120],roles:{mouse:1},box:[[10,42,-15,70]],clim:(T,P)=>T>10&&P<1300},
-  {k:'donkey',n:'donkeys',one:'donkey',path:'directed',tame:0.7,bred:1,real:1,col:[150,140,130],roles:{pack:0.7,ride:0.25,desert:1},box:[[8,31,22,44]],clim:(T,P)=>T>14&&P<700},
-  {k:'elephant',n:'elephants',one:'elephant',path:'tamed',tame:0.45,bred:0,real:1,col:[120,120,130],roles:{war:1,haul:0.6},box:[[5,30,68,110],[28,37,-10,12]],clim:(T,P)=>T>14&&P>400},
+  {k:'donkey',vul:0.5,n:'donkeys',one:'donkey',path:'directed',tame:0.7,bred:1,real:1,col:[150,140,130],roles:{pack:0.7,ride:0.25,desert:1},box:[[8,31,22,44]],clim:(T,P)=>T>14&&P<700},
+  {k:'elephant',vul:1,n:'elephants',one:'elephant',path:'tamed',tame:0.45,bred:0,real:1,col:[120,120,130],roles:{war:1,haul:0.6},box:[[5,30,68,110],[28,37,-10,12]],clim:(T,P)=>T>14&&P>400},
   {k:'guineafowl',n:'guineafowl',one:'guineafowl',path:'commensal',tame:0.9,bred:1,real:1,col:[90,90,110],roles:{meat:0.12},box:[[-25,16,-18,45]],clim:(T,P)=>T>18&&P>300},
-  {k:'eland',n:'eland',one:'eland',path:'prey',tame:0.12,bred:1,col:[190,150,90],roles:{meat:0.8,tsetse:1},box:[[-32,12,10,42]],clim:(T,P)=>T>14&&P>300&&P<1500},
-  {k:'zebra',n:'zebras',one:'zebra',path:'directed',tame:0.06,bred:1,col:[60,60,60],roles:{ride:0.8,pack:0.4,tsetse:1},box:[[-35,12,10,42]],clim:(T,P)=>T>12&&P>250&&P<1200},
+  {k:'eland',vul:0.6,n:'eland',one:'eland',path:'prey',tame:0.12,bred:1,col:[190,150,90],roles:{meat:0.8,tsetse:1},box:[[-32,12,10,42]],clim:(T,P)=>T>14&&P>300&&P<1500},
+  {k:'zebra',vul:0.4,n:'zebras',one:'zebra',path:'directed',tame:0.06,bred:1,col:[60,60,60],roles:{ride:0.8,pack:0.4,tsetse:1},box:[[-35,12,10,42]],clim:(T,P)=>T>12&&P>250&&P<1200},
   {k:'gwolf',n:'golden wolves',one:'golden wolf',path:'commensal',tame:0.25,bred:1,col:[180,140,80],roles:{hunt:0.8,guard:1,war:0.3},box:[[5,35,-17,45]],clim:(T,P)=>T>14},
   {k:'serval',n:'servals',one:'serval',path:'commensal',tame:0.2,bred:1,col:[210,160,60],roles:{mouse:0.9},box:[[-30,18,-18,45]],clim:(T,P)=>T>18&&P>400},
-  {k:'cheetah',n:'cheetahs',one:'cheetah',path:'tamed',tame:0.35,bred:0,breed:0.01,real:1,col:[220,180,90],roles:{hunt:0.8,war:0.15,prestige:1},box:[[-30,30,-18,50],[25,40,40,80]],clim:(T,P)=>T>12&&P<900},
-  {k:'hippo',n:'hippopotamuses',one:'hippopotamus',path:'prey',tame:0.015,bred:1,col:[110,90,110],roles:{meat:0.6,war:0.5,river:1},box:[[-30,32,-18,45]],clim:(T,P,rv)=>T>16&&rv>0.3},
-  {k:'ostrich',n:'ostriches',one:'ostrich',path:'prey',tame:0.15,bred:1,col:[110,100,90],roles:{meat:0.3,courier:1},box:[[-35,35,-18,60]],clim:(T,P)=>T>12&&P<700},
-  {k:'bison',n:'bison',one:'bison',path:'prey',tame:0.06,bred:1,col:[100,70,50],roles:{meat:1,haul:0.4},box:[[30,60,-115,-90]],clim:(T,P,rv,sH)=>sH>0.3},
-  {k:'moose',n:'moose',one:'moose',path:'directed',tame:0.06,bred:1,col:[90,80,60],roles:{ride:0.4,pack:0.6,taiga:1},box:[[48,70,-170,-50],[48,70,10,180]],clim:(T,P)=>T<6&&T>-10&&P>300},
-  {k:'peccary',n:'peccaries',one:'peccary',path:'prey',tame:0.15,bred:1,col:[120,100,90],roles:{meat:0.5},box:[[-30,30,-110,-35]],clim:(T,P)=>T>18&&P>600},
-  {k:'capybara',n:'capybaras',one:'capybara',path:'prey',tame:0.12,bred:1,col:[150,110,80],roles:{meat:0.5},box:[[-35,12,-82,-35]],clim:(T,P,rv)=>T>16&&rv>0.15},
-  {k:'tapir',n:'tapirs',one:'tapir',path:'directed',tame:0.08,bred:1,col:[70,70,80],roles:{pack:0.5,forest:1},box:[[-25,20,-95,-35]],clim:(T,P)=>T>20&&P>1200},
-  {k:'emu',n:'emus',one:'emu',path:'prey',tame:0.1,bred:1,col:[130,110,90],roles:{meat:0.4},box:[[-40,-10,112,155]],clim:(T,P)=>P<1000},
-  {k:'deer',n:'red deer',one:'red deer',path:'prey',tame:0.08,bred:1,col:[160,90,60],roles:{meat:0.6},box:[[35,62,-10,60]],clim:(T,P)=>T>2&&T<16&&P>400}];
+  {k:'cheetah',vul:0.3,n:'cheetahs',one:'cheetah',path:'tamed',tame:0.35,bred:0,breed:0.01,real:1,col:[220,180,90],roles:{hunt:0.8,war:0.15,prestige:1},box:[[-30,30,-18,50],[25,40,40,80]],clim:(T,P)=>T>12&&P<900},
+  {k:'hippo',vul:0.5,n:'hippopotamuses',one:'hippopotamus',path:'prey',tame:0.015,bred:1,col:[110,90,110],roles:{meat:0.6,war:0.5,river:1},box:[[-30,32,-18,45]],clim:(T,P,rv)=>T>16&&rv>0.3},
+  {k:'ostrich',vul:0.5,n:'ostriches',one:'ostrich',path:'prey',tame:0.15,bred:1,col:[110,100,90],roles:{meat:0.3,courier:1},box:[[-35,35,-18,60]],clim:(T,P)=>T>12&&P<700},
+  {k:'bison',vul:0.12,n:'bison',one:'bison',path:'prey',tame:0.06,bred:1,col:[100,70,50],roles:{meat:1,haul:0.4},box:[[30,60,-115,-90]],clim:(T,P,rv,sH)=>sH>0.3},
+  {k:'moose',vul:0.1,n:'moose',one:'moose',path:'directed',tame:0.06,bred:1,col:[90,80,60],roles:{ride:0.4,pack:0.6,taiga:1},box:[[48,70,-170,-50],[48,70,10,180]],clim:(T,P)=>T<6&&T>-10&&P>300},
+  {k:'peccary',vul:0.1,n:'peccaries',one:'peccary',path:'prey',tame:0.15,bred:1,col:[120,100,90],roles:{meat:0.5},box:[[-30,30,-110,-35]],clim:(T,P)=>T>18&&P>600},
+  {k:'capybara',vul:0.1,n:'capybaras',one:'capybara',path:'prey',tame:0.12,bred:1,col:[150,110,80],roles:{meat:0.5},box:[[-35,12,-82,-35]],clim:(T,P,rv)=>T>16&&rv>0.15},
+  {k:'tapir',vul:0.1,n:'tapirs',one:'tapir',path:'directed',tame:0.08,bred:1,col:[70,70,80],roles:{pack:0.5,forest:1},box:[[-25,20,-95,-35]],clim:(T,P)=>T>20&&P>1200},
+  {k:'emu',vul:0.5,n:'emus',one:'emu',path:'prey',tame:0.1,bred:1,col:[130,110,90],roles:{meat:0.4},box:[[-40,-10,112,155]],clim:(T,P)=>P<1000},
+  {k:'deer',vul:0.1,n:'red deer',one:'red deer',path:'prey',tame:0.08,bred:1,col:[160,90,60],roles:{meat:0.6},box:[[35,62,-10,60]],clim:(T,P)=>T>2&&T<16&&P>400}];
 const BI=Object.fromEntries(BEASTS.map((b,k)=>[b.k,k]));
 function beastWild(w,b,i,earth){if(b.k==='dog')return 0;const T=w.T[i],P=w.Pr[i],la=latOf(i),lo=lonOf(i);
   if(earth&&!b.box.some(([a,c,d,e])=>la>=a&&la<=c&&lo>=d&&lo<=e))return 0;return b.clim(T,P,w.rv[i],w.sH[i])?1:0}

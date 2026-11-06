@@ -214,6 +214,8 @@ function wildPass(){const s=S,w=WD,L=w.landIdx,v=P.wildV??0.5,R=s.wildR,Wt=s.wil
     for(const i of src)if(fit(i)<0.05){const fl=w.wildR[i]===k?0.05*w.wildW[i]:0;o[i]=Math.max(fl,o[i]*0.9);if(o[i]<1e-3)o[i]=0}
     for(const i of src){const oi=o[i];if(oi<0.05)continue;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||o[j]>=oi||fit(j)<0.15)continue;
       o[j]+=(oi-o[j])*Math.min(1,5*v/(100*w.nbD[e]))}}
+    // a thin stand where the climate suits it thickens (a tenth of the gap in five years)
+    for(const i of src)if(o[i]>0&&o[i]<1&&fit(i)>=0.15)o[i]+=0.1*o[i]*(1-o[i]);
     for(const i of L)if(o[i]>Wt[i]){Wt[i]=o[i];R[i]=k}})}
 // every five years
 function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.year,agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
