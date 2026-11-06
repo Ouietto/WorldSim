@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Asabiya History Engine</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +22,7 @@
   --bg:#0F1417; --panel:#151C20; --raise:#1B2429; --ink:#DCE3E0; --muted:#8E9B9C; --line:#2A353A;
   --chip:#212B30; --accent:#E2825F; --accent-soft:rgba(226,130,95,.16); --good:#6DB38A; --warn:#D9A54A; --link:#8DB8DA; color-scheme:dark}
 html,body{height:100%}
+body{margin:0}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:13px;line-height:1.45;overflow:hidden}
 .app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;
@@ -173,15 +177,48 @@ b.r{background:var(--ink)}b.y{background:var(--warn)}b.g{background:var(--accent
 .status{font-size:12px;color:var(--good);margin-top:8px;min-height:1.2em}
 .status.err{color:var(--accent)}
 details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-top:8px}
+/* the sheet handle and the legend button exist only on phones */
+.grab,.legbtn{display:none}
+/* Phones and narrow windows: the map fills the screen and the encyclopedia is a bottom sheet over it, dragged or tapped
+   between a tab strip (min), half the screen and nearly all of it; the map is never covered by the minimised sheet */
 @media (max-width:900px){
-  body{overflow:auto}
-  .app{height:auto;min-height:100%}
-  .main{grid-template-columns:minmax(0,1fr);grid-template-rows:62vh 110px auto}
-  .side{grid-column:1;grid-row:3;max-height:none}
-  .pane{max-height:75vh}
-  .stats{margin-left:0;width:100%}
+  :root{--sheetMin:calc(var(--sheetMinPx,64px) + env(safe-area-inset-bottom,0px))}
+  body{overflow:hidden;overscroll-behavior:none}
+  .app{height:100vh;height:100dvh;gap:6px;padding-top:max(6px,env(safe-area-inset-top,0px));padding-bottom:calc(var(--sheetMin) + 6px);
+    padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+  .bar{gap:6px 10px}
+  .brand .sub{display:none}
+  .brand .mark{font-size:21px}
+  .clock{gap:6px;flex-wrap:nowrap}
+  .btn.primary{min-width:62px}
+  .seg button{padding:5px 7px}
+  .year{font-size:16px;min-width:0}
+  .stats{margin-left:0;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:12px;white-space:nowrap;font-size:11.5px;scrollbar-width:none}
+  .stats::-webkit-scrollbar,.tabs::-webkit-scrollbar,.modes::-webkit-scrollbar{display:none}
+  .main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 60px;gap:6px}
+  .timeline{grid-column:1;grid-row:2}
+  .side{position:fixed;left:0;right:0;bottom:0;z-index:30;box-sizing:border-box;height:var(--sheetH,var(--sheetMin));
+    border-radius:14px 14px 0 0;border-bottom:0;box-shadow:0 -8px 28px rgba(0,0,0,.22);padding-bottom:env(safe-area-inset-bottom,0px);transition:height .22s ease}
+  .side.dragging{transition:none}
+  .side[data-sheet="half"]{--sheetH:56dvh}
+  .side[data-sheet="full"]{--sheetH:calc(100dvh - 56px - env(safe-area-inset-top,0px))}
+  .side[data-sheet="min"] .pane{visibility:hidden}
+  .grab{display:flex;align-items:center;justify-content:center;position:relative;height:26px;flex:none;touch-action:none;cursor:grab}
+  .grab .handle{width:40px;height:5px;border-radius:3px;background:var(--line)}
+  .grab .sheetbtn{position:absolute;right:6px;top:1px;border:0;background:none;padding:2px 10px;font-size:15px;line-height:1;color:var(--muted);cursor:pointer}
+  .tabs{flex:none;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .tabs button{flex:0 0 auto;padding:7px 11px 9px}
+  .pane{max-height:none;padding:10px 14px 16px}
+  .modes{flex-wrap:nowrap;overflow-x:auto;pointer-events:auto;top:8px;left:8px;right:8px;scrollbar-width:none}
+  .modes>*{flex:none}
+  .legend{left:8px;bottom:44px;max-width:calc(100% - 16px);max-height:45%;overflow:auto}
+  .app:not(.legon) .legend{display:none}
+  .legbtn{display:block;position:absolute;left:8px;bottom:8px;border:0;border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;background:rgba(14,22,27,.72);color:#dfe6e3;backdrop-filter:blur(4px)}
+  .app.legon .legbtn{background:#f2f2ec;color:#14202a}
+  .search input,.field input[type=text],.field input[type=number],.modes select,.field select{font-size:16px}
   .barrow{grid-template-columns:110px minmax(0,1fr) 38px}
 }
+@media (max-width:520px){.brand{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -200,12 +237,14 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
       <canvas id="map" aria-label="World map"></canvas>
       <div class="modes" id="modes"></div>
       <div class="legend" id="legend"></div>
+      <button class="legbtn" id="legbtn" type="button" aria-controls="legend" aria-expanded="false">Key</button>
       <div class="tip" id="tip" hidden></div>
       <div class="toast" id="toast" hidden></div>
       <div class="busy" id="busy">Loading Earth…</div>
     </section>
     <section class="timeline"><canvas id="chart" aria-label="Population, number of states and leading era over time"></canvas></section>
-    <aside class="side">
+    <aside class="side" data-sheet="min">
+      <div class="grab" id="grab"><span class="handle"></span><button class="sheetbtn" id="sheetbtn" type="button" aria-label="Open the panel" aria-expanded="false">▴</button></div>
       <nav class="tabs" role="tablist">
         <button role="tab" aria-selected="true" data-pane="chron">Chronicle</button>
         <button role="tab" aria-selected="false" data-pane="figs">Figures</button>

@@ -416,7 +416,7 @@ function entityCell(t,id){const s=S;
     case'league':return s.leagues[id].cell;
     case'rel':return s.rels[id].origin;case'fig':{const f=s.figs[id];const p=f.pol&&s.pols[f.pol];return p?p.capital:-1}
     case'plague':return s.outbreaks[id].origin;case'war':return s.pols[s.wars[id].d[0]].capital;case'mig':{const M=s.migs[id];return M.done?M.path[M.path.length-1]:M.cell}}return-1}
-function openPage(t,id,noPush){if(ui.page&&!noPush&&!(ui.page.t===t&&ui.page.id===id))ui.stack.push(ui.page);if(ui.stack.length>40)ui.stack.shift();ui.page={t,id:+id};showPane('insp');ui.dirty=true}
+function openPage(t,id,noPush){if(ui.page&&!noPush&&!(ui.page.t===t&&ui.page.id===id))ui.stack.push(ui.page);if(ui.stack.length>40)ui.stack.shift();ui.page={t,id:+id};ui.pane='insp';if(sheetMin())sheet('half');else showPane('insp');ui.dirty=true}
 document.querySelector('.side').addEventListener('click',e=>{const a=e.target.closest('.lnk');if(!a)return;e.preventDefault();openPage(a.dataset.t,+a.dataset.id);centerOn(entityCell(a.dataset.t,+a.dataset.id))});
 document.querySelector('.side').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const a=e.target.closest('.lnk,.card');if(a)a.click()});
 function bar(label,v,max,cls){const t=clamp(v/max,0,1);return`<div class="barrow"><span>${label}</span><div class="track"><div class="fill ${cls||''}" style="width:${(t*100).toFixed(0)}%"></div></div><span class="v">${v.toFixed(2)}</span></div>`}
@@ -729,7 +729,10 @@ function showPane(p){ui.pane=p;for(const b of document.querySelectorAll('.tabs b
   for(const k of ['chron','figs','plague','insp','clim','tech','check','setup'])$('pane-'+k).hidden=k!==p;
   if(p==='clim')renderClimate();if(p==='tech')renderTech();
   if(p==='insp')renderPage();if(p==='chron')renderChron(true);if(p==='figs')renderFigs();if(p==='plague')renderPlagues();if(p==='check')renderChecks()}
-document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)showPane(b.dataset.pane)});
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  // on a phone a tab opens the sheet; the open tab tapped again folds it away
+  if(MOB.matches){if(sheetMin()){ui.pane=b.dataset.pane;sheet('half');return}if(b.dataset.pane===ui.pane){sheet('min');return}}
+  showPane(b.dataset.pane)});
 
 /* ---------- controls ---------- */
 $('speed').innerHTML=SPEEDS.map(([v,l],k)=>`<button type="button" data-k="${k}" aria-pressed="${k===ui.speed}" title="${k===4?'As fast as possible':v+' years per second'}">${l}</button>`).join('');
@@ -859,12 +862,33 @@ function frame(t){
   if(ui.ringT&&performance.now()<ui.ringT)ui.dirty=true;
   if(S&&baseCv&&S.seaVer!==ui.seaVer){ui.seaVer=S.seaVer;paintBase();SUB=null;ui.dirty=true}
   if(ui.dirty&&S&&baseCv&&t-ui.lastRender>110){ui.lastRender=t;ui.dirty=false;buildComp();drawMap();updateTop()}
-  if(S&&t-ui.lastSide>700){ui.lastSide=t;
+  if(S&&t-ui.lastSide>700&&!sheetMin()){ui.lastSide=t;
     if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='tech')renderTech();else if(ui.pane==='clim')renderClimate()}
     if(ui.mode==='knowledge'&&ui.running&&t%3000<700)drawLegend();
     drawChart()}
   requestAnimationFrame(frame);
 }
+/* ---------- phones: the side panel is a bottom sheet ---------- */
+// three heights (the tab strip, half the screen, nearly all of it); the handle is tapped or dragged, and the panel is not
+// redrawn while folded away
+const MOB=matchMedia('(max-width:900px)'),sideEl=document.querySelector('.side');
+const sheetMin=()=>MOB.matches&&sideEl.dataset.sheet==='min';
+function sheet(st){const was=sideEl.dataset.sheet;sideEl.dataset.sheet=st;const b=$('sheetbtn');b.textContent=st==='min'?'▴':'▾';
+  b.setAttribute('aria-label',st==='min'?'Open the panel':'Fold the panel away');b.setAttribute('aria-expanded',String(st!=='min'));
+  if(was==='min'&&st!=='min')showPane(ui.pane)}
+function sheetMinPx(){const h=$('grab').offsetHeight+document.querySelector('.tabs').offsetHeight;if(h>0)document.documentElement.style.setProperty('--sheetMinPx',h+'px')}
+$('sheetbtn').addEventListener('click',()=>sheet(sideEl.dataset.sheet==='min'?'half':'min'));
+{let sg=null;const g=$('grab');
+  g.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;sg={y:e.clientY,h:sideEl.getBoundingClientRect().height,moved:false};sideEl.classList.add('dragging');try{g.setPointerCapture(e.pointerId)}catch(_){}});
+  g.addEventListener('pointermove',e=>{if(!sg)return;const dy=e.clientY-sg.y;if(Math.abs(dy)>6)sg.moved=true;
+    if(sg.moved){const lo=$('grab').offsetHeight+document.querySelector('.tabs').offsetHeight,hi=innerHeight-56;sideEl.style.setProperty('--sheetH',clamp(sg.h-dy,lo,hi)+'px')}});
+  const end=()=>{if(!sg)return;const h=sideEl.getBoundingClientRect().height,moved=sg.moved;sg=null;sideEl.classList.remove('dragging');sideEl.style.removeProperty('--sheetH');
+    if(!moved){sheet(sideEl.dataset.sheet==='min'?'half':'min');return}
+    const vh=innerHeight,lo=$('grab').offsetHeight+document.querySelector('.tabs').offsetHeight,c=[['min',lo],['half',0.56*vh],['full',vh-56]];
+    let best=c[0];for(const x of c)if(Math.abs(x[1]-h)<Math.abs(best[1]-h))best=x;sheet(best[0])};
+  g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end)}
+$('legbtn').addEventListener('click',()=>{const on=document.querySelector('.app').classList.toggle('legon');$('legbtn').setAttribute('aria-expanded',String(on))});
+new ResizeObserver(sheetMinPx).observe(document.querySelector('.tabs'));
 async function boot(){
   buildFilters();buildRules();drawLegend();showPane('chron');
   new ResizeObserver(resize).observe($('mapwrap'));new ResizeObserver(()=>{sizeCanvas(chartCv);drawChart()}).observe(chartCv);
