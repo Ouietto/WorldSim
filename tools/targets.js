@@ -40,6 +40,7 @@ module.exports=[
   {k:'rs_andes',  g:'First states',  n:'Central Andes',kind:'year',real:700,    lo:0,      hi:1450},
   {k:'rs_europe', g:'First states',  n:'Western Europe',kind:'year',real:B(50), lo:B(600), hi:500},
   {k:'rs_wafrica',g:'First states',  n:'West Africa',  kind:'year',real:900,  lo:300,  hi:1350},
+  {k:'rs_iran',   g:'First states',  n:'Iranian plateau (watched, not scored)',kind:'year',real:B(550),lo:B(900),hi:B(300),cls:'context'},
   // first appearance, before run 81 (kept for comparison, not scored)
   {k:'r_meso',   g:'First states',  n:'First seen: Mesopotamia',  kind:'year',real:B(2600),lo:B(3200),hi:B(2000),cls:'context'},  {k:'r_egypt',  g:'First states',  n:'First seen: Egypt',        kind:'year',real:B(3100),lo:B(3400),hi:B(2700),cls:'context'},  {k:'r_indus',  g:'First states',  n:'First seen: Indus',        kind:'year',real:B(2600),lo:B(2900),hi:B(2000),cls:'context'},  {k:'r_nchina', g:'First states',  n:'First seen: Yellow River', kind:'year',real:B(1900),lo:B(2200),hi:B(1500),cls:'context'},  {k:'r_mesoam', g:'First states',  n:'First seen: Mesoamerica',  kind:'year',real:400,    lo:B(500), hi:1100,cls:'context'},  {k:'r_andes',  g:'First states',  n:'First seen: Central Andes',kind:'year',real:700,    lo:0,      hi:1450,cls:'context'},  {k:'r_europe', g:'First states',  n:'First seen: Western Europe',kind:'year',real:B(50), lo:B(600), hi:500,cls:'context'},  {k:'r_wafrica',g:'First states',  n:'First seen: West Africa',  kind:'year',real:900,  lo:300,  hi:1350,cls:'context'},
   // first invention anywhere

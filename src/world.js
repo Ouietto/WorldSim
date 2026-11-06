@@ -287,6 +287,8 @@ const REGIONS=[
  {k:'andes',n:'Central Andes',box:[-20,-5,-80,-68],ref:-199},
  {k:'europe',n:'Western Europe',box:[42,55,-6,15],ref:-49},
  {k:'wafrica',n:'West Africa',box:[8,18,-12,8],ref:700},
+ // the plateau east of the Zagros, Khuzestan and Elam's lowland left to Mesopotamia (Medes c. 700, the Achaemenids 550 BCE)
+ {k:'iran',n:'Iranian plateau',box:[26,38,50,62],ref:-549},
 ];
 const NOSTATE=[{n:'New Guinea',box:[-10,-1,131,151]},{n:'Congo interior',box:[-5,4,15,28]},{n:'Amazon interior',box:[-10,0,-72,-52]}];
 const NOFARM=[{n:'Siberia',box:[55,75,60,180]},{n:'Australia',box:[-40,-11,113,154]},{n:'Northern North America',box:[52,72,-170,-55]},{n:'Southern Africa',box:[-35,-25,15,32]}];
@@ -377,7 +379,8 @@ function blurUnits(w,a,rx,ry,wrap){if(!w.gcS){boxBlur(a,W,H,rx,ry,wrap);return a
 function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,elev=w.elev,rough=w.rough,rv=w.rv,lat=w.lat;
   // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
   // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
-  {const rvF=new Float32Array(n),ffp=w.ffp;for(const i of landList)rvF[i]=rv[i]*ffp[i]*clamp((T[i]-amp[i]/2+8)/8,0.3,1);w.rvF=rvF}
+  // (provinces: land watered by hill streams on fans and piedmont counts with the floodplain, fineFans)
+  {const rvF=new Float32Array(n),ffp=w.ffp,fan=w.fan;for(const i of landList)rvF[i]=(fan?1-(1-rv[i]*ffp[i])*(1-fan[i]):rv[i]*ffp[i])*clamp((T[i]-amp[i]/2+8)/8,0.3,1);w.rvF=rvF}
   {const rr=new Float32Array(n);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);for(const i of landList)rr[i]*=1-Math.min(1,2*w.rvF[i]);w.rainRisk=rr}
   w.gs=new Float32Array(n);w.leach=new Float32Array(n);w.trop=new Float32Array(n);
   // suitability

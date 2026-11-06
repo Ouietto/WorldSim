@@ -14,17 +14,9 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "prov-fd70",
-   "env": "WORLD=prov SW=fd70"
-  },
-  {
-   "name": "prov-fd70-wr3",
-   "env": "WORLD=prov SW=fd70,wr3"
-  },
-  {
-   "name": "prov-fd70-wr6",
-   "env": "WORLD=prov SW=fd70,wr6"
+   "name": "prov-nofan",
+   "env": "WORLD=prov SW=nofan"
   }
  ],
- "note": "Run 86: province calibration. Run 85 slowed all idea diffusion to 0.7 on provinces: the farming fronts came into band (Central Europe 97%, Britain 81%) but writing, iron, coin and paper came later still and 1 CE population fell to 126M. Now only farming spreads at 0.7 (fd70), with writing three or six times as readily (wr3, wr6): province states form near their real dates, about 2,400 years after the grid's, and the writing rate was set for the grid's early states. Provinces also measure caravan crossings by distance, and province vegetation now feeds the climate model over the climate cells each province covers, by area (each province had been put whole into the climate cell of its middle: the Sahel's starting rain anomaly was \u221223 mm against the grid's +62 at 12\u201314\u00b0 N; now +92)."
+ "note": "Run 87: piedmont and alluvial-fan farmland on provinces (Nein, 2026-11-06). In dry country, hill streams water the fans and plains at the mountain foot (runoff from each 25 km cell by Fu's Budyko curve, run down the fine drainage, each dry, gentle cell watering what it can before passing on the rest); watered fan land counts with the floodplain (rvF), and the province map now keeps fan and dry-valley patches as provinces of their own (31,325 provinces). Seed 1: wheat is farmed at Kerman 5181 BCE (before: 2436), Herat 4512 (2106), Mehrgarh's plain 3753 (never by 2000), the Indus with wheat by 4068 (before: rice, 2013). prov-nofan: the same map without fan water. Province defaults from run 86 (farming at 0.7, writing x6). The Iranian plateau is now watched (not scored)."
 }

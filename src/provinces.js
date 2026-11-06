@@ -149,19 +149,39 @@ function fineFloodplain(w,FR,fp){
         const a=clamp((25-s)/20,0,1)*clamp((20-(e[k]-best))/15,0,1)*(rvB>=0.2?clamp((rvB-0.1)/0.4,0,1):0.5)*clamp((600-w.pHi[k])/300,0,1);g=Math.max(g,a*share[ds])}}
     f[k]=g}
   return f}
+/* piedmont and alluvial-fan farmland (Nein, 2026-11-06): in dry country, streams leaving the hills spread their water over the
+   fans and plains at the mountain foot (Mehrgarh below the Bolan, Jeitun under the Kopet Dag, the Susiana, the Kerman and Herat
+   fans), where floodwater and diverted streams grew crops long before canals; at 100 km these average to desert. Each 25 km
+   cell sheds what its rain leaves after evaporation (Fu's Budyko curve with w = 2, the lower end for dry hills whose rain comes
+   in storms, with evaporative demand from its temperature);
+   the water runs down the fine drainage, and in dry, gentle ground (under 500 mm, slopes under about 250 m per cell) it waters as
+   much land as it can, each cell taking what its crops lack of 550 mm before passing on the rest, less a sixth lost along the
+   channel. Water that joins a mapped river stays the river's (its floodplain is counted apart). Returns each cell's watered share */
+function fineFans(w,FR,D){
+  const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,isL=k=>e[k]>SL0,Q=new Float64Array(NF),fan=new Float32Array(NF),ord=[];
+  const ar=y=>Math.pow(111.32*180/HH,2)*Math.cos((90-(y+0.5)*180/HH)*Math.PI/180);
+  for(let k=0;k<NF;k++)if(isL(k))ord.push(k);ord.sort((a,b)=>D.dep[b]-D.dep[a]);
+  for(const k of ord){const P=Math.max(0,w.pHi[k]),T=w.tHi[k],A=ar((k/HW)|0),pet=300+55*Math.max(0,T),phi=P>1?pet/P:99;
+    const R=P>1?P*Math.max(0,Math.sqrt(1+phi*phi)-phi):0;let q=Q[k];
+    const big=FR&&FR.on[k]&&FR.rv[k]>=0.2;
+    if(!big&&P<500&&q>0){let s=0;const x=k%HW,y=(k/HW)|0;for(const j of [y*HW+(x+1)%HW,y*HW+(x+HW-1)%HW,k-HW,k+HW])if(j>=0&&j<NF&&isL(j))s=Math.max(s,Math.abs(e[j]-e[k]));
+      const flat=clamp((250-s)/150,0,1),need=550-P,a=Math.min(0.6*flat*A,q/need);fan[k]=a/A;q=(q-a*need)*(5/6)}
+    const d=D.down[k];if(d>=0)Q[d]+=q+R*A}
+  return fan}
 function buildProvinces(w,o){
   const NF=HW*HH,e=w.eHi,SL0=w.isEarth?SEA_LOW:0,count=o.count||26000,rMax=o.rMax||6,riverMin=o.riverMin??0.75;
   const cls=new Uint8Array(NF);for(let k=0;k<NF;k++)cls[k]=e[k]>0?1:e[k]>SL0?2:0;
   const fy=k=>(k/HW)|0,fx=k=>k%HW,latF=new Float32Array(HH);for(let y=0;y<HH;y++)latF[y]=(90-(y+0.5)*180/HH)*Math.PI/180;
   const nb4=(k,f)=>{const x=fx(k),y=fy(k);f(y*HW+(x+1)%HW,0);f(y*HW+(x+HW-1)%HW,0);if(y>0)f(k-HW,1);if(y<HH-1)f(k+HW,1)};
   // what each fine cell can grow: plant growth from its own climate (the model's formula), flatness, floodplain
-  const slope=new Float32Array(NF),wt=new Float32Array(NF),area=new Float32Array(NF),fp=o.fp||null,ff=o.ff||null;
+  const slope=new Float32Array(NF),wt=new Float32Array(NF),area=new Float32Array(NF),fp=o.fp||null,ff=o.ff||null,fan=o.fan||null;
   for(let k=0;k<NF;k++){if(!cls[k])continue;let s=0;nb4(k,j=>{if(cls[j]){const d=Math.abs(e[j]-e[k]);if(d>s)s=d}});slope[k]=s;
     const T=w.tHi[k],P=Math.max(0,w.pHi[k]),A=w.aHi[k],npp=Math.min(3000/(1+Math.exp(1.315-0.119*(T+A*0.15))),3000*(1-Math.exp(-0.000664*P)));
     const f=ff?ff[k]:fp&&fp[k]!==255?fp[k]/250:0;area[k]=Math.pow(111.32*180/HH,2)*Math.cos(latF[fy(k)]);
     // in dry land the people live by the water: rain-fed growth counts only above 250 mm, and floodplain counts on its own
     const rainNpp=P>250?npp:npp*Math.max(0,(P-100)/150);
-    wt[k]=area[k]*((rainNpp/1000)*(0.25+0.75*Math.exp(-s/150))+1.5*f+0.002)}
+    // (fans and piedmont ground watered by hill streams count like floodplain)
+    wt[k]=area[k]*((rainNpp/1000)*(0.25+0.75*Math.exp(-s/150))+1.5*Math.max(f,fan?fan[k]:0)+0.002)}
   // great rivers on the fine grid (fineRivers): the mapped courses at least riverMin in size lie between provinces
   const river=new Uint8Array(NF);
   if(o.rivers){const R=o.rivers;for(let k=0;k<NF;k++)if(cls[k]&&R.real[k]&&R.rv[k]>=riverMin)river[k]=1}
@@ -187,9 +207,9 @@ function buildProvinces(w,o){
   // in dry country a river's floodplain is the only farmland, often narrower than a 25 km cell (the Nile above the Delta, the
   // Indus in Sindh): it is ground of its own, never a line between provinces. Provinces of the desert around do not reach into
   // it, nor valley provinces out (grp: the ground a province may grow over; 3 for a dry valley: under 400 mm of rain, river cells
-  // and cells at least a fifth floodplain)
+  // and cells at least a fifth floodplain or a tenth watered fan)
   const grp=Uint8Array.from(cls);let valley=0;
-  if(o.ff)for(let k=0;k<NF;k++){if(cls[k]!==1||w.pHi[k]>=400)continue;if(river[k]||o.ff[k]>=0.2){river[k]=0;grp[k]=3;valley++}}
+  if(o.ff)for(let k=0;k<NF;k++){if(cls[k]!==1||w.pHi[k]>=400)continue;if(river[k]||o.ff[k]>=0.2||fan&&fan[k]>=0.1){river[k]=0;grp[k]=3;valley++}}
   const stepCost=(a,b,ns)=>(ns?1:Math.cos(latF[fy(a)]))*(1+Math.abs(e[b]-e[a])/150+slope[b]/600);
   const pid=new Int32Array(NF).fill(-1);
   const heap=mkHeap;
@@ -238,7 +258,13 @@ function buildProvinces(w,o){
     for(let p=0;p<np;p++){if(pCap[p]<=0)continue;mult[p]*=clamp(Math.pow(pCap[p]/T,0.25),0.8,1.25)}}
   // a cell left unclaimed (beyond every seed's reach after evening out) joins its claimed neighbour
   for(let pass=0;pass<20;pass++){let left=0;for(const k of order){if(pid[k]>=0)continue;let b=-1;nb4(k,j=>{if(b<0&&pid[j]>=0&&grp[j]===grp[k]&&!river[j])b=pid[j]});if(b>=0)pid[k]=b;else left++}if(!left)break}
-  // anything still unclaimed (a valley cell no seed reached) joins any neighbour of its own kind of land
+  // dry valley ground and watered fans no seed reached are provinces of their own, one to each patch (a fan below the Bolan is not
+  // the hill province beside it); anything else still unclaimed joins any neighbour of its own kind of land
+  // (a patch with under 300 km2 of floodplain or watered fan stays with its neighbour)
+  for(const k0 of order){if(pid[k0]>=0||grp[k0]!==3)continue;const id=np;let c=0,wa=0;const st=[k0],got=[k0];pid[k0]=id;
+    while(st.length){const k=st.pop();c+=cap[k];wa+=area[k]*Math.max(o.ff[k],fan?fan[k]:0);nb4(k,j=>{if(pid[j]<0&&grp[j]===3&&!river[j]){pid[j]=id;st.push(j);got.push(j)}})}
+    if(wa>=300){np++;pCap.push(c)}else for(const k of got)pid[k]=-2}
+  for(const k of order)if(pid[k]===-2)pid[k]=-1;
   for(let pass=0;pass<20;pass++){let left=0;for(const k of order){if(pid[k]>=0)continue;let b=-1;nb4(k,j=>{if(b<0&&pid[j]>=0&&cls[j]===cls[k]&&!river[j])b=pid[j]});if(b>=0)pid[k]=b;else left++}if(!left)break}
   for(const k of order)if(pid[k]<0){pid[k]=np++;pCap.push(cap[k])}
   // river cells go to the bank province beside them holding the fewest people
@@ -326,7 +352,7 @@ function provinceWorld(w,pid,o){o=o||{};
     S[n]=A.length;u.gcS=S;u.gcA=Int32Array.from(A);u.gcW=Float32Array.from(Wt)}
   shoreline(u);const landList=u.landIdx;
   // rivers and drainage on the 25 km grid
-  const FR=fineRivers(w),D=fineDrain(w,FR),fz=fineHollows(w),ff=fineFloodplain(w,FR,o.fp||null);u.fineRv=FR.rv;u.fineReal=FR.real;u.fineOn=FR.on;u.fineDn=D.down;
+  const FR=fineRivers(w),D=fineDrain(w,FR),fz=fineHollows(w),ff=fineFloodplain(w,FR,o.fp||null),fanF=o.noFans||swOn('nofan')?null:fineFans(w,FR,D);u.fineRv=FR.rv;u.fineReal=FR.real;u.fineOn=FR.on;u.fineDn=D.down;
   // each province drains from its most downstream cell (on a province with rivers, the most downstream cell of its largest);
   // where that would close a loop, from its most downstream cell of all (strictly nearer the sea than any of its own cells)
   const maxRv=new Float32Array(n),down=new Int32Array(n).fill(-1);
@@ -376,6 +402,8 @@ function provinceWorld(w,pid,o){o=o||{};
     Object.assign(u,{fillD,fillZ,pour})}
   // floodplain share of each unit
   {const ffp=new Float32Array(n);for(const v of landList){let A=0,s=0;for(let q=cS[v];q<cS[v+1];q++){const k=cA[q],a=fa[(k/HW)|0];if(!cls[k])continue;A+=a;s+=a*ff[k]}ffp[v]=A?s/A:0}u.ffp=ffp}
+  // the share of each province watered by hill streams on fans and piedmont (fineFans)
+  if(fanF){const fan=new Float32Array(n);for(const v of landList){let A=0,s=0;for(let q=cS[v];q<cS[v+1];q++){const k=cA[q],a=fa[(k/HW)|0];if(!cls[k])continue;A+=a;s+=a*fanF[k]}fan[v]=A?s/A:0}u.fan=fan}
   deriveLand(u);weatherWeights(u);seaLanes(u);
   if(w.isEarth){
     // target regions are drawn on today's coasts, where the measurements are taken
