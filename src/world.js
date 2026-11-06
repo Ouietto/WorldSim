@@ -1,6 +1,8 @@
 "use strict";
 /* ================= SIMULATION CORE (no DOM) ================= */
-const W=400,H=200,N=W*H,SC=4,HW=W*SC,HH=H*SC,AGW=40,AGH=20;
+const W=400,H=200,NC=W*H,SC=4,HW=W*SC,HH=H*SC,AGW=40,AGH=20;
+// N: the number of units the model runs on (the 100 km cells, or provinces and open sea); set by useWorld
+let N=NC;
 // test switches: SW=a,b in the environment turns on candidate changes so the ensemble can test several at once against
 // the same code; in the browser none are on. A switch that wins is made the default and removed.
 // test switches: experimental mechanics under trial, off by default. From SW=... in the test runner, or ?sw=a,b in the page address
@@ -185,7 +187,7 @@ function applyNumericClimate(C,input){
     C.tHi[i]=t;C.pHi[i]=p;const a=sample(lat,lon,'temperatureRange');if(Number.isFinite(a))C.aHi[i]=a;used++;
   }
   for(const key of ['rainSeasonality','dryMonths','growingMonths'])if(climate[key]){
-    C[key]=new Float32Array(N);for(let y=0;y<H;y++)for(let x=0;x<W;x++)C[key][y*W+x]=sample(90-(y+0.5)*180/H,(x+0.5)*360/W-180,key);
+    C[key]=new Float32Array(NC);for(let y=0;y<H;y++)for(let x=0;x<W;x++)C[key][y*W+x]=sample(90-(y+0.5)*180/H,(x+0.5)*360/W-180,key);
   }
   C.climateMeta=Object.assign({},climate.metadata,{numeric:true,inputPeriod:climate.period,coverage:used/(HW*HH)});
   return C;
@@ -253,7 +255,7 @@ function fitClimate(tHi,pHi,aHi,eHi,kg){
 }
 function gradeClimate(w,rawT,rawP,rawA){
   if(!w.kgGrid)return null;
-  const code=new Uint8Array(N),per=[];for(let g=0;g<6;g++)per.push({ok:0,tot:0});
+  const code=new Uint8Array(NC),per=[];for(let g=0;g<6;g++)per.push({ok:0,tot:0});
   let ok=0,tot=0;const RANK=[3,1,1,2,1,0];
   for(const i of w.landIdx){const og=kgGroup(w.kgGrid[i]);if(og<0)continue;
     const sg=simGroup(rawT[i],rawP[i],rawA[i]),a=w.area[i];
@@ -290,29 +292,84 @@ const CHINA_REF=[[-1600,0.25],[-1046,0.5],[-771,0.25],[-221,0.9],[220,0.45],[280
 // sea level against today's (m), Lambeck et al. 2014 (simplified): about -75 m at 12,000 BCE, near today's by 4000 BCE
 const SEA_LOW=-75,SEA_CURVE=[[-12000,-75],[-11000,-64],[-10000,-57],[-9500,-50],[-9000,-43],[-8000,-31],[-7000,-20],[-6500,-14],[-6000,-8],[-5000,-3],[-4000,-1],[-3000,0]];
 function seaLevelAt(y){const C=SEA_CURVE;if(y<=C[0][0])return C[0][1];for(let k=1;k<C.length;k++)if(y<=C[k][0]){const [a,va]=C[k-1],[b,vb]=C[k];return va+(vb-va)*(y-a)/(b-a)}return 0}
-// land list, coasts and landmasses from w.land (rebuilt when the sea takes a province)
-function shoreline(w){const land=w.land,nb=w.nb,landList=[],coastList=[],coast=new Uint8Array(N);
-  for(let i=0;i<N;i++)if(land[i]){landList.push(i);for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&!land[j]){coast[i]=1;break}}if(coast[i])coastList.push(i)}
+// land list, coasts and landmasses from w.land (rebuilt when the sea takes a province); neighbours from the lists nbS/nbA
+function shoreline(w){const n=w.n,land=w.land,S=w.nbS,A=w.nbA,landList=[],coastList=[],coast=new Uint8Array(n);
+  for(let i=0;i<n;i++)if(land[i]){landList.push(i);for(let e=S[i];e<S[i+1];e++)if(!land[A[e]]){coast[i]=1;break}if(coast[i])coastList.push(i)}
   w.landIdx=Int32Array.from(landList);w.coastIdx=Int32Array.from(coastList);w.coast=coast;
-  const lm=new Int32Array(N).fill(-1),lmSize=[],q=new Int32Array(N);
+  const lm=new Int32Array(n).fill(-1),lmSize=[],q=new Int32Array(n);
   for(const s0 of landList){if(lm[s0]>=0)continue;const id=lmSize.length;let h=0,t=0;q[t++]=s0;lm[s0]=id;
-    while(h<t){const i=q[h++];for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(t)}
+    while(h<t){const i=q[h++];for(let e=S[i];e<S[i+1];e++){const j=A[e];if(land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(t)}
   w.lm=lm;w.lmSize=lmSize;w.lmCount=lmSize.length}
-// sea links: coastal cell -> coastal cells across water within 6 sea steps
-function seaLanes(w){const land=w.land,coast=w.coast,nb=w.nb,lm=w.lm,q=new Int32Array(N);
-  const n8=(i,f)=>{const cx=i%W,cy=(i/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;f(yy*W+(cx+dx+W)%W)}}};
-  const ls=new Int32Array(N+1),lt=[],ld=[],seen=new Int32Array(N).fill(-1),qd=new Uint8Array(N);
-  for(let i=0;i<N;i++){ls[i]=lt.length;if(!coast[i])continue;
+// sea links: coastal unit -> coastal units across water within 6 sea steps (the water spreads through snS/snA: the 8 cells around
+// on the grid, every touching unit among provinces and open sea)
+function seaLanes(w){const n=w.n,land=w.land,coast=w.coast,S=w.nbS,A=w.nbA,S8=w.snS,A8=w.snA,lm=w.lm,q=new Int32Array(n);
+  const ls=new Int32Array(n+1),lt=[],ld=[],seen=new Int32Array(n).fill(-1),qd=new Uint8Array(n);
+  for(let i=0;i<n;i++){ls[i]=lt.length;if(!coast[i])continue;
     let h=0,t=0;const found=[];
-    for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&!land[j]&&seen[j]!==i){seen[j]=i;q[t++]=j;qd[j]=1}}
+    for(let e=S[i];e<S[i+1];e++){const j=A[e];if(!land[j]&&seen[j]!==i){seen[j]=i;q[t++]=j;qd[j]=1}}
     while(h<t){const c=q[h++],dc=qd[c];
-      n8(c,j=>{if(seen[j]===i)return;seen[j]=i;
+      for(let e=S8[c];e<S8[c+1];e++){const j=A8[e];if(seen[j]===i)continue;seen[j]=i;
         if(land[j]){if(j!==i&&dc>=2&&coast[j])found.push([j,dc])}
-        else if(dc<6){qd[j]=dc+1;q[t++]=j}})}
+        else if(dc<6){qd[j]=dc+1;q[t++]=j}}}
     found.sort((a,b)=>(lm[b[0]]!==lm[i])-(lm[a[0]]!==lm[i])||a[1]-b[1]);
+    // on provinces a coast has many more coastal neighbours across the water, mostly islets and the near shore of one land: at
+    // most three lanes to each other land, so the far shore (Tunisia from Sicily) is not crowded out
+    if(w.isProv){const per=new Map(),keep=[];for(const f of found){const m=lm[f[0]];if(m!==lm[i]){const c=per.get(m)||0;if(c>=3)continue;per.set(m,c+1)}keep.push(f);if(keep.length>=10)break}found.length=0;found.push(...keep)}
     for(const [j,d] of found.slice(0,10)){lt.push(j);ld.push(d)}
   }
-  ls[N]=lt.length;w.ls=ls;w.lt=Int32Array.from(lt);w.ld=Uint8Array.from(ld)}
+  ls[n]=lt.length;w.ls=ls;w.lt=Int32Array.from(lt);w.ld=Uint8Array.from(ld)}
+// neighbour lists of the 100 km grid in the old order (west, east, north, south; and the 8 around, row by row)
+function gridLists(w){const nb=w.nb,S=new Int32Array(NC+1),A=[],S8=new Int32Array(NC+1),A8=[];
+  for(let i=0;i<NC;i++){S[i]=A.length;for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0)A.push(j)}
+    S8[i]=A8.length;const cx=i%W,cy=(i/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;A8.push(yy*W+(cx+dx+W)%W)}}}
+  S[NC]=A.length;S8[NC]=A8.length;w.nbS=S;w.nbA=Int32Array.from(A);w.snS=S8;w.snA=Int32Array.from(A8)}
+// the world the model runs on
+function useWorld(w){WD=w;N=w.n;return w}
+// what a unit's climate, ground and river make of it (the same for 100 km cells and provinces): flood farming (rvF), rain
+// failure, biome, growing season, farming and herding suitability, travel cost, tsetse, monsoon edge, desert
+function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,elev=w.elev,rough=w.rough,rv=w.rv,lat=w.lat;
+  // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
+  // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
+  {const rvF=new Float32Array(n),ffp=w.ffp;for(const i of landList)rvF[i]=rv[i]*ffp[i]*clamp((T[i]-amp[i]/2+8)/8,0.3,1);w.rvF=rvF}
+  {const rr=new Float32Array(n);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);for(const i of landList)rr[i]*=1-Math.min(1,2*w.rvF[i]);w.rainRisk=rr}
+  w.gs=new Float32Array(n);w.leach=new Float32Array(n);w.trop=new Float32Array(n);
+  // suitability
+  const sF=new Float32Array(n),sH=new Float32Array(n),nomad=new Uint8Array(n),biome=new Uint8Array(n);
+  for(const i of landList){
+    const t=T[i],p=Pr[i],tw=t+amp[i]/2;biome[i]=biomeOf(t,p);
+    if(t<-9)continue;
+    const half=amp[i]/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
+    w.gs[i]=gs;
+    const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
+    // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
+    const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
+    const irr=w.rvF[i]*clamp((tw-14)/6,0,1);
+    const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
+    w.leach[i]=leach;
+    w.trop[i]=elev[i]<1200?clamp((t-21)/3,0,1)*clamp((p-900)/600,0,1):0;
+    sF[i]=Math.max(tS*pS,tS*irr*0.95)*(1-0.65*rough[i])*(elev[i]>3500?0.3:1)*(1-0.7*leach);
+    sH[i]=clamp((tw-4)/10,0,1)*clamp((27-t)/7,0,1)*clamp((p-120)/180,0,1)*clamp((1100-p)/500,0.15,1)*(1-0.4*rough[i]);
+    nomad[i]=(sH[i]>0.45&&sF[i]<0.3)?1:0;
+  }
+  Object.assign(w,{sF,sH,nomad,biome});
+  // travel cost (units of a half flat cell), tsetse belt, orbital monsoon zone
+  const tcost=new Uint8Array(n),tsetse=new Uint8Array(n),monZone=new Float32Array(n),desert=new Uint8Array(n);
+  for(const i of landList){const b=biome[i],t=T[i],p=Pr[i],la=lat[i]*180/Math.PI;
+    let c=2;if(b===7){c=8;desert[i]=1}else if(b===9)c=6;else if(b===1||b===2)c=6;else if(b===3)c=3;
+    // travel cost from broken ground, not from height: 'rough' also counts altitude above 1200 m, which made the flat altiplano
+    // and the Basin of Mexico costlier to cross than the Alps. Only very high country (thin air, no crops) keeps a height penalty
+    {const alt=Math.max(0,elev[i]-1200)/3000,rel=Math.max(0,rough[i]-Math.min(1,alt))+Math.max(0,elev[i]-3800)/1500;c+=Math.round(Math.min(1,rel)*8)}
+    if(rv[i]>0.3)c=Math.max(1,c>>1);tcost[i]=Math.min(20,c);
+    tsetse[i]=(t>22&&p>900&&Math.abs(la)<14)?1:0;
+    if(p<520)monZone[i]=clamp((33-Math.abs(la))/8,0,1)*clamp((Math.abs(la)-9)/5,0,1)*(la>0?1:0.45)*clamp((520-p)/250,0,1)}
+  Object.assign(w,{tcost,tsetse,monZone,desert});
+}
+// weather interpolation: each unit's four nearest points of the 40 x 20 weather grid and its place between them
+function weatherWeights(w){const n=w.n,wi=new Int32Array(n*4),wf=new Float32Array(n*2);
+  for(let i=0;i<n;i++){const gx=(w.cxA[i]+0.5)/W*AGW-0.5,gy=clamp((w.cyA[i]+0.5)/H*AGH-0.5,0,AGH-1.001);
+    const x0=Math.floor(gx),y0=Math.floor(gy),xa=((x0%AGW)+AGW)%AGW,xb=(xa+1)%AGW,y1=Math.min(y0+1,AGH-1);
+    wi[i*4]=y0*AGW+xa;wi[i*4+1]=y0*AGW+xb;wi[i*4+2]=y1*AGW+xa;wi[i*4+3]=y1*AGW+xb;wf[i*2]=gx-x0;wf[i*2+1]=gy-y0}
+  w.wi=wi;w.wf=wf}
 function genWorld(o){
   const r=mulberry32(hashStr('world:'+o.seed));
   const eHi=new Float32Array(HW*HH);
@@ -336,10 +393,10 @@ function genWorld(o){
   }
   // our own climate model (climate.js); measured normals override it on Earth below
   const MR=climModel(eHi,{}),C=climToHi(MR,eHi);
-  const w={seed:o.seed,eHi,isEarth:!!o.earth,imported:!!o.height&&!o.earth,kgHi:o.kg||null,fitted:false};
+  N=NC;const w={seed:o.seed,n:NC,eHi,isEarth:!!o.earth,imported:!!o.height&&!o.earth,kgHi:o.kg||null,fitted:false};
   w.clim=MR;
   // raw (model) climate on the coarse grid, kept for grading
-  const rawT=new Float32Array(N),rawP=new Float32Array(N),rawA=new Float32Array(N);
+  const rawT=new Float32Array(NC),rawP=new Float32Array(NC),rawA=new Float32Array(NC);
   const agg=(src,dst)=>{for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){let s=0;for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++)s+=src[(cy*SC+dy)*HW+cx*SC+dx];dst[cy*W+cx]=s/(SC*SC)}};
   agg(C.tHi,rawT);agg(C.pHi,rawP);agg(C.aHi,rawA);
   const numericClimate=o.climate||(o.earth?EARTH_CLIMATE:null);
@@ -348,10 +405,10 @@ function genWorld(o){
   // measured climate is never rewritten to pass a classification test; Köppen fitting stays for model worlds
   if(o.kg&&o.fit&&!numericClimate){w.fitChanged=fitClimate(C.tHi,C.pHi,C.aHi,eHi,o.kg);w.fitted=true}
   w.tHi=C.tHi;w.pHi=C.pHi;w.aHi=C.aHi;
-  const elev=new Float32Array(N),T=new Float32Array(N),Pr=new Float32Array(N),amp=new Float32Array(N),rough=new Float32Array(N),land=new Uint8Array(N);
+  const elev=new Float32Array(NC),T=new Float32Array(NC),Pr=new Float32Array(NC),amp=new Float32Array(NC),rough=new Float32Array(NC),land=new Uint8Array(NC);
   // Earth is built at the low sea level of the last deglaciation; the history drowns the shelves as the sea rises (seaApply).
   // lvl is the sea level (m) at which a province goes under: the elevation that half its ground stands above
-  const SL0=o.earth?SEA_LOW:0,lvl=new Float32Array(N),landNow=new Uint8Array(N),sub=new Float32Array(SC*SC);
+  const SL0=o.earth?SEA_LOW:0,lvl=new Float32Array(NC),landNow=new Uint8Array(NC),sub=new Float32Array(SC*SC);
   for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){
     let se=0,se2=0,st=0,sp=0,sa=0,nl=0,n0=0,q=0;
     for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const k=(cy*SC+dy)*HW+cx*SC+dx,e=eHi[k];sub[q++]=e;se+=e;se2+=e*e;st+=C.tHi[k];sp+=C.pHi[k];sa+=C.aHi[k];if(e>SL0)nl++;if(e>0)n0++}
@@ -361,46 +418,46 @@ function genWorld(o){
     rough[i]=land[i]?clamp(Math.sqrt(Math.max(0,se2/n-em*em))/700+Math.max(0,em-1200)/3000,0,1):0;
   }
   Object.assign(w,{elev,T,Pr,amp,rough,land,rawT,rawP,rawA,lvl,landNow,land0:land.slice()});
-  if(o.kg){const kgGrid=new Uint8Array(N);
+  if(o.kg){const kgGrid=new Uint8Array(NC);
     for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){const cnt=new Uint8Array(33);let best=0,bc=0;
       for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const c=o.kg[(cy*SC+dy)*HW+cx*SC+dx];if(c>=1&&c<=31){cnt[c]++;if(cnt[c]>bc){bc=cnt[c];best=c}}}
       kgGrid[cy*W+cx]=best}
     w.kgGrid=kgGrid}
-  const lat=new Float32Array(N),area=new Float32Array(N),x3=new Float32Array(N),y3=new Float32Array(N),z3=new Float32Array(N),cosLon=new Float32Array(N),sinLon=new Float32Array(N),cxA=new Int16Array(N),cyA=new Int16Array(N),nb=new Int32Array(N*4);
+  const lat=new Float32Array(NC),area=new Float32Array(NC),x3=new Float32Array(NC),y3=new Float32Array(NC),z3=new Float32Array(NC),cosLon=new Float32Array(NC),sinLon=new Float32Array(NC),cxA=new Int16Array(NC),cyA=new Int16Array(NC),nb=new Int32Array(NC*4);
   for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){
     const i=cy*W+cx,la=(90-(cy+0.5)/H*180)*Math.PI/180,lo=((cx+0.5)/W*360-180)*Math.PI/180;
     lat[i]=la;area[i]=(40075/W)*(20004/H)*Math.cos(la);cxA[i]=cx;cyA[i]=cy;
     cosLon[i]=Math.cos(lo);sinLon[i]=Math.sin(lo);x3[i]=Math.cos(la)*Math.cos(lo);y3[i]=Math.cos(la)*Math.sin(lo);z3[i]=Math.sin(la);
     nb[i*4]=cy*W+(cx+W-1)%W;nb[i*4+1]=cy*W+(cx+1)%W;nb[i*4+2]=cy>0?i-W:-1;nb[i*4+3]=cy<H-1?i+W:-1;
   }
-  const cosLat=new Float32Array(N);for(let i=0;i<N;i++)cosLat[i]=Math.max(0.2,Math.cos(lat[i]));
-  Object.assign(w,{lat,area,x3,y3,z3,cosLon,sinLon,cxA,cyA,nb,cosLat});
-  shoreline(w);const landList=Array.from(w.landIdx),coastList=Array.from(w.coastIdx),coast=w.coast,lm=w.lm,q=new Int32Array(N);
+  const cosLat=new Float32Array(NC);for(let i=0;i<NC;i++)cosLat[i]=Math.max(0.2,Math.cos(lat[i]));
+  Object.assign(w,{lat,area,x3,y3,z3,cosLon,sinLon,cxA,cyA,nb,cosLat});gridLists(w);
+  shoreline(w);const landList=Array.from(w.landIdx),coastList=Array.from(w.coastIdx),coast=w.coast,lm=w.lm,q=new Int32Array(NC);
   // drainage
-  const filled=new Float32Array(N),down=new Int32Array(N).fill(-1),vis=new Uint8Array(N),order=[],hk=[],hv=[];
+  const filled=new Float32Array(NC),down=new Int32Array(NC).fill(-1),vis=new Uint8Array(NC),order=[],hk=[],hv=[];
   // on Earth, water is routed along the real river courses (stream burning): 100 km province averages smooth away the valleys,
   // merging the Tigris and Euphrates and losing the Yellow River's loop. How much water each river carries is still worked out
   // from rainfall, so wet and dry eras still swell or shrink it
   const RIV=o.earth?earthRivers():null,rElev=RIV?Float32Array.from(elev):elev;
-  if(RIV){w.rvReal=new Uint8Array(N);for(const L of RIV)for(const c of L.cells)if(land[c]){rElev[c]=elev[c]-6000;w.rvReal[c]=1}}
+  if(RIV){w.rvReal=new Uint8Array(NC);for(const L of RIV)for(const c of L.cells)if(land[c]){rElev[c]=elev[c]-6000;w.rvReal[c]=1}}
   const hpush=(i,k)=>{let n=hk.length;hk.push(k);hv.push(i);while(n>0){const p=(n-1)>>1;if(hk[p]<=hk[n])break;[hk[p],hk[n]]=[hk[n],hk[p]];[hv[p],hv[n]]=[hv[n],hv[p]];n=p}};
   const hpop=()=>{const top=hv[0],lk=hk.pop(),lv=hv.pop();if(hk.length){hk[0]=lk;hv[0]=lv;let n=0;for(;;){const l=2*n+1,rr=l+1;let m=n;if(l<hk.length&&hk[l]<hk[m])m=l;if(rr<hk.length&&hk[rr]<hk[m])m=rr;if(m===n)break;[hk[m],hk[n]]=[hk[n],hk[m]];[hv[m],hv[n]]=[hv[n],hv[m]];n=m}}return top};
   const n8=(i,f)=>{const cx=i%W,cy=(i/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;f(yy*W+(cx+dx+W)%W)}}};
-  for(let i=0;i<N;i++)if(!land[i])vis[i]=1;
+  for(let i=0;i<NC;i++)if(!land[i])vis[i]=1;
   for(const i of coastList){filled[i]=rElev[i];vis[i]=1;let oc=-1;n8(i,j=>{if(!land[j]&&oc<0)oc=j});down[i]=oc;hpush(i,rElev[i])}
   while(hv.length){const i=hpop();order.push(i);n8(i,j=>{if(!vis[j]){vis[j]=1;filled[j]=Math.max(rElev[j],filled[i]+0.01);down[j]=i;hpush(j,filled[j])}})}
   // real courses: each chain flows from its higher end to its lower; the larger rivers are laid first, so a tributary ends where
   // it meets them. A pointer that would close a loop is dropped and the province keeps its routed outlet
   // closed hollows (rivers and water switches): a second priority flood on the true heights (the burned courses aside) gives how
   // far each province's hollow would have to fill before it spills (fillD, m)
-  const fillD=new Float32Array(N);{const fz=new Float32Array(N).fill(-1e9),vv=new Uint8Array(N);for(let i=0;i<N;i++)if(!land[i])vv[i]=1;
+  const fillD=new Float32Array(NC);{const fz=new Float32Array(NC).fill(-1e9),vv=new Uint8Array(NC);for(let i=0;i<NC;i++)if(!land[i])vv[i]=1;
     for(const i of coastList){fz[i]=elev[i];vv[i]=1;hpush(i,elev[i])}
     while(hv.length){const i=hpop();n8(i,j=>{if(!vv[j]){vv[j]=1;fz[j]=Math.max(elev[j],fz[i]+0.01);hpush(j,fz[j])}})}
     for(const i of landList)fillD[i]=fz[i]>-1e8?Math.max(0,fz[i]-elev[i]):0;w.fillZ=fz}
-  if(RIV){const set=new Uint8Array(N),fd=Int32Array.from(down);
+  if(RIV){const set=new Uint8Array(NC),fd=Int32Array.from(down);
     // which end is the mouth: the end nearer the sea along the river network itself (tributaries reach it through the main
     // stream); averaged heights are no guide on flat ground (the White Nile rises in a province lower than Khartoum's)
-    const rd=new Int32Array(N).fill(-1),adj=new Map(),link=(a,b)=>{if(a===b)return;if(!adj.has(a))adj.set(a,[]);adj.get(a).push(b)},isR=new Uint8Array(N);
+    const rd=new Int32Array(NC).fill(-1),adj=new Map(),link=(a,b)=>{if(a===b)return;if(!adj.has(a))adj.set(a,[]);adj.get(a).push(b)},isR=new Uint8Array(NC);
     for(const L of RIV)for(const c of L.cells)isR[c]=1;
     for(const L of RIV){const c=L.cells;for(let k=0;k+1<c.length;k++){link(c[k],c[k+1]);link(c[k+1],c[k])}
       for(const e of [c[0],c[c.length-1]])n8(e,j=>{if(isR[j]){link(e,j);link(j,e)}})}
@@ -409,17 +466,17 @@ function genWorld(o){
     // (default since run 81) a river's mouth is found mainly through rivers at least as large as itself: each step into a smaller river costs more. The
     // upper Niger rises beside the Senegal's headwaters, and through that small river its source end looked nearer the sea than
     // Timbuktu, so it ran backwards into the Senegal (and its middle course and inland delta went dry)
-    const cRk=new Uint8Array(N).fill(99);for(const L of RIV)for(const c of L.cells)if(L.rank<cRk[c])cRk[c]=L.rank;
+    const cRk=new Uint8Array(NC).fill(99);for(const L of RIV)for(const c of L.cells)if(L.rank<cRk[c])cRk[c]=L.rank;
     // two courses that touch at their upper ends (each end over 100 m above its course's other end) meet across a watershed,
     // not at a confluence: such a link costs as much as 60 steps (the Logone's source beside the Sanaga's)
-    const hiE=new Uint8Array(N);for(const L of RIV){const a=L.cells[0],z=L.cells[L.cells.length-1];if(elev[a]>elev[z]+100)hiE[a]=1;else if(elev[z]>elev[a]+100)hiE[z]=1}
+    const hiE=new Uint8Array(NC);for(const L of RIV){const a=L.cells[0],z=L.cells[L.cells.length-1];if(elev[a]>elev[z]+100)hiE[a]=1;else if(elev[z]>elev[a]+100)hiE[z]=1}
     const cost=(i,j)=>(hiE[i]&&hiE[j]?60:0);
-    const dij=(rk,sinks)=>{const d=new Float32Array(N).fill(-1),hk2=[],hv2=[];
+    const dij=(rk,sinks)=>{const d=new Float32Array(NC).fill(-1),hk2=[],hv2=[];
       const push=(c,k)=>{let n=hk2.length;hk2.push(k);hv2.push(c);while(n>0){const p=(n-1)>>1;if(hk2[p]<=hk2[n])break;[hk2[p],hk2[n]]=[hk2[n],hk2[p]];[hv2[p],hv2[n]]=[hv2[n],hv2[p]];n=p}};
       const pop=()=>{const tc=hv2[0],tk=hk2[0],lk=hk2.pop(),lv=hv2.pop();if(hk2.length){hk2[0]=lk;hv2[0]=lv;let n=0;for(;;){const l=2*n+1,rr=l+1;let m=n;if(l<hk2.length&&hk2[l]<hk2[m])m=l;if(rr<hk2.length&&hk2[rr]<hk2[m])m=rr;if(m===n)break;[hk2[m],hk2[n]]=[hk2[n],hk2[m]];[hv2[m],hv2[n]]=[hv2[n],hv2[m]];n=m}}return[tc,tk]};
       for(const L of RIV)for(const c of L.cells){let wt=!landNow[c];n8(c,j=>{if(!landNow[j])wt=true});if(wt)push(c,1+5*Math.max(0,cRk[c]-rk))}
       for(const c of sinks)push(c,1+5*Math.max(0,cRk[c]-rk));
-      const done=new Uint8Array(N);while(hv2.length){const [c,k]=pop();if(done[c])continue;done[c]=1;d[c]=k;for(const j of adj.get(c)||[])if(!done[j])push(j,k+1+5*Math.max(0,cRk[j]-rk)+cost(c,j))}
+      const done=new Uint8Array(NC);while(hv2.length){const [c,k]=pop();if(done[c])continue;done[c]=1;d[c]=k;for(const j of adj.get(c)||[])if(!done[j])push(j,k+1+5*Math.max(0,cRk[j]-rk)+cost(c,j))}
       return d};
     // a course whose end lies deep in a dry closed hollow, touching only courses that lie wholly in the hollow too, ends there (the
     // Chari in Lake Chad, the Amu Darya in the Aral). A wet hollow in the averaged heights is a gorge too narrow to see (the Congo's
@@ -428,76 +485,42 @@ function genWorld(o){
     const sinkC=[];RIV.forEach((L,k)=>{for(const c of [L.cells[0],L.cells[L.cells.length-1]]){if(!land[c]||fillD[c]<=20||Pr[c]>=700)continue;let out=false;n8(c,j=>{if(!isR[j])return;for(const q of inChains.get(j)||[])if(q!==k&&!allIn(q))out=true});if(!out)sinkC.push([c,L.rank])}});
     const rdR=new Map();const rdFor=rk=>{if(rdR.has(rk))return rdR.get(rk);const d=dij(rk,sinkC.map(([c])=>c));rdR.set(rk,d);return d};
     const dir=RIV.map(L=>{const D=rdFor(L.rank);let a=D[L.cells[0]],z=D[L.cells[L.cells.length-1]];if(a<0&&z<0){a=rd[L.cells[0]];z=rd[L.cells[L.cells.length-1]]}return a<0&&z<0?0:a<0?1:z<0?-1:a<z?-1:a>z?1:0});
+    // the mapped courses as oriented here, source to mouth (the province world lays its 25 km rivers from them)
+    w.rivCh=RIV.map((L,k)=>{let c=L.cells.filter(i=>land[i]);if(c.length>=2&&(dir[k]===-1||(!dir[k]&&elev[c[0]]<elev[c[c.length-1]])))c=c.slice().reverse();return{rank:L.rank,cells:c}});
     for(let k=0;k<RIV.length;k++){const L=RIV[k];let c=L.cells.filter(i=>land[i]);if(c.length<2)continue;if(dir[k]===-1||(!dir[k]&&elev[c[0]]<elev[c[c.length-1]]))c=c.slice().reverse();
       for(let j=0;j<c.length-1;j++)if(!set[c[j]]&&c[j]!==c[j+1]){down[c[j]]=c[j+1];set[c[j]]=1}}
-    const st=new Uint8Array(N);
+    const st=new Uint8Array(NC);
     for(const i0 of landList){if(st[i0])continue;const path=[];let i=i0;
       while(i>=0&&land[i]&&!st[i]){st[i]=1;path.push(i);i=down[i]}
       if(i>=0&&land[i]&&st[i]===1){let j=i;do{const nx=down[j];if(set[j]){down[j]=fd[j];set[j]=0}j=nx}while(j!==i&&j>=0)}
       for(const q of path)st[q]=2}
     // order provinces by distance from the river mouth so water is passed downstream in turn
-    const dep=new Int32Array(N).fill(-1);const dOf=i0=>{const path=[];let i=i0;while(i>=0&&land[i]&&dep[i]<0&&path.length<N){path.push(i);i=down[i]}
+    const dep=new Int32Array(NC).fill(-1);const dOf=i0=>{const path=[];let i=i0;while(i>=0&&land[i]&&dep[i]<0&&path.length<NC){path.push(i);i=down[i]}
       let d=i>=0&&land[i]&&dep[i]>=0?dep[i]:-1;for(let k=path.length-1;k>=0;k--)dep[path[k]]=++d;return dep[i0]};
     for(const i of landList)dOf(i);order.length=0;for(const i of Array.from(landList).sort((a,b)=>dep[a]-dep[b]))order.push(i)}
-  const acc=new Float32Array(N);
+  const acc=new Float32Array(NC);
   for(const i of landList)acc[i]=Math.max(0,Pr[i]-200)*area[i]*1e-4*(T[i]<-9?0.2:1);
   for(let k=order.length-1;k>=0;k--){const i=order[k],d=down[i];if(d>=0&&land[d])acc[d]+=acc[i]}
   // real courses gather water into fewer, larger channels than the old routing; the threshold keeps the share of provinces
   // with a sizeable river about where the model was calibrated
-  const rv=new Float32Array(N),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
+  const rv=new Float32Array(NC),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   w.down=down;w.acc=acc;w.rv=rv;w.order=Int32Array.from(order);
   // water switch: for each province in a hollow, the province beyond its rim that its water reaches first along the drainage
   // (pour); the water pass holds a lake there when inflow beats evaporation
-  {const pour=new Int32Array(N).fill(-1),inH=i=>fillD[i]>1&&!(w.rvReal&&w.rvReal[i]);
+  {const pour=new Int32Array(NC).fill(-1),inH=i=>fillD[i]>1&&!(w.rvReal&&w.rvReal[i]);
     for(const i of landList){if(!inH(i))continue;let j=down[i],k=0;while(j>=0&&land[j]&&inH(j)&&k<400){j=down[j];k++}pour[i]=j>=0&&land[j]?j:-1}
     w.fillD=fillD;w.pour=pour}
-  {const rr=new Float32Array(N);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);w.rainRisk=rr}
   // floodplain: the share of a province's fine-grid land lying within 30 m of its lowest ground. A river farms only its floodplain:
   // the Nile in Upper Egypt waters a strip a few miles wide (about a quarter of the province), the Delta and Sumer all of it.
   // rvF = river size × floodplain share is what flood farming, silt and irrigation use; rv stays for boats, fish and maps
-  {const ffp=new Float32Array(N),rvF=new Float32Array(N),sl0=o.earth?SEA_LOW:0;for(const i of landList){const cx=i%W,cy=(i/W)|0;let mn=1e9,n=0,k=0;
+  {const ffp=new Float32Array(NC),sl0=o.earth?SEA_LOW:0;for(const i of landList){const cx=i%W,cy=(i/W)|0;let mn=1e9,n=0,k=0;
     for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const v=eHi[(cy*SC+dy)*HW+cx*SC+dx];if(v>sl0&&v<mn)mn=v}
     for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const v=eHi[(cy*SC+dy)*HW+cx*SC+dx];if(v<=sl0)continue;n++;if(v<=mn+30)k++}
     // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
     // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
-    ffp[i]=n?k/n:1;rvF[i]=rv[i]*ffp[i]*clamp((T[i]-amp[i]/2+8)/8,0.3,1)}w.ffp=ffp;w.rvF=rvF}
-  for(const i of landList)w.rainRisk[i]*=1-Math.min(1,2*w.rvF[i]);
-  // suitability
-  const sF=new Float32Array(N),sH=new Float32Array(N),nomad=new Uint8Array(N),biome=new Uint8Array(N);
-  for(const i of landList){
-    const t=T[i],p=Pr[i],tw=t+amp[i]/2;biome[i]=biomeOf(t,p);
-    if(t<-9)continue;
-    const half=amp[i]/2,gs=half<0.5?(t>6?12:0):(t-half>=6?12:t+half<=6?0:12*Math.acos(clamp((6-t)/half,-1,1))/Math.PI);
-    w.gs=w.gs||new Float32Array(N);w.gs[i]=gs;
-    const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
-    // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
-    const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
-    const irr=w.rvF[i]*clamp((tw-14)/6,0,1);
-    const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
-    w.leach=w.leach||new Float32Array(N);w.leach[i]=leach;
-    w.trop=w.trop||new Float32Array(N);w.trop[i]=elev[i]<1200?clamp((t-21)/3,0,1)*clamp((p-900)/600,0,1):0;
-    sF[i]=Math.max(tS*pS,tS*irr*0.95)*(1-0.65*rough[i])*(elev[i]>3500?0.3:1)*(1-0.7*leach);
-    sH[i]=clamp((tw-4)/10,0,1)*clamp((27-t)/7,0,1)*clamp((p-120)/180,0,1)*clamp((1100-p)/500,0.15,1)*(1-0.4*rough[i]);
-    nomad[i]=(sH[i]>0.45&&sF[i]<0.3)?1:0;
-  }
-  Object.assign(w,{sF,sH,nomad,biome});
-  // travel cost (units of a half flat cell), tsetse belt, orbital monsoon zone
-  const tcost=new Uint8Array(N),tsetse=new Uint8Array(N),monZone=new Float32Array(N),desert=new Uint8Array(N);
-  for(const i of landList){const b=biome[i],t=T[i],p=Pr[i],la=lat[i]*180/Math.PI;
-    let c=2;if(b===7){c=8;desert[i]=1}else if(b===9)c=6;else if(b===1||b===2)c=6;else if(b===3)c=3;
-    // travel cost from broken ground, not from height: 'rough' also counts altitude above 1200 m, which made the flat altiplano
-    // and the Basin of Mexico costlier to cross than the Alps. Only very high country (thin air, no crops) keeps a height penalty
-    {const alt=Math.max(0,elev[i]-1200)/3000,rel=Math.max(0,rough[i]-Math.min(1,alt))+Math.max(0,elev[i]-3800)/1500;c+=Math.round(Math.min(1,rel)*8)}
-    if(rv[i]>0.3)c=Math.max(1,c>>1);tcost[i]=Math.min(20,c);
-    tsetse[i]=(t>22&&p>900&&Math.abs(la)<14)?1:0;
-    if(p<520)monZone[i]=clamp((33-Math.abs(la))/8,0,1)*clamp((Math.abs(la)-9)/5,0,1)*(la>0?1:0.45)*clamp((520-p)/250,0,1)}
-  Object.assign(w,{tcost,tsetse,monZone,desert});
-  // weather interpolation
-  const wi=new Int32Array(N*4),wf=new Float32Array(N*2);
-  for(let i=0;i<N;i++){const cx=i%W,cy=(i/W)|0,gx=(cx+0.5)/W*AGW-0.5,gy=clamp((cy+0.5)/H*AGH-0.5,0,AGH-1.001);
-    const x0=Math.floor(gx),y0=Math.floor(gy),xa=(x0+AGW)%AGW,xb=(x0+1)%AGW,y1=Math.min(y0+1,AGH-1);
-    wi[i*4]=y0*AGW+xa;wi[i*4+1]=y0*AGW+xb;wi[i*4+2]=y1*AGW+xa;wi[i*4+3]=y1*AGW+xb;wf[i*2]=gx-x0;wf[i*2+1]=gy-y0}
-  w.wi=wi;w.wf=wf;
+    ffp[i]=n?k/n:1}w.ffp=ffp}
+  deriveLand(w);
+  weatherWeights(w);
   seaLanes(w);
   if(w.isEarth){
     // target regions are drawn on today's coasts, where the measurements are taken
@@ -514,9 +537,9 @@ function genWorld(o){
     w.medCells=Int32Array.from(med);w.chinaCells=Int32Array.from(china);
     // the last ice sheets, as radial retreats from their final domes (simplified from Dyke 2004 for North America and
     // Hughes et al. 2016 for Scandinavia): year each province comes out from under the ice
-    w.iceY=new Float32Array(N).fill(-1e9);
+    w.iceY=new Float32Array(NC).fill(-1e9);
     const ICE=[[59,-80,-6500,5500,16],[56,-127,-10000,2000,8],[64,17,-8000,4000,8]];
-    for(let i=0;i<N;i++){if(!land[i])continue;for(const [la0,lo0,y0,span,R] of ICE){const p0=la0*Math.PI/180,l0=lo0*Math.PI/180;
+    for(let i=0;i<NC;i++){if(!land[i])continue;for(const [la0,lo0,y0,span,R] of ICE){const p0=la0*Math.PI/180,l0=lo0*Math.PI/180;
       const d=Math.acos(clamp(Math.sin(lat[i])*Math.sin(p0)+Math.cos(lat[i])*Math.cos(p0)*(cosLon[i]*Math.cos(l0)+sinLon[i]*Math.sin(l0)),-1,1))*180/Math.PI;
       if(d<=R*1.15)w.iceY[i]=Math.max(w.iceY[i],y0-span*d/R)}}
   }
