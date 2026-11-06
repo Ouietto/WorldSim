@@ -1,7 +1,6 @@
 {"seeds": "1-64", "end": 1500, "per": 4, "ref": "", "baseEnv": "",
  "variants": [
   {"name": "base", "env": ""},
-  {"name": "rivers", "env": "SW=rivers"},
-  {"name": "water", "env": "SW=rivers,water"}
+  {"name": "prov", "env": "WORLD=prov"}
  ],
- "note": "Run 81: first states now counted from lasting statehood (15 of 20 decades); Mesopotamia's first city-states on the southern plain; Egypt on the lower Nile to the Fourth Cataract (first lasting kingdoms; one state holding two thirds of its people). rivers: the upper Niger reaches Timbuktu, the Chari ends in the Chad basin. water: rivers follow the rain of their time, lakes in hollows where inflow and evaporation balance, the Sahara dries north-east first, people leave drying land along its water."}
+ "note": "Run 82: the province world (about 30,900 provinces drawn from the 25 km land, equal people each, rivers between them, river size from half the grid's threshold) against the 100 km grid, both on the ported model (neighbour lists; the grid world gives the same histories as before). No recalibration yet."}
