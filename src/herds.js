@@ -111,7 +111,7 @@ function herdPass(){
   for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=w.wild[sp],Pg=s.domP[sp];
     const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own
-    for(const i of L){const wv=wild[i];if(wv<0.2||d[i]>0.05||s.pop[i]<500)continue;let near=false;ring(i,6,j=>{if(d[j]>0.05)near=true});if(near){Pg[i]=0;continue}
+    for(const i of L){const wv=wild[i];if(wv<0.2||d[i]>0.05||pEq(i)<500)continue;let near=false;ring(i,6,j=>{if(d[j]>0.05)near=true});if(near){Pg[i]=0;continue}
       const keepers=sp===4?Math.max(s.herd[i],0.6*s.farm[i]):sp===3?Math.max(s.herd[i],0.5):s.herd[i];if(keepers<0.4)continue;
       Pg[i]+=rate*wv*keepers*(0.5+r());if(Pg[i]>=1){Pg[i]=0;domesticate(sp,i)}}
     for(const i of L){let v=d[i];if(v<=0)continue;const c=capFor(sp,i);
@@ -271,7 +271,7 @@ function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,y=s.ye
   for(let k=0;k<BEASTS.length;k++){const b=BEASTS[k],d=s.bst[k],Pg=s.bP[k],wild=w.bwild[k];
     // taming is a chance event: the more people of the right kind live beside the wild animal, the likelier it is each decade
     if(b.k!=='dog'&&!(s.bFirst[k]&&s.bTold[k]>=3)){let sum=0;const cand=[];
-      for(const i of L){if(!wild[i]||d[i]>0.05||s.pop[i]<300)continue;
+      for(const i of L){if(!wild[i]||d[i]>0.05||pEq(i)<300)continue;
         const st=s.pol[i]?s.pols[s.pol[i]]:null,sed=s.sed?s.sed[i]:0;
         const ctx=b.path==='commensal'?(s.farm[i]>0.5?1:0):b.path==='prey'?Math.max(0.8*s.herd[i],0.2*sed):
           b.path==='directed'?(s.herd[i]>0.4?s.herd[i]*(0.5+0.5*Math.min(1,s.horse[i]+s.camel[i]+s.bst[BI.donkey][i]+(s.domL?s.domL[i]:0))):0):

@@ -300,7 +300,10 @@ function provinceWorld(w,pid,o){o=o||{};
     // of crossing that many times over the 100 km (hopK = 100 km / distance), and a flow between neighbours grows with the shared
     // border and falls with the distance twice over (once for the gradient, once for the steps): nbE = border/distance^2, both in
     // 100 km. A 100 km square of the grid gives 1 for both
-    u.hopK=Float32Array.from(D,d=>clamp(1/d,0.2,6));u.nbE=Float32Array.from(D,(d,q)=>clamp(u.nbW[q]/(d*d),0,6))}
+    u.hopK=Float32Array.from(D,d=>clamp(1/d,0.2,6));
+    // people per unit stand for how crowded a 100 km neighbourhood is in many places (contact, connection, who can innovate): a
+    // province counts its people as if spread over a 100 km cell at its latitude (szF = that cell's area over the province's)
+    u.szF=Float32Array.from(area,(a,v)=>v<np&&a>0?(40075/W)*(20004/H)*Math.cos(lat[v])/a:1);u.nbE=Float32Array.from(D,(d,q)=>clamp(u.nbW[q]/(d*d),0,6))}
   // home cell: the 100 km cell holding each unit's middle; hbS/hbA list the units at home in each cell (searches within a
   // radius go through these)
   {const hx=new Int16Array(n),hy=new Int16Array(n),cnt=new Int32Array(NC+1);

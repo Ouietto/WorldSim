@@ -332,6 +332,10 @@ function useWorld(w){WD=w;N=w.n;let m=4;for(let i=0;i<w.n;i++)m=Math.max(m,w.nbS
 // a chance per year of spreading to a neighbour, set for steps of 100 km, across edge e (provinces: as many 100 km steps' worth
 // as the distance holds; the grid: unchanged)
 function hopP(p,e){const k=WD.hopK;return k?1-Math.pow(1-Math.min(p,0.999),k[e]):p}
+// the same for a spread that picks one neighbour at random each year: on provinces it picks among more, shorter borders
+function hopR(p,i,e){const w=WD,k=w.hopK;return k?1-Math.pow(1-Math.min(p,0.999),k[e]*(w.nbS[i+1]-w.nbS[i])/4):p}
+// a unit's people as a 100 km cell's worth (provinces: as if spread over a 100 km cell at their latitude; the grid: as they are)
+function pEq(i){const z=WD.szF;return z?S.pop[i]*z[i]:S.pop[i]}
 // the unit at a place given in 100 km cells (x wraps; -1 beyond the top or bottom of the map): on provinces, the one holding the
 // cell's middle
 function uAt(x,y){if(y<0||y>=H)return -1;x=((x%W)+W)%W;const w=WD;return w&&w.uid?w.uid[(y*SC+(SC>>1))*HW+x*SC+(SC>>1)]:y*W+x}

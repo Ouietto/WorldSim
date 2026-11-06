@@ -277,7 +277,7 @@ function climateStep(){
     let u=r(),K=EPOCH_KINDS[0];for(const k of EPOCH_KINDS){if(u<k.w){K=k;break}u-=k.w}
     const amp=K.amp[0]+r()*(K.amp[1]-K.amp[0]),dur=Math.round(K.dur[0]+r()*(K.dur[1]-K.dur[0]));
     const e={k:K.k,start:y,end:y+dur,amp,cell:-1,where:''};
-    if(K.k==='dry'){const L=WD.landIdx;let c=-1;const rad=10+r()*12;for(let t=0;t<200;t++){const i=L[(r()*L.length)|0];if(c<0&&s.pop[i]>1000&&WD.T[i]>5)c=i}
+    if(K.k==='dry'){const L=WD.landIdx;let c=-1;const rad=10+r()*12;for(let t=0;t<200;t++){const i=L[(r()*L.length)|0];if(c<0&&pEq(i)>1000&&WD.T[i]>5)c=i}
       if(c<0)return;e.cell=c;e.cx=WD.cxA[c];e.cy=WD.cyA[c];e.rad=rad;e.where=regionName(c);
       chron('nature',`${K.start} ${e.where}; it will last for generations.`,c)}
     else chron('nature',K.start,-1);
@@ -644,7 +644,7 @@ function firstTech(k,cell,o){
   if(verb){chron('ideas',`Scholars and craftsmen of ${where} ${verb}${t.synth?', a path our own history never took':''}.`,cell,refs);if(k>=8)spot(`${t.n} first appears in ${where}`,cell,refs)}
 }
 function techStep(a0,b0){if(a0==null){a0=0;b0=1}
-  const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nbE=w.nbE||null,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
+  const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nbE=w.nbE||null,szF=w.szF||null,w_land=w.land,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
   const suit=[w.sF,w.sH,rvAg(),null,w.sH];
   // drums carry where forest and hills hide fires and slow runners; beacons need hills in sight of each other
   if(!w.drumSuit){w.drumSuit=new Float32Array(N);w.beaconSuit=new Float32Array(N);for(const i of L){w.drumSuit[i]=clamp(Math.max(w.forest0[i],1.5*w.rough[i]),0,1);w.beaconSuit[i]=clamp(2*w.rough[i]+0.2,0,1)}}
@@ -654,14 +654,16 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
   for(let kk=Math.floor(a0*L.length),ke=Math.floor(b0*L.length);kk<ke;kk++){
     const i=L[kk];if(s_pop[i]<1)continue;const ei=s_eth[i];
     let conn=s_pop[i];const pi=s_pol[i],po=pi?pols[pi]:null;
-    for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0)conn+=s_pop[j]}
+    // (on provinces: the people of the province and its neighbours as if spread over five 100 km cells)
+    if(szF){let a=w_area[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]){conn+=s_pop[j];a+=w_area[j]}}conn*=5*w_area[i]*szF[i]/a}
+    else for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0)conn+=s_pop[j]}
     const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
     // narrow straits were crossed in skin boats and dugouts long before seafaring (Crete by 7000 BCE, Britain by 4000 BCE)
     const ls0=w_ls[i],ls1=s_sail[i]>0.3?w_ls[i+1]:ls0,lsE=w_ls[i+1];
     const dark=po?po.cult<0.1:true;
     // peopled neighbours and how closely each is in touch (east-west neighbours on the grid count fully, north-south ones by the
     // width of the shared side; provinces by the length of the shared border)
-    const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+Math.sqrt(s_pop[i]*s_pop[j])/6000+s_car[i]+s_car[j])*pg;
+    const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+(szF?Math.sqrt(s_pop[i]*szF[i]*s_pop[j]*szF[j]):Math.sqrt(s_pop[i]*s_pop[j]))/6000+s_car[i]+s_car[j])*pg;
     let nn=0;for(let e=w_nbS[i];e<w_nbS[i+1];e++){const j=w_nbA[e];if(j>=0&&pop[j]>=1){NJ_[nn]=j;NC_[nn]=w_nbE?Math.min(1,cti(j))*w_nbE[e]:cti(j)*w_nbW[e];nn++}}
     const lowC=conn<3000,noFarm=s_farm[i]<0.3&&s_herd[i]<0.3;
     // carriers: an institution is taken up by the people who need it, scribes by a court with cities to run, accounts by
@@ -705,12 +707,12 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
     if(!s_firstTech[2]||s_irrig[i]<0.5){if(s_farm[i]>0.8&&w.rvF[i]>0.15&&w_Pr[i]<1000&&s_pop[i]/w_area[i]>4*clamp(w_Pr[i]/600,0.2,1)&&r()<0.0008*P.invent){seedTech(s.irrig,i,1,1);firstTech(2,i,po)}}
     const ri=s_rel[i];
     if(ri>=0){const R=rels[ri];
-      let j=rndNb(i,r());
-      if(ls1>ls0&&r()<0.2)j=w_lt[ls0+((r()*(ls1-ls0))|0)];
+      let j=-1,ej=-1;{const x=r(),a=w_nbS[i],n=w_nbS[i+1]-a;if(n>0){ej=a+((x*n)|0);j=w_nbA[ej]}}
+      if(ls1>ls0&&r()<0.2){j=w_lt[ls0+((r()*(ls1-ls0))|0)];ej=-1}
       if(j>=0&&s_pop[j]>=1&&s_rel[j]!==ri&&!(R.kind==='ethnic'&&s_eth[j]>=0&&s_eths[s_eth[j]].fam!==R.fam)){
         const qj=s_pol[j],sr=qj?pols[qj].rel:-1;
-        let p=0.09*R.miss*P.faith*Math.min(1,0.15+Math.sqrt(s_pop[i]*s_pop[j])/15000+2*s_car[j])*(pi&&qj===pi?1.5:1)*(sr===ri?4:sr>=0?0.25:1)*(s_rel[j]<0?1.3:0.6)*(1+0.5*s_paper[i])*(0.7+0.6*R.cent);
-        if(r()<p)s_rel[j]=ri;
+        let p=0.09*R.miss*P.faith*Math.min(1,0.15+(szF?Math.sqrt(s_pop[i]*szF[i]*s_pop[j]*szF[j]):Math.sqrt(s_pop[i]*s_pop[j]))/15000+2*s_car[j])*(pi&&qj===pi?1.5:1)*(sr===ri?4:sr>=0?0.25:1)*(s_rel[j]<0?1.3:0.6)*(1+0.5*s_paper[i])*(0.7+0.6*R.cent);
+        if(r()<(szF&&ej>=0?hopR(p,i,ej):p))s_rel[j]=ri;
       }}
   }
 }
@@ -734,7 +736,7 @@ function hearthCheck(){
           else if(h.kind==='horse')ok=w.sH[i]>0.45&&w.sF[i]<0.35&&s.herd[i]>0.2;
           else if(h.kind==='camel')ok=s.herd[i]>0.3&&(w.desert[i]||w.Pr[i]<350);
           else if(h.kind==='ard')ok=s.farm[i]>0.8&&s.herd[i]>0.5&&!w.tsetse[i]&&w.Pr[i]<900;
-          else ok=w.coast[i]&&s.pop[i]>200;
+          else ok=w.coast[i]&&pEq(i)>200;
           if(ok&&s.pop[i]>bp){bp=s.pop[i];best=i}}
         if(best<0){h.year=y+25;continue}c=best}
       if(s.eth[c]<0){h.year=y+20;continue}
@@ -1277,7 +1279,7 @@ function migStep(M){
     }else{M.pop*=0.8;M.fails++;const a=(r()<0.5?1:-1)*(0.8+r()*0.9),ca=Math.cos(a),sa=Math.sin(a),nx=M.dx*ca-M.dy*sa,ny=M.dx*sa+M.dy*ca;M.dx=nx;M.dy=ny;
       if(M.fails>5)settle(M,M.path[Math.max(0,M.path.length-2)],null)}
   }else{
-    if(s.pop[j]>1000&&s.eth[j]>=0&&s.eth[j]!==M.eth){displace(j,0.15,0);const pr=s.press.get(s.eth[j]);if(pr)pr.mig=M.id}
+    if(pEq(j)>1000&&s.eth[j]>=0&&s.eth[j]!==M.eth){displace(j,0.15,0);const pr=s.press.get(s.eth[j]);if(pr)pr.mig=M.id}
     const room=s.K[j]-s.pop[j];
     if(M.steps>2&&room>0&&M.pop>40000&&r()<0.09)dropPocket(M,j,0.04+0.04*r());
     if((room>M.pop*0.15&&M.steps>4&&r()<0.25)||M.steps>M.max)settle(M,j,null);
@@ -1350,11 +1352,11 @@ function culture(o){
 function politics(){for(const _ of politicsG());}
 function* politicsG(){
   if(!S.recK)recPass();
-  const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
+  const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop,szF=w.szF||null;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
   const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),CO=cohArr();
-  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
+  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.cA=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
-    o.pop+=pp;o.K+=s_K[i];o.cells++;o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.K+=s_K[i];o.cells++;if(szF)o.cA+=1/szF[i];o.sS+=s_s[i];const di=dd(i);o.dS+=di;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i];o.ig+=s_integ[i];const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN++;if(w_heavy[i]>0.4)o.hvN++;if(isWaste(i,o.kind==="horde"))o.wasteN++;if(s_car[i]>0.3){const tl=1500*s_car[i];o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom++;if(w_coast[i])o.coastN++;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN++;if(s_fort[i]>0.5)o.fortN++;
     o.cx+=w_cosLon[i];o.cy+=w_sinLon[i];o.yy+=w_cyA[i];if(pp>o.mp){o.mp=pp;o.mc=i}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]>200)o.front.push(i);
@@ -1384,6 +1386,9 @@ function* politicsG(){
     if(o.cells>o.maxCells){o.maxCells=o.cells;o.peak=o.full}
     if(o.pop>o.maxPop)o.maxPop=o.pop;
     o.lx=Math.atan2(o.cy,o.cx);o.ly=o.yy/o.cells;
+    // on provinces a state's size counts in 100 km cells of land, as on the grid (thresholds, tiers, reach); nU is how many
+    // provinces it holds
+    o.nU=o.cells;if(szF){o.cells=Math.max(1,o.cA);if(o.wasteN)o.wasteN*=o.cA/o.nU}
     const c=o.capital;
     o.spc=clamp(0.9*Math.log10(Math.max(o.pop,1e3))-2.7+0.6*Math.log10(o.cells+1)+(o.tier==='Empire'||o.tier==='Khaganate'?1.6:o.tier==='Kingdom'||o.tier==='Khanate'?0.8:0)+s_recK[c]+0.8*s_law[c]+0.6*s_coin[c]+0.5*s_paper[c]+0.5*s_roads[c],0,10);
   }
@@ -1456,8 +1461,8 @@ function* politicsG(){
     if(!o.fK&&o.cells>=40){o.fK=1;
       const f=figFor(o,o.founderR,'founder');if(!f.deeds.some(d=>d[1].startsWith('Founded')))deed(f,`Founded the ${o.base} state`,[R_(o)]);
       chron('rise',`The ${o.full} rises under ${rulerName(o)}.`,c,[R_(o)])}
-    if(!o.fE&&o.cells>=100){o.fE=1;const f=figFor(o,Rn,'ruler');deed(f,`Ruled the ${o.full} at ${o.cells} provinces`,[R_(o)]);
-      chron('rise',`The ${o.base} realm grows to ${o.cells} provinces under ${rulerName(o)}.`,c,[R_(o),RF(f)]);spot(`The ${o.full} reaches ${o.cells} provinces`,c,[R_(o)])}
+    if(!o.fE&&o.cells>=100){o.fE=1;const f=figFor(o,Rn,'ruler');deed(f,`Ruled the ${o.full} at ${o.nU??o.cells} provinces`,[R_(o)]);
+      chron('rise',`The ${o.base} realm grows to ${o.nU??o.cells} provinces under ${rulerName(o)}.`,c,[R_(o),RF(f)]);spot(`The ${o.full} reaches ${o.cells} provinces`,c,[R_(o)])}
     // invention, tied to cultural vigour
     // a league of cities shares one pool of skills and ideas
     const lgI=o.league!=null&&s.leagues&&s_leagues[o.league]&&!s_leagues[o.league].end?s_leagues[o.league]:null,oP=lgI?Math.max(o.pop,lgI.pop||0):o.pop,oC=lgI?Math.max(o.cells,lgI.cells||0):o.cells;
@@ -1800,7 +1805,7 @@ function statecraft(o,c,y){
     o.p10=o.pop;o.plagueD=0}
   // position in need/energy space, for invention
   const need=clamp((o.press-0.8)*2+(atWar?0.3:0)+0.5*Math.max(0,o.burden-0.8)-0.3*Math.max(0,1-o.press),-1,1);
-  const energy=clamp(-0.8+0.6*s.ard[c]+0.5*s.iron[c]+0.4*s.horse[c]+0.3*(o.coastN/Math.max(1,o.cells))+0.4*WD.rv[c]+0.3*s.camel[c]+0.3*s.wheel[c],-1,1);
+  const energy=clamp(-0.8+0.6*s.ard[c]+0.5*s.iron[c]+0.4*s.horse[c]+0.3*(o.coastN/Math.max(1,o.nU??o.cells))+0.4*WD.rv[c]+0.3*s.camel[c]+0.3*s.wheel[c],-1,1);
   o.fac=[need,energy];
 }
 function localPop(i){const w=WD,s=S;let t=s.pop[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0)t+=s.pop[j]}return t*1.8}
@@ -1829,7 +1834,7 @@ function poolPass(){
   const s=S,w=WD,L=w.landIdx,dp=s.dp,tmp=s.bfsPar;const s_car=s.car,s_city=s.city,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_herd=s.herd,s_pop=s.pop,s_rp=s.rp,s_sail=s.sail,w_area=w.area,w_coast=w.coast,w_land=w.land,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sH=w.sH;
   for(const i of L){if(s_pop[i]<1){dp[i]*=0.98;continue}
     const dens=s_pop[i]/w_area[i],tgt=Math.min(1,0.22*Math.log10(1+dens)+0.3*s_herd[i]*s_farm[i]+(s_city[i]>=0?0.2:0));
-    let m=dp[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||s_pop[j]<1)continue;const c=Math.min(1,Math.sqrt(s_pop[i]*s_pop[j])/20000+s_car[i]);m=Math.max(m,dp[j]*(w.hopK?Math.pow(0.9+0.08*c,w.nbD[d]):0.9+0.08*c))}
+    let m=dp[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||s_pop[j]<1)continue;const c=Math.min(1,(w.szF?Math.sqrt(s_pop[i]*w.szF[i]*s_pop[j]*w.szF[j]):Math.sqrt(s_pop[i]*s_pop[j]))/20000+s_car[i]);m=Math.max(m,dp[j]*(w.hopK?Math.pow(0.9+0.08*c,w.nbD[d]):0.9+0.08*c))}
     if(w_coast[i]&&s_sail[i]>0.5)for(let q=w_ls[i];q<w_ls[i+1];q++){const j=w_lt[q];if(s_pop[j]>=1)m=Math.max(m,dp[j]*0.92)}
     tmp[i]=Math.round(1000*(dp[i]+0.06*(Math.max(tgt,m)-dp[i])))}
   for(const i of L)dp[i]=tmp[i]/1000;

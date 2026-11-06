@@ -104,7 +104,7 @@ function techLevels(c){
 // a state's situation pulls some rows forward
 function techLean(o,aff){
   const s=S,need=o.fac?o.fac[0]:0,energy=o.fac?o.fac[1]:0,c=o.capital;
-  return[0.6+0.6*Math.max(0,need),0.6+0.4*Math.min(1,o.cells/100)+0.3*(o.coastN||0)/Math.max(1,o.cells),0.6+0.5*Math.min(1,o.cells/80),
+  return[0.6+0.6*Math.max(0,need),0.6+0.4*Math.min(1,o.cells/100)+0.3*(o.coastN||0)/Math.max(1,o.nU??o.cells),0.6+0.5*Math.min(1,o.cells/80),
     0.5+0.6*Math.max(0,energy)+0.4*Math.max(0,-need),0.7+0.3*aff[3],0.6+0.8*Math.min(1,s.dp[c]||0),
     0.5+0.8*Math.min(1,o.enemies.size/2),0.5+0.6*clamp(o.burden||0,0,1.5)];
 }

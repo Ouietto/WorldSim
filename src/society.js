@@ -82,7 +82,7 @@ function colonizePass(){
     for(let t=0;t<60;t++){const j=CI[(r()*CI.length)|0];if(s.pol[j]||!w.land[j]||w.desert[j])continue;
       let dx=Math.abs(w.cxA[j]-cx);dx=Math.min(dx,W-dx);const d=Math.hypot(dx,w.cyA[j]-cy);if(d<4||d>reach)continue;
       const dT=Math.abs(w.T[j]-w.T[c]);if(dT>6||s.K[j]<3000)continue;
-      const sc=(s.K[j]-s.pop[j])/(1+dT)*(1-0.5*d/reach)*(s.eth[j]<0||s.pop[j]<500?1.5:1);if(sc>bs){bs=sc;best=j}}
+      const sc=(s.K[j]-s.pop[j])/(1+dT)*(1-0.5*d/reach)*(s.eth[j]<0||pEq(j)<500?1.5:1);if(sc>bs){bs=sc;best=j}}
     if(best<0)continue;
     const j=best,n=Math.min(0.03*o.pop,s.K[j]*0.5,40000);if(n<3000)continue;
     s.pop[c]=Math.max(1,s.pop[c]-n*0.6);
