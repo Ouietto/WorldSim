@@ -25,15 +25,15 @@ function fineRivers(w){
   // the coarse courses. The 100 km drainage keeps some 100 loops where mapped courses cross and its fallback routing (a flood
   // over the burned-in rivers, which can enter a river system from a neighbouring one) ran back upstream: the Shatt al-Arab, the
   // Ordos loop of the Yellow River, the lower Amazon. Here the mapped courses are laid again: largest first, a course that passes
-  // a cell twice (a meander within 100 km) leaving it where it last does; a course's end runs into a larger touching course, or the
-  // sea beside it, or else the way water leaves by the ground alone (the true heights from the sea of the low stand: with the Gulf
+  // a cell twice (a meander within 100 km) leaving it where it last does; a course's end runs into a touching course that reaches
+  // the sea (the largest), or the sea beside it, or ends in a dry closed hollow, or else takes the way water leaves by the ground alone (the true heights from the sea of the low stand: with the Gulf
   // dry, the Tigris and Euphrates run on across it). Other ground drains as on the 100 km grid; any loop left is opened by a way
   // out that reaches the sea
-  const down=Int32Array.from(w.down);let loopsLeft=0,flipped=0,reps=0;const rkOf=new Uint8Array(NC).fill(99);
+  const down=Int32Array.from(w.down);let loopsLeft=0,flipped=0,reps=0,sinks=0,fdTo=null;const sinkL=[];const rkOf=new Uint8Array(NC).fill(99);
   if(w.rivCh){const n8c=(i,f)=>{const cx=i%W,cy=(i/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;f(yy*W+(cx+dx+W)%W)}}};
     const fdT=new Int32Array(NC).fill(-1);{const vis=new Uint8Array(NC),Hc=mkHeap();for(let i=0;i<NC;i++)if(!land[i])vis[i]=1;
       for(const i of w.coastIdx){vis[i]=1;let oc=-1;n8c(i,j=>{if(!land[j]&&oc<0)oc=j});fdT[i]=oc;Hc.push(w.elev[i],i)}
-      while(Hc.size){const [kk,i]=Hc.pop();n8c(i,j=>{if(!vis[j]){vis[j]=1;fdT[j]=i;Hc.push(Math.max(w.elev[j],kk+0.01),j)}})}}
+      while(Hc.size){const [kk,i]=Hc.pop();n8c(i,j=>{if(!vis[j]){vis[j]=1;fdT[j]=i;Hc.push(Math.max(w.elev[j],kk+0.01),j)}})}}fdTo=fdT;
     // a lowland course whose mouth end stands well above its source end (lowest 25 km ground, over 50 m) was turned the wrong way
     // on the 100 km grid, where the river network's distance to the sea decides: the Amazon (which ran up to Iquitos), the Yenisei,
     // the Angara, the Parana, tributaries of the Amazon, Yukon and Mackenzie. Mountain courses keep the grid's direction (a 100 km
@@ -48,8 +48,12 @@ function fineRivers(w){
       for(let j=0;j+1<c.length;j++){const x=c[j];if(set[x])continue;const jl=last.get(x);if(jl>=c.length-1)continue;down[x]=c[jl+1];set[x]=1}}
     const safe0=(t,c)=>{const seen=new Set();let x=t;while(x>=0&&land[x]){if(x===c||seen.has(x))return false;seen.add(x);x=down[x]}return true};
     for(const L of ord){const z=L.cells[L.cells.length-1];if(set[z])continue;let bj=-1,br=99,be=Infinity;
-      n8c(z,j=>{if(!set[j]||L.cells.includes(j)||rkOf[j]>L.rank)return;if((rkOf[j]<br||rkOf[j]===br&&w.elev[j]<be)&&safe0(j,z)){br=rkOf[j];be=w.elev[j];bj=j}});
+      n8c(z,j=>{if(!set[j]||L.cells.includes(j))return;if((rkOf[j]<br||rkOf[j]===br&&w.elev[j]<be)&&safe0(j,z)){br=rkOf[j];be=w.elev[j];bj=j}});
       if(bj<0)n8c(z,j=>{if(bj<0&&!land[j])bj=j});
+      // a course that joins none and ends deep in a dry closed hollow ends there (the Chari in Lake Chad, the Amu Darya in the Aral):
+      // it goes no further, and the lakes decide whether the hollow spills. A wet hollow in 100 km heights is a gorge too narrow to
+      // see (the Congo's cuvette)
+      if(bj<0&&w.fillD[z]>20&&w.Pr[z]<700&&!onSea(z)){down[z]=-1;set[z]=1;sinks++;sinkL.push(z);continue}
       down[z]=bj>=0?bj:fdT[z];set[z]=1}
     const succ=new Map();for(const L of CH){const c=L.cells;for(let j=0;j+1<c.length;j++){if(!succ.has(c[j]))succ.set(c[j],[]);succ.get(c[j]).push([L.rank,c[j+1]])}}
     for(const v of succ.values())v.sort((a,b)=>a[0]-b[0]);
@@ -70,8 +74,10 @@ function fineRivers(w){
   const thC=w.isEarth?3600:2500,rvC=new Float32Array(NC);for(const i of w.landIdx)rvC[i]=acc[i]>thC?clamp(Math.log(acc[i]/thC)/Math.log(100)+0.2,0,1):0;
   const isL=k=>e[k]>SL0,rv=new Float32Array(NF),real=new Uint8Array(NF),on=new Uint8Array(NF),rk=new Uint8Array(NF).fill(99),dn=new Int32Array(NF).fill(-2),low=new Int32Array(NC).fill(-1);
   // every mapped course is traced, whatever water it carries (the Euphrates above the Tigris holds under the model's river size,
-  // but its valley still leads the water), and every river the flows make
-  for(let c=0;c<NC;c++){if(!land[c]||!(rvC[c]>0||rr&&rr[c]))continue;const cx=c%W,cy=(c/W)|0;let b=-1,be=1e9;
+  // but its valley still leads the water)
+  // (on Earth: the mapped courses and the way on from each to the sea; elsewhere every river the flows make)
+  const want=new Uint8Array(NC);if(rr){for(let c=0;c<NC;c++)if(rr[c]&&land[c]){let x=c,n=0;while(x>=0&&land[x]&&!want[x]&&n<NC){want[x]=1;x=down[x];n++}}}else for(let c=0;c<NC;c++)if(rvC[c]>0)want[c]=1;
+  for(let c=0;c<NC;c++){if(!land[c]||!want[c])continue;const cx=c%W,cy=(c/W)|0;let b=-1,be=1e9;
     for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const k=(cy*SC+dy)*HW+cx*SC+dx;if(isL(k)&&e[k]<be){be=e[k];b=k}}low[c]=b}
   // larger first; between equal flows (dry country) the one nearer the mouth first, so a course is always laid after the one it
   // drains into and can never be led back into itself
@@ -79,7 +85,8 @@ function fineRivers(w){
     let d=i>=0&&land[i]&&dpC[i]>=0?dpC[i]:-1;for(let t=P.length-1;t>=0;t--)dpC[P[t]]=++d}
   const steps=[];for(let c=0;c<NC;c++)if(low[c]>=0)steps.push(c);steps.sort((a,b)=>acc[b]-acc[a]||dpC[a]-dpC[b]);
   const BW=2*SC+2,dist=new Float32Array(BW*BW),prev=new Int32Array(BW*BW);let failed=0;
-  for(const c of steps){const d=down[c],a=low[c];if(d<0)continue;const toSea=!land[d]||low[d]<0;
+  for(const c of steps){const d=down[c],a=low[c];if(d<0){if(dn[a]===-2)dn[a]=-1;rv[a]=Math.max(rv[a],rvC[c]);on[a]=1;continue}
+    const toSea=!land[d]||low[d]<0;
     const cx=c%W,cy=(c/W)|0,dcx=d%W,dcy=(d/W)|0;let ddx=dcx-cx;if(ddx>W/2)ddx-=W;if(ddx<-W/2)ddx+=W;const ddy=dcy-cy;
     const x0=cx*SC+Math.min(0,ddx)*SC-1,y0=cy*SC+Math.min(0,ddy)*SC-1,bw=(Math.abs(ddx)+1)*SC+2,bh=(Math.abs(ddy)+1)*SC+2;
     const gk=(lx,ly)=>{const y=y0+ly;if(y<0||y>=HH)return -1;return y*HW+((x0+lx)%HW+HW)%HW};
@@ -109,7 +116,7 @@ function fineRivers(w){
     for(const k of tr){if(dp[k]!==-3||dn[k]!==-2)continue;let bj=-1,be=Infinity;fn8(k,j=>{if(dp[j]>=0&&e[j]<be){be=e[j];bj=j}});if(bj>=0){dn[k]=bj;fixed++}}
     if(!fixed)break}
   let unres=0;for(const k of tr)if(dp[k]<0){dn[k]=-2;unres++}
-  return{rv,real,on,rk,dn,dp,low,failed,unres,cuts,loopsLeft,flipped,reps,downC:down,accC:acc,rvC}}
+  return{rv,real,on,rk,dn,dp,low,failed,unres,cuts,loopsLeft,flipped,reps,sinks,sinkL,fdT:fdTo,downC:down,accC:acc,rvC}}
 /* drainage of every fine cell: river traces carry their own course; other ground drains by the lowest way out (priority flood,
    8 neighbours) into a trace or the sea. Returns the next cell downstream (-1: the sea) and steps to the sea */
 function fineDrain(w,FR){
@@ -285,7 +292,16 @@ function provinceWorld(w,pid,o){o=o||{};
       for(let v=0;v<n;v++){const idx=[];for(let q=S[v];q<S[v+1];q++)idx.push(q);idx.sort((p,q)=>A[p]-A[q]);const a2=idx.map(q=>A[q]),l2=Lb?idx.map(q=>Lb[q]):null;
         for(let t=0;t<idx.length;t++){A[S[v]+t]=a2[t];if(Lb)Lb[S[v]+t]=l2[t]}}
       return[S,A,Lb]};
-    [u.nbS,u.nbA,u.nbL]=csr(Array.from(P4.keys()),P4);[u.snS,u.snA]=csr(Array.from(P8),null)}
+    [u.nbS,u.nbA,u.nbL]=csr(Array.from(P4.keys()),P4);[u.snS,u.snA]=csr(Array.from(P8),null);
+    u.nbW=Float32Array.from(u.nbL,l=>l/(20004/H));
+    // distance between neighbouring middles, in cell heights (100 km)
+    const D=new Float32Array(u.nbA.length);for(let v=0;v<n;v++)for(let q=u.nbS[v];q<u.nbS[v+1];q++){const j=u.nbA[q];D[q]=Math.acos(clamp(x3[v]*x3[j]+y3[v]*y3[j]+z3[v]*z3[j],-1,1))*6371/(20004/H)}u.nbD=D}
+  // home cell: the 100 km cell holding each unit's middle; hbS/hbA list the units at home in each cell (searches within a
+  // radius go through these)
+  {const hx=new Int16Array(n),hy=new Int16Array(n),cnt=new Int32Array(NC+1);
+    for(let v=0;v<n;v++){hx[v]=((Math.round(cxA[v])%W)+W)%W;hy[v]=clamp(Math.round(cyA[v]),0,H-1);cnt[hy[v]*W+hx[v]+1]++}
+    for(let c=0;c<NC;c++)cnt[c+1]+=cnt[c];const A=new Int32Array(n),f=cnt.slice(0,NC);for(let v=0;v<n;v++)A[f[hy[v]*W+hx[v]]++]=v;
+    Object.assign(u,{hx,hy,hbS:cnt,hbA:A})}
   // the 100 km cells each unit covers, with its share in each (climate anomalies and other fields of the 100 km grid reach the
   // units through gridToUnits)
   {const S=new Int32Array(n+1),A=[],Wt=[];for(let v=0;v<n;v++){S[v]=A.length;const m=new Map();let tot=0;
@@ -294,7 +310,7 @@ function provinceWorld(w,pid,o){o=o||{};
     S[n]=A.length;u.gcS=S;u.gcA=Int32Array.from(A);u.gcW=Float32Array.from(Wt)}
   shoreline(u);const landList=u.landIdx;
   // rivers and drainage on the 25 km grid
-  const FR=fineRivers(w),D=fineDrain(w,FR),fz=fineHollows(w),ff=fineFloodplain(w,FR,o.fp||null);u.fineRv=FR.rv;u.fineReal=FR.real;u.fineOn=FR.on;
+  const FR=fineRivers(w),D=fineDrain(w,FR),fz=fineHollows(w),ff=fineFloodplain(w,FR,o.fp||null);u.fineRv=FR.rv;u.fineReal=FR.real;u.fineOn=FR.on;u.fineDn=D.down;
   // each province drains from its most downstream cell (on a province with rivers, the most downstream cell of its largest);
   // where that would close a loop, from its most downstream cell of all (strictly nearer the sea than any of its own cells)
   const maxRv=new Float32Array(n),down=new Int32Array(n).fill(-1);
@@ -302,6 +318,13 @@ function provinceWorld(w,pid,o){o=o||{};
   const pick=(v,riv)=>{let b=-1,bd=Infinity;for(let q=cS[v];q<cS[v+1];q++){const k=cA[q];if(!cls[k]||riv&&!(FR.on[k]&&FR.rv[k]>=maxRv[v]))continue;if(D.dep[k]<bd){bd=D.dep[k];b=k}}return b};
   const drainTo=(v,k)=>{if(k<0)return -1;const d=D.down[k];if(d>=0)return uid[d];let s=-1;fn8(k,j=>{if(s<0&&!cls[j])s=uid[j]});return s};
   for(let v=0;v<np;v++){let t=hasTr[v]?drainTo(v,pick(v,true)):-2;if(t===v||t===-2)t=drainTo(v,pick(v,false));down[v]=t===v?-1:t}
+  // a river ending in a closed hollow (Lake Chad, the Aral, Baikal) drains on, when its lake overflows, the way the ground leads
+  // out of the hollow; whether it does is the lakes' to decide
+  const sinkU=new Uint8Array(n);u.sinkU=sinkU;
+  if(FR.sinkL&&FR.fdT)for(const z of FR.sinkL){const a=FR.low[z];if(a<0)continue;const v=pid[a];if(v<0||down[v]!==-1)continue;
+    let c=FR.fdT[z];for(let st=0;st<60&&c>=0;st++){if(!w.land[c]){down[v]=seaU[c]>=0?seaU[c]:-1;break}
+      const cx=c%W,cy=(c/W)|0;let b=-1,be=1e9;for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++){const k=(cy*SC+dy)*HW+cx*SC+dx;if(cls[k]&&e[k]<be){be=e[k];b=k}}
+      if(b>=0&&uid[b]!==v&&land[uid[b]]){down[v]=uid[b];break}c=FR.fdT[c]}if(down[v]!==-1)sinkU[v]=1}
   for(let rep=0;rep<20;rep++){const st=new Uint8Array(n);let fixed=0;
     for(let v0=0;v0<np;v0++){if(st[v0])continue;const P=[];let v=v0;while(v>=0&&v<np&&!st[v]){st[v]=1;P.push(v);v=down[v]}
       if(v>=0&&v<np&&st[v]===1){let x=v;do{const nx=down[x];const t=drainTo(x,pick(x,false));if(t!==down[x]){down[x]=t===x?-1:t;fixed++}x=nx}while(x!==v&&x>=0)}
@@ -313,7 +336,9 @@ function provinceWorld(w,pid,o){o=o||{};
   const order=Int32Array.from(Array.from(landList).sort((a,b)=>dep[a]-dep[b]));
   const acc=new Float32Array(n);for(const v of landList)acc[v]=Math.max(0,Pr[v]-200)*area[v]*1e-4*(T[v]<-9?0.2:1);
   for(let k=order.length-1;k>=0;k--){const v=order[k],d=down[v];if(d>=0&&land[d])acc[d]+=acc[v]}
-  const th=w.isEarth?3600:2500,rv=new Float32Array(n);for(const v of landList)rv[v]=acc[v]>th?clamp(Math.log(acc[v]/th)/Math.log(100)+0.2,0,1):0;
+  // river size: the grid's threshold (3,600, some 1,100 m3/s by the model's runoff) left the Euphrates above the Tigris no river;
+  // provinces count rivers from half that (Nein, 2026-11-05)
+  const th=w.isEarth?1800:1250,rv=new Float32Array(n);u.rvTh=th;for(const v of landList)rv[v]=acc[v]>th?clamp(Math.log(acc[v]/th)/Math.log(100)+0.2,0,1):0;
   // a river belongs to the provinces on both its banks: one holds its cells (on a great river, the bank holding fewer people),
   // the other touches them and shares its size (rtS/rtA: the provinces whose river a province shares). Only a cell on the
   // holder's main river counts, not a tributary at its edge; provinces on a mapped course
@@ -326,8 +351,10 @@ function provinceWorld(w,pid,o){o=o||{};
   Object.assign(u,{down,order,acc,rv,rvReal});
   // hollows: how deep the unit's ground lies below the level its hollow spills at (fillD, mean over its cells), and that level
   // at its lowest cell (fillZ); pour: the first unit beyond the rim along the drainage
-  {const fillD=new Float32Array(n),fillZ=new Float32Array(n).fill(-1e9);
-    for(const v of landList){let A=0,s=0,lo=Infinity;for(let q=cS[v];q<cS[v+1];q++){const k=cA[q],a=fa[(k/HW)|0];if(!cls[k])continue;A+=a;s+=a*Math.max(0,fz[k]-e[k]);if(e[k]<lo){lo=e[k];fillZ[v]=fz[k]}}fillD[v]=A?s/A:0}
+  // hsh: the share of the province lying more than a metre below its spill level, all a lake can cover
+  {const fillD=new Float32Array(n),fillZ=new Float32Array(n).fill(-1e9),hsh=new Float32Array(n);
+    for(const v of landList){let A=0,s=0,lo=Infinity,ah=0;for(let q=cS[v];q<cS[v+1];q++){const k=cA[q],a=fa[(k/HW)|0];if(!cls[k])continue;A+=a;const d=Math.max(0,fz[k]-e[k]);s+=a*d;if(d>1)ah+=a;if(e[k]<lo){lo=e[k];fillZ[v]=fz[k]}}fillD[v]=A?s/A:0;hsh[v]=A?ah/A:0}
+    u.hsh=hsh;
     const pour=new Int32Array(n).fill(-1),inH=v=>fillD[v]>1&&!rvReal[v];
     for(const v of landList){if(!inH(v))continue;let j=down[v],k=0;while(j>=0&&land[j]&&inH(j)&&k<400){j=down[j];k++}pour[v]=j>=0&&land[j]?j:-1}
     Object.assign(u,{fillD,fillZ,pour})}
@@ -354,7 +381,3 @@ function provinceWorld(w,pid,o){o=o||{};
       if(d<=R*1.15)u.iceY[v]=Math.max(u.iceY[v],y0-span*d/R)}}
   }
   u.stray=stray;return u}
-// a field of the 100 km grid as seen by the units: the share-weighted mean over the cells each covers (the grid world's units are
-// its cells: a copy)
-function gridToUnits(w,g,out){out=out||new Float32Array(w.n);if(!w.gcS){out.set(g.subarray?g.subarray(0,w.n):g.slice(0,w.n));return out}
-  const S=w.gcS,A=w.gcA,Wt=w.gcW;for(let v=0;v<w.n;v++){let x=0;for(let q=S[v];q<S[v+1];q++)x+=Wt[q]*g[A[q]];out[v]=x}return out}

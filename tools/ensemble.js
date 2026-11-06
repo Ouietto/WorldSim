@@ -14,7 +14,7 @@
 // The score counts scored targets only (see cls in targets.js); "all 41" is the old score over the original targets.
 const fs=require('fs'),path=require('path'),os=require('os'),crypto=require('crypto'),{spawn,execFileSync}=require('child_process');
 const ROOT=path.join(__dirname,'..'),TARGETS=require('./targets.js');
-const CORE=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','earth_elev.b64','koppen.b64','earth_climate.b64'];
+const CORE=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','provinces.js','earth_elev.b64','koppen.b64','earth_climate.b64','earth_pid.b64','earth_fp.b64'];
 const arg=(k,d)=>{const i=process.argv.indexOf('--'+k);return i>0?process.argv[i+1]:d};
 const range=s=>String(s).split(',').flatMap(p=>{const m=p.match(/^(\d+)-(\d+)$/);if(!m)return[p];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(String(i));return a});
 const parseEnv=s=>Object.fromEntries((s||'').split(/\s+/).filter(Boolean).map(kv=>{const i=kv.indexOf('=');return[kv.slice(0,i),kv.slice(i+1)]}));

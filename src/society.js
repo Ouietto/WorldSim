@@ -251,7 +251,7 @@ function rallyPass(){const s=S,w=WD,L=w.landIdx;if(!s.rally)s.rally=new Float32A
 function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass();const R=s.rally;
   for(const id of s.alive){const o=s.pols[id];o.tFront=0}
   for(const i of L){const p=s.pol[i];if(!p)continue;const o=s.pols[p];if(o.kind!=='state'||s.pop[i]<1)continue;
-    let best=-1,bu=0;for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j]||s.pol[j]||s.pop[j]<1||s.eth[j]<0||s.eth[j]===s.eth[i])continue;
+    let best=-1,bu=0;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j]||s.pol[j]||s.pop[j]<1||s.eth[j]<0||s.eth[j]===s.eth[i])continue;
       const E=s.eths[s.eth[j]],ride=E&&E.ride?E.ride:0,hungry=(s.evP[j]<0.9?1.6:1)*(s.pop[j]>0.95*s.K[j]?1.4:1);
       const u=Math.pow(R[j]+1,0.75)*s.s[j]*milAt(j)*(1+1.5*ride)*hungry*(1+0.6*s.herd[j]*w.sH[j]);if(u>bu){bu=u;best=j}}
     if(best<0)continue;o.tFront++;

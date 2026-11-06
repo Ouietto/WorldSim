@@ -9,16 +9,22 @@ const SPEEDS=[[5,'5'],[25,'25'],[100,'100'],[400,'400'],[1e9,'Max']];
 const ERA_COL=[[120,128,130],[118,150,86],[196,140,64],[150,96,72],[178,74,58],[122,84,150],[64,96,150],[40,130,140]];
 const GROUP_COL=[[40,140,70],[222,190,120],[206,170,90],[110,170,110],[90,120,170],[200,215,225]];
 const ui={running:false,speed:2,mode:'political',page:null,stack:[],z:1,ox:0,oy:0,bs:1,filters:new Set(Object.keys(TYPES)),q:'',lastChronKey:'',dirty:true,lastRender:0,lastSide:0,pausedAtEnd:false,pane:'chron',know:new Set(),figFilter:'all',fq:'',plagueSort:'deaths',climView:'mismatch',src:'earth',ready:false,lastSpot:0,toastT:0,ringCell:-1,ringT:0,follow:false,cities:(()=>{try{return localStorage.getItem('asabiya.cities')||'all'}catch(e){return'all'}})()};
-let EARTH=null,IMPORTED=null,baseCv=null,compCv=document.createElement('canvas'),ovCv=document.createElement('canvas');
-compCv.width=HW;compCv.height=HH;ovCv.width=W;ovCv.height=H;
-const ovCtx=ovCv.getContext('2d'),ovImg=ovCtx.createImageData(W,H),compCtx=compCv.getContext('2d');
+let EARTH=null,IMPORTED=null,baseCv=null,compCv=document.createElement('canvas');
+compCv.width=HW;compCv.height=HH;
+// the overlay: one colour per unit (100 km cell or province), RGBA
+let OVD=new Uint8ClampedArray(NC*4);const compCtx=compCv.getContext('2d');
 /* ---------- refined borders ----------
    Each province is drawn as 2x2 sub-cells. A sub-cell joins the neighbouring province it is closest to, unless a ridge or a strait
-   lies in between, so borders settle along mountain crests and water instead of following the square grid; coasts are cut at full detail. */
-const SW=W*2,SH=H*2,SN=SW*SH,subCv=document.createElement('canvas');subCv.width=SW;subCv.height=SH;
-const subCtx=subCv.getContext('2d'),subImg=subCtx.createImageData(SW,SH);
+   lies in between, so borders settle along mountain crests and water instead of following the square grid; coasts are cut at full detail.
+   On provinces the map is drawn from the 25 km province map itself, one pixel per 25 km cell. */
+let SW=W*2,SH=H*2,SN=SW*SH;const subCv=document.createElement('canvas');subCv.width=SW;subCv.height=SH;
+const subCtx=subCv.getContext('2d');let subImg=subCtx.createImageData(SW,SH);
 let SUB=null;
+function subSize(w,h){if(SW===w&&SH===h)return;SW=w;SH=h;SN=w*h;subCv.width=w;subCv.height=h;subImg=subCtx.createImageData(w,h)}
 function prepSub(){
+  if(WD.uid){const w=WD;subSize(HW,HH);const unit=w.uid,land=new Uint8Array(SN);for(let q=0;q<SN;q++)land[q]=w.land[unit[q]]?1:0;
+    SUB={unit,land,lab:new Int32Array(SN),rep:new Int32Array(SN)};return}
+  subSize(W*2,H*2);
   // the land mask follows the history's own sea level, so exposed shelves (Doggerland, Sundaland, Beringia) take map colours
   const w=WD,e=w.eHi,nb=new Int32Array(SN*9).fill(-1),wt=new Float32Array(SN*9),land=new Uint8Array(SN),HS=SC/2,sl=(S&&S.seaLvl!=null?S.seaLvl:w.seaLvl)||0;
   const E=(x,y)=>e[clamp(Math.round(y),0,HH-1)*HW+((Math.round(x)%HW)+HW)%HW];
@@ -33,6 +39,7 @@ function prepSub(){
 }
 // label every sub-cell by weighted vote of its 3x3 neighbourhood; rep = the province whose colour it takes
 function subLabels(key){
+  if(SUB.unit){const {unit,land,lab,rep}=SUB;for(let q=0;q<SN;q++){if(!land[q]){lab[q]=-2;rep[q]=-1;continue}const v=unit[q];lab[q]=key?key[v]:v;rep[q]=v}return}
   const {nb,wt,land,lab,rep}=SUB,cl=new Int32Array(9),cs=new Float32Array(9);
   for(let q=0;q<SN;q++){if(!land[q]){lab[q]=-2;rep[q]=-1;continue}let n=0,best=-1,bw=-1,bc=-1,bcw=-1;
     for(let k=0;k<9;k++){const j=nb[q*9+k];if(j<0)continue;const a=key?key[j]:j,ww=wt[q*9+k];let f=-1;for(let t=0;t<n;t++)if(cl[t]===a){f=t;break}if(f<0){f=n++;cl[f]=a;cs[f]=0}cs[f]+=ww}
@@ -65,7 +72,8 @@ function paintBase(){
     else{const b=biomeOf(w.tHi[i],w.pHi[i]);[R,G,B]=BCOL[b];
       if(v>2200&&b!==1){const t=clamp((v-2200)/2600,0,1);R+=(158-R)*t;G+=(150-G)*t;B+=(140-B)*t}
       if(v>4600&&w.tHi[i]<2){R=G=B=232}
-      if(ice){const ci=((y/SC)|0)*W+((x/SC)|0);if(yr<ice[ci]){R=228;G=236;B=242}}}
+      if(ice){const ci=w.uid?w.uid[i]:((y/SC)|0)*W+((x/SC)|0);if(yr<ice[ci]){R=228;G=236;B=242}}
+      if(w.uid&&S&&S.lake){const f=S.lake[w.uid[i]];if(f>=0.05){const t=0.35+0.6*f;R+=(70-R)*t;G+=(120-G)*t;B+=(170-B)*t}}}
     d[i*4]=R*sh;d[i*4+1]=G*sh;d[i*4+2]=B*sh;d[i*4+3]=255;
   }
   ctx.putImageData(img,0,0);
@@ -73,7 +81,13 @@ function paintBase(){
   for(let l=-60;l<=60;l+=30){const yy=(90-l)/180*HH;ctx.moveTo(0,yy);ctx.lineTo(HW,yy)}
   for(let l=-150;l<=180;l+=30){const xx=(l+180)/360*HW;ctx.moveTo(xx,0);ctx.lineTo(xx,HH)}ctx.stroke();
   // water switch: lakes, painted by the share of each province under water
-  if(S&&S.lake){const cw=HW/W,chh=HH/H;for(const i of w.landIdx){const f=S.lake[i];if(f<0.05)continue;ctx.fillStyle=`rgba(70,120,170,${(0.35+0.6*f).toFixed(2)})`;ctx.fillRect((i%W)*cw,((i/W)|0)*chh,cw+0.5,chh+0.5)}}
+  if(S&&S.lake&&!w.uid){const cw=HW/W,chh=HH/H;for(const i of w.landIdx){const f=S.lake[i];if(f<0.05)continue;ctx.fillStyle=`rgba(70,120,170,${(0.35+0.6*f).toFixed(2)})`;ctx.fillRect((i%W)*cw,((i/W)|0)*chh,cw+0.5,chh+0.5)}}
+  // provinces: the rivers along their 25 km courses, as wide as the province holding each reach makes them
+  if(w.uid){ctx.strokeStyle='rgba(52,104,136,.8)';ctx.lineCap='round';
+    for(let k=0;k<HW*HH;k++){if(!w.fineOn[k])continue;const d=w.fineDn[k];if(d<0)continue;const r=w.rv[w.uid[k]];if(r<0.3)continue;
+      const x1=k%HW+0.5,y1=((k/HW)|0)+0.5;let x2=d%HW+0.5;const y2=((d/HW)|0)+0.5;if(Math.abs(x2-x1)>HW/2)continue;
+      ctx.lineWidth=0.4+(r-0.3)*1.6;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+    baseCv=c;return}
   // rivers as smooth curves: each reach bends through its cell centre, from the midpoint with its main tributary to the midpoint with the cell downstream
   const up=new Int32Array(N).fill(-1),upv=new Float32Array(N);
   for(const i of w.landIdx){const j=w.down[i];if(j>=0&&w.rv[i]>upv[j]){upv[j]=w.rv[i];up[j]=i}}
@@ -108,7 +122,8 @@ function rainCol(v){v=clamp(v,0,1)*(RCOL.length-1);const k=Math.min(RCOL.length-
 const rainCss=()=>'linear-gradient(90deg,'+RCOL.map((c,k)=>`rgb(${c}) ${Math.round(k/(RCOL.length-1)*100)}%`).join(',')+')';
 function tempCol(t){if(t<=TCOL[0][0])return TCOL[0][1];for(let k=1;k<TCOL.length;k++)if(t<=TCOL[k][0]){const [a,ca]=TCOL[k-1],[b,cb]=TCOL[k],f=(t-a)/(b-a);return[ca[0]+(cb[0]-ca[0])*f,ca[1]+(cb[1]-ca[1])*f,ca[2]+(cb[2]-ca[2])*f]}return TCOL[TCOL.length-1][1]}
 function buildOverlay(){
-  const s=S,w=WD,d=ovImg.data,m=ui.mode;d.fill(0);
+  if(OVD.length!==N*4)OVD=new Uint8ClampedArray(N*4);
+  const s=S,w=WD,d=OVD,m=ui.mode;d.fill(0);
   const bc=m==='alliances'?blocs():null,know=[...ui.know].map(k=>TI[k]);
   const g=w.grade;
   if(m!=='terrain')for(const i of w.landIdx){
@@ -150,14 +165,15 @@ function buildOverlay(){
       case'cchange':if(w.land[i]){const dp=s.cdP[i],dt=s.cdT[i];const v=clamp(dp/250,-1,1);c=v>=0?[70-40*v,140+30*v,190]:[200,140+40*v,70];a=Math.min(220,40+Math.abs(v)*200+Math.abs(dt)*20)}break;
       case'weather':{const v=s.anom[i];c=v>0?[30,150,150]:[170,110,40];a=Math.min(220,Math.abs(v)*120)}break;
       case'climate':
-        if(ui.climView==='mismatch'&&g){const k=g.code[i];if(k){c=[[0,0,0],[90,170,110],[200,120,50],[60,120,210],[150,110,210],[230,90,70]][k];a=k===1?110:210}}
+        // (the grading and the model's own climate live on the 100 km grid: a province shows its home cell's)
+        {const ci=w.hx?w.hy[i]*W+w.hx[i]:i;
+        if(ui.climView==='mismatch'&&g){const k=g.code[ci];if(k){c=[[0,0,0],[90,170,110],[200,120,50],[60,120,210],[150,110,210],[230,90,70]][k];a=k===1?110:210}}
         else if(ui.climView==='observed'&&w.kgGrid){const gg=kgGroup(w.kgGrid[i]);if(gg>=0){c=GROUP_COL[gg];a=200}}
-        else{const gg=simGroup(w.rawT[i],w.rawP[i],w.rawA[i]);c=GROUP_COL[gg];a=200}
+        else{const gg=simGroup(w.coarse?w.coarse.rawT[ci]:w.rawT[ci],w.coarse?w.coarse.rawP[ci]:w.rawP[ci],w.coarse?w.coarse.rawA[ci]:w.rawA[ci]);c=GROUP_COL[gg];a=200}}
         break;
     }
     if(c){const o=i*4;d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=a}
   }
-  ovCtx.putImageData(ovImg,0,0);
 }
 function buildComp(){
   const s=S,w=WD,ctx=compCtx;
@@ -167,7 +183,7 @@ function buildComp(){
   if(!SUB)prepSub();
   const keyM=m==='peoples'?s.eth:m==='religion'?s.rel:(m==='political'||m==='alliances')?s.pol:null;
   subLabels(keyM);
-  {const sd=subImg.data,od=ovImg.data,rep=SUB.rep;for(let q=0;q<SN;q++){const j=rep[q],o=q*4;if(j<0){sd[o+3]=0;continue}const r=j*4;sd[o]=od[r];sd[o+1]=od[r+1];sd[o+2]=od[r+2];sd[o+3]=od[r+3]}
+  {const sd=subImg.data,od=OVD,rep=SUB.rep;for(let q=0;q<SN;q++){const j=rep[q],o=q*4;if(j<0){sd[o+3]=0;continue}const r=j*4;sd[o]=od[r];sd[o+1]=od[r+1];sd[o+2]=od[r+2];sd[o+3]=od[r+3]}
    subCtx.putImageData(subImg,0,0)}
   ctx.imageSmoothingEnabled=true;ctx.drawImage(subCv,0,0,HW,HH);
   if(m==='political'||m==='alliances'||m==='peoples'||m==='religion'){
@@ -176,16 +192,24 @@ function buildComp(){
     const thin=new Path2D(),hi=new Path2D(),war=new Path2D();
     const seg=(p,x1,y1,x2,y2)=>{p.moveTo(x1,y1);p.lineTo(x2,y2)};
     // borders traced on the refined sub-cell labels (marching squares through edge midpoints)
-    const L=SUB.lab,HS=SC/2,cat=(p,q)=>{if(p===-2||q===-2)return null;if(polMode&&p>0&&q>0&&s.pols[p].enemies.has(q))return war;if(p<=0&&q<=0&&m!=='peoples')return null;return selP>0&&(p===selP||q===selP)?hi:thin};
+    const L=SUB.lab,HS=HW/SW,cat=(p,q)=>{if(p===-2||q===-2)return null;if(polMode&&p>0&&q>0&&s.pols[p].enemies.has(q))return war;if(p<=0&&q<=0&&m!=='peoples')return null;return selP>0&&(p===selP||q===selP)?hi:thin};
     for(let sy=0;sy<SH-1;sy++)for(let sx=0;sx<SW-1;sx++){const q=sy*SW+sx,a=L[q],b=L[q+1],c=L[q+SW],d=L[q+SW+1];if(a===b&&b===c&&c===d)continue;
       const X=(sx+1)*HS,Y=(sy+1)*HS,h2=HS/2*0+HS/2;const mids=[];
       if(a!==b)mids.push([X,Y-h2,a,b]);if(c!==d)mids.push([X,Y+h2,c,d]);if(a!==c)mids.push([X-h2,Y,a,c]);if(b!==d)mids.push([X+h2,Y,b,d]);
       if(mids.length===2){const [m1,m2]=mids,P1=cat(m1[2],m1[3]);if(P1)seg(P1,m1[0],m1[1],m2[0],m2[1])}
       else for(const mm of mids){const P1=cat(mm[2],mm[3]);if(P1)seg(P1,mm[0],mm[1],X,Y)}}
-    if(polMode){const hatch=new Path2D(),fortP=new Path2D();
+    if(polMode&&w.uid){const hatch=new Path2D(),fortP=new Path2D(),U=w.uid;
+      // provinces: hordes hatched, walls along the 25 km edges a fortified province shares with another realm's
+      for(let y=0;y<HH;y++)for(let x=0;x<HW;x++){const k=y*HW+x,i=U[k];if(!w.land[i])continue;const p=s.pol[i];if(!p)continue;const o=s.pols[p];
+        if(o.kind==='horde'&&((x+y)&3)===0){hatch.moveTo(x,y+1);hatch.lineTo(x+1,y)}
+        if(s.fort[i]>0.4){const r=y*HW+(x+1)%HW,b=y<HH-1?k+HW:-1,l=y*HW+(x+HW-1)%HW,t=y>0?k-HW:-1;
+          for(const [j,x1,y1,x2,y2] of [[r,x+1,y,x+1,y+1],[l,x,y,x,y+1],[b,x,y+1,x+1,y+1],[t,x,y,x+1,y]]){if(j<0)continue;const q=U[j];if(q===i||!w.land[q]||s.pol[q]===p)continue;fortP.moveTo(x1,y1);fortP.lineTo(x2,y2)}}}
+      ctx.strokeStyle='rgba(60,40,20,.55)';ctx.lineWidth=0.5;ctx.stroke(hatch);
+      ctx.save();ctx.strokeStyle='#3a2614';ctx.lineWidth=1.6;ctx.setLineDash([1.2,0.8]);ctx.stroke(fortP);ctx.restore()}
+    else if(polMode){const hatch=new Path2D(),fortP=new Path2D();
       for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=s.pols[p],x=w.cxA[i]*SC,y=w.cyA[i]*SC;
         if(o.kind==='horde'&&((w.cxA[i]+w.cyA[i])&1)){hatch.moveTo(x,y+SC);hatch.lineTo(x+SC,y)}
-        if(s.fort[i]>0.4){for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j]||s.pol[j]===p)continue;
+        if(s.fort[i]>0.4){for(let d=0;d<4;d++){const j=w.nbA[w.nbS[i]+d];if(j<0||!w.land[j]||s.pol[j]===p)continue;
           if(d===0){fortP.moveTo(x,y);fortP.lineTo(x,y+SC)}else if(d===1){fortP.moveTo(x+SC,y);fortP.lineTo(x+SC,y+SC)}else if(d===2){fortP.moveTo(x,y);fortP.lineTo(x+SC,y)}else{fortP.moveTo(x,y+SC);fortP.lineTo(x+SC,y+SC)}}}}
       ctx.strokeStyle='rgba(60,40,20,.55)';ctx.lineWidth=0.9;ctx.stroke(hatch);
       ctx.save();ctx.strokeStyle='#3a2614';ctx.lineWidth=3.2;ctx.setLineDash([2.5,1.5]);ctx.stroke(fortP);ctx.restore()}
@@ -270,9 +294,11 @@ function drawMap(){
       placed.push(bx);ctx.strokeStyle='rgba(245,243,236,.82)';ctx.lineWidth=3;ctx.strokeText(txt,sx,sy);ctx.fillStyle='#16222b';ctx.fillText(txt,sx,sy)})
   }
   if(ui.page&&ui.page.t==='cell'){const i=ui.page.id,cx=W2.cxA[i],cy=W2.cyA[i];ctx.strokeStyle='#fff';ctx.lineWidth=2;
-    each(cx*SC,cy*SC,(sx,sy)=>ctx.strokeRect(sx,sy,SC*k,SC*k))}
+    if(W2.uid){each((cx+0.5)*SC,(cy+0.5)*SC,(sx,sy)=>{ctx.beginPath();ctx.arc(sx,sy,Math.max(6,Math.sqrt(W2.area[i])/25*k*0.6),0,7);ctx.stroke()})}
+    else each(cx*SC,cy*SC,(sx,sy)=>ctx.strokeRect(sx,sy,SC*k,SC*k))}
 }
-function screenToCell(sx,sy){const k=ui.bs*ui.z;let mx=(sx-ui.ox)/k;mx=((mx%HW)+HW)%HW;const my=(sy-ui.oy)/k;if(my<0||my>=HH)return-1;return Math.floor(my/SC)*W+Math.floor(mx/SC)}
+function screenToCell(sx,sy){const k=ui.bs*ui.z;let mx=(sx-ui.ox)/k;mx=((mx%HW)+HW)%HW;const my=(sy-ui.oy)/k;if(my<0||my>=HH)return-1;
+  if(WD.uid)return WD.uid[Math.floor(my)*HW+Math.floor(mx)];return Math.floor(my/SC)*W+Math.floor(mx/SC)}
 function centerOn(i){if(i==null||i<0)return;const k=ui.bs*ui.z;ui.ox=mapDim.w/2-(WD.cxA[i]+0.5)*SC*k;ui.oy=mapDim.h/2-(WD.cyA[i]+0.5)*SC*k;clampView();drawMap()}
 
 /* ---------- legend ---------- */
@@ -663,7 +689,7 @@ function drawChina(){
   ctx.setLineDash([4,3]);ctx.strokeStyle=cssVar('--muted');ctx.beginPath();CHINA_REF.forEach((p,k)=>{const nx=k+1<CHINA_REF.length?CHINA_REF[k+1][0]:x1;if(k===0)ctx.moveTo(X(p[0]),Y(p[1]));else ctx.lineTo(X(p[0]),Y(p[1]));ctx.lineTo(X(nx),Y(p[1]))});ctx.stroke();ctx.setLineDash([]);
   ctx.strokeStyle=cssVar('--accent');ctx.lineWidth=1.6;ctx.beginPath();let st=false;for(const [y,v] of ch){if(y<x0)continue;st?ctx.lineTo(X(y),Y(v)):ctx.moveTo(X(y),Y(v));st=true}ctx.stroke();
 }
-function aggGrade(C){const T=new Float32Array(N),Pp=new Float32Array(N),A=new Float32Array(N);
+function aggGrade(C){const T=new Float32Array(NC),Pp=new Float32Array(NC),A=new Float32Array(NC);
   const agg=(src,dst)=>{for(let cy=0;cy<H;cy++)for(let cx=0;cx<W;cx++){let s=0;for(let dy=0;dy<SC;dy++)for(let dx=0;dx<SC;dx++)s+=src[(cy*SC+dy)*HW+cx*SC+dx];dst[cy*W+cx]=s/(SC*SC)}};
   agg(C.tHi,T);agg(C.pHi,Pp);agg(C.aHi,A);return gradeClimate(WD,T,Pp,A).score}
 function quickGrade(){return aggGrade(genClimate(WD.eHi))}
@@ -766,10 +792,11 @@ function buildWorld(src){
   setTimeout(()=>{
     try{
       const fit=$('fitc').checked;P.fitClimate=fit;
-      if(src==='earth')WD=genWorld({seed:'Earth',earth:true,height:EARTH.height,kg:EARTH.kg,fit});
+      // provinces (Earth only): the province map instead of the 100 km grid
+      if(src==='earth'){WD=genWorld({seed:'Earth',earth:true,height:EARTH.height,kg:EARTH.kg,fit});if($('provc')&&$('provc').checked&&EARTH.pid)WD=provinceWorld(WD,EARTH.pid,{fp:EARTH.fp})}
       else if(src==='import'&&IMPORTED)WD=genWorld(Object.assign({seed:IMPORTED.name},IMPORTED));
       else WD=genWorld({seed:$('wseed').value||'atlas-7',landFrac:P.landFrac});
-      ui.src=src;for(const b of $('src').children)b.setAttribute('aria-pressed',b.dataset.v===src);
+      useWorld(WD);SUB=null;ui.src=src;for(const b of $('src').children)b.setAttribute('aria-pressed',b.dataset.v===src);
       paintBase();startHistory();busy(false);
     }catch(err){console.error(err);busy(true,'World generation failed: '+err.message)}
   },30);
@@ -849,7 +876,9 @@ async function boot(){
     busy(true,'Loading Earth…');
     const [e,k,c]=await Promise.all([inflateB64(EARTH_ELEV_B64),inflateB64(KOPPEN_B64),inflateB64(EARTH_CLIMATE_B64)]);
     EARTH=decodeEarth(e,k,c);
+    if(typeof EARTH_PID_B64!=='undefined'){const [pd,fp]=await Promise.all([inflateB64(EARTH_PID_B64),inflateB64(EARTH_FP_B64)]);EARTH.pid=decodePid(pd);EARTH.fp=fp}
     let seed=null;try{const m=/seed-([A-Za-z0-9]+)/.exec(location.hash||'');if(m)seed=m[1]}catch(err){}
+    try{if(new URL(location.href).searchParams.get('world')==='prov'&&$('provc'))$('provc').checked=true}catch(err){}
     $('hseed').value=seed||String(Math.floor(Math.random()*1e6));
     buildWorld('earth');
   }catch(err){console.error(err);busy(true,'Earth could not be loaded here, so a generated world is used instead.');setTimeout(()=>buildWorld('gen'),800)}

@@ -107,7 +107,7 @@ function domesticate(sp,i){const s=S,w=WD,d=s.dom[sp];d[i]=Math.max(d[i],0.3);ri
   if(e)chron('ideas',`${first?'':'Independently, '}the ${e.name} ${DOM_TXT[sp]}.`,i,[RE(e)])}
 // every ten years: domestication, herd growth, spread with herders and trade, hard winters and droughts
 function herdPass(){
-  const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
+  const s=S,w=WD,r=s.r,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,y=s.year;
   for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=w.wild[sp],Pg=s.domP[sp];
     const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own
@@ -119,7 +119,7 @@ function herdPass(){
       v+=0.3*v*(1-v/c);if(s.pop[i]<1)v*=0.8;d[i]=clamp(v,0,1)}
     const add=[];
     for(const i of L){const v=d[i];if(v<0.12)continue;
-      for(let k=0;k<4;k++){const j=nb[i*4+k];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=capFor(sp,j);if(c<0.03)continue;
+      for(let k=nbS[i];k<nbS[i+1];k++){const j=nbA[k];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=capFor(sp,j);if(c<0.03)continue;
         const keen=0.25+0.75*Math.max(s.past[j],0.6*s.herd[j]);if(r()<0.6*keen)add.push(j,Math.min(c,0.25*v),i)}}
     for(let k=0;k<add.length;k+=3){d[add[k]]=Math.max(d[add[k]],add[k+1]);if(sp===0&&s.linOf)linCarry('horse',add[k+2],add[k])}}
   // a killing winter (dzud) or drought on the steppe
@@ -203,7 +203,7 @@ function coalitionPass(){
 // Herders organise against rivals, not only against states: a clan bordering another herding people,
 // or the farmers at the edge of the sown, has a frontier (Barfield 1989; Turchin 2009).
 function steppeFront(i,ei){const w=WD,s=S;
-  for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j]||s.pop[j]<1)continue;
+  for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j]||s.pop[j]<1)continue;
     const ej=s.eth[j];if(ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)return 1;
     if(s.past[j]<0.3&&s.past[i]>0.55)return 1}
   return 0}
@@ -267,7 +267,7 @@ function beastCap(k,i){const s=S,w=WD,b=BEASTS[k],T=w.T[i]+s.cdT[i],P=w.Pr[i];
   const ok=b.clim(T,P,w.rv[i],w.sH[i])?1:0.25,tr=linTraits(b.k,i),hard=tr?tr.hardy:0.5;
   return clamp(ok*(0.5+0.5*hard)+(ok<1?0.2*hard:0),0,1)}
 // every ten years
-function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
+function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,y=s.year;
   for(let k=0;k<BEASTS.length;k++){const b=BEASTS[k],d=s.bst[k],Pg=s.bP[k],wild=w.bwild[k];
     // taming is a chance event: the more people of the right kind live beside the wild animal, the likelier it is each decade
     if(b.k!=='dog'&&!(s.bFirst[k]&&s.bTold[k]>=3)){let sum=0;const cand=[];
@@ -286,7 +286,7 @@ function beastPass(){const s=S,w=WD,r=s.r,L=w.landIdx,nb=w.nb,y=s.year;
     for(const i of L){let v=d[i];if(v<=0)continue;const c=beastCap(k,i);if(c<=0.01||s.pop[i]<1){d[i]=v<0.01?0:v*0.6;continue}v+=0.3*v*(1-v/c);d[i]=clamp(v,0,1)}
     if(b.path==='tamed')continue;const add=[];
     for(const i of L){const v=d[i];if(v<0.12)continue;
-      for(let q=0;q<4;q++){const j=nb[i*4+q];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=beastCap(k,j);if(c<0.05)continue;if(r()<0.35)add.push(i,j,Math.min(c,0.3*v))}}
+      for(let q=nbS[i];q<nbS[i+1];q++){const j=nbA[q];if(j<0||s.pop[j]<1||d[j]>=v*0.8)continue;const c=beastCap(k,j);if(c<0.05)continue;if(r()<0.35)add.push(i,j,Math.min(c,0.3*v))}}
     for(let q=0;q<add.length;q+=3){const i=add[q],j=add[q+1];d[j]=Math.max(d[j],add[q+2]);linCarry(b.k,i,j)}
     // a tamed-only animal is now and then bred at last by its keepers
     if(b.path==='tamed'&&b.breed&&s.bFirst[k]&&!s['bred_'+b.k]&&r()<b.breed){let c=-1;for(const i of L)if(d[i]>0.3){c=i;break}

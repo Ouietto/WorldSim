@@ -275,7 +275,9 @@ function biomeOf(T,Pp){
   if(T<-9)return 1;if(T<-1)return 2;if(T<5)return Pp<250?2:3;
   const t=Math.max(T,0);if(Pp<150+8*t)return 7;if(Pp<330+13*t)return 6;if(T>=20)return Pp<1300?8:9;return Pp<700?5:4;
 }
-function cellAt(lat,lon){const y=clamp(Math.floor((90-lat)/180*H),0,H-1),x=((Math.floor((lon+180)/360*W)%W)+W)%W;return y*W+x}
+function cellAt(lat,lon){const w=typeof WD!=='undefined'?WD:null;
+  if(w&&w.uid){const y=clamp(Math.floor((90-lat)/180*HH),0,HH-1),x=((Math.floor((lon+180)/360*HW)%HW)+HW)%HW;return w.uid[y*HW+x]}
+  const y=clamp(Math.floor((90-lat)/180*H),0,H-1),x=((Math.floor((lon+180)/360*W)%W)+W)%W;return y*W+x}
 const REGIONS=[
  {k:'meso',n:'Mesopotamia',box:[29,37,39,49],ref:-3099},
  {k:'egypt',n:'Egypt',box:[22,31.5,29,34],ref:-3099},
@@ -294,11 +296,11 @@ const SEA_LOW=-75,SEA_CURVE=[[-12000,-75],[-11000,-64],[-10000,-57],[-9500,-50],
 function seaLevelAt(y){const C=SEA_CURVE;if(y<=C[0][0])return C[0][1];for(let k=1;k<C.length;k++)if(y<=C[k][0]){const [a,va]=C[k-1],[b,vb]=C[k];return va+(vb-va)*(y-a)/(b-a)}return 0}
 // land list, coasts and landmasses from w.land (rebuilt when the sea takes a province); neighbours from the lists nbS/nbA
 function shoreline(w){const n=w.n,land=w.land,S=w.nbS,A=w.nbA,landList=[],coastList=[],coast=new Uint8Array(n);
-  for(let i=0;i<n;i++)if(land[i]){landList.push(i);for(let e=S[i];e<S[i+1];e++)if(!land[A[e]]){coast[i]=1;break}if(coast[i])coastList.push(i)}
+  for(let i=0;i<n;i++)if(land[i]){landList.push(i);for(let e=S[i];e<S[i+1];e++){const j=A[e];if(j>=0&&!land[j]){coast[i]=1;break}}if(coast[i])coastList.push(i)}
   w.landIdx=Int32Array.from(landList);w.coastIdx=Int32Array.from(coastList);w.coast=coast;
   const lm=new Int32Array(n).fill(-1),lmSize=[],q=new Int32Array(n);
   for(const s0 of landList){if(lm[s0]>=0)continue;const id=lmSize.length;let h=0,t=0;q[t++]=s0;lm[s0]=id;
-    while(h<t){const i=q[h++];for(let e=S[i];e<S[i+1];e++){const j=A[e];if(land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(t)}
+    while(h<t){const i=q[h++];for(let e=S[i];e<S[i+1];e++){const j=A[e];if(j>=0&&land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(t)}
   w.lm=lm;w.lmSize=lmSize;w.lmCount=lmSize.length}
 // sea links: coastal unit -> coastal units across water within 6 sea steps (the water spreads through snS/snA: the 8 cells around
 // on the grid, every touching unit among provinces and open sea)
@@ -306,7 +308,7 @@ function seaLanes(w){const n=w.n,land=w.land,coast=w.coast,S=w.nbS,A=w.nbA,S8=w.
   const ls=new Int32Array(n+1),lt=[],ld=[],seen=new Int32Array(n).fill(-1),qd=new Uint8Array(n);
   for(let i=0;i<n;i++){ls[i]=lt.length;if(!coast[i])continue;
     let h=0,t=0;const found=[];
-    for(let e=S[i];e<S[i+1];e++){const j=A[e];if(!land[j]&&seen[j]!==i){seen[j]=i;q[t++]=j;qd[j]=1}}
+    for(let e=S[i];e<S[i+1];e++){const j=A[e];if(j>=0&&!land[j]&&seen[j]!==i){seen[j]=i;q[t++]=j;qd[j]=1}}
     while(h<t){const c=q[h++],dc=qd[c];
       for(let e=S8[c];e<S8[c+1];e++){const j=A8[e];if(seen[j]===i)continue;seen[j]=i;
         if(land[j]){if(j!==i&&dc>=2&&coast[j])found.push([j,dc])}
@@ -318,13 +320,29 @@ function seaLanes(w){const n=w.n,land=w.land,coast=w.coast,S=w.nbS,A=w.nbA,S8=w.
     for(const [j,d] of found.slice(0,10)){lt.push(j);ld.push(d)}
   }
   ls[n]=lt.length;w.ls=ls;w.lt=Int32Array.from(lt);w.ld=Uint8Array.from(ld)}
-// neighbour lists of the 100 km grid in the old order (west, east, north, south; and the 8 around, row by row)
-function gridLists(w){const nb=w.nb,S=new Int32Array(NC+1),A=[],S8=new Int32Array(NC+1),A8=[];
-  for(let i=0;i<NC;i++){S[i]=A.length;for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0)A.push(j)}
+// neighbour lists of the 100 km grid in the old order (west, east, north, south, -1 beyond the poles; and the 8 around, row by
+// row). nbW: how much of a side the neighbour shares, in cell heights (east-west 1, north-south the cell's width, cos latitude)
+// nbD: how far the neighbour's middle lies, in cell heights (east-west the cell's width, north-south 1)
+function gridLists(w){const nb=w.nb,S=new Int32Array(NC+1),A=[],Wt=[],Dt=[],S8=new Int32Array(NC+1),A8=[];
+  for(let i=0;i<NC;i++){S[i]=A.length;for(let d=0;d<4;d++){A.push(nb[i*4+d]);Wt.push(d<2?1:w.cosLat[i]);Dt.push(d<2?w.cosLat[i]:1)}
     S8[i]=A8.length;const cx=i%W,cy=(i/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;A8.push(yy*W+(cx+dx+W)%W)}}}
-  S[NC]=A.length;S8[NC]=A8.length;w.nbS=S;w.nbA=Int32Array.from(A);w.snS=S8;w.snA=Int32Array.from(A8)}
+  S[NC]=A.length;S8[NC]=A8.length;w.nbS=S;w.nbA=Int32Array.from(A);w.nbW=Float32Array.from(Wt);w.nbD=Float32Array.from(Dt);w.snS=S8;w.snA=Int32Array.from(A8)}
 // the world the model runs on
-function useWorld(w){WD=w;N=w.n;return w}
+function useWorld(w){WD=w;N=w.n;let m=4;for(let i=0;i<w.n;i++)m=Math.max(m,w.nbS[i+1]-w.nbS[i]);if(NJ_.length<m){NJ_=new Int32Array(m);NC_=new Float64Array(m)}return w}
+// the unit at a place given in 100 km cells (x wraps; -1 beyond the top or bottom of the map): on provinces, the one holding the
+// cell's middle
+function uAt(x,y){if(y<0||y>=H)return -1;x=((x%W)+W)%W;const w=WD;return w&&w.uid?w.uid[(y*SC+(SC>>1))*HW+x*SC+(SC>>1)]:y*W+x}
+// a field of the 100 km grid as seen by the units: the share-weighted mean over the cells each covers (the grid world's units are
+// its cells: a copy)
+function gridToUnits(w,g,out){out=out||new Float32Array(w.n);if(!w.gcS){out.set(g.subarray?g.subarray(0,w.n):g.slice(0,w.n));return out}
+  const S=w.gcS,A=w.gcA,Wt=w.gcW;for(let v=0;v<w.n;v++){let x=0;for(let q=S[v];q<S[v+1];q++)x+=Wt[q]*g[A[q]];out[v]=x}return out}
+// a field over the units as a field over the 100 km grid (the area-weighted mean of the units in each cell), and a box blur of a
+// unit field done on the grid
+function unitsToGrid(w,a,out){out=out||new Float32Array(NC);if(!w.gcS){out.set(a.subarray?a.subarray(0,NC):a.slice(0,NC));return out}
+  const s=new Float64Array(NC),m=new Float64Array(NC),S=w.gcS,A=w.gcA,Wt=w.gcW;
+  for(let v=0;v<w.n;v++){const ar=w.area[v];for(let q=S[v];q<S[v+1];q++){const c=A[q],x=Wt[q]*ar;s[c]+=x*a[v];m[c]+=x}}
+  for(let c=0;c<NC;c++)out[c]=m[c]>0?s[c]/m[c]:0;return out}
+function blurUnits(w,a,rx,ry,wrap){if(!w.gcS){boxBlur(a,W,H,rx,ry,wrap);return a}const g=unitsToGrid(w,a);boxBlur(g,W,H,rx,ry,wrap);return gridToUnits(w,g,a)}
 // what a unit's climate, ground and river make of it (the same for 100 km cells and provinces): flood farming (rvF), rain
 // failure, biome, growing season, farming and herding suitability, travel cost, tsetse, monsoon edge, desert
 function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,elev=w.elev,rough=w.rough,rv=w.rv,lat=w.lat;
@@ -503,7 +521,7 @@ function genWorld(o){
   for(let k=order.length-1;k>=0;k--){const i=order[k],d=down[i];if(d>=0&&land[d])acc[d]+=acc[i]}
   // real courses gather water into fewer, larger channels than the old routing; the threshold keeps the share of provinces
   // with a sizeable river about where the model was calibrated
-  const rv=new Float32Array(NC),th=o.earth?3600:2500;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
+  const rv=new Float32Array(NC),th=o.earth?3600:2500;w.rvTh=th;for(const i of landList)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   w.down=down;w.acc=acc;w.rv=rv;w.order=Int32Array.from(order);
   // water switch: for each province in a hollow, the province beyond its rim that its water reaches first along the drainage
   // (pour); the water pass holds a lake there when inflow beats evaporation

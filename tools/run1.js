@@ -3,7 +3,7 @@
 // Env: P_<name>=<value> overrides a slider (e.g. P_pull=0.5); ABL=... passes ablation switches through.
 const fs=require('fs'),zlib=require('zlib'),path=require('path');
 const seed=process.argv[2]||'1',END=+(process.argv[3]||1500),SRC=path.resolve(process.argv[4]||path.join(__dirname,'..','src'));
-const CORE=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js'].filter(f=>fs.existsSync(path.join(SRC,f)));
+const CORE=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','provinces.js'].filter(f=>fs.existsSync(path.join(SRC,f)));
 const core=CORE.map(f=>fs.readFileSync(path.join(SRC,f),'utf8')).join('\n');
 const B=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(path.join(SRC,f),'utf8'),'base64')));
 const overrides=Object.entries(process.env).filter(([k])=>k.startsWith('P_')).map(([k,v])=>[k.slice(2),+v]);
@@ -11,6 +11,8 @@ eval(core+`
 ;(function(){
 const E=decodeEarth(B('earth_elev.b64'),B('koppen.b64'),B('earth_climate.b64'));
 WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
+// WORLD=prov: the province world (src/earth_pid.b64) instead of the 100 km grid
+useWorld(process.env.WORLD==='prov'?provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64')}):WD);
 for(const [k,v] of overrides)P[k]=v;
 const LA=i=>WD.lat[i]*180/Math.PI,LO=i=>(WD.cxA[i]+0.5)/W*360-180;
 const t0=Date.now();newHistory(seed);const tInit=Date.now()-t0;
@@ -35,7 +37,7 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
   // frontier horsemanship: riding skill of the peoples ruling farming states that border a steppe horde (people-weighted)
   // (run 79: a state borders herders when one of its provinces touches a herding province outside it, held by a confederation or by
   // clans; before, only states bordering an organised confederation counted, so the measure fell whenever the steppe was mostly clans)
-  {const hf=new Uint8Array(S.pols.length);for(const i of WD.landIdx){const q=S.pol[i];if(!q||hf[q])continue;for(let d=0;d<4;d++){const j=WD.nb[i*4+d];if(j<0||S.pol[j]===q||S.pop[j]<1||S.past[j]<=0.55)continue;const p=S.pol[j]?S.pols[S.pol[j]]:null;if(!p||p.kind==='horde'){hf[q]=1;break}}}
+  {const hf=new Uint8Array(S.pols.length);for(const i of WD.landIdx){const q=S.pol[i];if(!q||hf[q])continue;for(let d=WD.nbS[i];d<WD.nbS[i+1];d++){const j=WD.nbA[d];if(j<0||S.pol[j]===q||S.pop[j]<1||S.past[j]<=0.55)continue;const p=S.pol[j]?S.pols[S.pol[j]]:null;if(!p||p.kind==='horde'){hf[q]=1;break}}}
   let a=0,b=0,ar=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||!o.nb||o.farmN<0.5*o.cells)continue;
     if(!hf[id])continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
    diag[y].x={'Frontier states: riding skill':b?+(a/b).toFixed(2):null,'Frontier states: share with mounted archers':b?+(ar/b).toFixed(2):null}}

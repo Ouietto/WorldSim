@@ -89,16 +89,26 @@ const R_=o=>['pol',o.id,o.full],RB=o=>['pol',o.id,o.base],RE=e=>['eth',e.id,e.na
 function chron(t,txt,cell,refs,why){S.chron.push({y:S.year,t,txt,cell:cell==null?-1:cell,refs:refs||[],why:why||null});if(S.chron.length>30000)S.chron.splice(0,4000)}
 function spot(txt,cell,refs){S.spot.push({y:S.year,txt,cell,refs:refs||[]});if(S.spot.length>60)S.spot.shift()}
 function angDist(a,b){const w=WD;return Math.acos(clamp(w.x3[a]*w.x3[b]+w.y3[a]*w.y3[b]+w.z3[a]*w.z3[b],-1,1))}
-function seedTech(f,c,v,rad){const w=WD;const cx=w.cxA[c],cy=w.cyA[c];
-  for(let dy=-rad;dy<=rad;dy++){const y=cy+dy;if(y<0||y>=H)continue;for(let dx=-rad;dx<=rad;dx++){const j=y*W+(cx+dx+W)%W;if(w.land[j])f[j]=Math.max(f[j],v*(dx||dy?0.85:1))}}}
+// every unit within rad 100 km cells of unit c (a square; sea too), with its offset from c in cells: on the grid each cell around;
+// on provinces each unit whose middle lies in a cell around c's home cell, at its true offset
+function ring(c,rad,f){const w=WD;
+  if(!w.hbS){const cx=w.cxA[c],cy=w.cyA[c];for(let dy=-rad;dy<=rad;dy++){const y=cy+dy;if(y<0||y>=H)continue;for(let dx=-rad;dx<=rad;dx++)f(y*W+(cx+dx+W)%W,dx,dy)}return}
+  const cx=w.hx[c],cy=w.hy[c],S=w.hbS,A=w.hbA,x0=w.cxA[c],y0=w.cyA[c];
+  for(let dy=-rad;dy<=rad;dy++){const y=cy+dy;if(y<0||y>=H)continue;for(let dx=-rad;dx<=rad;dx++){const b=y*W+(cx+dx+W)%W;
+    for(let q=S[b];q<S[b+1];q++){const j=A[q];let ox=w.cxA[j]-x0;if(ox>W/2)ox-=W;if(ox<-W/2)ox+=W;f(j,ox,w.cyA[j]-y0)}}}}
+function seedTech(f,c,v,rad){const w=WD;ring(c,rad,(j,dx,dy)=>{if(w.land[j])f[j]=Math.max(f[j],v*(dx||dy?0.85:1))})}
 function nearestPeopled(c,maxR,test){
-  const w=WD,s=S;let best=-1,bd=1e9;const cx=w.cxA[c],cy=w.cyA[c];
-  for(let dy=-maxR;dy<=maxR;dy++){const y=cy+dy;if(y<0||y>=H)continue;for(let dx=-maxR;dx<=maxR;dx++){const j=y*W+(cx+dx+W)%W;
-    if(!w.land[j]||s.pop[j]<1||(test&&!test(j)))continue;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=j}}}
+  const w=WD,s=S;let best=-1,bd=1e9;
+  ring(c,maxR,(j,dx,dy)=>{if(!w.land[j]||s.pop[j]<1||(test&&!test(j)))return;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=j}});
   return best;
 }
-function ring(c,rad,f){const w=WD,cx=w.cxA[c],cy=w.cyA[c];for(let dy=-rad;dy<=rad;dy++){const y=cy+dy;if(y<0||y>=H)continue;for(let dx=-rad;dx<=rad;dx++)f(y*W+(cx+dx+W)%W,dx,dy)}}
+// the unit at a point given in 100 km cells (fractions count)
+function uAtF(x,y){if(y<0||y>=H)return -1;const w=WD;if(!w.uid)return Math.floor(y)*W+((Math.floor(x)%W)+W)%W;
+  return w.uid[Math.min(HH-1,Math.floor(y*SC))*HW+((Math.floor(x*SC)%HW)+HW)%HW]}
 function dirWord(dx,dy){const a=Math.atan2(-dy,dx)*180/Math.PI;const k=Math.round(((a+360)%360)/45)%8;return['east','north-east','north','north-west','west','south-west','south','south-east'][k]}
+// a neighbour picked at random (on the grid one of the four sides, an edge of the map counting as none)
+function rndNb(i,x){const w=WD,a=w.nbS[i],n=w.nbS[i+1]-a;return n>0?w.nbA[a+((x*n)|0)]:-1}
+let NJ_=new Int32Array(64),NC_=new Float64Array(64);
 function dxWrap(a,b){let d=WD.cxA[b]-WD.cxA[a];if(d>W/2)d-=W;if(d<-W/2)d+=W;return d}
 const EARTH_HEARTHS=[
  {kind:'farm',lat:36.5,lon:40,y:-9000,crop:'wheat and barley',anim:'sheep and goats',grain:1,pk:'wheat'},
@@ -157,7 +167,7 @@ function newHistory(hseed){
   const q=s.q;let h=0,t=0;
   seeds.forEach((i,k)=>{const mac=macs[k];s.eth[i]=newEth(-1,-1,makeLang(r,pick(r,MACROS[mac]),mac));q[t++]=i});
   while(h<t){const i=q[h++];
-    const iced=j=>w.iceY&&w.iceY[j]>s.start;for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}}
+    const iced=j=>w.iceY&&w.iceY[j]>s.start;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}}
     if(w.coast[i]){ring(i,3,j=>{if(w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}})}
   }
   for(const i of w.landIdx)if(s.eth[i]>=0){s.pop[i]=s.K[i]*0.55;s.lmFound[w.lm[i]]=1}
@@ -186,7 +196,7 @@ function seaStep(){const s=S,w=WD,lv=seaLevelAt(s.year);if(lv<=s.seaLvl+0.01)ret
   const gone=[];for(const i of w.landIdx)if(w.lvl[i]<=lv)gone.push(i);if(!gone.length)return;
   const lm0=w.lm.slice();let moved=0,where=-1,wp=0,nm=null;
   for(const i of gone){const p=s.pop[i];if(p>wp&&s.eth[i]>=0){wp=p;where=i;nm=regionName(i)}
-    w.land[i]=0;let best=-1,bk=-1;for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&w.land[j]&&w.lvl[j]>lv&&s.K[j]>bk){bk=s.K[j];best=j}}
+    w.land[i]=0;let best=-1,bk=-1;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&w.land[j]&&w.lvl[j]>lv&&s.K[j]>bk){bk=s.K[j];best=j}}
     if(best>=0&&p>0){s.pop[best]+=p;moved+=p;if(s.eth[best]<0)s.eth[best]=s.eth[i];else mixIn(best,s.eth[i],p/(s.pop[best]+1)*0.6)}
     const pid=s.pol[i];s.pop[i]=0;s.eth[i]=-1;s.eth2[i]=-1;s.rel[i]=-1;s.pol[i]=0;s.K[i]=0;
     if(pid&&s.pols[pid]&&s.pols[pid].capital===i){const o=s.pols[pid];let c=-1;if(best>=0&&s.pol[best]===pid)c=best;else for(const j of w.landIdx)if(s.pol[j]===pid&&w.land[j]){c=j;break}if(c>=0)o.capital=c}}
@@ -198,7 +208,7 @@ function seaStep(){const s=S,w=WD,lv=seaLevelAt(s.year);if(lv<=s.seaLvl+0.01)ret
   let split=false;
   // the shores facing each other across the new strait: a drowned province touching the smaller land, and the nearest
   // drowned province touching the larger one
-  const shore=(g,m)=>{for(let d=0;d<4;d++){const j=w.nb[g*4+d];if(j>=0&&w.land[j]&&w.lm[j]===m)return j}return -1};
+  const shore=(g,m)=>{for(let d=w.nbS[g];d<w.nbS[g+1];d++){const j=w.nbA[d];if(j>=0&&w.land[j]&&w.lm[j]===m)return j}return -1};
   for(const ms of byOld.values()){if(ms.length<2)continue;ms.sort((a,b)=>w.lmSize[a]-w.lmSize[b]);const m=ms[0],M=ms[ms.length-1];
     const As=[],Bs=[];for(const g of gone){const j=shore(g,m),k=shore(g,M);if(j>=0)As.push([g,j]);if(k>=0)Bs.push([g,k])}if(!As.length)continue;
     let a=As[0][1],b=-1,bd=1e9;for(const [ga,ja] of As)for(const [gb,jb] of Bs){const d=angDist(ga,gb)-(s.pop[ja]>0?0.01:0);if(d<bd){bd=d;a=ja;b=jb}}
@@ -312,12 +322,12 @@ function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=ne
 // it can no longer feed downstream along its water and on to the nearest land that can take them (the Nile, the Niger bend,
 // Lake Chad, the Sahel: Kuper & Kropelin 2006; Brooks 2006)
 function waterPass(){
-  const s=S,w=WD,L=w.landIdx,ord=w.order,down=w.down,fd=w.fillD,area=w.area;if(!ord||!fd)return;
+  const s=S,w=WD,L=w.landIdx,ord=w.order,down=w.down,fd=w.fillD,area=w.area,hsh=w.hsh||null;if(!ord||!fd)return;
   if(!w.rv0){w.rv0=w.rv.slice();w.rvF0=w.rvF.slice()}
   // hollows: provinces lying below the level at which their hollow spills, joined to neighbours that fill to the same level (a
   // neighbouring hollow with its own spill level is a separate basin: the Niger's inland delta is not the Saharan depression beyond it)
   if(!w.bid){const bid=new Int32Array(N).fill(-1),cells=[],fz=w.fillZ;for(const i of L){if(bid[i]>=0||!(fd[i]>1))continue;const b=cells.length,q=[i],C=[];bid[i]=b;
-      while(q.length){const c=q.pop();C.push(c);const cx=c%W,cy=(c/W)|0;for(let dy=-1;dy<=1;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-1;dx<=1;dx++){const j=yy*W+(cx+dx+W)%W;if(bid[j]<0&&w.land[j]&&fd[j]>1&&Math.abs(fz[j]-fz[c])<2){bid[j]=b;q.push(j)}}}}
+      while(q.length){const c=q.pop();C.push(c);for(let e=w.snS[c];e<w.snS[c+1];e++){const j=w.snA[e];if(bid[j]<0&&w.land[j]&&fd[j]>1&&Math.abs(fz[j]-fz[c])<2){bid[j]=b;q.push(j)}}}
       C.sort((a,b2)=>w.elev[a]-w.elev[b2]);cells.push(C)}
     w.bid=bid;w.bcells=cells}
   if(!s.lake){s.lake=new Float32Array(N);s.Kw=Float32Array.from(s.K);s.lakeMax=new Map();s.Pw=new Float32Array(N);s.dryW=new Uint8Array(N)}
@@ -332,7 +342,7 @@ function waterPass(){
     runL[i]=Math.max(0,P-P/Math.sqrt(1+(P/E)*(P/E)))*area[i]}
   // a stream crossing dry land loses water into its bed and to the air, the smaller the stream the larger the share (up to 15% a
   // province in true desert); great rivers lose little (the Nile)
-  const th0=w.isEarth?3600:2500,keep=new Float32Array(N);for(const i of L){const P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i]);keep[i]=1-0.15*clamp((400-P)/400,0,1)}
+  const th0=w.rvTh,keep=new Float32Array(N);for(const i of L){const P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i]);keep[i]=1-0.15*clamp((400-P)/400,0,1)}
   const flow=(src,dst,blk)=>{dst.set(src);for(let k=ord.length-1;k>=0;k--){const i=ord[k],d=down[i];if(d<0||!w.land[d])continue;const b=bid[i];
       if(b>=0&&blk&&blk[b])continue;const a=dst[i];dst[d]+=a*(1-(1-keep[i])/(1+acc[i]/th0))}};
   flow(run,acc,null);flow(runL,accL,null);
@@ -342,33 +352,38 @@ function waterPass(){
   // no lake; nor does one the sea has reached, or one in wet country
   const shut=new Uint8Array(nb);let any=false;
   for(let b=0;b<nb;b++){const B=BC[b],I=pool[b];if(I<=0)continue;let Ad=0,En=0,Pm=0,sea=false;
-    for(const c of B){if(!w.land[c]){sea=true;break}Ad+=area[c];const P=Math.max(0.3*w.Pr[c],w.Pr[c]+s.cdP[c]);Pm+=area[c]*P;En+=area[c]*Math.max(150,PET(c)-P)}
-    let thru=false;for(const c of B){if(w.rv0[c]<0.5)continue;const d=down[c];if(d>=0&&w.land[d]&&bid[d]!==b){thru=true;break}}
+    // (on provinces only the part of a province lying in the hollow can hold water: hsh)
+    for(const c of B){if(!w.land[c]){sea=true;break}const ah=hsh?area[c]*hsh[c]:area[c];Ad+=ah;const P=Math.max(0.3*w.Pr[c],w.Pr[c]+s.cdP[c]);Pm+=ah*P;En+=ah*Math.max(150,PET(c)-P)}
+    // (on provinces, not where a river ends in its closed hollow and only an overflow would carry on: the balance of water decides)
+    let thru=false;for(const c of B){if(w.rv0[c]<0.5||w.sinkU&&w.sinkU[c])continue;const d=down[c];if(d>=0&&w.land[d]&&bid[d]!==b){thru=true;break}}
     // a hollow a great river runs out of is part of its valley, never a lake (the Nile above Qena)
     if(sea||thru||Pm/Math.max(1,Ad)>=900)continue;En/=Math.max(1,Ad);if(globalThis.LAKEDBG)LAKEDBG.push({b,key:B[0],I,Ad,En,Pm:Pm/Ad,n:B.length});
     // a lake brims where inflow and evaporation are near balance: a hollow that could carry off less than about two thirds of its
     // inflow is a river basin, not a lake. A brimming lake spills from its outlet (Mega-Chad into the Benue at its height)
     let A=I/En;const A0=Math.min(A,Ad);if(A>=1.6*Ad)continue;
-    if(A>=Ad){for(const c of B)lake[c]=1}
-    else{shut[b]=1;any=true;for(const c of B){if(A<=0)break;const f=Math.min(1,A/area[c]);lake[c]=f;A-=f*area[c]}}
+    if(A>=Ad){for(const c of B)lake[c]=hsh?hsh[c]:1}
+    else{shut[b]=1;any=true;for(const c of B){if(A<=0)break;const f=Math.min(hsh?hsh[c]:1,A/area[c]);lake[c]=f;A-=f*area[c]}}
     if(B.length<3)continue;const key=B[0],was=s.lakeMax.get(key)||0;if(A0>was)s.lakeMax.set(key,A0);
     if(A0>=40000&&was<40000)chron('nature',`A great lake spreads across the ${regionName(key)}, some ${fmtK(Math.round(A0))} square kilometres of open water.`,key,[]);
     else if(was>=40000&&A0<0.2*was&&!s['lakeGone'+key]){s['lakeGone'+key]=1;chron('nature',`The great lake of the ${regionName(key)} has shrunk to marsh and salt pans.`,key,[])}}
   // then the water runs again, ending in the closed lakes
   if(any)flow(run,acc,shut);
-  const th=w.isEarth?3600:2500,rv=w.rv,rvF=w.rvF,ffp=w.ffp;
-  for(const i of L){rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
+  const th=w.rvTh,rv=w.rv,rvF=w.rvF,ffp=w.ffp;
+  for(const i of L)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
+  // on provinces the bank across a river shares its size
+  if(w.rtS){const r0=Float32Array.from(rv),S=w.rtS,A=w.rtA;for(const i of L)for(let q=S[i];q<S[i+1];q++)if(r0[A[q]]>rv[i])rv[i]=r0[A[q]]}
+  for(const i of L){
     rvF[i]=Math.min(1,rv[i]*(ffp?ffp[i]:1)*clamp((w.T[i]-w.amp[i]/2+8)/8,0.3,1)+0.5*Math.min(lake[i],1-lake[i]))}
   s.Kw.set(s.K);s.seaVer++;
 }
 // every year, before hunger takes them: where the climate is drying (rain down since the last water pass) and the land holds more people than it can feed, they move
 // rather than starve: downstream along the drainage (up to eight provinces) or to a neighbour, wherever there is most room
 function followWater(){
-  const s=S,w=WD,L=w.landIdx,pop=s.pop,K=s.K,Kw=s.Kw,down=w.down,nb=w.nb,dry=s.dryW;if(!dry)return;
+  const s=S,w=WD,L=w.landIdx,pop=s.pop,K=s.K,Kw=s.Kw,down=w.down,nbS=w.nbS,nbA=w.nbA,dry=s.dryW;if(!dry)return;
   for(const i of L){const p=pop[i];if(!dry[i]||p<50||p<=1.02*K[i])continue;
     let best=-1,bs=0,j=i;
     for(let st=1;st<=8;st++){j=down[j];if(j<0||!w.land[j])break;const sp=(K[j]-pop[j])/(1+0.15*st);if(sp>bs){bs=sp;best=j}}
-    for(let d=0;d<4;d++){const q=nb[i*4+d];if(q<0||!w.land[q])continue;const sp=K[q]-pop[q];if(sp>bs){bs=sp;best=q}}
+    for(let d=nbS[i];d<nbS[i+1];d++){const q=nbA[d];if(q<0||!w.land[q])continue;const sp=K[q]-pop[q];if(sp>bs){bs=sp;best=q}}
     if(best<0)continue;const mv=Math.min(0.6*(p-K[i]),0.5*bs);if(mv<1)continue;moveFolk(i,best,mv);s.fwN=(s.fwN||0)+mv}
 }
 // people moving from one province to another bring their people, faith and ways, as in migrate()
@@ -533,11 +548,11 @@ function growth(){
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){
-  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk;const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nb=w.nb,w_sF=w.sF,w_sH=w.sH;
+  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk;const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
   for(let kk=0;kk<L.length;kk++){
     const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
     const pr=p/s_K[i];if(pr<0.55)continue;
-    const j=w_nb[i*4+((r()*4)|0)];if(j<0||!w_land[j])continue;
+    const j=rndNb(i,r());if(j<0||!w_land[j])continue;
     const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)continue;
     const ar=w_area[j],kE=Math.max(kj,ar*3*w_sF[j]*s_farm[i]*(1+0.6*s_metal[i]+0.6*s_iron[i]),ar*1.1*w_sH[j]*s_herd[i]);
     const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)continue;
@@ -566,8 +581,8 @@ function grazePass(){
     if((kk+y)&1||p<3000||s.past[i]<0.5||s.herd[i]<0.4||s.farm[i]>0.5)continue;
     const q=s.pol[i],o=q?s.pols[q]:null;if(o&&o.kind==='state'&&!herdLed(o))continue;
     const e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=2+Math.round(3*Math.min(1,s.horse[i])*(0.3+(e&&e.ride?e.ride:0))),own=G[i]/(p*s.past[i]+1);if(own<=0)continue;
-    const cx=w.cxA[i],cy=w.cyA[i];let best=-1,bg=0;
-    for(let t=0;t<4;t++){const dy=Math.round((r()*2-1)*R),yy=cy+dy;if(yy<0||yy>=H)continue;const dx=Math.round((r()*2-1)*R),j=yy*W+(cx+dx+W)%W;
+    const cx=w.hx?w.hx[i]:w.cxA[i],cy=w.hy?w.hy[i]:w.cyA[i];let best=-1,bg=0;
+    for(let t=0;t<4;t++){const dy=Math.round((r()*2-1)*R),yy=cy+dy;if(yy<0||yy>=H)continue;const dx=Math.round((r()*2-1)*R),j=uAt(cx+dx,yy);
       if(j===i||!w.land[j]||s.farm[j]>0.5||G[j]<=0)continue;const qj=s.pol[j],oj=qj?s.pols[qj]:null;if(oj&&oj.kind==='state'&&!herdLed(oj))continue;
       const gain=G[j]/(s.pop[j]*Math.max(0.3,s.past[j])+1)/own-1-0.06*Math.hypot(dx,dy)-(oj&&qj!==q?0.3:0);if(gain>bg){bg=gain;best=j}}
     if(best>=0&&(TG[i]===best||(TG[i]>=0&&Math.abs(w.cxA[TG[i]]-w.cxA[best])+Math.abs(w.cyA[TG[i]]-w.cyA[best])<=1)))A[i]=0.7*A[i]+bg;else if(best>=0&&bg>A[i]){TG[i]=best;A[i]=0.5*bg}else A[i]*=0.7;
@@ -598,7 +613,7 @@ function seaHop(){
     const range=2+Math.floor(sl*28)+((r()*3)|0)+(s_nav[i]>0.5?14:0)+(s_ocean[i]>0.5?70:0);
     let x=w_cxA[i]+0.5,y=w_cyA[i]+0.5,seen=0,tgt=-1;
     for(let st=0;st<range*1.5;st++){x+=dx*0.7;y+=dy*0.7;if(y<0||y>=H)break;
-      const j=Math.floor(y)*W+((Math.floor(x)%W)+W)%W;if(!w_land[j]){seen=1;continue}if(seen){tgt=j;break}}
+      const j=uAtF(x,y);if(!w_land[j]){seen=1;continue}if(seen){tgt=j;break}}
     if(tgt<0||w_T[tgt]<-9)continue;
     if(s_pop[tgt]<1){
       s_pop[tgt]=Math.min(60+s_pop[i]*0.02,s_K[tgt]*0.5+1);s_eth[tgt]=s_eth[i];s_rel[tgt]=s_rel[i];s_s[tgt]=0.4;
@@ -626,7 +641,7 @@ function firstTech(k,cell,o){
   if(verb){chron('ideas',`Scholars and craftsmen of ${where} ${verb}${t.synth?', a path our own history never took':''}.`,cell,refs);if(k>=8)spot(`${t.n} first appears in ${where}`,cell,refs)}
 }
 function techStep(a0,b0){if(a0==null){a0=0;b0=1}
-  const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nb=w.nb,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
+  const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
   const suit=[w.sF,w.sH,rvAg(),null,w.sH];
   // drums carry where forest and hills hide fires and slow runners; beacons need hills in sight of each other
   if(!w.drumSuit){w.drumSuit=new Float32Array(N);w.beaconSuit=new Float32Array(N);for(const i of L){w.drumSuit[i]=clamp(Math.max(w.forest0[i],1.5*w.rough[i]),0,1);w.beaconSuit[i]=clamp(2*w.rough[i]+0.2,0,1)}}
@@ -636,14 +651,16 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
   for(let kk=Math.floor(a0*L.length),ke=Math.floor(b0*L.length);kk<ke;kk++){
     const i=L[kk];if(s_pop[i]<1)continue;const ei=s_eth[i];
     let conn=s_pop[i];const pi=s_pol[i],po=pi?pols[pi]:null;
-    for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0)conn+=s_pop[j]}
+    for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0)conn+=s_pop[j]}
     const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
     // narrow straits were crossed in skin boats and dugouts long before seafaring (Crete by 7000 BCE, Britain by 4000 BCE)
     const ls0=w_ls[i],ls1=s_sail[i]>0.3?w_ls[i+1]:ls0,lsE=w_ls[i+1];
     const dark=po?po.cult<0.1:true;
-    const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+Math.sqrt(s_pop[i]*s_pop[j])/6000+s_car[i]+s_car[j])*pg,ct0=cti(w_nb[i*4]),ct1=cti(w_nb[i*4+1]),ct2=cti(w_nb[i*4+2]),ct3=cti(w_nb[i*4+3]);
-    let nj0=-1,nj1=-1,nj2=-1,nj3=-1;{const b=i*4;let j=w_nb[b];if(j>=0&&pop[j]>=1)nj0=j;j=w_nb[b+1];if(j>=0&&pop[j]>=1)nj1=j;j=w_nb[b+2];if(j>=0&&pop[j]>=1)nj2=j;j=w_nb[b+3];if(j>=0&&pop[j]>=1)nj3=j}
-    const clT=w_cosLat[i],lowC=conn<3000,noFarm=s_farm[i]<0.3&&s_herd[i]<0.3;
+    // peopled neighbours and how closely each is in touch (east-west neighbours on the grid count fully, north-south ones by the
+    // width of the shared side; provinces by the length of the shared border)
+    const pg=1+0.4*T[31][i],cti=j=>j<0?1:Math.min(1,0.25+Math.sqrt(s_pop[i]*s_pop[j])/6000+s_car[i]+s_car[j])*pg;
+    let nn=0;for(let e=w_nbS[i];e<w_nbS[i+1];e++){const j=w_nbA[e];if(j>=0&&pop[j]>=1){NJ_[nn]=j;NC_[nn]=cti(j)*w_nbW[e];nn++}}
+    const lowC=conn<3000,noFarm=s_farm[i]<0.3&&s_herd[i]<0.3;
     // carriers: an institution is taken up by the people who need it, scribes by a court with cities to run, accounts by
     // merchants; a chiefdom beside a literate empire has no one to read (Goody 1986). A rival that beats you with it
     // forces the pace (Renfrew and Cherry 1986).
@@ -654,10 +671,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
       const A=T[f];let t=A[i];
       if(t<0.995){
         let m=0,same=0,mc=1,v,mj=-1;
-        if(nj0>=0&&(v=A[nj0])>m){m=v;same=pi&&pol[nj0]===pi;mc=ct0;mj=nj0}
-        if(nj1>=0&&(v=A[nj1])>m){m=v;same=pi&&pol[nj1]===pi;mc=ct1;mj=nj1}
-        if(nj2>=0&&(v=A[nj2])>m){m=v;same=pi&&pol[nj2]===pi;mc=ct2*clT;mj=nj2}
-        if(nj3>=0&&(v=A[nj3])>m){m=v;same=pi&&pol[nj3]===pi;mc=ct3*clT;mj=nj3}
+        for(let q=0;q<nn;q++){const nj=NJ_[q];if((v=A[nj])>m){m=v;same=pi&&pol[nj]===pi;mc=NC_[q];mj=nj}}
         for(let q=ls0;q<lsE;q++){const raft=q>=ls1,j=w_lt[q];if(raft&&(w.ld[q]>2||w.lm[j]===w.lm[i]))continue;if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=raft?0.2:0.7;mj=j}}
         if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(1,mc);if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
@@ -676,7 +690,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
           if(cr&&pi){const dt=t-t0;if(dt>0.01)s.s[i]=Math.max(0.02,s.s[i]-3*dt*dt)}}
         if(INST[f]&&dark&&m<0.5)t*=pi?0.994:0.985;
       }else if(INST[f]&&dark){// saturated cell: only decays if no neighbour still knows it
-        let m=0;if(nj0>=0)m=Math.max(m,T[f][nj0]);if(nj1>=0)m=Math.max(m,T[f][nj1]);if(nj2>=0)m=Math.max(m,T[f][nj2]);if(nj3>=0)m=Math.max(m,T[f][nj3]);if(m<0.5)t*=pi?0.994:0.985}
+        let m=0;for(let q=0;q<nn;q++)m=Math.max(m,T[f][NJ_[q]]);if(m<0.5)t*=pi?0.994:0.985}
       // farming is practised by everyone: a well-peopled province that has it refines it over generations,
       // instead of staying at the level of the thin chain of neighbours that brought it
       if(f===0&&t>0.3&&t<0.995&&!lowC)t+=0.004*(0.2+suit[f][i])*(1-t)
@@ -688,7 +702,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
     if(!s_firstTech[2]||s_irrig[i]<0.5){if(s_farm[i]>0.8&&w.rvF[i]>0.15&&w_Pr[i]<1000&&s_pop[i]/w_area[i]>4*clamp(w_Pr[i]/600,0.2,1)&&r()<0.0008*P.invent){seedTech(s.irrig,i,1,1);firstTech(2,i,po)}}
     const ri=s_rel[i];
     if(ri>=0){const R=rels[ri];
-      let j=w_nb[i*4+((r()*4)|0)];
+      let j=rndNb(i,r());
       if(ls1>ls0&&r()<0.2)j=w_lt[ls0+((r()*(ls1-ls0))|0)];
       if(j>=0&&s_pop[j]>=1&&s_rel[j]!==ri&&!(R.kind==='ethnic'&&s_eth[j]>=0&&s_eths[s_eth[j]].fam!==R.fam)){
         const qj=s_pol[j],sr=qj?pols[qj].rel:-1;
@@ -742,7 +756,7 @@ function cropFor(T,Pp,rv){
 }
 const PLAGUE=['fever','pox','sweat','plague','flux','ague'];
 function disease(){
-  const s=S,w=WD,r=s.r,L=w.landIdx,dz=P.disease;const s_dp=s.dp,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_herd=s.herd,s_immune=s.immune,s_infect=s.infect,s_ob=s.ob,s_outbreaks=s.outbreaks,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_sail=s.sail,s_tk=s.tk,w_area=w.area,w_coast=w.coast,w_ls=w.ls,w_lt=w.lt,w_nb=w.nb;
+  const s=S,w=WD,r=s.r,L=w.landIdx,dz=P.disease;const s_dp=s.dp,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_herd=s.herd,s_immune=s.immune,s_infect=s.infect,s_ob=s.ob,s_outbreaks=s.outbreaks,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_sail=s.sail,s_tk=s.tk,w_area=w.area,w_coast=w.coast,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW;
   for(let t=0;t<40;t++){
     const i=L[(r()*L.length)|0];if(s_pop[i]<1||s_infect[i])continue;
     const dens=s_pop[i]/w_area[i];
@@ -768,7 +782,7 @@ function disease(){
     s_pop[i]-=dd;o.deaths+=dd;o.active++;
     if(s_pol[i]){const po=s_pols[s_pol[i]];po.shock+=0.003;po.plagueD=(po.plagueD||0)+dd;o.hit.add(s_pol[i])}
     const spreadTo=j=>{s_infect[j]=3;s_ob[j]=o.id;nl.push(j);o.cells++;if(o.spread.length<4000)o.spread.push([s.year-o.year,j])};
-    for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j<0||s_pop[j]<1||s_infect[j]||s_immune[j]>0.95||s_ob[j]===o.id)continue;
+    for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||s_pop[j]<1||s_infect[j]||s_immune[j]>0.95||s_ob[j]===o.id)continue;
       const dj=s_pop[j]/w_area[j];
       if(r()<0.4*(1-s_immune[j])*Math.min(1,(dens+dj)/8+0.15)*(s_pol[j]===s_pol[i]?1:0.7))spreadTo(j)}
     if(w_coast[i]&&s_sail[i]>0.5)for(let q=w_ls[i];q<w_ls[i+1];q++){const j=w_lt[q];if(s_pop[j]<1||s_infect[j]||s_immune[j]>0.95||s_ob[j]===o.id)continue;if(r()<0.06*(1-s_immune[j]))spreadTo(j)}
@@ -886,7 +900,7 @@ function civilWar(o,breakup){
   if(!breakup){const keep=cells.length-top.length;for(let k=cells.length-1;k>=0;k--){const c=cells[k];if(c===o.capital)continue;if(k>=top.length||s.integ[c]>0.8&&r()<0.7){lab[c]=id;q[t++]=c}}}
   const sOK=seeds.filter(c=>lab[c]===-2);if(!sOK.length){for(const i of cells)lab[i]=0;return}
   const ids=sOK.map(c=>{const nid=newPolity(c,o,{kind:o.kind,origin:{type:'rebellion',from:id,why}});lab[c]=nid;q[t++]=c;return nid});
-  while(h<t){const i=q[h++],l=lab[i];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&lab[j]===-2){lab[j]=l;q[t++]=j}}}
+  while(h<t){const i=q[h++],l=lab[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&lab[j]===-2){lab[j]=l;q[t++]=j}}}
   const cut=[];for(const i of cells){const l=lab[i];if(l>0&&l!==id){s.pol[i]=l;s.s[i]=Math.min(1,s.s[i]+0.12)}else if(l===-2)cut.push(i);s.pop[i]*=0.94;lab[i]=0}
   // lords carve up fallen realms (default since run 79): provinces cut off from both the capital and the rebels do not stay with the old ruler; their lords keep them
   if(cut.length&&o.kind==='state')partitionLands(o,cut,why);
@@ -911,16 +925,16 @@ function hordeBreakup(o){
   // the khan keeps his own people's pastures near the camp: the same reach a failing state keeps (run 76: a wider core let
   // the house outlive every collapse; confederations born before 5000 BCE were still riding at 3000 BCE)
   const lim=2,q=[o.capital];lab[o.capital]=1;let h=0;
-  while(h<q.length){const i=q[h++];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&own.has(j)&&!lab[j]&&s.eth[j]===o.core&&s.dist[j]<=lim){lab[j]=1;q.push(j)}}}
+  while(h<q.length){const i=q[h++];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&own.has(j)&&!lab[j]&&s.eth[j]===o.core&&s.dist[j]<=lim){lab[j]=1;q.push(j)}}}
   // a khan whose capital stands among subject peoples still keeps the camps around it
-  if(q.length<3){h=0;while(h<q.length){const i=q[h++];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&own.has(j)&&!lab[j]&&s.dist[j]<=0.5*lim){lab[j]=1;q.push(j)}}}}
+  if(q.length<3){h=0;while(h<q.length){const i=q[h++];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&own.has(j)&&!lab[j]&&s.dist[j]<=0.5*lim){lab[j]=1;q.push(j)}}}}
   const why='A confederation held together by one leader rarely outlives him.',news=[],pieces=[];let freed=0;
   // the house itself must pass the same test as a rebel chief: too few people or pastures left to feed a following, and its
   // camp goes back to the clans with the rest
   let cp=0;for(const i of q)cp+=s.pop[i];const fall=cp<5e4||q.length<6;
   if(fall)for(const i of q)lab[i]=0;
   for(const c0 of cells){if(lab[c0])continue;const comp=[c0];lab[c0]=2;let k=0,pp=0,best=c0,bp=-1;
-    while(k<comp.length){const i=comp[k++];pp+=s.pop[i];if(s.pop[i]>bp){bp=s.pop[i];best=i}for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&own.has(j)&&!lab[j]){lab[j]=2;comp.push(j)}}}
+    while(k<comp.length){const i=comp[k++];pp+=s.pop[i];if(s.pop[i]>bp){bp=s.pop[i];best=i}for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&own.has(j)&&!lab[j]){lab[j]=2;comp.push(j)}}}
     pieces.push({comp,pp,best})}
   // only a few chiefs can hold a following of their own: the Xiongnu split in two, the Turks in two, the Mongols in four.
   // The largest pieces get a chance at a successor confederation, at most one to three; everyone else goes back to the clans
@@ -964,13 +978,13 @@ function partitionLands(o,cells,why){
   const good=i=>s.pop[i]>=1&&((s.farm[i]>0.5&&cerealEff(i)>=0.3)||(hl&&s.past[i]>0.5));
   const set=new Set();for(const i of cells){if(good(i))set.add(i);else{s.pol[i]=0;s.s[i]=0.3;out.freed++}}
   for(const c0 of set){if(lab[c0])continue;const comp=[c0];lab[c0]=-3;let k=0,pp=0;
-    while(k<comp.length){const i=comp[k++];pp+=s.pop[i];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&set.has(j)&&!lab[j]){lab[j]=-3;comp.push(j)}}}
+    while(k<comp.length){const i=comp[k++];pp+=s.pop[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&set.has(j)&&!lab[j]){lab[j]=-3;comp.push(j)}}}
     if(pp<FLOOR.chief*P.floor*3){for(const i of comp){s.pol[i]=0;s.s[i]=0.3;lab[i]=0}out.freed+=comp.length;continue}
     // lords: the strongest seats, spread apart
     const m=Math.max(1,Math.min(12,Math.round(comp.length/(6+r()*8)))),byPop=comp.slice().sort((a,b)=>s.pop[b]-s.pop[a]),seeds=[];
     for(const c of byPop){if(seeds.length>=m)break;if(seeds.every(q=>angDist(q,c)>0.03*Math.sqrt(comp.length/m)))seeds.push(c)}
     const q=s.q;let h=0,t=0;const ids=seeds.map(c=>{const nid=newPolity(c,o,{kind:'state',origin:{type:'rebellion',from:o.id,why}});lab[c]=nid;q[t++]=c;return nid});
-    while(h<t){const i=q[h++],l=lab[i];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&lab[j]===-3){lab[j]=l;q[t++]=j}}}
+    while(h<t){const i=q[h++],l=lab[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&lab[j]===-3){lab[j]=l;q[t++]=j}}}
     for(const i of comp){const l=lab[i];if(l>0){s.pol[i]=l;s.s[i]=Math.min(1,s.s[i]+0.1);out.claimed++}else{s.pol[i]=0;out.freed++}lab[i]=0}
     out.ids.push(...ids)}
   return out}
@@ -1064,9 +1078,9 @@ function distBFS(){
   for(let d=0;pending>0&&d<60000;d++){
     const bk=B[d&31];B[d&31]=[];
     for(const i of bk){pending--;if(s.dist[i]!==d)continue;const p=s.pol[i],horde=pols[p].kind==='horde';
-      for(let k=0;k<4;k++){const j=w.nb[i*4+k];if(j<0||s.pol[j]!==p)continue;
+      for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
         // built roads cut the climb most: stairways and switchbacks over the passes (the Inca roads, Hyslop 1984)
-        let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(k<2)c*=w.cosLat[i];if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
+        let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);c*=w.nbD[k];if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
         const nd=d+Math.max(1,Math.min(30,Math.round(c)));if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
       if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
     }
@@ -1149,7 +1163,7 @@ function foundReligion(o){
   if(site){site.faith=s.rels.length;chron('faith',`The new faith takes the ancient sanctuary of ${site.name} for its holy city; people have gathered there for ${s.year-site.born} years.`,c)}
   const R={id:s.rels.length,name,founder:f.id,born:s.year,origin:c,holy:c,pol:o.id,eth:s.eth[c],fam:e?e.fam:-1,kind:universal?'universal':'ethnic',miss:universal?0.35+0.65*r():0.15,cent:universal?0.3+0.4*r():0.1,holder:o.id,rgb:hsl(r()*360,0.55,0.48),parent:-1,kids:[],cells:0,pop:0,peak:0,alive:true,states:[],councils:0};
   s.rels.push(R);f.rel=R.id;
-  s.rel[c]=R.id;for(let d=0;d<4;d++){const j=WD.nb[c*4+d];if(j>=0&&s.pop[j]>=1&&s.pol[j]===o.id)s.rel[j]=R.id}
+  s.rel[c]=R.id;for(let d=WD.nbS[c];d<WD.nbS[c+1];d++){const j=WD.nbA[d];if(j>=0&&s.pop[j]>=1&&s.pol[j]===o.id)s.rel[j]=R.id}
   deed(f,`Began to preach ${name} in the ${o.full}`,[RR(R),R_(o)]);
   chron('faith',`The prophet ${f.name} begins to preach ${name} in the ${o.full}${universal?', a faith open to every people':''}.`,c,[RF(f),RR(R),R_(o)]);
   spot(`The prophet ${f.name} begins to preach ${name}`,c,[RF(f),RR(R)]);
@@ -1322,7 +1336,7 @@ function culture(o){
 function politics(){for(const _ of politicsG());}
 function* politicsG(){
   if(!S.recK)recPass();
-  const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nb=w.nb,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
+  const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
   const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),CO=cohArr();
   for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
@@ -1491,7 +1505,7 @@ function* politicsG(){
     const o=p?pols[p]:null,horde=o&&o.kind==='horde';
     let fr=0,cand=-1,nc=0,candSea=false,threat=0,rcand=-1,rn=0;
     const cl=w_cosLat[i];
-    for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j<0||!w_land[j])continue;const q=pol[j],wt=d<2?1:cl;
+    for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||!w_land[j])continue;const q=pol[j],wt=w_nbW[d];
       if(q!==p){const ej=s_eth[j];
         if(ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)fr=1;
         else if(ri>=0&&s_rel[j]>=0&&s_rel[j]!==ri)fr=1;
@@ -1532,12 +1546,12 @@ function* politicsG(){
           const prist=clamp((dens-15)/15,0,1)*s_circE[i]+0.5*s_irrig[i]*Math.min(1,2*w.rvF[i])+0.5*temple,cg=0.12+0.88*Math.min(1,1.3*s.stx[i]+prist);
           if(r()<cg*P.formRate*0.0012*(0.2+1.6*P.circ*s_circE[i])*(0.4+s_s[i])*(1+Math.min(2,dens/15))*Math.min(1,0.05+s_metal[i]+s_recK[i]+s_horse[i]*0.5+Math.min(0.4,Math.max(0,dens-5)/25)+0.15*Math.max(0,s_circE[i]-0.5)+0.6*s_cStore[i]*Math.min(1,Math.max(0,dens-6)/12)+0.4*s_irrig[i]+0.6*temple)*(()=>{const fe=Math.max(cerealEff(i),0.6*(0.4+0.6*s_cStore[i])*Math.min(1,Math.max(0,dens-8)/12));return 0.03+0.97*fe*fe})()){
             const id=newPolity(i,null);
-            for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
+            for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
         else if(past>0.3&&dens>0.3&&(w_nomad[i]||w_desert[i])&&(fr||steppeFront(i,ei))){
           // riders organise far more readily than herders on foot; a rival clan is a weaker spur than a state
           if(r()<P.nomad*0.0003*(fr?1:0.3)*(0.4+s_s[i])*(0.08+1.4*s_horse[i]+s_camel[i])){
             const id=newPolity(i,null,{kind:'horde'});
-            for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&w_land[j]&&!pol[j]&&(w_nomad[j]||w_desert[j])&&pop[j]>=1&&r()<0.6){pol[j]=id;s_dist[j]=2}}}}
+            for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]&&!pol[j]&&(w_nomad[j]||w_desert[j])&&pop[j]>=1&&r()<0.6){pol[j]=id;s_dist[j]=2}}}}
       }
     }
     if(s_fort[i]>0){const keep=o&&!horde&&o.S>0.3&&o.press<1&&(o.treas??0)>-0.2;s_fort[i]=keep?s_fort[i]*0.9995:s_fort[i]*0.99;if(s_fort[i]<0.01)s_fort[i]=0}
@@ -1551,7 +1565,7 @@ function* politicsG(){
       else s_uni[i]*=0.9975}
     if(y%10===0){yield;exitPass(0,0.25);yield;exitPass(0.25,0.5);yield;exitPass(0.5,0.75);yield;exitPass(0.75,1);yield}
     for(const i of w.landIdx){const p=s_pol[i];if(!p)continue;const o=s_pols[p];if(o.kind!=='state'||i===o.capital)continue;const ce=herdLed(o)&&s.past[i]>0.5?0.5:cerealEff(i);
-      if(isWaste(i)){let rim=0;for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j>=0&&s_pol[j]===p&&!isWaste(j))rim++}
+      if(isWaste(i)){let rim=0;for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&s_pol[j]===p&&!isWaste(j))rim++}
         const keep=rim>0||s_fort[i]>0.3||s_car[i]>0.3||(dd(i)<0.35*o.h&&o.S>0.4&&(o.burden||0)<1.1);if(!keep&&r()<0.3){s_pol[i]=0;continue}}
       if(ce<0.35&&r()<0.15*(1-ce/0.35)*(1.2-0.5*s_integ[i])){s_pol[i]=0;continue}
       // a ruler who cannot see, pay or reach a province does not keep it: its chiefs stop answering (prestige-goods chiefdoms,
@@ -1593,7 +1607,7 @@ function ethPass(log){
   for(let e=0;e<n;e++){const o=E[e];if(o.alive)for(let k=0;k<6;k++)o.cult[k]=clamp(o.cult[k]+gauss(s.r)*0.015*(1-0.6*rw[e]),0,1)}
 }
 function mixPass(){
-  const s=S,w=WD,r=s.r,L=w.landIdx;const s_eth=s.eth,s_eth2=s.eth2,s_lab=s.lab,s_mix=s.mix,s_mixT=s.mixT,s_pop=s.pop,w_land=w.land,w_nb=w.nb;let born=0;
+  const s=S,w=WD,r=s.r,L=w.landIdx;const s_eth=s.eth,s_eth2=s.eth2,s_lab=s.lab,s_mix=s.mix,s_mixT=s.mixT,s_pop=s.pop,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW;let born=0;
   for(let k=0;k<L.length;k++){const i=L[k],b=s_eth2[i];if(b<0)continue;
     if(s_pop[i]<1||b===s_eth[i]){s_eth2[i]=-1;continue}
     let m=s_mix[i];
@@ -1606,7 +1620,7 @@ function mixPass(){
       const q=s.q;let h=0,t=0,cnt=0,pp=0;q[t++]=i;s_lab[i]=-7;
       while(h<t&&cnt<60){const c=q[h++];const ea=s_eth[c],eb=s_eth2[c];
         if((ea===A&&eb===b)||(ea===b&&eb===A)){s_eth[c]=nid;s_eth2[c]=-1;s_mix[c]=0;s_mixT[c]=0;cnt++;pp+=s_pop[c];
-          for(let d=0;d<4;d++){const j=w_nb[c*4+d];if(j>=0&&w_land[j]&&s_lab[j]!==-7){s_lab[j]=-7;q[t++]=j}}}}
+          for(let d=w_nbS[c];d<w_nbS[c+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]&&s_lab[j]!==-7){s_lab[j]=-7;q[t++]=j}}}}
       for(let z=0;z<t;z++)s_lab[q[z]]=0;
       const E=s.eths,ne=E[nid];
       if(cnt<5){for(let z=0;z<t;z++){const c=q[z];if(s_eth[c]===nid){s_eth[c]=A;s_eth2[c]=-1}}ne.alive=false;ne.stillborn=true;continue}
@@ -1635,7 +1649,7 @@ function cityPass(){
 }
 // shape of an empire at its peak: east-west versus north-south extent in km (Turchin, Adams & Hall 2006)
 function polShape(o){const w=WD,cols=new Uint8Array(W);let la0=90,la1=-90,sl=0,n=0;
-  for(const i of w.landIdx){if(S.pol[i]!==o.id||isWaste(i))continue;const la=w.lat[i]*57.2958;if(la<la0)la0=la;if(la>la1)la1=la;cols[w.cxA[i]]=1;sl+=la;n++}
+  for(const i of w.landIdx){if(S.pol[i]!==o.id||isWaste(i))continue;const la=w.lat[i]*57.2958;if(la<la0)la0=la;if(la>la1)la1=la;cols[w.hx?w.hx[i]:w.cxA[i]]=1;sl+=la;n++}
   if(n<10)return null;let gap=0,run=0;for(let k=0;k<2*W;k++){if(cols[k%W])run=0;else{run++;if(run>gap)gap=run}}gap=Math.min(gap,W);
   const span=(W-gap+1)*360/W,ml=sl/n,ew=span*111*Math.cos(ml/57.2958),ns=(la1-la0+180/H)*111;return{ew:Math.round(ew),ns:Math.round(ns),n}}
 function shapePass(){const s=S;
@@ -1710,7 +1724,7 @@ function prepEco(w){
     oncho[i]=rv>0.25&&w.rough[i]>0.12?clamp((t-21)/3,0,1)*clamp((p-700)/300,0,1)*clamp((1900-p)/300,0,1):0;
     good[i]=w.sF[i]+0.5*w.rv[i]*(w.sF[i]>0.05?1:0)}
   // environmental circumscription (Carneiro): good land hemmed in by poor land or sea
-  const sur=Float32Array.from(good);boxBlur(sur,W,H,7,6,true);
+  const sur=Float32Array.from(good);blurUnits(w,sur,7,6,true);
   for(const i of w.landIdx){const own=good[i];if(own<0.15)continue;circ[i]=clamp((1-sur[i]/own)*1.3,0,1)}
   // ecological niche of each province (Turchin, Adams & Hall 2006): climate, moisture, way of life, disease setting
   const nT=new Float32Array(N),nM=new Float32Array(N),nN=new Float32Array(N),nD=new Float32Array(N);
@@ -1775,32 +1789,33 @@ function statecraft(o,c,y){
   const energy=clamp(-0.8+0.6*s.ard[c]+0.5*s.iron[c]+0.4*s.horse[c]+0.3*(o.coastN/Math.max(1,o.cells))+0.4*WD.rv[c]+0.3*s.camel[c]+0.3*s.wheel[c],-1,1);
   o.fac=[need,energy];
 }
-function localPop(i){const w=WD,s=S;let t=s.pop[i];for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0)t+=s.pop[j]}return t*1.8}
+function localPop(i){const w=WD,s=S;let t=s.pop[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0)t+=s.pop[j]}return t*1.8}
 // contact with states: a state's example, trade demand and threat reach a few provinces past its borders, fading with
 // distance; a strong state reaches further than a chiefdom. Outside the cradles, states form where this reaches.
-function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nb=w.nb;
+function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nbS=w.nbS,nbA=w.nbA;
   for(const i of L){const p=s.pol[i];if(!p){x[i]=0;continue}const o=s.pols[p];
     x[i]=o.kind!=='state'?0.25:o.tier==='Chiefdom'||o.tier==='Clans'?0.2:clamp((o.spc||2)/7,0.25,1)}
   // a caravan road carries the example of the state at its far end: salt, gold, scribes and envoys
   for(const i of L)if(s.car[i]>0.1)x[i]=Math.max(x[i],0.8*Math.min(1,s.car[i]))
   for(let k=0;k<6;k++){const fw=k%2===0;for(let a=0;a<L.length;a++){const i=L[fw?a:L.length-1-a];let m=x[i];
-    for(let d=0;d<4;d++){const j=nb[i*4+d];if(j>=0&&w.land[j]){const v=0.8*x[j];if(v>m)m=v}}x[i]=m}}}
+    for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&w.land[j]){const v=0.8*x[j];if(v>m)m=v}}x[i]=m}}}
 // the exit option (Herbst, Scott): open land nearby lets subjects walk away; crowding or barren surroundings trap them (Carneiro)
 function exitPass(a0,b0){if(a0==null){a0=0;b0=1}
   const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of LL){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,exPd=w.exPd;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
   for(let kk=Math.floor(a0*LL.length),ke=Math.floor(b0*LL.length);kk<ke;kk++){const i=LL[kk];if(s_pop[i]<1||w_sF[i]<0.1){s_circE[i]=w_circ[i];continue}
-    const cx=w_cxA[i],cy=w_cyA[i];let tot=0,n=0;
-    for(let dy=-3;dy<=3;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-3;dx<=3;dx++){if(!dx&&!dy)continue;const j=yy*W+(cx+dx+W)%W;n++;if(!w_land[j])continue;
+    // the land around, sampled every 100 km out to 300 km (on provinces, the province at each point; its own ground aside)
+    const cx=w.hx?w.hx[i]:w_cxA[i],cy=w.hy?w.hy[i]:w_cyA[i];let tot=0,n=0;
+    for(let dy=-3;dy<=3;dy++){const yy=cy+dy;if(yy<0||yy>=H)continue;for(let dx=-3;dx<=3;dx++){if(!dx&&!dy)continue;const j=uAt(cx+dx,yy);if(j===i)continue;n++;if(!w_land[j])continue;
       const q=exQ[j],pd=exPd[j];tot+=q*Math.max(0,1-s_pop[j]/w_area[j]/pd)*(s_pol[j]?0.4:1)}}
-    const ex=tot/n,own=w_sF[i]+0.1;s_exit[i]=ex;
+    const ex=n?tot/n:0,own=w_sF[i]+0.1;s_exit[i]=ex;
     s_circE[i]=clamp(Math.max(w_circ[i],1-1.6*ex/own),0,1)}
 }
 // disease pools (McNeill, Crosby): dense, connected farming and herding peoples build up crowd diseases and immunity to them
 function poolPass(){
-  const s=S,w=WD,L=w.landIdx,dp=s.dp,tmp=s.bfsPar;const s_car=s.car,s_city=s.city,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_herd=s.herd,s_pop=s.pop,s_rp=s.rp,s_sail=s.sail,w_area=w.area,w_coast=w.coast,w_land=w.land,w_ls=w.ls,w_lt=w.lt,w_nb=w.nb,w_sH=w.sH;
+  const s=S,w=WD,L=w.landIdx,dp=s.dp,tmp=s.bfsPar;const s_car=s.car,s_city=s.city,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_herd=s.herd,s_pop=s.pop,s_rp=s.rp,s_sail=s.sail,w_area=w.area,w_coast=w.coast,w_land=w.land,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sH=w.sH;
   for(const i of L){if(s_pop[i]<1){dp[i]*=0.98;continue}
     const dens=s_pop[i]/w_area[i],tgt=Math.min(1,0.22*Math.log10(1+dens)+0.3*s_herd[i]*s_farm[i]+(s_city[i]>=0?0.2:0));
-    let m=dp[i];for(let d=0;d<4;d++){const j=w_nb[i*4+d];if(j<0||s_pop[j]<1)continue;const c=Math.min(1,Math.sqrt(s_pop[i]*s_pop[j])/20000+s_car[i]);m=Math.max(m,dp[j]*(0.9+0.08*c))}
+    let m=dp[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0||s_pop[j]<1)continue;const c=Math.min(1,Math.sqrt(s_pop[i]*s_pop[j])/20000+s_car[i]);m=Math.max(m,dp[j]*(0.9+0.08*c))}
     if(w_coast[i]&&s_sail[i]>0.5)for(let q=w_ls[i];q<w_ls[i+1];q++){const j=w_lt[q];if(s_pop[j]>=1)m=Math.max(m,dp[j]*0.92)}
     tmp[i]=Math.round(1000*(dp[i]+0.06*(Math.max(tgt,m)-dp[i])))}
   for(const i of L)dp[i]=tmp[i]/1000;
@@ -1831,13 +1846,13 @@ function caravanPass(){
   const arid=j=>w.land[j]&&(w.desert[j]||w.Pr[j]<300);
   const srcs=[];
   for(let t=0;t<2500&&srcs.length<14;t++){const i=L[(r()*L.length)|0];if(arid(i)||!s.pol[i]||s.pop[i]/w.area[i]<1.5)continue;
-    if(s.camel[i]<0.5&&s.tk[25][i]<0.5)continue;let ok=false;for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j>=0&&arid(j))ok=true}if(ok)srcs.push(i)}
+    if(s.camel[i]<0.5&&s.tk[25][i]<0.5)continue;let ok=false;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&arid(j))ok=true}if(ok)srcs.push(i)}
   const mark=s.bfsMark||(s.bfsMark=new Int32Array(N));
   for(const a of srcs){
     const st=++s.bfsStamp;
     const q=[a];mark[a]=st;par[a]=-1;dist[a]=0;let hit=-1;
     for(let h=0;h<q.length&&hit<0;h++){const i=q[h];if(dist[i]>70)break;
-      for(let d=0;d<4;d++){const j=w.nb[i*4+d];if(j<0||!w.land[j]||mark[j]===st)continue;
+      for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j]||mark[j]===st)continue;
         if(arid(j)){if(q.length<6000){mark[j]=st;par[j]=i;dist[j]=dist[i]+1;q.push(j)}}
         else if(dist[i]>=8&&s.pop[j]/w.area[j]>1.5&&s.pol[j]!==s.pol[a]){par[j]=i;hit=j;break}}}
     if(hit<0)continue;
@@ -1880,17 +1895,20 @@ function climInit(){
   climUpdate();
 }
 function orbitFor(y){return WD.isEarth?orbitAt(y):orbitAt(y-(S.orb0||0))}
+// the cell of the climate model's grid (half the 100 km grid's resolution) holding a unit's home cell
+function climCell(w,i){const x=w.hx?w.hx[i]:w.cxA[i],y=w.hy?w.hy[i]:w.cyA[i];return Math.floor(y/2)*CW+Math.floor(x/2)}
 function landAlbedo(){
   // coarse land albedo from vegetation and land use: cleared forest and fields are brighter than forest
   const s=S,w=WD,a=new Float32Array(CN),n=new Float32Array(CN);
-  for(const i of w.landIdx){const cx=Math.floor(w.cxA[i]/2),cy=Math.floor(w.cyA[i]/2),j=cy*CW+cx;const b=VEG[s.veg[i]];let al=b?b[3]:CLM.albL;
-    const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<f0)al+=(0.31-al)*(1-s.forest[i]/f0)*(al<0.31?1:0);a[j]+=al;n[j]++}
+  // (each unit at its middle; provinces weighed by area)
+  for(const i of w.landIdx){const j=climCell(w,i),wt=w.uid?w.area[i]:1;const b=VEG[s.veg[i]];let al=b?b[3]:CLM.albL;
+    const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<f0)al+=(0.31-al)*(1-s.forest[i]/f0)*(al<0.31?1:0);a[j]+=al*wt;n[j]+=wt}
   for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:CLM.albL;return a;
 }
 // coarse rain-recycling factor from vegetation: deserts return little of their rain to the air, forests much.
 // Not used yet: the model's African rain belt shifts north instead of widening, so the feedback amplifies Sahel drying.
 function landRecyc(){const s=S,w=WD,a=new Float32Array(CN),n=new Float32Array(CN);
-  for(const i of w.landIdx){const cx=Math.floor(w.cxA[i]/2),cy=Math.floor(w.cyA[i]/2),j=cy*CW+cx;const b=VEG[s.veg[i]];a[j]+=b&&b[5]!=null?b[5]:1;n[j]++}
+  for(const i of w.landIdx){const j=climCell(w,i),wt=w.uid?w.area[i]:1;const b=VEG[s.veg[i]];a[j]+=(b&&b[5]!=null?b[5]:1)*wt;n[j]+=wt}
   for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:1;return a}
 function climUpdate(){drain(climUpdateG())}
 function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.env.NOCLIM){S.climY=S.year;S.climCo2=S.co2;return}
@@ -1900,12 +1918,14 @@ function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.en
   s.climR=R;s.climY=s.year;s.climCo2=s.co2;
   // map the change from the reference run onto the history grid
   let gs=0,gw=0;
+  // (worked out on the 100 km grid, then onto the units)
+  const gT=w.uid?new Float32Array(NC):s.cdT,gP=w.uid?new Float32Array(NC):s.cdP;
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,hx=x*SC+SC/2,hy=y*SC+SC/2;
-    s.cdT[i]=climSample(R.Ta,0,hx,hy)-climSample(R0.Ta,0,hx,hy);const dp=climSample(R.Pa,0,hx,hy)-climSample(R0.Pa,0,hx,hy);
+    gT[i]=climSample(R.Ta,0,hx,hy)-climSample(R0.Ta,0,hx,hy);const dp=climSample(R.Pa,0,hx,hy)-climSample(R0.Pa,0,hx,hy);
     // the coarse model's tropical rain belt is too narrow, so it SHIFTS where the real belt mostly widens; its drying signal is damped
-    s.cdP[i]=dp>0?dp:dp*0.4}
+    gP[i]=dp>0?dp:dp*0.4}
   // keep the large-scale signal: the coarse model's local detail is not trusted on top of measured climate
-  boxBlur(s.cdT,W,H,3,2,true);boxBlur(s.cdP,W,H,4,2,true);
+  boxBlur(gT,W,H,3,2,true);boxBlur(gP,W,H,4,2,true);if(w.uid){gridToUnits(w,gT,s.cdT);gridToUnits(w,gP,s.cdP)}
   s.cdP0=Float32Array.from(s.cdP);if(WD.isEarth)for(const i of WD.landIdx)s.cdP[i]+=humidRain(i,s.year);
   if(typeof climateSuit==='function'&&s.pkAv)climateSuit();
   for(let j=0;j<CN;j++){const c=R0.g.cosl[Math.floor(j/CW)];gs+=c*(R.Ta[j]-R0.Ta[j]);gw+=c}

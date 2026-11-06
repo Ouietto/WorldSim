@@ -14,7 +14,7 @@ def main():
     args = parser.parse_args()
     read = lambda name: (source / name).read_text(encoding="utf-8")
     core = "\n".join(read(name) for name in (
-        "world.js", "climate.js", "lang.js", "hist.js", "crops.js", "herds.js", "tech.js", "society.js",
+        "world.js", "climate.js", "lang.js", "hist.js", "crops.js", "herds.js", "tech.js", "society.js", "provinces.js",
     ))
     assets = "\n".join(
         f'const {name}="{read(filename).strip()}";'
@@ -22,6 +22,8 @@ def main():
             ("EARTH_ELEV_B64", "earth_elev.b64"),
             ("KOPPEN_B64", "koppen.b64"),
             ("EARTH_CLIMATE_B64", "earth_climate.b64"),
+            ("EARTH_PID_B64", "earth_pid.b64"),
+            ("EARTH_FP_B64", "earth_fp.b64"),
         )
     )
     page = (
