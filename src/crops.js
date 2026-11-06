@@ -100,7 +100,7 @@ function cropPass(quiet){
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0)b|=grow[j]}pkAv[i]=b}
   if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;
     for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;if((pkAv[j]|g)!==pkAv[j]&&r()<hopP(0.12,d))pkAv[j]|=g;else if((pkAv[j]|c)!==pkAv[j]&&r()<hopP(0.012,d))pkAv[j]|=c}
-    if(s.sail[i]>0.3&&r()<0.05){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}
+    if(s.sail[i]>0.3&&r()<pLn(0.05,i)){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}
     // the skin boats and dugouts that carry farming know-how over a narrow strait carry the seed too (the first
     // farmers of Britain came by boat from the continent with emmer and barley; Brace et al. 2019). Same crossings and odds
     // as the know-how in the technique pass: a strait up to two links wide to another landmass, a fifth of the land contact
@@ -121,11 +121,11 @@ function cropPass(quiet){
     if(quiet)continue;
     if(farm[i]>0.5&&pop[i]>=1){if(a>cB[2*best+1]-1.5)edge[best]|=1;if(a<cB[2*best]+1.5)edge[best]|=2}
     // discoveries: freezing and sun-drying potatoes where nights freeze and days are dry; soaking maize in lime
-    if(best===CI.potato&&!s.firstTech[TI.chuno]&&el>2500&&P<1300&&T>-2&&T<14&&farm[i]>0.6&&pEq(i)>2000&&r()<0.004){seedTech(chu,i,1,1);firstTech(TI.chuno,i,s.pol[i]?s.pols[s.pol[i]]:null)}
+    if(best===CI.potato&&!s.firstTech[TI.chuno]&&el>2500&&P<1300&&T>-2&&T<14&&farm[i]>0.6&&pEq(i)>2000&&r()<pU(0.004,i)){seedTech(chu,i,1,1);firstTech(TI.chuno,i,s.pol[i]?s.pols[s.pol[i]]:null)}
     // Boserup: crowded farmers on slopes or in wetlands build terraces and raised fields
     // invented independently wherever crowding on slopes or wetlands demands it (Yemen, China, the Andes, Mesoamerica, New Guinea)
-    if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&rvAg()[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>2&&r()<0.0006){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
-    if(best===CI.maize&&!s.firstTech[TI.nixtamal]&&farm[i]>0.7&&pEq(i)>3000&&r()<0.0015){seedTech(nix,i,1,1);firstTech(TI.nixtamal,i,s.pol[i]?s.pols[s.pol[i]]:null)}}
+    if(ter[i]<0.1&&(w.rough[i]>0.3||(P>1000&&w.rough[i]<0.1&&rvAg()[i]>0.15))&&farm[i]>0.7&&pop[i]>0.85*s.K[i]&&pop[i]/w.area[i]>2&&r()<pU(0.0006,i)){seedTech(ter,i,1,1);if(!s.firstTech[TI.terrace])firstTech(TI.terrace,i,s.pol[i]?s.pols[s.pol[i]]:null)}
+    if(best===CI.maize&&!s.firstTech[TI.nixtamal]&&farm[i]>0.7&&pEq(i)>3000&&r()<pU(0.0015,i)){seedTech(nix,i,1,1);firstTech(TI.nixtamal,i,s.pol[i]?s.pols[s.pol[i]]:null)}}
   if(!quiet){for(let k=0;k<CROPS.length;k++){if(edge[k]&1)cB[2*k+1]+=0.025;if(edge[k]&2)cB[2*k]=Math.max(0,cB[2*k]-0.025)}openPass()}
 }
 // after each climate re-solve: farm and pasture suitability follow the new climate (a greener Sahara can be farmed)
@@ -200,6 +200,9 @@ function originsInit(){const s=S,w=WD;s.wildG=new Float32Array(N);s.sed=new Floa
 function originsOn(){return WD.isEarth&&P.hearthMode==='emergent'}
 // every five years
 function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.year,agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
+  // on provinces crowding and wild plenty are judged over the 100 km cell, as on the grid: the first village to sow is the one
+  // with the best stands and the most neighbours, not the smallest valley-floor province
+  const cD=w.szF?cellDensF(s.pop,'pop'):null,cK=w.szF?cellDensF(s.Kf,'kf'):null;
   for(const i of L){const p=s.pop[i];if(p<1){s.sed[i]*=0.9;s.cultv[i]*=0.9;continue}
     const la=Math.abs(w.lat[i])*57.2958,ri=w.wildR[i];
     // farmers whose borrowed crops do poorly here take up the local wild plants too (secondary domestication: millet beside
@@ -208,7 +211,7 @@ function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.yea
       const g=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
       let cv=s.cultv[i];cv=clamp(cv+0.05*pr*(1-cv)-0.01*(1-pr)*cv,0,1);s.cultv[i]=cv;let dm=s.domst[i];
       if(cv>0.15)dm=Math.min(1,dm+15*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
-    const rich=clamp((s.Kf[i]/w.area[i]-0.1)/0.25,0,1);
+    const rich=clamp(((cK?cK[i]:s.Kf[i]/w.area[i])-0.1)/0.25,0,1);
     // wild stands: big-seeded grasses store for years; roots and fruit keep poorly and invite less settling
     let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=w.wildW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
     s.wildG[i]=grain;
@@ -217,7 +220,7 @@ function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.yea
     const stress=Math.min(1,clamp(-s.evT[i]/2,0,1)+clamp((1-s.evP[i])*3,0,1)+clamp((0.85-s.wm[i])*2,0,1));
     const tgt=rich*stor*(1-0.6*stress);let sd=s.sed[i];sd+=(tgt-sd)*(tgt>sd?0.02:0.05);s.sed[i]=sd;
     let cv=s.cultv[i],dm=s.domst[i];
-    if(grain>0.1&&sd>0.35){const crowd=clamp((p/w.area[i]-0.15)/0.4,0,1),press=Math.min(1,crowd+0.7*stress+0.6*(s.ritW?s.ritW[i]:0));
+    if(grain>0.1&&sd>0.35){const crowd=clamp(((cD?cD[i]:p/w.area[i])-0.15)/0.4,0,1),press=Math.min(1,crowd+0.7*stress+0.6*(s.ritW?s.ritW[i]:0));
       cv+=0.03*sd*grain*press*(1-cv)-0.006*(1-press)*cv}
     else cv-=0.05*cv;
     s.cultv[i]=cv=clamp(cv,0,1);

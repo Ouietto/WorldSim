@@ -299,8 +299,10 @@ function shoreline(w){const n=w.n,land=w.land,S=w.nbS,A=w.nbA,landList=[],coastL
   for(let i=0;i<n;i++)if(land[i]){landList.push(i);for(let e=S[i];e<S[i+1];e++){const j=A[e];if(j>=0&&!land[j]){coast[i]=1;break}}if(coast[i])coastList.push(i)}
   w.landIdx=Int32Array.from(landList);w.coastIdx=Int32Array.from(coastList);w.coast=coast;
   const lm=new Int32Array(n).fill(-1),lmSize=[],q=new Int32Array(n);
-  for(const s0 of landList){if(lm[s0]>=0)continue;const id=lmSize.length;let h=0,t=0;q[t++]=s0;lm[s0]=id;
-    while(h<t){const i=q[h++];for(let e=S[i];e<S[i+1];e++){const j=A[e];if(j>=0&&land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(t)}
+  // a landmass's size in 100 km cells of land (on the grid, how many cells)
+  const z=w.szF;
+  for(const s0 of landList){if(lm[s0]>=0)continue;const id=lmSize.length;let h=0,t=0,a=0;q[t++]=s0;lm[s0]=id;
+    while(h<t){const i=q[h++];if(z)a+=1/z[i];for(let e=S[i];e<S[i+1];e++){const j=A[e];if(j>=0&&land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(z?a:t)}
   w.lm=lm;w.lmSize=lmSize;w.lmCount=lmSize.length}
 // sea links: coastal unit -> coastal units across water within 6 sea steps (the water spreads through snS/snA: the 8 cells around
 // on the grid, every touching unit among provinces and open sea)
@@ -336,6 +338,26 @@ function hopP(p,e){const k=WD.hopK;return k?1-Math.pow(1-Math.min(p,0.999),k[e])
 function hopR(p,i,e){const w=WD,k=w.hopK;return k?1-Math.pow(1-Math.min(p,0.999),k[e]*(w.nbS[i+1]-w.nbS[i])/4):p}
 // a unit's people as a 100 km cell's worth (provinces: as if spread over a 100 km cell at their latitude; the grid: as they are)
 function pEq(i){const z=WD.szF;return z?S.pop[i]*z[i]:S.pop[i]}
+// Rules written for 100 km cells, made to hold on units of any size (the grid: every one returns what it was given, exactly).
+// cw: how many 100 km cells of land a unit stands for at its latitude; cwL: its width along a frontier or a coast, in cells
+function cw(i){const z=WD.szF;return z?1/z[i]:1}
+function cwL(i){const z=WD.szF;return z?Math.sqrt(1/z[i]):1}
+// a yearly chance per 100 km cell that something starts somewhere in it (a chiefdom, an epidemic, an invention), for a unit of
+// any size: a province of three cells has three cells' chances, one of a third has a third
+function pU(p,i){const z=WD.szF;return z?1-Math.pow(1-Math.min(p,0.999),1/z[i]):p}
+// a chance per 100 km of frontier for a stroke from front unit i that falls on unit j (j = i: on itself): where units are small
+// there are more and smaller strokes, so that the land and people at stake per km of front each year stay what they were
+function pF(p,i,j){const z=WD.szF;return z?1-Math.pow(1-Math.min(p,0.999),Math.sqrt(1/z[i])*z[j]):p}
+// a yearly chance per 100 km of coast or frontier, for a unit as long as it is along it
+function pLn(p,i){const z=WD.szF;return z?1-Math.pow(1-Math.min(p,0.999),Math.sqrt(1/z[i])):p}
+// a unit picked at random from a list, by weight (the grid: any alike, with the one draw it always took); the running totals are
+// kept until the list itself is replaced (the sea rising rebuilds the land and coast lists)
+function cumOf(w,key,list,wf){let c=w['_cum'+key];if(!c||c.list!==list){const a=new Float64Array(list.length);let t=0;for(let k=0;k<list.length;k++){t+=wf(list[k]);a[k]=t}c={list,a,t};w['_cum'+key]=c}return c}
+function pickCum(c,u){const a=c.a,x=u*c.t;let lo=0,hi=a.length-1;while(lo<hi){const m=(lo+hi)>>1;if(a[m]>x)hi=m;else lo=m+1}return c.list[lo]}
+function rLand(r){const w=WD,L=w.landIdx;return w.szF?pickCum(cumOf(w,'land',L,cw),r()):L[(r()*L.length)|0]}
+function rCoast(r){const w=WD,C=w.coastIdx;return w.szF?pickCum(cumOf(w,'coast',C,cwL),r()):C[(r()*C.length)|0]}
+// the length of coast in 100 km cells (the grid: how many coastal cells)
+function coastLen(){const w=WD;return w.szF?cumOf(w,'coast',w.coastIdx,cwL).t:w.coastIdx.length}
 // the unit at a place given in 100 km cells (x wraps; -1 beyond the top or bottom of the map): on provinces, the one holding the
 // cell's middle
 function uAt(x,y){if(y<0||y>=H)return -1;x=((x%W)+W)%W;const w=WD;return w&&w.uid?w.uid[(y*SC+(SC>>1))*HW+x*SC+(SC>>1)]:y*W+x}

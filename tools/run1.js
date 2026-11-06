@@ -15,6 +15,8 @@ WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
 useWorld(process.env.WORLD==='prov'?provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64')}):WD);
 for(const [k,v] of overrides)P[k]=v;
 const LA=i=>WD.lat[i]*180/Math.PI,LO=i=>(WD.cxA[i]+0.5)/W*360-180;
+// shares of land count each unit by the 100 km cells of land it stands for (the grid: one each)
+const CW=i=>WD.szF?1/WD.szF[i]:1;
 const t0=Date.now();newHistory(seed);const tInit=Date.now()-t0;
 const out={seed,end:END},pop={},big={},bigH={},who={},sec={};let lap=Date.now(),hMax=null,pontic=null;
 const marks=[-2999,-999,1,1000,1500].filter(y=>y<=END);
@@ -44,7 +46,7 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
   // men of fighting age against the usual share, in states of 20+ provinces (cohort switch)
   // confederations: how many large ones, and how much of the steppe they hold
   {let big=0,huge=0,n=0,h=0,hp=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='horde')continue;if(o.cells>=20)big++;if(o.cells>=60)huge++}
-   for(const i of WD.landIdx){const g=mrName[i];if((g==='Inner Asian steppe'||g==='Pontic-Caspian steppe')&&S.pop[i]>=1){n++;const o=S.pol[i]?S.pols[S.pol[i]]:null;if(o&&o.kind==='horde'){h++;hp+=S.pop[i]}}}
+   for(const i of WD.landIdx){const g=mrName[i];if((g==='Inner Asian steppe'||g==='Pontic-Caspian steppe')&&S.pop[i]>=1){n+=CW(i);const o=S.pol[i]?S.pols[S.pol[i]]:null;if(o&&o.kind==='horde'){h+=CW(i);hp+=S.pop[i]}}}
    Object.assign(diag[y].x,{'Confederations of 20+ provinces':big,'Confederations of 60+ provinces':huge,'Steppe provinces held by confederations':n?+(h/n).toFixed(2):null})}
   if(S.coh){let a=0,b=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||o.cells<20||o.mpR==null)continue;a+=o.pop*o.mpR;b+=o.pop}diag[y].x['Large states: young men against normal']=b?+(a/b).toFixed(2):null}};
 // war after 1000 BCE: share of state-years at war (people-weighted, states of 3+ provinces), provinces changing hands
@@ -55,7 +57,7 @@ const DOM={inv:/break through the frontier/,dom:/abandon their pastures/,wall:/f
 const invSrc={beaten:0,drought:0,riches:0,people:0};
 // farmed = growing a staple. Knowing how to farm with no crop to grow (herders at the Cape, foragers on the Northwest Coast) is
 // not farming; it was counted as farming before run 76
-const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n++;if(S.farm[i]>0.5&&S.crop&&S.crop[i]>=0)f++}return n?f/n:0},fArr={};
+const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n+=CW(i);if(S.farm[i]>0.5&&S.crop&&S.crop[i]>=0)f+=CW(i)}return n?f/n:0},fArr={};
 // sustained statehood (run 81): a region counts from the first decade after which a state, league or overlord's bloc holds 30%
 // of its people (and 100,000) in at least 15 of the next 20 decades; first appearance stays as r_. Mesopotamia's first
 // city-states: a state above chiefdom with its capital on the southern alluvium, held the same way
@@ -74,12 +76,12 @@ while(S.year<END){step();
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
   if(S.year>=-1000&&S.year%10===0){if(WAR.t0==null)WAR.t0=S.year;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||o.cells<3)continue;WAR.sy+=10;WAR.p+=o.pop;if(o.enemies.size)WAR.w+=o.pop}
-    for(const i of WD.landIdx)if(S.taken[i]>S.year-10&&S.taken[i]<=S.year)WAR.taken++}
+    for(const i of WD.landIdx)if(S.taken[i]>S.year-10&&S.taken[i]<=S.year)WAR.taken+=CW(i)}
   if(S.year%25===0)for(const k of ['cEur','brit','scand','japan'])if(fArr[k]==null&&fShare(k)>=0.5)fArr[k]=S.year;
   if(S.year%1000===0||S.year===1){sec[S.year]=(Date.now()-lap)/1000;lap=Date.now()}
   if(S.year%50===0&&S.year<=1)for(const k of S.alive){const o=S.pols[k];if(o.kind==='horde'&&(!hMax||o.cells>hMax.cells))hMax={cells:o.cells,y:S.year,at:Math.round(LA(o.capital))+','+Math.round(LO(o.capital))}}
-  if(S.year===-999&&typeof herdLed!=='undefined'){let n=0,f=0;for(const i of WD.landIdx){const la=LA(i),lo=LO(i);if(la>44&&la<52&&lo>28&&lo<50&&WD.sod[i]&&S.pop[i]>=1){n++;const o=S.pol[i]?S.pols[S.pol[i]]:null;if(o&&o.kind==='state'&&!herdLed(o))f++}}pontic=n?+(f/n).toFixed(3):null}
-  if(marks.includes(S.year)){const st=S.stats[S.stats.length-1];pop[S.year]=Math.round(st.pop/1e6);big[S.year]=st.bcS??st.bc;bigH[S.year]=st.bcH??null;
+  if(S.year===-999&&typeof herdLed!=='undefined'){let n=0,f=0;for(const i of WD.landIdx){const la=LA(i),lo=LO(i);if(la>44&&la<52&&lo>28&&lo<50&&WD.sod[i]&&S.pop[i]>=1){n+=CW(i);const o=S.pol[i]?S.pols[S.pol[i]]:null;if(o&&o.kind==='state'&&!herdLed(o))f+=CW(i)}}pontic=n?+(f/n).toFixed(3):null}
+  if(marks.includes(S.year)){const st=S.stats[S.stats.length-1];pop[S.year]=Math.round(st.pop/1e6);big[S.year]=Math.round(st.bcS??st.bc);bigH[S.year]=st.bcH==null?null:Math.round(st.bcH);
     const d=o=>o?o.full+' '+o.cells+' at '+Math.round(WD.lat[o.capital]*180/Math.PI)+','+Math.round((WD.cxA[o.capital]+0.5)/W*360-180):null;who[S.year]={state:d(S.pols[st.bigS]),horde:d(S.pols[st.bigH])}}}
 const yr=v=>v?v.y:null,rf=k=>S.regionFirst[k]?S.regionFirst[k].y:null,ft=k=>yr(S.firstTech[TI[k]]);
 for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafrica'])out['r_'+k]=rf(k);for(const k in RS)out['rs_'+k]=sus(RS[k]);out.rc_meso=sus(UR);out.rk_egypt=sus(UK);out.ru_egypt=sus(UE);

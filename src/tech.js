@@ -90,7 +90,8 @@ function techAfford(o){
   a[0]=clamp(a[0]+0.3*s.herd[c]+0.25*s.horse[c]+0.2*s.camel[c],0,1);
   a[3]=clamp(a[3]+0.25*s.metal[c]+0.2*s.iron[c],0,1);
   a[5]=clamp(0.6*admOf()[c]+0.3*s.paper[c]+0.2*s.law[c],0,1);
-  let urb=0;for(const i of cells)if(s.city[i]>=0)urb++;a[6]=clamp(0.3*s.wheel[c]+0.3*s.iron[c]+urb/cells.length*1.5,0,1);
+  // towns: the share of sampled cells holding one (provinces: towns per cell of land, a town being a single province)
+  let urb=0;for(const i of cells)if(s.city[i]>=0)urb++;a[6]=clamp(0.3*s.wheel[c]+0.3*s.iron[c]+(w.szF?Math.min(1,(o.cityN||0)/Math.max(1,o.cells)):urb/cells.length)*1.5,0,1);
   return a;
 }
 // highest tier mastered in each row and column, from what the capital knows
@@ -104,7 +105,7 @@ function techLevels(c){
 // a state's situation pulls some rows forward
 function techLean(o,aff){
   const s=S,need=o.fac?o.fac[0]:0,energy=o.fac?o.fac[1]:0,c=o.capital;
-  return[0.6+0.6*Math.max(0,need),0.6+0.4*Math.min(1,o.cells/100)+0.3*(o.coastN||0)/Math.max(1,o.nU??o.cells),0.6+0.5*Math.min(1,o.cells/80),
+  return[0.6+0.6*Math.max(0,need),0.6+0.4*Math.min(1,o.cells/100)+0.3*(o.coastN||0)/Math.max(1,o.cells),0.6+0.5*Math.min(1,o.cells/80),
     0.5+0.6*Math.max(0,energy)+0.4*Math.max(0,-need),0.7+0.3*aff[3],0.6+0.8*Math.min(1,s.dp[c]||0),
     0.5+0.8*Math.min(1,o.enemies.size/2),0.5+0.6*clamp(o.burden||0,0,1.5)];
 }
