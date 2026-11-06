@@ -3257,18 +3257,21 @@ function climInit(){
 function orbitFor(y){return WD.isEarth?orbitAt(y):orbitAt(y-(S.orb0||0))}
 // the cell of the climate model's grid (half the 100 km grid's resolution) holding a unit's home cell
 function climCell(w,i){const x=w.hx?w.hx[i]:w.cxA[i],y=w.hy?w.hy[i]:w.cyA[i];return Math.floor(y/2)*CW+Math.floor(x/2)}
+function climAdd(w,i,v,a,n){if(!w.gcS){const j=climCell(w,i);a[j]+=v;n[j]+=1;return}
+  const S_=w.gcS,A=w.gcA,Wt=w.gcW,ar=w.area[i];for(let q=S_[i];q<S_[i+1];q++){const c=A[q],j=Math.floor(((c/W)|0)/2)*CW+Math.floor((c%W)/2),x=ar*Wt[q];a[j]+=v*x;n[j]+=x}}
 function landAlbedo(){
   // coarse land albedo from vegetation and land use: cleared forest and fields are brighter than forest
   const s=S,w=WD,a=new Float32Array(CN),n=new Float32Array(CN);
-  // (each unit at its middle; provinces weighed by area)
-  for(const i of w.landIdx){const j=climCell(w,i),wt=w.uid?w.area[i]:1;const b=VEG[s.veg[i]];let al=b?b[3]:CLM.albL;
-    const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<f0)al+=(0.31-al)*(1-s.forest[i]/f0)*(al<0.31?1:0);a[j]+=al*wt;n[j]+=wt}
+  // (the grid: each cell in its climate cell; provinces spread over the climate cells they cover, by area: a desert province
+  // of a dozen cells is not all put in the climate cell of its middle)
+  for(const i of w.landIdx){const b=VEG[s.veg[i]];let al=b?b[3]:CLM.albL;
+    const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<f0)al+=(0.31-al)*(1-s.forest[i]/f0)*(al<0.31?1:0);climAdd(w,i,al,a,n)}
   for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:CLM.albL;return a;
 }
 // coarse rain-recycling factor from vegetation: deserts return little of their rain to the air, forests much.
 // Not used yet: the model's African rain belt shifts north instead of widening, so the feedback amplifies Sahel drying.
 function landRecyc(){const s=S,w=WD,a=new Float32Array(CN),n=new Float32Array(CN);
-  for(const i of w.landIdx){const j=climCell(w,i),wt=w.uid?w.area[i]:1;const b=VEG[s.veg[i]];a[j]+=(b&&b[5]!=null?b[5]:1)*wt;n[j]+=wt}
+  for(const i of w.landIdx){const b=VEG[s.veg[i]];climAdd(w,i,b&&b[5]!=null?b[5]:1,a,n)}
   for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:1;return a}
 function climUpdate(){drain(climUpdateG())}
 function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.env.NOCLIM){S.climY=S.year;S.climCo2=S.co2;return}
