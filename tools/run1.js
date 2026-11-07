@@ -30,6 +30,10 @@ const MR=[['Egypt',22,31.5,29,34],['Pontic-Caspian steppe',44,52,30,55],['Near E
 const mrName=new Array(N).fill('Other');for(const i of WD.landIdx){const la=LA(i),lo=LO(i);let n='Other';for(const b of MR)if(la>=b[1]&&la<=b[2]&&lo>=b[3]&&lo<=b[4]){n=b[0];break}
   if(n==='South America')n=WD.elev[i]>1500||lo<-76?'Andes and Pacific coast':'Lowland South America';mrName[i]=n}
 const MRN=MR.map(b=>b[0]).filter(n=>n!=='South America').concat(['Andes and Pacific coast','Lowland South America','Other']);
+function frontierRide(){const hf=new Uint8Array(S.pols.length);for(const i of WD.landIdx){const q=S.pol[i];if(!q||hf[q])continue;for(let d=WD.nbS[i];d<WD.nbS[i+1];d++){const j=WD.nbA[d];if(j<0||S.pol[j]===q||S.pop[j]<1||S.past[j]<=0.55)continue;const p=S.pol[j]?S.pols[S.pol[j]]:null;if(!p||p.kind==='horde'){hf[q]=1;break}}}
+  let a=0,b=0,ar=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||!o.nb||o.farmN<0.5*o.cells)continue;
+    if(!hf[id])continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
+   return {'Frontier states: riding skill':b?+(a/b).toFixed(2):null,'Frontier states: share with mounted archers':b?+(ar/b).toFixed(2):null}}
 const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp[n]=0;for(const i of WD.landIdx){const p=S.pop[i];if(p<1)continue;rp[mrName[i]]+=p;
     if(S.farm[i]>0.5){const c=S.crop&&S.crop[i]>=0?CROPS[S.crop[i]].k:'none';cp[c]=(cp[c]||0)+p;
       if(S.cf){const g=mrName[i];fq[g]=(fq[g]||0)+p*S.cf[i];fw[g]=(fw[g]||0)+p}}}
@@ -39,10 +43,7 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
   // frontier horsemanship: riding skill of the peoples ruling farming states that border a steppe horde (people-weighted)
   // (run 79: a state borders herders when one of its provinces touches a herding province outside it, held by a confederation or by
   // clans; before, only states bordering an organised confederation counted, so the measure fell whenever the steppe was mostly clans)
-  {const hf=new Uint8Array(S.pols.length);for(const i of WD.landIdx){const q=S.pol[i];if(!q||hf[q])continue;for(let d=WD.nbS[i];d<WD.nbS[i+1];d++){const j=WD.nbA[d];if(j<0||S.pol[j]===q||S.pop[j]<1||S.past[j]<=0.55)continue;const p=S.pol[j]?S.pols[S.pol[j]]:null;if(!p||p.kind==='horde'){hf[q]=1;break}}}
-  let a=0,b=0,ar=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||!o.nb||o.farmN<0.5*o.cells)continue;
-    if(!hf[id])continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
-   diag[y].x={'Frontier states: riding skill':b?+(a/b).toFixed(2):null,'Frontier states: share with mounted archers':b?+(ar/b).toFixed(2):null}}
+  diag[y].x=frontierRide();
   // men of fighting age against the usual share, in states of 20+ provinces (cohort switch)
   // confederations: how many large ones, and how much of the steppe they hold
   {let big=0,huge=0,n=0,h=0,hp=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='horde')continue;if(o.cells>=20)big++;if(o.cells>=60)huge++}
@@ -53,6 +54,11 @@ const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp
 const WAR={w:0,p:0,sy:0,taken:0,t0:null};
 // steppe and migration dynamics after 3000 BCE, counted from the chronicle as it is written (it is trimmed when long)
 const DOM={inv:/break through the frontier/,dom:/abandon their pastures/,wall:/fortify its frontier/},dCnt={inv:0,dom:0,wall:0};let chI=0;
+// steppe and frontier checks (Nein, 2026-11-05: sourced history checks before the step 1 batch is judged; not tuning targets):
+// breakthroughs after 1000 BCE, the first great frontier wall in North China, the eastern steppe (the Mongolian plateau) under one
+// power by decade after 200 BCE, the lives of steppe empires of a million km2 and more, mounted archers on frontiers at 1000 BCE
+const CK={inv1k:0,wallNC:null,es:0,esN:0,arch1000bce:null},ncSet=new Set(WD.landIdx.filter(i=>LA(i)>=34&&LA(i)<=42&&LO(i)>=104&&LO(i)<=122)),
+  ES=WD.landIdx.filter(i=>LA(i)>=42&&LA(i)<=52&&LO(i)>=88&&LO(i)<=120);
 // where each invasion came from: a beaten confederation fleeing, a confederation in drought or grown rich, or a people on the move
 const invSrc={beaten:0,drought:0,riches:0,people:0};
 // farmed = growing a staple. Knowing how to farm with no crop to grow (herders at the Cape, foragers on the Northwest Coast) is
@@ -73,8 +79,11 @@ const held=R=>{const cnt=new Map();let tot=0;for(const i of R.cells){const pp=S.
 const sus=a=>{for(let t=0;t<a.length;t++){if(!a[t][1])continue;const n=Math.min(20,a.length-t);if(n<5)return null;let k=0;for(let u=t;u<t+n;u++)if(a[u][1])k++;if(k>=0.75*n)return a[t][0]}return null};
 while(S.year<END){step();
   if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)])}
-  {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
+  {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'&&c.y>=-1000)CK.inv1k++;if(k==='wall'&&CK.wallNC==null&&ncSet.has(c.cell))CK.wallNC=c.y;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
+  if(S.year===-999)CK.arch1000bce=frontierRide()['Frontier states: share with mounted archers'];
+  if(S.year>=-200&&S.year%10===0){const cnt=new Map();let tot=0;for(const i of ES){if(S.pop[i]<1)continue;const a=CW(i);tot+=a;const p=S.pol[i];if(!p)continue;const k=headOf(S.pols[p]);cnt.set(k,(cnt.get(k)||0)+a)}
+    let best=0;for(const v of cnt.values())if(v>best)best=v;CK.esN++;if(tot>0&&best>=0.5*tot)CK.es++}
   if(S.year>=-1000&&S.year%10===0){if(WAR.t0==null)WAR.t0=S.year;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||o.cells<3)continue;WAR.sy+=10;WAR.p+=o.pop;if(o.enemies.size)WAR.w+=o.pop}
     for(const i of WD.landIdx)if(S.taken[i]>S.year-10&&S.taken[i]<=S.year)WAR.taken+=CW(i)}
   if(S.year%25===0)for(const k of ['cEur','brit','scand','japan'])if(fArr[k]==null&&fShare(k)>=0.5)fArr[k]=S.year;
@@ -92,6 +101,9 @@ if(S.origins){for(const R of WILD)out['o_'+R.k]=S.origins[R.k]?S.origins[R.k].y:
 if(S.bFirst){out.x_beasts=BEASTS.map((b,k)=>S.bFirst[k]?b.k+' '+S.bFirst[k].y:null).filter(Boolean);out.x_alt=S.alt.map(a=>a.k+' '+a.y);out.x_breeds=S.lins.filter(L=>L.told).length}
 {const yrs=Math.max(1,END+3000)/1000;out.d_invasions=+(dCnt.inv/yrs).toFixed(2);for(const k in invSrc)out['d_inv_'+k]=+(invSrc[k]/yrs).toFixed(2);out.d_dominoes=+(dCnt.dom/yrs).toFixed(2);out.d_walls=dCnt.wall}
 out.diag=diag;
+{const yrs=Math.max(1,END+1000)/1000;out.d_inv1k=+(CK.inv1k/yrs).toFixed(2);out.d_wallNC=CK.wallNC;out.d_eSteppe=CK.esN?+(CK.es/CK.esN).toFixed(3):null;
+ out.d_arch1000bce=CK.arch1000bce;out.d_arch1=diag[1]&&diag[1].x?diag[1].x['Frontier states: share with mounted archers']:null;out.d_arch1000=diag[1000]&&diag[1000].x?diag[1000].x['Frontier states: share with mounted archers']:null;
+ const L=S.pols.filter(o=>o&&o.kind==='horde'&&o.maxCells>=100&&o.born>=-1000).map(o=>(o.alive?S.year:o.died)-o.born).sort((a,b)=>a-b);out.d_bigConfN=L.length;out.d_bigConfLife=L.length?L[L.length>>1]:null}
 {const ws=S.wars.filter(x=>!x.civil&&x.start>=-1000),done=ws.filter(x=>x.end).map(x=>x.end-x.start).sort((a,b)=>a-b),span=Math.max(1,S.year-(WAR.t0??-1000));
  out.d_warShare=WAR.p?+(WAR.w/WAR.p).toFixed(3):null;out.d_warsPerState=WAR.sy?+(ws.length/(WAR.sy/100)).toFixed(2):null;out.d_warLen=done.length?done[done.length>>1]:null;out.d_taken=+(WAR.taken/(span/100)).toFixed(0);
  const g={};for(const x of ws)if(x.goal)g[x.goal]=(g[x.goal]||0)+1;out.d_goals=g;

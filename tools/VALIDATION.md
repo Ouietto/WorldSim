@@ -57,4 +57,16 @@ The regional targets ask when one state, league or overlord's bloc first held 30
 | Large empires wider than tall | 65% | 50–85% | Turchin, Adams & Hall (2006): Eurasian empires are elongated east–west. |
 | New Guinea, Congo interior, Amazon interior under kingdoms at 1500 CE | 0%, 15%, 0% | 0–10%, 0–35%, 0–10% | New Guinea and Amazonia had no kingdoms; the Kongo and Luba kingdoms reached the Congo basin's edges. |
 
+### Steppe and frontier checks (reported, not scored)
+
+Agreed with Nein (2026-11-05) as checks on the herds and raids work, not tuning targets.
+
+| Check | Real | Band | Source |
+|---|---|---|---|
+| Eastern steppe (Mongolian plateau, 42–52° N, 88–120° E) under one power, share of decades from 200 BCE | about 60% | 35–85% | Xiongnu 209 BCE–48 CE, Tanshihuai's Xianbei about 156–181, Rouran 402–552, Türks 552–630 and 682–744, Uyghurs 744–840, Liao 916–1125, Mongols 1206–1388: about 1,100 of 1,700 years (Barfield, *The Perilous Frontier*, 1989). |
+| Steppe empires of a million km² or more, median life | about 96 years | 40–250 | The same list: 26 (Xianbei), 62, 78, 96, 150, 180, about 260 (Xiongnu) years. |
+| Steppe breakthroughs into farming lands per millennium, from 1000 BCE | about 6.5 | 3–12 | About 16 major conquests from the steppe in 2,500 years: Scythians in the Near East, Parthians, Yuezhi and Kushans, Saka in India, the Sixteen Kingdoms and Northern Wei, Huns, Hephthalites, Avars, Bulgars, Magyars, Liao, Seljuks, Ghaznavids, Mongols, Timur (Grousset, *The Empire of the Steppes*, 1970; Barfield 1989). |
+| First great frontier wall in North China | about 300 BCE | 500–100 BCE | The northern walls of Zhao, Yan and Qin, about 300–270 BCE (Di Cosmo, *Ancient China and Its Enemies*, 2002, ch. 4). |
+| Frontier farming states with mounted archers (people-weighted), 1000 BCE / 1 CE / 1000 CE | 0 / about 80% / about 90% | 0–15% / 50–100% / 60–100% | Chariot armies at 1000 BCE; Assyrian riders in the 9th century BCE and Zhao's adoption of mounted archery in 307 BCE (Drews, *Early Riders*, 2004; *Shiji*); by 1 CE Han, Parthian and Kushan cavalry archers; by 1000 CE Byzantine, Abbasid and Ghaznavid Turkic, Song and Rus' horse archers. |
+
 Not scored, but printed with each run (`x` in the JSON): the largest steppe confederation before 1 CE and when (the Xiongnu at their height held some 9 million km², Taagepera 1979), how many peoples were driven off their pastures into others (`pushed`), the first domestications of each herd animal, and whether any horses reached the Americas before ships did (there should be none).

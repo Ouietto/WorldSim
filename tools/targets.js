@@ -68,6 +68,14 @@ module.exports=[
   {k:'medMax', g:'Empires',n:'Mediterranean best share',kind:'share',real:0.95,lo:0.5,hi:1},
   {k:'ewShare',g:'Empires',n:'Large empires wider than tall',kind:'share',real:0.65,lo:0.5,hi:0.85},
   {k:'s_pontic',g:'Empires',n:'Pontic steppe under farming states at 1000 BCE',kind:'share',real:0.02,lo:0,hi:0.25},
+  // steppe and frontier checks (Nein, 2026-11-05: sourced before the step 1 batch is judged; checks, not tuning targets). Sources in VALIDATION.md
+  {k:'d_eSteppe',g:'Steppe and frontier',n:'Eastern steppe under one power (share of decades, 200 BCE on)',kind:'share',real:0.6,lo:0.35,hi:0.85,cls:'context'},
+  {k:'d_bigConfLife',g:'Steppe and frontier',n:'Steppe empires of 1M km2+: median life (years)',kind:'num',real:96,lo:40,hi:250,cls:'context'},
+  {k:'d_inv1k',g:'Steppe and frontier',n:'Steppe breakthroughs into farming lands per millennium (1000 BCE on)',kind:'num',real:6.5,lo:3,hi:12,dec:1,cls:'context'},
+  {k:'d_wallNC',g:'Steppe and frontier',n:'First great frontier wall in North China',kind:'year',real:B(300),lo:B(500),hi:B(100),cls:'context'},
+  {k:'d_arch1000bce',g:'Steppe and frontier',n:'Frontier states with mounted archers, 1000 BCE',kind:'share',real:0,lo:0,hi:0.15,cls:'context'},
+  {k:'d_arch1',g:'Steppe and frontier',n:'Frontier states with mounted archers, 1 CE',kind:'share',real:0.8,lo:0.5,hi:1,cls:'context'},
+  {k:'d_arch1000',g:'Steppe and frontier',n:'Frontier states with mounted archers, 1000 CE',kind:'share',real:0.9,lo:0.6,hi:1,cls:'context'},
   // where states should stay rare at 1500 CE (share of peopled land under kingdoms or larger)
   {k:'s_ng',   g:'Stateless',n:'New Guinea',kind:'share',real:0,lo:0,hi:0.1,cls:'guard'},
   {k:'s_congo',g:'Stateless',n:'Congo interior',kind:'share',real:0.15,lo:0,hi:0.35,cls:'guard'},
