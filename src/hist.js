@@ -1781,10 +1781,10 @@ function prepEco(w){
   for(const i of w.landIdx){const own=good[i];if(own<0.15)continue;circ[i]=clamp((1-sur[i]/own)*1.3,0,1)}
   // ecological niche of each province (Turchin, Adams & Hall 2006): climate, moisture, way of life, disease setting
   const nT=new Float32Array(N),nM=new Float32Array(N),nN=new Float32Array(N),nD=new Float32Array(N);
-  // (switch rvniche; Nein, 2026-11-06: count river water) a people farming a floodplain or fan lives on the river's water, not the
+  // (default since run 89, Nein 2026-11-06: count river water; switch norvniche turns it off) a people farming a floodplain or fan lives on the river's water, not the
   // rain: moisture counts the watered share of the farmland (as the fan pass waters it, to 550 mm) and only the rest is desert living,
   // so the Nile's and Sumer's farmers are not desert peoples to the rule of ecological reach
-  const RVN=swOn('rvniche');
+  const RVN=!swOn('norvniche');
   for(const i of w.landIdx){const g=RVN?Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)):0,pe=w.Pr[i]+g*Math.max(0,550-w.Pr[i]);
     nT[i]=w.T[i]/8;nM[i]=2*clamp(Math.log(Math.max(1,pe)/150)/Math.log(20),0,1);nN[i]=w.nomad[i]?1.2:w.desert[i]?0.8*(1-g):0;nD[i]=0.8*mal[i]+(w.tsetse[i]?0.5:0)}
   // seasonal pastures (transhumance): herds move between summer uplands and winter lowlands, or between desert-edge grass after the rains and wetter pasture in the dry season
