@@ -10,25 +10,21 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "prov-horsedense",
-   "env": "WORLD=prov SW=horsedense"
+   "name": "prov-herds",
+   "env": "WORLD=prov SW=herds"
   },
   {
-   "name": "prov-wildanim-horsedense",
-   "env": "WORLD=prov SW=wildanim,horsedense"
+   "name": "prov-herds-dzwide",
+   "env": "WORLD=prov SW=herds,dzwide"
   },
   {
-   "name": "prov-seacol",
-   "env": "WORLD=prov SW=seacol"
+   "name": "prov-herds-dzwide-hunger",
+   "env": "WORLD=prov SW=herds,dzwide,hunger"
   },
   {
-   "name": "prov-medturf-seacol",
-   "env": "WORLD=prov SW=medturf,seacol"
-  },
-  {
-   "name": "prov-medturf-seacol-fd55",
-   "env": "WORLD=prov SW=medturf,seacol,fd55"
+   "name": "prov-step1-all",
+   "env": "WORLD=prov SW=herds,dzwide,hunger,wildanim,horsedense"
   }
  ],
- "note": "Run 90 (rvniche now default). horsedense: taming goes with the square of the wild stands and, for the horse, with hard winters (full at a -12 C coldest month; Anthony 2007); seed 1 tames horses in Inner Mongolia at 3002 BCE (base) / 2912 (with wildanim), where before Bulgaria 3302 / central Anatolia 4202. seacol: crowded coastal farmers move along sea lanes with their crops; seed 1 Apulia 4003 -> 5072 BCE (5889 with medturf; real ~6000). medturf runs the European front 400-700 years early, so fd55 (farming diffusion x0.55 instead of x0.7) tests recalibrating it."
+ "note": "Run 91: step 1 (herds) on provinces, with the new steppe and frontier checks (context). herds: herders live on a herd stock that dies in killing winters and droughts and regrows slowly. dzwide: winters shared over 36-degree cells (Mongolian plateau losses over 8.7% in 9.8% of years, real 10%; over 17% in 4.3%). hunger: herding hardship raises raids, confederations and the search for grass; ruined clans settle as farmers or cross into a state with room. step1-all adds the moving animal ranges and the horse rule (run 90: wildanim+horsedense -0.2 +- 1.0, horse 2893 BCE in band; horsedense alone +0.3 +- 0.8)."
 }
