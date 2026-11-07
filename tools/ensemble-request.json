@@ -10,21 +10,25 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "prov-rvniche",
-   "env": "WORLD=prov SW=rvniche"
+   "name": "prov-horsedense",
+   "env": "WORLD=prov SW=horsedense"
   },
   {
-   "name": "prov-medturf",
-   "env": "WORLD=prov SW=medturf"
+   "name": "prov-wildanim-horsedense",
+   "env": "WORLD=prov SW=wildanim,horsedense"
   },
   {
-   "name": "prov-medturf-rvniche",
-   "env": "WORLD=prov SW=medturf,rvniche"
+   "name": "prov-seacol",
+   "env": "WORLD=prov SW=seacol"
   },
   {
-   "name": "prov-wildanim",
-   "env": "WORLD=prov SW=wildanim"
+   "name": "prov-medturf-seacol",
+   "env": "WORLD=prov SW=medturf,seacol"
+  },
+  {
+   "name": "prov-medturf-seacol-fd55",
+   "env": "WORLD=prov SW=medturf,seacol,fd55"
   }
  ],
- "note": "Run 89 (lakes map: Natural Earth lakes as open water, 31,445 provinces). rvniche: river and fan water count in a people's ecological niche, so Nile and Sumerian farmers are not desert peoples to the rule of ecological reach (Nile to Levant win x0.44 -> x0.94). medturf: no grass sod in summer-dry climates (Koppen Cs, Ds); the turf penalty took 59-69% off Levant, Greek and Anatolian farm capacity (seed 1, 3000 BCE: Levant coast 1.2 -> 2.3 people/km2, Upper Mesopotamia 0.8 -> 2.2 and 74% in states). wildanim: wild animal ranges follow the climate and vegetation, with naive American game hunted down. Run 88: wildmove -9.4 +- 1.1 (origins 1,000-1,500 years early), seedcarry no further change."
+ "note": "Run 90 (rvniche now default). horsedense: taming goes with the square of the wild stands and, for the horse, with hard winters (full at a -12 C coldest month; Anthony 2007); seed 1 tames horses in Inner Mongolia at 3002 BCE (base) / 2912 (with wildanim), where before Bulgaria 3302 / central Anatolia 4202. seacol: crowded coastal farmers move along sea lanes with their crops; seed 1 Apulia 4003 -> 5072 BCE (5889 with medturf; real ~6000). medturf runs the European front 400-700 years early, so fd55 (farming diffusion x0.55 instead of x0.7) tests recalibrating it."
 }
