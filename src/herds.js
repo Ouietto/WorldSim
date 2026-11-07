@@ -162,12 +162,20 @@ function herdPass(){
       const mk=a=>{const nv=new Float32Array(N);for(const i of w.landIdx)if(a[i]>0)nv[i]=n0(i);return nv};s.nvH=s.wA.map(mk);s.nvB=s.bA.map(mk)}
     HERDS.forEach((h,sp)=>animRange(s.wA[sp],i=>nicheH(sp,i),w.wild[sp],true,HVUL[sp],s.fvH[sp],s.nvH[sp]));
     BEASTS.forEach((b,k)=>{if(b.k!=='dog')animRange(s.bA[k],i=>nicheB(k,i),w.bwild[k],b.path!=='commensal',b.vul||0,s.fvB[k],s.nvB[k])})}
+  const HDN=swOn('horsedense');
   for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=s.wA?s.wA[sp]:w.wild[sp],Pg=s.domP[sp];
     const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own
     for(const i of L){const wv=wild[i];if(wv<0.2||d[i]>0.05||pEq(i)<500)continue;let near=false;ring(i,6,j=>{if(d[j]>0.05)near=true});if(near){Pg[i]=0;continue}
       const keepers=sp===4?Math.max(s.herd[i],0.6*s.farm[i]):sp===3?Math.max(s.herd[i],0.5):s.herd[i];if(keepers<0.4)continue;
-      Pg[i]+=rate*wv*keepers*(0.5+r());if(Pg[i]>=1){Pg[i]=0;domesticate(sp,i)}}
+      // (switch horsedense; Nein, 2026-11-07) taming needs the animal in numbers: breeding stock is caught where it is the main game
+      // (Botai's bones are nearly all horse: Outram et al. 2009), so progress goes with the square of the stands, and thin pockets
+      // at a range's edge (forest-steppe Anatolia, Balkan woods) count for little
+      // and horses are worth taming where winters kill cattle and sheep: a horse paws through snow to the grass and feeds itself, so on
+      // the cold steppe it is the meat that lasts the winter (Anthony 2007, ch. 10); the coldest month here, from the year's mean and
+      // range, scales it: full at -12 C and colder, a tenth where winters are mild
+      const wn=HDN&&sp===0?clamp(-(w.T[i]+s.cdT[i]-0.5*(w.amp?w.amp[i]:20))/12,0.1,1):1;
+      Pg[i]+=rate*(HDN?wv*wv:wv)*wn*keepers*(0.5+r());if(Pg[i]>=1){Pg[i]=0;domesticate(sp,i)}}
     for(const i of L){let v=d[i];if(v<=0)continue;const c=capFor(sp,i);
       if(c<=0.01){d[i]=v<0.01?0:v*0.5;continue}
       v+=0.3*v*(1-v/c);if(s.pop[i]<1)v*=0.8;d[i]=clamp(v,0,1)}

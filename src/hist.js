@@ -555,12 +555,12 @@ function growth(){
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){
-  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn();const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
+  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn(),SEAC=swOn('seacol');const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
   // a move from i toward neighbour j, sc of a 100 km step's flow
-  const one=(i,j,p,pr,sc)=>{if(j<0||!w_land[j])return;
-    const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)return;
+  const one=(i,j,p,pr,sc)=>{if(j<0||!w_land[j])return 0;
+    const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)return 0;
     const ar=w_area[j],kE=Math.max(kj,ar*3*w_sF[j]*s_farm[i]*(1+0.6*s_metal[i]+0.6*s_iron[i]),ar*1.1*w_sH[j]*s_herd[i]);
-    const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)return;
+    const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)return 0;
     let mob=mg*(0.08+0.25*s_herd[i]*w_sH[i]*(0.5+s_horse[i]));
     if(s_pol[j]&&s_pol[j]!==s_pol[i])mob*=0.4;
     else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)+2*Math.max(0,(o.ext??0.45)-0.7)}
@@ -577,10 +577,19 @@ function migrate(){
     // their selection mix into the newcomers' place by their numbers, as their ways do
     if(SEEDS&&s.cultv&&s.cultv[i]>0.05){const WR=s.occ?s.wildR:w.wildR,k=WR[i];if(k>=0){const sh=pj<1?1:mv/(pj+mv),cv=s.cultv[i];
       if(s.occ){const o=s.occ[k];if(o[j]<o[i])o[j]+=(o[i]-o[j])*Math.min(1,2*sh*cv)}
-      const rj=WR[j];if(rj===k||rj<0){s.cultv[j]+=(cv-s.cultv[j])*sh;s.domst[j]+=(s.domst[i]-s.domst[j])*sh}}}};
+      const rj=WR[j];if(rj===k||rj<0){s.cultv[j]+=(cv-s.cultv[j])*sh;s.domst[j]+=(s.domst[i]-s.domst[j])*sh}}}
+    return mv};
+  // (switch seacol; Nein, 2026-11-07) crowded farmers on a coast paddle along it and across narrow seas to good land beyond, as
+  // the first farmers reached Cyprus, Crete, southern Italy and Iberia by boat ahead of any land front (Zilhao 2001; Broodbank 2013):
+  // the same move as over land, along the sea lanes, a twentieth of a land step's flow per 100 km of water and per 100 km of the
+  // home coast; dugouts and paddled boats go up to 3 sea steps, sailing boats 6; the seed goes with them
+  const seaMove=i=>{const fl=0.05*cwL(i),far=s.sail[i]>0.3?6:3;
+    for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>far)continue;const qq=s_pop[i];if(qq<1)break;
+      if(one(i,j,qq,qq/s_K[i],fl/dl)>0&&s.pkAv)s.pkAv[j]|=s.pkAv[i]}};
   for(let kk=0;kk<L.length;kk++){
     const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
     const pr=p/s_K[i];if(pr<0.55)continue;
+    if(SEAC&&s_farm[i]>=0.5&&w.coast[i])seaMove(i);
     // (on provinces people move toward every neighbour each year, each by its share of the flow: nbE/4 of a 100 km step's)
     if(nbE){for(let e=w.nbS[i];e<w.nbS[i+1];e++){const q=s_pop[i];if(q<1)break;one(i,w.nbA[e],q,q/s_K[i],Math.min(1,nbE[e]/4))}continue}
     one(i,rndNb(i,r()),p,pr,1)}
