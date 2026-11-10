@@ -1725,11 +1725,22 @@ function moveFolk(i,j,mv){const s=S,T=s.tk,pj=s.pop[j];s.pop[i]-=mv;s.pop[j]+=mv
 // ice over the grass in a cold winter (dzud; a dry summer before a hard winter is the worst: Fernandez-Gimenez et al. 2012).
 // Herders who outnumber what their herds feed eat into their breeding stock. The winter is its own weather field, drawn from its
 // own random stream so the rains stay the same.
-const herdsOn=()=>swOn('herds');
+const herdsOn=()=>!swOn('noherds');
 function herdYear(){
   const s=S,w=WD,L=w.landIdx;
   if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
-  const g=s.WG,rW=s.rW;for(let k=0;k<g.length;k++)g[k]=0.3*g[k]+0.954*gauss(rW);
+  const g=s.WG,rW=s.rW;
+  // (switch dzwide; 2026-11-07) a hard winter covers a whole country: the cold of the Siberian High and its snow reach across 2,000 km
+  // at once (the 2010 dzud struck about four-fifths of Mongolia). The winter is a local field on 9-degree cells plus a field on
+  // 36-degree cells, so each place keeps the same spread of winters but neighbours share them. Rao et al. (2015): Mongolia's
+  // national livestock loss tops 6% in 26% of years and 8.7% in 10% (median 4.2%), with 17% and 20% in its worst years; without
+  // this, the plateau's worst year in a thousand was 17%
+  if(!swOn('nodzwide')){if(!s.WG2){s.WG2=new Float32Array(10*5);s.WGf=new Float32Array(AGW*AGH)}const g2=s.WG2,gf=s.WGf;
+    for(let k=0;k<g2.length;k++)g2[k]=0.3*g2[k]+0.954*gauss(rW);for(let k=0;k<gf.length;k++)gf[k]=0.3*gf[k]+0.954*gauss(rW);
+    for(let y=0;y<AGH;y++)for(let x=0;x<AGW;x++){const gx=(x+0.5)/4-0.5,gy=clamp((y+0.5)/4-0.5,0,4),x0=Math.floor(gx),y0=Math.min(3,Math.floor(gy)),fx=gx-x0,fy=gy-y0,
+      xa=((x0%10)+10)%10,xb=(xa+1)%10,c=(g2[y0*10+xa]*(1-fx)+g2[y0*10+xb]*fx)*(1-fy)+(g2[(y0+1)*10+xa]*(1-fx)+g2[(y0+1)*10+xb]*fx)*fy;
+      g[y*AGW+x]=0.6*gf[y*AGW+x]+0.8*c/Math.sqrt(((1-fx)**2+fx*fx)*((1-fy)**2+fy*fy))}}
+  else for(let k=0;k<g.length;k++)g[k]=0.3*g[k]+0.954*gauss(rW);
   const dT=s.dT+s.gT+epochTemp(),wi=w.wi,wf=w.wf,hs=s.hs,lossA=s.hsLoss,dom=s.dom;
   for(const i of L){lossA[i]=0;if(!(w.sH[i]>0.03||w.desert[i]))continue;
     const T=w.T[i]+dT+s.cdT[i]+s.evT[i],cold=clamp((w.amp[i]/2-T-4)/10,0,1);
@@ -1742,9 +1753,27 @@ function herdYear(){
     hs[i]=clamp(v,0.02,1.6);
     const ls=lossA[i];if(ls>0.25&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
     if(s.past[i]>0.5&&p>=1){const a=cw(i);s.hzC+=a;if(ls>0.25)s.dzC+=a;if(cold>0.5){s.hzCc+=a;if(ls>0.25)s.dzCc+=a}}}
+  // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
+  // is how far its herds stand below a normal year's (none above 0.8 of it, full at 0.2); a clan below its ruin line for five years
+  // running cannot rebuild alone and gives up the herds where it can (Khazanov 1984: the poor drop out of nomadism and settle;
+  // Barfield 1989: the khan's loot and tribute hold the rest)
+  if(!swOn('nohunger')){if(!s.hgr){s.hgr=new Float32Array(N);s.ruinY=new Uint16Array(N)}const hg=s.hgr,ry=s.ruinY;
+    for(const i of L){if(!(s.past[i]>0.5)||s.pop[i]<1||!(w.sH[i]>0.03||w.desert[i])){hg[i]=0;ry[i]=0;continue}
+      const v=hs[i],th=0.15+0.2*(((i*2654435761)>>>0)/4294967296);hg[i]=clamp((0.8-v)/0.6,0,1);ry[i]=v<th?Math.min(60000,ry[i]+1):0;
+      if(ry[i]>=5)settleRuined(i)}}
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='horde'||o.cells<15)continue;const ls=lossA[o.capital];if(ls<0.3)continue;
     o.shock+=0.5*ls;chron('nature',`${dz0(o.capital)?'A killing winter buries the pastures':'Drought burns the pastures'}: the ${o.full} loses ${Math.round(ls*100)}% of its herds.`,o.capital,[R_(o)])}
 }
+// ruined herders settle: where fields can be had and farming is known next door, they take up the plough (a tenth of the way a year);
+// otherwise a tenth of them a year go into a neighbouring state's province that has room (a state short of people or soldiers lets
+// them in; the Ming and Qing settled surrendered Mongols on the frontier), and mix with its people
+function settleRuined(i){const s=S,w=WD;let kn=false,bit=0,best=-1,room=0;
+  for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;if(s.farm[j]>=0.5){kn=true;if(s.pkAv)bit|=s.pkAv[j]}
+    const q=s.pol[j];if(q&&q!==s.pol[i]&&s.pols[q].kind==='state'){const rm=0.7*s.K[j]-s.pop[j];if(rm>room){room=rm;best=j}}}
+  if(kn&&w.sF[i]>=0.12){s.farm[i]+=(0.6-s.farm[i])*0.1;if(s.pkAv)s.pkAv[i]|=bit;
+    if(s.farm[i]>0.5&&s.farm[i]<0.51&&s.eth[i]>=0)chron('migration',`Ruined by hard years, the herders of the ${s.eths[s.eth[i]].name} take up farming.`,i,[RE(s.eths[s.eth[i]])]);return}
+  if(best>=0){const m=Math.min(0.1*s.pop[i],room);if(m<1)return;s.pop[i]-=m;s.pop[best]+=m;mixIn(best,s.eth[i],m/s.pop[best]);
+    if((s.ruinY[i]%25)===5&&s.eth[i]>=0)chron('migration',`Ruined herders of the ${s.eths[s.eth[i]].name} cross into the ${s.pols[s.pol[best]].full} to settle.`,best,[RE(s.eths[s.eth[i]]),R_(s.pols[s.pol[best]])])}}
 // was the herd lost to the winter or to the summer?
 function dz0(i){const s=S,w=WD;return w.amp[i]/2-(w.T[i]+s.cdT[i])-4>0&&s.wm[i]>0.85}
 function computeK(){
@@ -1878,12 +1907,12 @@ function growth(){
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){
-  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn();const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
+  const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn(),SEAC=swOn('seacol');const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
   // a move from i toward neighbour j, sc of a 100 km step's flow
-  const one=(i,j,p,pr,sc)=>{if(j<0||!w_land[j])return;
-    const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)return;
+  const one=(i,j,p,pr,sc)=>{if(j<0||!w_land[j])return 0;
+    const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)return 0;
     const ar=w_area[j],kE=Math.max(kj,ar*3*w_sF[j]*s_farm[i]*(1+0.6*s_metal[i]+0.6*s_iron[i]),ar*1.1*w_sH[j]*s_herd[i]);
-    const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)return;
+    const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)return 0;
     let mob=mg*(0.08+0.25*s_herd[i]*w_sH[i]*(0.5+s_horse[i]));
     if(s_pol[j]&&s_pol[j]!==s_pol[i])mob*=0.4;
     else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)+2*Math.max(0,(o.ext??0.45)-0.7)}
@@ -1900,10 +1929,19 @@ function migrate(){
     // their selection mix into the newcomers' place by their numbers, as their ways do
     if(SEEDS&&s.cultv&&s.cultv[i]>0.05){const WR=s.occ?s.wildR:w.wildR,k=WR[i];if(k>=0){const sh=pj<1?1:mv/(pj+mv),cv=s.cultv[i];
       if(s.occ){const o=s.occ[k];if(o[j]<o[i])o[j]+=(o[i]-o[j])*Math.min(1,2*sh*cv)}
-      const rj=WR[j];if(rj===k||rj<0){s.cultv[j]+=(cv-s.cultv[j])*sh;s.domst[j]+=(s.domst[i]-s.domst[j])*sh}}}};
+      const rj=WR[j];if(rj===k||rj<0){s.cultv[j]+=(cv-s.cultv[j])*sh;s.domst[j]+=(s.domst[i]-s.domst[j])*sh}}}
+    return mv};
+  // (switch seacol; Nein, 2026-11-07) crowded farmers on a coast paddle along it and across narrow seas to good land beyond, as
+  // the first farmers reached Cyprus, Crete, southern Italy and Iberia by boat ahead of any land front (Zilhao 2001; Broodbank 2013):
+  // the same move as over land, along the sea lanes, a twentieth of a land step's flow per 100 km of water and per 100 km of the
+  // home coast; dugouts and paddled boats go up to 3 sea steps, sailing boats 6; the seed goes with them
+  const seaMove=i=>{const fl=0.05*cwL(i),far=s.sail[i]>0.3?6:3;
+    for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>far)continue;const qq=s_pop[i];if(qq<1)break;
+      if(one(i,j,qq,qq/s_K[i],fl/dl)>0&&s.pkAv)s.pkAv[j]|=s.pkAv[i]}};
   for(let kk=0;kk<L.length;kk++){
     const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
     const pr=p/s_K[i];if(pr<0.55)continue;
+    if(SEAC&&s_farm[i]>=0.5&&w.coast[i])seaMove(i);
     // (on provinces people move toward every neighbour each year, each by its share of the flow: nbE/4 of a 100 km step's)
     if(nbE){for(let e=w.nbS[i];e<w.nbS[i+1];e++){const q=s_pop[i];if(q<1)break;one(i,w.nbA[e],q,q/s_K[i],Math.min(1,nbE[e]/4))}continue}
     one(i,rndNb(i,r()),p,pr,1)}
@@ -1919,7 +1957,7 @@ function grazePass(){
     const pr=s.K[i]>1?p/s.K[i]:0;D[i]=clamp(D[i]+0.004*Math.max(0,pr-0.8)*s.past[i]-0.03*D[i]*(pr<0.7?1:0.3),0,1);
     if((kk+y)&1||p<3000||s.past[i]<0.5||s.herd[i]<0.4||s.farm[i]>0.5)continue;
     const q=s.pol[i],o=q?s.pols[q]:null;if(o&&o.kind==='state'&&!herdLed(o))continue;
-    const e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=2+Math.round(3*Math.min(1,s.horse[i])*(0.3+(e&&e.ride?e.ride:0))),own=G[i]/(p*s.past[i]+1);if(own<=0)continue;
+    const e=s.eth[i]>=0?s.eths[s.eth[i]]:null,R=2+Math.round(3*Math.min(1,s.horse[i])*(0.3+(e&&e.ride?e.ride:0)))+(s.hgr&&s.hgr[i]>0.5?2:0),own=G[i]/(p*s.past[i]+1);if(own<=0)continue;
     const cx=w.hx?w.hx[i]:w.cxA[i],cy=w.hy?w.hy[i]:w.cyA[i];let best=-1,bg=0;
     for(let t=0;t<4;t++){const dy=Math.round((r()*2-1)*R),yy=cy+dy;if(yy<0||yy>=H)continue;const dx=Math.round((r()*2-1)*R),j=uAt(cx+dx,yy);
       if(j===i||!w.land[j]||s.farm[j]>0.5||G[j]<=0)continue;const qj=s.pol[j],oj=qj?s.pols[qj]:null;if(oj&&oj.kind==='state'&&!herdLed(oj))continue;
@@ -2917,7 +2955,7 @@ function* politicsG(){
             else for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]&&!pol[j]&&s_eth[j]===ei&&pop[j]>=1&&r()<0.5){pol[j]=id;s_dist[j]=2}}}}
         else if(past>0.3&&dens>0.3&&(w_nomad[i]||w_desert[i])&&(fr||steppeFront(i,ei))){
           // riders organise far more readily than herders on foot; a rival clan is a weaker spur than a state
-          if(r()<pU(P.nomad*0.0003*(fr?1:0.3)*(0.4+s_s[i])*(0.08+1.4*s_horse[i]+s_camel[i]),i)){
+          if(r()<pU(P.nomad*0.0003*(fr?1:0.3)*(0.4+s_s[i])*(0.08+1.4*s_horse[i]+s_camel[i])*(s.hgr?1+2*s.hgr[i]:1),i)){
             const id=newPolity(i,null,{kind:'horde'});
             if(szF)grabNear(i,id,j=>!pol[j]&&(w_nomad[j]||w_desert[j])&&pop[j]>=1,0.6);
             else for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]&&!pol[j]&&(w_nomad[j]||w_desert[j])&&pop[j]>=1&&r()<0.6){pol[j]=id;s_dist[j]=2}}}}
@@ -3104,7 +3142,12 @@ function prepEco(w){
   for(const i of w.landIdx){const own=good[i];if(own<0.15)continue;circ[i]=clamp((1-sur[i]/own)*1.3,0,1)}
   // ecological niche of each province (Turchin, Adams & Hall 2006): climate, moisture, way of life, disease setting
   const nT=new Float32Array(N),nM=new Float32Array(N),nN=new Float32Array(N),nD=new Float32Array(N);
-  for(const i of w.landIdx){nT[i]=w.T[i]/8;nM[i]=2*clamp(Math.log(Math.max(1,w.Pr[i])/150)/Math.log(20),0,1);nN[i]=w.nomad[i]?1.2:w.desert[i]?0.8:0;nD[i]=0.8*mal[i]+(w.tsetse[i]?0.5:0)}
+  // (default since run 89, Nein 2026-11-06: count river water; switch norvniche turns it off) a people farming a floodplain or fan lives on the river's water, not the
+  // rain: moisture counts the watered share of the farmland (as the fan pass waters it, to 550 mm) and only the rest is desert living,
+  // so the Nile's and Sumer's farmers are not desert peoples to the rule of ecological reach
+  const RVN=!swOn('norvniche');
+  for(const i of w.landIdx){const g=RVN?Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)):0,pe=w.Pr[i]+g*Math.max(0,550-w.Pr[i]);
+    nT[i]=w.T[i]/8;nM[i]=2*clamp(Math.log(Math.max(1,pe)/150)/Math.log(20),0,1);nN[i]=w.nomad[i]?1.2:w.desert[i]?0.8*(1-g):0;nD[i]=0.8*mal[i]+(w.tsetse[i]?0.5:0)}
   // seasonal pastures (transhumance): herds move between summer uplands and winter lowlands, or between desert-edge grass after the rains and wetter pasture in the dry season
   const transh=new Float32Array(N);
   for(const i of w.landIdx){if(w.sH[i]<0.12)continue;let v=0;const e0=w.elev[i],p0=w.Pr[i];
@@ -3441,7 +3484,11 @@ function cropsInit(){
     // monsoon grasslands with dry winters (the loess of North China) grow bunchgrass, not a matted sod: the hoe farmers of
     // Yangshao worked them from the start (Liu & Chen 2012)
     const dryWinter=i=>{const k=w.kgGrid?w.kgGrid[i]:0;return k===15||k===16||k===26||k===27};
-    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if(b===5||b===6)w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*rvAg()[i]))*(dryWinter(i)?0.25:1)}
+    // (switch medturf; Nein, 2026-11-06: why the Mediterranean is so thinly farmed) summer-dry climates (Koppen Cs and Ds) grow
+    // annual grasses that die back each summer among shrubs and open oak woodland, not a perennial mat of roots: the wild cereals
+    // of the Fertile Crescent are such annuals, and the first farmers sowed among them (Zohary, Hopf & Weiss 2012; Blumler 1998)
+    const dryS=i=>{if(!swOn('medturf'))return false;const k=w.kgGrid?w.kgGrid[i]:0;return(k>=12&&k<=14)||(k>=22&&k<=25)};
+    for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if((b===5||b===6)&&!dryS(i))w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*rvAg()[i]))*(dryWinter(i)?0.25:1)}
     for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;w.soilDig[i]=so.dig;if(w.turf[i]>0.3)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
       // heavy wet clays belong to forest and savanna-clay soils, not to volcanic highlands, river silt or mountain soils
       if(!['forest','podzol','clay'].includes(so.k))w.heavy[i]=0}}
@@ -3728,7 +3775,7 @@ function capFor(sp,i){const s=S,w=WD,ps=s.past[i],T=w.T[i]+s.cdT[i],P=w.Pr[i];
    llamas; each beast's own) at about P.wildAV km a year (2), dies back where the climate no longer suits it, holding on in
    pockets of its first range, and is hunted out and crowded off by dense farming country (wild horses, aurochs, elephants); the
    animals that live beside people (cats, guineafowl, servals, golden wolves) are not */
-const wildAOn=()=>swOn('wildanim');
+const wildAOn=()=>!swOn('nowildanim');
 function climNow(i){const w=WD,s=S,T=w.T[i]+(s.cdT?s.cdT[i]:0),P=Math.max(0,w.Pr[i]+(s.cdP?s.cdP[i]:0)),tw=T+w.amp[i]/2;
   const sH=clamp((tw-4)/10,0,1)*clamp((27-T)/7,0,1)*clamp((P-120)/180,0,1)*clamp((1100-P)/500,0.15,1)*(1-0.4*w.rough[i]);return{T,P,sH}}
 // grazers want open country: the vegetation the climate gives now (vegPass), not rain and warmth alone; forest closes the
@@ -3795,12 +3842,20 @@ function herdPass(){
       const mk=a=>{const nv=new Float32Array(N);for(const i of w.landIdx)if(a[i]>0)nv[i]=n0(i);return nv};s.nvH=s.wA.map(mk);s.nvB=s.bA.map(mk)}
     HERDS.forEach((h,sp)=>animRange(s.wA[sp],i=>nicheH(sp,i),w.wild[sp],true,HVUL[sp],s.fvH[sp],s.nvH[sp]));
     BEASTS.forEach((b,k)=>{if(b.k!=='dog')animRange(s.bA[k],i=>nicheB(k,i),w.bwild[k],b.path!=='commensal',b.vul||0,s.fvB[k],s.nvB[k])})}
+  const HDN=!swOn('nohorsedense');
   for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=s.wA?s.wA[sp]:w.wild[sp],Pg=s.domP[sp];
     const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own
     for(const i of L){const wv=wild[i];if(wv<0.2||d[i]>0.05||pEq(i)<500)continue;let near=false;ring(i,6,j=>{if(d[j]>0.05)near=true});if(near){Pg[i]=0;continue}
       const keepers=sp===4?Math.max(s.herd[i],0.6*s.farm[i]):sp===3?Math.max(s.herd[i],0.5):s.herd[i];if(keepers<0.4)continue;
-      Pg[i]+=rate*wv*keepers*(0.5+r());if(Pg[i]>=1){Pg[i]=0;domesticate(sp,i)}}
+      // (switch horsedense; Nein, 2026-11-07) taming needs the animal in numbers: breeding stock is caught where it is the main game
+      // (Botai's bones are nearly all horse: Outram et al. 2009), so progress goes with the square of the stands, and thin pockets
+      // at a range's edge (forest-steppe Anatolia, Balkan woods) count for little
+      // and horses are worth taming where winters kill cattle and sheep: a horse paws through snow to the grass and feeds itself, so on
+      // the cold steppe it is the meat that lasts the winter (Anthony 2007, ch. 10); the coldest month here, from the year's mean and
+      // range, scales it: full at -12 C and colder, a tenth where winters are mild
+      const wn=HDN&&sp===0?clamp(-(w.T[i]+s.cdT[i]-0.5*(w.amp?w.amp[i]:20))/12,0.1,1):1;
+      Pg[i]+=rate*(HDN?wv*wv:wv)*wn*keepers*(0.5+r());if(Pg[i]>=1){Pg[i]=0;domesticate(sp,i)}}
     for(const i of L){let v=d[i];if(v<=0)continue;const c=capFor(sp,i);
       if(c<=0.01){d[i]=v<0.01?0:v*0.5;continue}
       v+=0.3*v*(1-v/c);if(s.pop[i]<1)v*=0.8;d[i]=clamp(v,0,1)}
@@ -4439,7 +4494,7 @@ function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass()
   for(const id of s.alive){const o=s.pols[id];o.tFront=0}
   for(const i of L){const p=s.pol[i];if(!p)continue;const o=s.pols[p];if(o.kind!=='state'||s.pop[i]<1)continue;
     let best=-1,bu=0;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j]||s.pol[j]||s.pop[j]<1||s.eth[j]<0||s.eth[j]===s.eth[i])continue;
-      const E=s.eths[s.eth[j]],ride=E&&E.ride?E.ride:0,hungry=(s.evP[j]<0.9?1.6:1)*(s.pop[j]>0.95*s.K[j]?1.4:1);
+      const E=s.eths[s.eth[j]],ride=E&&E.ride?E.ride:0,hungry=(s.evP[j]<0.9?1.6:1)*(s.pop[j]>0.95*s.K[j]?1.4:1)*(s.hgr?1+1.5*s.hgr[j]:1);
       const u=Math.pow(R[j]+1,0.75)*s.s[j]*milAt(j)*(1+1.5*ride)*hungry*(1+0.6*s.herd[j]*w.sH[j]);if(u>bu){bu=u;best=j}}
     if(best<0)continue;o.tFront+=cwL(i);
     // a raid every few years where the tribes are strong; walls, garrisons and loyal settlers blunt it
