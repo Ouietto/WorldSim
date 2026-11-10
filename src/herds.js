@@ -95,7 +95,7 @@ function capFor(sp,i){const s=S,w=WD,ps=s.past[i],T=w.T[i]+s.cdT[i],P=w.Pr[i];
    llamas; each beast's own) at about P.wildAV km a year (2), dies back where the climate no longer suits it, holding on in
    pockets of its first range, and is hunted out and crowded off by dense farming country (wild horses, aurochs, elephants); the
    animals that live beside people (cats, guineafowl, servals, golden wolves) are not */
-const wildAOn=()=>swOn('wildanim');
+const wildAOn=()=>!swOn('nowildanim');
 function climNow(i){const w=WD,s=S,T=w.T[i]+(s.cdT?s.cdT[i]:0),P=Math.max(0,w.Pr[i]+(s.cdP?s.cdP[i]:0)),tw=T+w.amp[i]/2;
   const sH=clamp((tw-4)/10,0,1)*clamp((27-T)/7,0,1)*clamp((P-120)/180,0,1)*clamp((1100-P)/500,0.15,1)*(1-0.4*w.rough[i]);return{T,P,sH}}
 // grazers want open country: the vegetation the climate gives now (vegPass), not rain and warmth alone; forest closes the
@@ -162,7 +162,7 @@ function herdPass(){
       const mk=a=>{const nv=new Float32Array(N);for(const i of w.landIdx)if(a[i]>0)nv[i]=n0(i);return nv};s.nvH=s.wA.map(mk);s.nvB=s.bA.map(mk)}
     HERDS.forEach((h,sp)=>animRange(s.wA[sp],i=>nicheH(sp,i),w.wild[sp],true,HVUL[sp],s.fvH[sp],s.nvH[sp]));
     BEASTS.forEach((b,k)=>{if(b.k!=='dog')animRange(s.bA[k],i=>nicheB(k,i),w.bwild[k],b.path!=='commensal',b.vul||0,s.fvB[k],s.nvB[k])})}
-  const HDN=swOn('horsedense');
+  const HDN=!swOn('nohorsedense');
   for(let sp=0;sp<HERDS.length;sp++){const d=s.dom[sp],wild=s.wA?s.wA[sp]:w.wild[sp],Pg=s.domP[sp];
     const rate=[0.004,0.003,0.0012,0.0015,0.005][sp];
     // where tame herds are already near, people get animals from neighbours instead of taming their own

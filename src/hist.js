@@ -402,7 +402,7 @@ function moveFolk(i,j,mv){const s=S,T=s.tk,pj=s.pop[j];s.pop[i]-=mv;s.pop[j]+=mv
 // ice over the grass in a cold winter (dzud; a dry summer before a hard winter is the worst: Fernandez-Gimenez et al. 2012).
 // Herders who outnumber what their herds feed eat into their breeding stock. The winter is its own weather field, drawn from its
 // own random stream so the rains stay the same.
-const herdsOn=()=>swOn('herds');
+const herdsOn=()=>!swOn('noherds');
 function herdYear(){
   const s=S,w=WD,L=w.landIdx;
   if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
@@ -412,7 +412,7 @@ function herdYear(){
   // 36-degree cells, so each place keeps the same spread of winters but neighbours share them. Rao et al. (2015): Mongolia's
   // national livestock loss tops 6% in 26% of years and 8.7% in 10% (median 4.2%), with 17% and 20% in its worst years; without
   // this, the plateau's worst year in a thousand was 17%
-  if(swOn('dzwide')){if(!s.WG2){s.WG2=new Float32Array(10*5);s.WGf=new Float32Array(AGW*AGH)}const g2=s.WG2,gf=s.WGf;
+  if(!swOn('nodzwide')){if(!s.WG2){s.WG2=new Float32Array(10*5);s.WGf=new Float32Array(AGW*AGH)}const g2=s.WG2,gf=s.WGf;
     for(let k=0;k<g2.length;k++)g2[k]=0.3*g2[k]+0.954*gauss(rW);for(let k=0;k<gf.length;k++)gf[k]=0.3*gf[k]+0.954*gauss(rW);
     for(let y=0;y<AGH;y++)for(let x=0;x<AGW;x++){const gx=(x+0.5)/4-0.5,gy=clamp((y+0.5)/4-0.5,0,4),x0=Math.floor(gx),y0=Math.min(3,Math.floor(gy)),fx=gx-x0,fy=gy-y0,
       xa=((x0%10)+10)%10,xb=(xa+1)%10,c=(g2[y0*10+xa]*(1-fx)+g2[y0*10+xb]*fx)*(1-fy)+(g2[(y0+1)*10+xa]*(1-fx)+g2[(y0+1)*10+xb]*fx)*fy;
@@ -434,7 +434,7 @@ function herdYear(){
   // is how far its herds stand below a normal year's (none above 0.8 of it, full at 0.2); a clan below its ruin line for five years
   // running cannot rebuild alone and gives up the herds where it can (Khazanov 1984: the poor drop out of nomadism and settle;
   // Barfield 1989: the khan's loot and tribute hold the rest)
-  if(swOn('hunger')){if(!s.hgr){s.hgr=new Float32Array(N);s.ruinY=new Uint16Array(N)}const hg=s.hgr,ry=s.ruinY;
+  if(!swOn('nohunger')){if(!s.hgr){s.hgr=new Float32Array(N);s.ruinY=new Uint16Array(N)}const hg=s.hgr,ry=s.ruinY;
     for(const i of L){if(!(s.past[i]>0.5)||s.pop[i]<1||!(w.sH[i]>0.03||w.desert[i])){hg[i]=0;ry[i]=0;continue}
       const v=hs[i],th=0.15+0.2*(((i*2654435761)>>>0)/4294967296);hg[i]=clamp((0.8-v)/0.6,0,1);ry[i]=v<th?Math.min(60000,ry[i]+1):0;
       if(ry[i]>=5)settleRuined(i)}}
