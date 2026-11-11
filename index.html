@@ -2453,7 +2453,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -2492,7 +2492,7 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
-    s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
+    s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;takeCaptives(o,j,q?0.03:0.06);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
     const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde')o.prest=(o.prest||0)+0.02*a;
     if(q&&s.city[j]>=0)sackCity(o,j,q);
@@ -2516,7 +2516,7 @@ function raid(o,i,j){
   const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
-    const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
+    takeCaptives(o,j,0.03);const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
     displace(j,0.04,o.id);
   }
 }
@@ -2971,7 +2971,7 @@ function* politicsG(){
         // for the poorer side), or punish a raider. A neighbour worth nothing by any road is left alone.
         if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
-            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)-0.01*own-tl3:-1e18,
+            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)*(slaveOn()&&!kinBan(o,t.rel)?1.5:1)-0.01*own-tl3:-1e18,
             vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,bv=Math.max(vC,vT,vR,vP);
           if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':'raid'}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
@@ -3270,7 +3270,7 @@ function* stepG(){
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(hv&&s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
@@ -4748,6 +4748,44 @@ function goodsPass(){const s=S,w=WD,pols=s.pols;if(!s.ore)goodsInit();const G=s.
 function lackV(o,t){if(!o.gmet||!t.gs)return 0;let v=0;for(let g=0;g<NG;g++)if(o.gmet[g]<0.8&&t.gs[g]>t.gd[g])v+=GOODS[g].v/GVS*(1-o.gmet[g]);return 0.5*(o.tax||0)*v+2*(o.grv&&o.grv.get(t.id)||0)}
 // stateless land with ore or salt a state is short of is worth holding whatever its people pay
 function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of [0,2,3,4,5])if(G[g][j]>0.3&&o.gmet[g]<0.8)return true;return false}
+
+/* ---------- slavery (Nein, 2026-11-11; switch noslaves turns it off) ----------
+   Captives are taken when land is conquered and in raids, and are a traded good. A polity keeps a pool of captives with the
+   peoples they came from. Every ten years peoples who live by raiding sell most of theirs to the richest neighbouring state,
+   and each state puts its captives to work where labour is wanted: on the estates of unequal realms, most of all in warm, wet
+   farmland (plantations), in mines, and in cities. They are added to the people of those provinces as slaves and bring their
+   own culture with them, so a people carried off in numbers shows on the map where it was put to work. Slaves do not serve in
+   the army; their labour concentrates wealth; where they are many and the state is weak they rise. Their descendants are
+   absorbed over generations, so slavery lasts only where captives keep coming. Universal faiths mostly forbid enslaving
+   fellow believers. */
+const slaveOn=()=>!swOn('noslaves');
+function kinBan(o,rel){if(o.rel<0||rel!==o.rel)return false;const R=S.rels[o.rel];return!!R&&R.kind==='universal'&&(R.id*7+3)%10<7}
+function takeCaptives(o,j,share){const s=S;if(!slaveOn()||s.pop[j]<50||kinBan(o,s.rel[j]))return;const n=s.pop[j]*share;s.pop[j]-=n;o.capt=(o.capt||0)+n;
+  const e=s.eth[j];if(e>=0){if(!o.captE)o.captE=new Map();o.captE.set(e,(o.captE.get(e)||0)+n)}}
+function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float32Array(N);s.slvE=new Int32Array(N).fill(-1)}const SL=s.slv,G=s.ore;
+  // sale: raiders and small chiefs sell to the richest neighbouring state that will take them
+  for(const id of s.alive){const o=pols[id];if(!(o.capt>100)||!o.nb)continue;if(o.kind==='state'&&(o.cA||o.cells)>=6)continue;let b=null,bv=0;
+    for(const [q] of o.nb){const t=pols[q];if(!t||!t.alive||t.kind!=='state'||o.enemies.has(q))continue;const v=(t.tax||0)*(0.3+(t.ineq||0.25));if(v>bv){bv=v;b=t}}
+    if(!b)continue;const n=0.8*o.capt;o.capt-=n;b.capt=(b.capt||0)+n;if(o.captE){if(!b.captE)b.captE=new Map();for(const [e,x] of o.captE){b.captE.set(e,(b.captE.get(e)||0)+0.8*x);o.captE.set(e,0.2*x)}}
+      o.loot=(o.loot||0)+0.3*n;s.slvSold=(s.slvSold||0)+n}
+  // work: weight of each province for its state's captives
+  const want=i=>{const p=s.pop[i];if(p<500)return 0;const hot=w.T[i]>18&&w.Pr[i]>800&&s.farm[i]>0.5?3:0,mine=G&&(G[2][i]>0.3||G[3][i]>0.3||G[5][i]>0.3||G[0][i]>0.5)?3:0;return p*(1+hot+mine+(s.city[i]>=0?1:0))*s.farm[i]};
+  for(const id of s.alive){const o=pols[id];o.slvW=0;o.slvN=0}
+  for(const i of w.landIdx){const p=s.pol[i];if(SL[i]>0){SL[i]*=0.9;if(SL[i]<0.005){SL[i]=0;s.slvE[i]=-1}}if(!p)continue;const o=pols[p];o.slvN+=SL[i]*s.pop[i];if(o.capt>100)o.slvW+=want(i)}
+  for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=pols[p];if(!(o.capt>100)||!(o.slvW>0))continue;const n=o.capt*want(i)/o.slvW;if(n<1)continue;
+    let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
+    const old=s.pop[i];s.pop[i]+=n;SL[i]=Math.min(0.7,(SL[i]*old+n)/(old+n));if(e>=0&&e!==s.eth[i]){mixIn(i,e,n/(old+n));s.slvE[i]=e}o.slvN+=n}
+  for(const id of s.alive){const o=pols[id];
+    if(o.capt>100&&o.slvW>0){let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
+      if(bx>=50000&&e>=0&&s.eths[e]&&(o.cA||o.cells)>=15){s.slvMig=(s.slvMig||0)+1;chron('migration',`${Math.round(bx/1000)},000 captives of the ${s.eths[e].name} are carried off to the fields, mines and households of the ${o.full}.`,o.capital,[RE(s.eths[e]),R_(o)],'Taken in war and raids, or bought from those who took them.')}
+      o.capt=0;o.captE=null}
+    else if(o.capt>0)o.capt*=0.7;
+    o.slvS=o.pop>0?clamp(o.slvN/o.pop,0,0.7):0;
+    if(o.kind==='state'){if(o.ineq!=null)o.ineq=clamp(o.ineq+0.05*o.slvS,0.15,0.92);
+      // a rising: many slaves, a weak or distracted state
+      if(o.slvS>0.12&&((o.hold??0.5)<0.5||o.enemies.size)&&r()<0.5*(o.slvS-0.1)){o.shock=(o.shock||0)+0.3;s.slvRev=(s.slvRev||0)+1;
+        for(const i of polCells(id))if(SL[i]>0.2){SL[i]*=0.5;s.pop[i]*=0.97}
+        if((o.cA||o.cells)>=15)chron('fall',`The slaves of the ${o.full} rise against their masters.`,o.capital,[R_(o)],'They were many, and the realm was busy elsewhere.')}}}}
 
 /* ---------- provinces (stage 1 of the province rebuild) ----------
    Provinces drawn from the land on the 25 km fine grid (HW x HH), each holding roughly as many people as the land can feed,

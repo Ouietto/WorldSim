@@ -344,3 +344,41 @@ function goodsPass(){const s=S,w=WD,pols=s.pols;if(!s.ore)goodsInit();const G=s.
 function lackV(o,t){if(!o.gmet||!t.gs)return 0;let v=0;for(let g=0;g<NG;g++)if(o.gmet[g]<0.8&&t.gs[g]>t.gd[g])v+=GOODS[g].v/GVS*(1-o.gmet[g]);return 0.5*(o.tax||0)*v+2*(o.grv&&o.grv.get(t.id)||0)}
 // stateless land with ore or salt a state is short of is worth holding whatever its people pay
 function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of [0,2,3,4,5])if(G[g][j]>0.3&&o.gmet[g]<0.8)return true;return false}
+
+/* ---------- slavery (Nein, 2026-11-11; switch noslaves turns it off) ----------
+   Captives are taken when land is conquered and in raids, and are a traded good. A polity keeps a pool of captives with the
+   peoples they came from. Every ten years peoples who live by raiding sell most of theirs to the richest neighbouring state,
+   and each state puts its captives to work where labour is wanted: on the estates of unequal realms, most of all in warm, wet
+   farmland (plantations), in mines, and in cities. They are added to the people of those provinces as slaves and bring their
+   own culture with them, so a people carried off in numbers shows on the map where it was put to work. Slaves do not serve in
+   the army; their labour concentrates wealth; where they are many and the state is weak they rise. Their descendants are
+   absorbed over generations, so slavery lasts only where captives keep coming. Universal faiths mostly forbid enslaving
+   fellow believers. */
+const slaveOn=()=>!swOn('noslaves');
+function kinBan(o,rel){if(o.rel<0||rel!==o.rel)return false;const R=S.rels[o.rel];return!!R&&R.kind==='universal'&&(R.id*7+3)%10<7}
+function takeCaptives(o,j,share){const s=S;if(!slaveOn()||s.pop[j]<50||kinBan(o,s.rel[j]))return;const n=s.pop[j]*share;s.pop[j]-=n;o.capt=(o.capt||0)+n;
+  const e=s.eth[j];if(e>=0){if(!o.captE)o.captE=new Map();o.captE.set(e,(o.captE.get(e)||0)+n)}}
+function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float32Array(N);s.slvE=new Int32Array(N).fill(-1)}const SL=s.slv,G=s.ore;
+  // sale: raiders and small chiefs sell to the richest neighbouring state that will take them
+  for(const id of s.alive){const o=pols[id];if(!(o.capt>100)||!o.nb)continue;if(o.kind==='state'&&(o.cA||o.cells)>=6)continue;let b=null,bv=0;
+    for(const [q] of o.nb){const t=pols[q];if(!t||!t.alive||t.kind!=='state'||o.enemies.has(q))continue;const v=(t.tax||0)*(0.3+(t.ineq||0.25));if(v>bv){bv=v;b=t}}
+    if(!b)continue;const n=0.8*o.capt;o.capt-=n;b.capt=(b.capt||0)+n;if(o.captE){if(!b.captE)b.captE=new Map();for(const [e,x] of o.captE){b.captE.set(e,(b.captE.get(e)||0)+0.8*x);o.captE.set(e,0.2*x)}}
+      o.loot=(o.loot||0)+0.3*n;s.slvSold=(s.slvSold||0)+n}
+  // work: weight of each province for its state's captives
+  const want=i=>{const p=s.pop[i];if(p<500)return 0;const hot=w.T[i]>18&&w.Pr[i]>800&&s.farm[i]>0.5?3:0,mine=G&&(G[2][i]>0.3||G[3][i]>0.3||G[5][i]>0.3||G[0][i]>0.5)?3:0;return p*(1+hot+mine+(s.city[i]>=0?1:0))*s.farm[i]};
+  for(const id of s.alive){const o=pols[id];o.slvW=0;o.slvN=0}
+  for(const i of w.landIdx){const p=s.pol[i];if(SL[i]>0){SL[i]*=0.9;if(SL[i]<0.005){SL[i]=0;s.slvE[i]=-1}}if(!p)continue;const o=pols[p];o.slvN+=SL[i]*s.pop[i];if(o.capt>100)o.slvW+=want(i)}
+  for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=pols[p];if(!(o.capt>100)||!(o.slvW>0))continue;const n=o.capt*want(i)/o.slvW;if(n<1)continue;
+    let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
+    const old=s.pop[i];s.pop[i]+=n;SL[i]=Math.min(0.7,(SL[i]*old+n)/(old+n));if(e>=0&&e!==s.eth[i]){mixIn(i,e,n/(old+n));s.slvE[i]=e}o.slvN+=n}
+  for(const id of s.alive){const o=pols[id];
+    if(o.capt>100&&o.slvW>0){let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
+      if(bx>=50000&&e>=0&&s.eths[e]&&(o.cA||o.cells)>=15){s.slvMig=(s.slvMig||0)+1;chron('migration',`${Math.round(bx/1000)},000 captives of the ${s.eths[e].name} are carried off to the fields, mines and households of the ${o.full}.`,o.capital,[RE(s.eths[e]),R_(o)],'Taken in war and raids, or bought from those who took them.')}
+      o.capt=0;o.captE=null}
+    else if(o.capt>0)o.capt*=0.7;
+    o.slvS=o.pop>0?clamp(o.slvN/o.pop,0,0.7):0;
+    if(o.kind==='state'){if(o.ineq!=null)o.ineq=clamp(o.ineq+0.05*o.slvS,0.15,0.92);
+      // a rising: many slaves, a weak or distracted state
+      if(o.slvS>0.12&&((o.hold??0.5)<0.5||o.enemies.size)&&r()<0.5*(o.slvS-0.1)){o.shock=(o.shock||0)+0.3;s.slvRev=(s.slvRev||0)+1;
+        for(const i of polCells(id))if(SL[i]>0.2){SL[i]*=0.5;s.pop[i]*=0.97}
+        if((o.cA||o.cells)>=15)chron('fall',`The slaves of the ${o.full} rise against their masters.`,o.capital,[R_(o)],'They were many, and the realm was busy elsewhere.')}}}}
