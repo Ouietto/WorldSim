@@ -373,13 +373,25 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
   for(const i of w.landIdx){const p=s.pol[i];if(SL[i]>0){SL[i]*=0.95;if(SL[i]<0.005){SL[i]=0;s.slvE[i]=-1}}if(!p)continue;const o=pols[p];o.slvN+=SL[i]*s.pop[i];if(o.capt>100)o.slvW+=want(i)}
   for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=pols[p];if(!(o.capt>100)||!(o.slvW>0))continue;const n=o.capt*want(i)/o.slvW;if(n<1)continue;
     let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
-    const old=s.pop[i];s.pop[i]+=n;SL[i]=Math.min(0.7,(SL[i]*old+n)/(old+n));s.s[i]=Math.min(1,s.s[i]+0.05*SL[i]);if(e>=0&&e!==s.eth[i]){mixIn(i,e,n/(old+n));s.slvE[i]=e}o.slvN+=n}
+    const old=s.pop[i];s.pop[i]+=n;SL[i]=Math.min(0.7,(SL[i]*old+n)/(old+n));s.s[i]=Math.min(1,s.s[i]+0.05*SL[i]);if(s.forest[i]>0.05&&s.farm[i]>0.5)s.forest[i]=Math.max(0,s.forest[i]-0.1*SL[i]);if(e>=0&&e!==s.eth[i]){mixIn(i,e,n/(old+n));s.slvE[i]=e}o.slvN+=n}
   for(const id of s.alive){const o=pols[id];
     if(o.capt>100&&o.slvW>0){let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
       if(bx>=50000&&e>=0&&s.eths[e]&&(o.cA||o.cells)>=15){s.slvMig=(s.slvMig||0)+1;chron('migration',`${Math.round(bx/1000)},000 captives of the ${s.eths[e].name} are carried off to the fields, mines and households of the ${o.full}.`,o.capital,[RE(s.eths[e]),R_(o)],'Taken in war and raids, or bought from those who took them.')}
       o.capt=0;o.captE=null}
     else if(o.capt>0)o.capt*=0.7;
     o.slvS=o.pop>0?clamp(o.slvN/o.pop,0,0.7):0;
+    // slaves of the state (Nein, 2026-11-11): a quarter of a realm's slaves work for the crown, on roads and walls, at the oar, clearing
+    // forest (stSl, people). A ruler with money who cannot trust his nobles or his own people buys soldiers too (mam, the share of
+    // the army that is slave soldiery): they fight well and owe everything to him, and they break the nobles' hold. But an army that
+    // is mostly theirs can take the throne when the ruler is weak, and then they are the nobility (the Mamluks of Egypt, the
+    // Ghaznavids, the Delhi sultans; Pipes 1981; Crone 1980)
+    if(o.kind==='state'){o.stSl=0.25*o.slvN;const c=o.capital;
+      if(o.slvN>2000&&(o.mon||0)>0.4&&((o.nob||0)>0.45||(o.hold??0.5)<0.45))o.mam=Math.min(0.9,(o.mam||0)+0.06);else if(o.mam>0)o.mam*=0.85;
+      if(o.mam>0.05){o.nob=Math.max(0,(o.nob||0)-0.03*o.mam);
+        if(o.mam>0.5&&o.ruler&&o.ruler.comp<0.45&&r()<0.4*(o.mam-0.4)){const old=o.ruler.name;succession(o);if(o.alive){o.ruler.comp=Math.max(o.ruler.comp,0.65);o.shock=(o.shock||0)+0.3;o.nob=Math.min(0.95,(o.nob||0)+0.25);o.mam=0.3;o.mamRule=s.year;s.mamN=(s.mamN||0)+1;
+          if(o.cmdW)o.cmdW[0]*=1.3;if((o.cA||o.cells)>=15)chron('fall',`The slave soldiers of the ${o.full} set aside ${old}'s heirs and raise one of their own, ${o.ruler.name}, to the throne.`,c,[R_(o)],'Bought to guard the throne against the great families, they had become the only army that mattered.')}}}
+      // cleared forest where slaves work the land
+      }
     if(o.kind==='state'){if(o.ineq!=null)o.ineq=clamp(o.ineq+0.05*o.slvS,0.15,0.92);
       // a rising: many slaves, a weak or distracted state
       if(o.slvS>0.12&&((o.hold??0.5)<0.5||o.enemies.size)&&r()<0.5*(o.slvS-0.1)){o.shock=(o.shock||0)+0.3;s.slvRev=(s.slvRev||0)+1;
