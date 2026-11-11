@@ -1169,7 +1169,7 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
-    s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;takeCaptives(o,j,q?0.03:0.06);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
+    s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
     const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde')o.prest=(o.prest||0)+0.02*a;
     if(q&&s.city[j]>=0)sackCity(o,j,q);
@@ -1193,7 +1193,7 @@ function raid(o,i,j){
   const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
-    takeCaptives(o,j,0.03);const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
+    takeCaptives(o,j,0.06);const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
     displace(j,0.04,o.id);
   }
 }

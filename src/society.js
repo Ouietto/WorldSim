@@ -367,7 +367,7 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
   // work: weight of each province for its state's captives
   const want=i=>{const p=s.pop[i];if(p<500)return 0;const hot=w.T[i]>18&&w.Pr[i]>800&&s.farm[i]>0.5?3:0,mine=G&&(G[2][i]>0.3||G[3][i]>0.3||G[5][i]>0.3||G[0][i]>0.5)?3:0;return p*(1+hot+mine+(s.city[i]>=0?1:0))*s.farm[i]};
   for(const id of s.alive){const o=pols[id];o.slvW=0;o.slvN=0}
-  for(const i of w.landIdx){const p=s.pol[i];if(SL[i]>0){SL[i]*=0.9;if(SL[i]<0.005){SL[i]=0;s.slvE[i]=-1}}if(!p)continue;const o=pols[p];o.slvN+=SL[i]*s.pop[i];if(o.capt>100)o.slvW+=want(i)}
+  for(const i of w.landIdx){const p=s.pol[i];if(SL[i]>0){SL[i]*=0.95;if(SL[i]<0.005){SL[i]=0;s.slvE[i]=-1}}if(!p)continue;const o=pols[p];o.slvN+=SL[i]*s.pop[i];if(o.capt>100)o.slvW+=want(i)}
   for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=pols[p];if(!(o.capt>100)||!(o.slvW>0))continue;const n=o.capt*want(i)/o.slvW;if(n<1)continue;
     let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
     const old=s.pop[i];s.pop[i]+=n;SL[i]=Math.min(0.7,(SL[i]*old+n)/(old+n));if(e>=0&&e!==s.eth[i]){mixIn(i,e,n/(old+n));s.slvE[i]=e}o.slvN+=n}
