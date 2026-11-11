@@ -1860,8 +1860,9 @@ function computeK(){
 }
 function growth(){
   const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade,CO=cohArr();const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
+  const DT=s.dt||1,DX=DT>1?1-Math.pow(0.8,DT):0.2;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s_pop[i];if(p<=0)continue;const K=s_K[i];
-    if(p<K)p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s_farm[i]+0.5*s_herd[i]));else{let ex=(p-K)*0.2;const gq=s_pol[i]?s_pols[s_pol[i]]:null;if(gq&&gq.gran>0.05&&gq.wet<-0.1){const sv=ex*0.6*gq.gran;ex-=sv;gq.granUse=(gq.granUse||0)+sv}p-=ex;if(!s_pol[i]&&p>1.2*K&&p>20000&&s_eth[i]>=0)pushPressure(s_eth[i],ex*0.35,i,0,null)}
+    if(p<K){if(DT>1)p=K>0?K/(1+(K/p-1)*Math.exp(-g*DT*(0.6+0.4*Math.min(1,s_farm[i]+0.5*s_herd[i])))):p;else p+=g*p*(1-p/K)*(0.6+0.4*Math.min(1,s_farm[i]+0.5*s_herd[i]))}else{let ex=(p-K)*DX;const gq=s_pol[i]?s_pols[s_pol[i]]:null;if(gq&&gq.gran>0.05&&gq.wet<-0.1){const sv=ex*0.6*gq.gran;ex-=sv;gq.granUse=(gq.granUse||0)+sv}p-=ex;if(!s_pol[i]&&p>1.2*K&&p>20000&&s_eth[i]>=0)pushPressure(s_eth[i],ex*0.35,i,0,null)}
     if(CO){
       // cohorts: the year's net change (above) is met by births to the women there are; deaths fall on each age; children and
       // young adults grow up. Losses from war, plague or flight since last year are spread over the ages first. A province
@@ -1908,12 +1909,13 @@ function growth(){
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
 function migrate(){
   const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn(),SEAC=swOn('seacol');const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
+  const MDT=s.dtM||1;
   // a move from i toward neighbour j, sc of a 100 km step's flow
   const one=(i,j,p,pr,sc)=>{if(j<0||!w_land[j])return 0;
     const kj=s_K[j];if(kj<2&&w_sF[j]<0.05&&w_sH[j]<0.05)return 0;
     const ar=w_area[j],kE=Math.max(kj,ar*3*w_sF[j]*s_farm[i]*(1+0.6*s_metal[i]+0.6*s_iron[i]),ar*1.1*w_sH[j]*s_herd[i]);
     const pj=s_pop[j],prj=pj/kE,diff=pr-prj;if(diff<0.1)return 0;
-    let mob=mg*(0.08+0.25*s_herd[i]*w_sH[i]*(0.5+s_horse[i]));
+    let mob=MDT*mg*(0.08+0.25*s_herd[i]*w_sH[i]*(0.5+s_horse[i]));
     if(s_pol[j]&&s_pol[j]!==s_pol[i])mob*=0.4;
     else if(s_pol[i]&&!s_pol[j]){const o=s_pols[s_pol[i]];if(o.kind==='state')mob*=1+2*Math.max(0,(o.burden||0)-0.7)+1.5*Math.max(0,(o.ineq||0)-0.5)+2*Math.max(0,(o.ext??0.45)-0.7)}
     if(s_farm[i]>=0.5&&pj>=1&&s_farm[j]<0.3)mob*=settleOK(i,j);
@@ -1982,7 +1984,7 @@ function virginSoil(tgt,src){
 }
 function seaHop(){
   const s=S,w=WD,r=s.r,C=w.coastIdx;const s_K=s.K,s_admin=s.admin,s_eth=s.eth,s_eths=s.eths,s_lmFound=s.lmFound,s_nav=s.nav,s_ocean=s.ocean,s_pop=s.pop,s_rel=s.rel,s_s=s.s,s_sail=s.sail,w_T=w.T,w_cxA=w.cxA,w_cyA=w.cyA,w_land=w.land,w_lm=w.lm,w_lmSize=w.lmSize;if(!C.length)return;
-  const ex=coastLen()*0.004*P.seafaring;let tries=Math.floor(ex)+(r()<ex%1?1:0);
+  const ex=coastLen()*0.004*P.seafaring*(s.dt||1);let tries=Math.floor(ex)+(r()<ex%1?1:0);
   while(tries-->0){
     const i=rCoast(r);if(pEq(i)<30)continue;
     const sl=s_sail[i];if(r()>0.04+0.5*sl)continue;
@@ -3106,17 +3108,27 @@ function step(){for(const _ of stepG());}
 // one simulated year, split into slices so the page can stay responsive between them
 // remainder that is never negative: in JS, -8997 % 10 is -7, which silently skipped passes in BCE years
 const ymod=(y,n)=>((y%n)+n)%n;
+// (default; switch nofast turns it off; Nein, 2026-11-10: let the early game pass faster) while the whole world forages (no farming, no herds, no polity)
+// the yearly passes run once a decade for the decade: growth by the logistic's exact solution over ten years, migration in two
+// five-year moves, three rounds of technique spread, ten years of sea crossings. Passes on their own schedules (every 5, 10, 20 and
+// 50 years) run as always. The first field, herd or polity ends it for good. One run takes half its time before the first state
+// because yearly weather keeps every province's numbers moving, not because anything is changing
+function fastD(){const s=S;if(swOn('nofast')||s.fastOff)return 1;
+  if(ymod(s.year,10)===0){let on=s.alive.length>0||(s.domLog&&s.domLog.length>0);if(!on){const f=s.farm,h=s.herd;for(const i of WD.landIdx)if(f[i]>0.01||h[i]>0.01){on=true;break}}
+    if(on){s.fastOff=s.year;return 1}}
+  return 10}
 function* stepG(){
-  const s=S;s.year++;
-  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();if(herdsOn())herdYear();if(s.year%50===0||!s.lake)waterPass();hearthCheck();
+  const s=S;s.year++;const FD=fastD(),hv=FD===1||ymod(s.year,FD)===0;s.dt=FD;
+  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();if(hv&&herdsOn())herdYear();if(s.year%50===0||!s.lake)waterPass();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
-  computeK();followWater();growth();yield;migrate();seaHop();if(S.gzD)grazePass();
-  if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
-  disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
-  yield* politicsG();
-  if(s.year%5===1)rallyPass();if(s.year%2===0)frontierPass();
+  if(hv){computeK();followWater();growth();yield;if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();seaHop();if(S.gzD)grazePass()}
+  if(FD>1){if(hv)for(let k=0;k<3;k++){techStep(0,1);yield}}
+  else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
+  if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
+  if(hv)yield* politicsG();
+  if(s.year%5===1)rallyPass();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
