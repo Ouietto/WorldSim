@@ -1,30 +1,82 @@
 {
- "seeds": "1-64",
+ "seeds": "1-24",
  "end": 1500,
  "per": 4,
  "ref": "",
  "baseEnv": "",
  "variants": [
   {
-   "name": "prov",
+   "name": "all",
    "env": "WORLD=prov"
   },
   {
-   "name": "prov-herds",
-   "env": "WORLD=prov SW=herds"
+   "name": "off-herds",
+   "env": "WORLD=prov SW=noherds"
   },
   {
-   "name": "prov-herds-dzwide",
-   "env": "WORLD=prov SW=herds,dzwide"
+   "name": "off-dzwide",
+   "env": "WORLD=prov SW=nodzwide"
   },
   {
-   "name": "prov-herds-dzwide-hunger",
-   "env": "WORLD=prov SW=herds,dzwide,hunger"
+   "name": "off-hunger",
+   "env": "WORLD=prov SW=nohunger"
   },
   {
-   "name": "prov-step1-all",
-   "env": "WORLD=prov SW=herds,dzwide,hunger,wildanim,horsedense"
+   "name": "off-wildanim",
+   "env": "WORLD=prov SW=nowildanim"
+  },
+  {
+   "name": "off-horsedense",
+   "env": "WORLD=prov SW=nohorsedense"
+  },
+  {
+   "name": "off-fast",
+   "env": "WORLD=prov SW=nofast"
+  },
+  {
+   "name": "off-seats",
+   "env": "WORLD=prov SW=noseats"
+  },
+  {
+   "name": "off-army",
+   "env": "WORLD=prov SW=noarmy"
+  },
+  {
+   "name": "off-field",
+   "env": "WORLD=prov SW=nofield"
+  },
+  {
+   "name": "off-choice",
+   "env": "WORLD=prov SW=nochoice"
+  },
+  {
+   "name": "off-peace",
+   "env": "WORLD=prov SW=nopeace"
+  },
+  {
+   "name": "off-money",
+   "env": "WORLD=prov SW=nomoney"
+  },
+  {
+   "name": "off-goods",
+   "env": "WORLD=prov SW=nogoods"
+  },
+  {
+   "name": "off-grants",
+   "env": "WORLD=prov SW=nogrants"
+  },
+  {
+   "name": "off-slaves",
+   "env": "WORLD=prov SW=noslaves"
+  },
+  {
+   "name": "off-works",
+   "env": "WORLD=prov SW=noworks"
+  },
+  {
+   "name": "legacy",
+   "env": "WORLD=prov SW=noherds,nodzwide,nohunger,nowildanim,nohorsedense,nofast,noseats,noarmy,nofield,nochoice,nopeace,nomoney,nogoods,nogrants,noslaves,noworks"
   }
  ],
- "note": "Run 91: step 1 (herds) on provinces, with the new steppe and frontier checks (context). herds: herders live on a herd stock that dies in killing winters and droughts and regrows slowly. dzwide: winters shared over 36-degree cells (Mongolian plateau losses over 8.7% in 9.8% of years, real 10%; over 17% in 4.3%). hunger: herding hardship raises raids, confederations and the search for grass; ruined clans settle as farmers or cross into a state with room. step1-all adds the moving animal ranges and the horse rule (run 90: wildanim+horsedense -0.2 +- 1.0, horse 2893 BCE in band; horsedense alone +0.3 +- 0.8)."
+ "note": "Run 92, the mega test (Nein, 2026-11-10): everything built since run 91 on, each feature off in turn, and all of them off (legacy). 24 seeds. Features: herds, country-wide winters, hungry herders, moving animal ranges, horse rule, decade steps for foragers, relay seats, armies (garrisons, band wars, hardening), field armies and command, war aims, negotiated peace, money, goods and routes, land for soldiers, slavery, roads as works."
 }
