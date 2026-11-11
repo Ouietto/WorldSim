@@ -1088,11 +1088,40 @@ const calmOf=o=>clamp(0.5+0.5*(o.leg??1)-Math.max(0,(o.burden||0.6)-0.8),0,1);
 // a people that has lived beside states for generations learns their weapons and their ways of war, and holds together better
 // against them (the Germans of the Rhine frontier, Wells 1999; Heather 2009): hard, 0 to 1, on each people
 const hardOf=e=>e>=0&&S.eths[e]?S.eths[e].hard||0:0;
+/* ---------- armies, part 2: field armies and who leads them (Nein, 2026-11-10; switch nofield turns it off) ----------
+   A state's field force is one to four armies, each standing somewhere under a commander. A fight draws on the armies near it
+   (falling off over 600 km) and on a local levy worth three-tenths of the whole, so a realm at war on three fronts fights each
+   with a part, and a blow far from every army meets little. An army on the march counts for less until it arrives. A horde is
+   its own army. Who commands is the people's habit, learned from results: every fight an army wins raises the standing of its
+   kind of commander (king, noble, priest, merchant's captain, chosen war leader) and every loss lowers it faster; a new realm
+   starts from its people's habit. The kind in favour colours what wars are for. A general who keeps winning far from a weak
+   court takes the throne. */
+const fieldOn=()=>armyOn()&&!swOn('nofield'),CMD=['king','noble','priest','merchant','chief'],CMD_M=[1,1.1,1,0.9,1],CMD_AIM=[1,1.15,1.1,0.7,0.9];
+function kmB(i,j){const w=WD,a=w.lat[i],b=w.lat[j];let dl=(w.cxA[i]-w.cxA[j])/W*2*Math.PI;if(dl>Math.PI)dl-=2*Math.PI;if(dl<-Math.PI)dl+=2*Math.PI;
+  const h=Math.sin((a-b)/2)**2+Math.cos(a)*Math.cos(b)*Math.sin(dl/2)**2;return 12742*Math.asin(Math.min(1,Math.sqrt(h)))}
+function cmdPick(o,first){const cwt=o.cmdW,r=S.r;if(first){let b=0;for(let k=1;k<5;k++)if(cwt[k]>cwt[b])b=k;return b}let t=0;for(const x of cwt)t+=x;let u=r()*t;for(let k=0;k<5;k++){u-=cwt[k];if(u<=0)return k}return 0}
+function armiesOf(o){if(!o.cmdW){const E=S.eths[o.core],rl=o.rel>=0&&S.rels[o.rel]?S.rels[o.rel].cent||0:0;o.cmdW=E&&E.cmdW?E.cmdW.slice():[1,1,0.4+rl,0.3,1.5];o.arm=[]}
+  const n=1+Math.min(3,Math.floor((o.cA||o.cells)/40));while(o.arm.length<n)o.arm.push({at:o.capital,cmd:cmdPick(o,o.arm.length===0),eta:0,w:0,l:0});
+  if(o.arm.length>n)o.arm.length=n;return o.arm}
+function localForce(o,i){const A=o.arm;if(!A||!A.length)return 1;const y=S.year;let f=0.3;for(const a of A){const m=a.cmd===0?0.9+0.4*o.ruler.comp:CMD_M[a.cmd];f+=0.7/A.length*(a.eta>y?0.3:1)*m*Math.exp(-kmB(i,a.at)/600)}return f}
+function armyCredit(o,i,win){const A=o.arm;if(!A)return;let b=null,bd=800;for(const a of A){const d=kmB(i,a.at);if(d<bd){bd=d;b=a}}if(!b)return;
+  if(win)b.w++;else b.l++;o.cmdW[b.cmd]=clamp(o.cmdW[b.cmd]*(win?1.01:0.985),0.05,5);const E=S.eths[o.core];if(E){if(!E.cmdW)E.cmdW=o.cmdW.slice();else E.cmdW[b.cmd]+=(o.cmdW[b.cmd]-E.cmdW[b.cmd])*0.02}}
+// each year: armies go where the fighting is (the first to where land was last lost, the rest to the fronts), marching 500 km a year
+function armyYear(){const s=S,y=s.year,r=s.r;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const A=armiesOf(o);let top=0;for(let k=1;k<5;k++)if(o.cmdW[k]>o.cmdW[top])top=k;o.aimM=CMD_AIM[top];o.cmdTop=top;
+    const T=[];if(o.lostAt!=null&&y-o.lostY<=5&&s.pol[o.lostAt]!==undefined)T.push(o.lostAt);if(o.hot)for(const h of o.hot)T.push(h);
+    for(let k=0;k<A.length;k++){const a=A[k];const t=T.length?T[k%T.length]:(o.enemies.size?a.at:o.capital);
+      if(t!==a.at){const d=kmB(a.at,t);if(d>150){a.eta=y+Math.ceil(d/500)*(a.cmd===4&&!o.enemies.size?2:1);a.at=t}}
+      // a winning general far from a weak court
+      if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))){
+        const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
+        if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
+    o.hot=null;o.hotN=0}}
 function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6+Math.max(0.15*men,men-0.25*(o.garr||0)))*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
-  if(q){const d=s.pols[q];Ud=Math.pow(strength(d)+1,P.scaleExp)*(0.5*d.S+0.5*s.s[j])*milAt(j)*Math.exp(-dd(j)/d.h)*(0.6+0.4*s.integ[j])}
+  if(q){const d=s.pols[q];Ud=Math.pow(strength(d)+1,P.scaleExp)*(0.5*d.S+0.5*s.s[j])*milAt(j)*Math.exp(-dd(j)/d.h)*(0.6+0.4*s.integ[j]);if(d.kind==='state'&&fieldOn())Ud*=localForce(d,j)}
   else Ud=Math.pow((s.rally&&s.rally[j]>0?2*s.rally[j]:pEq(j)*4)+1,0.75)*s.s[j]*milAt(j)*0.8*(1+1.5*hardOf(s.eth[j]));
   return Ud*(1+1.6*w.rough[j])*(1+2.5*s.fort[j])*(1+0.6*s.colony[j]+(q?0.3*(s.pols[q].nob||0)+(j===s.pols[q].capital&&s.pols[q].tier==='City-state'?0.4:0):0));
 }
@@ -1102,7 +1131,7 @@ function stepCost(i,j){const w=WD,c=w.tcost[j]||2;return w.szF?Math.max(1,Math.r
 function attack(o,i,j,sea){
   const s=S,w=WD,q=s.pol[j];
   const di=dd(i);
-  let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
+  let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);const FLD=fieldOn();if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
   if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
@@ -1123,6 +1152,7 @@ function attack(o,i,j,sea){
   const pw2=tro*ub*(kin&&dpol.rel===o.rel?Math.min(0.9,pw*1.15+0.01):pw)*(o.kind==='state'?0.1+0.9*Math.pow(cerealEff(j),1.5):1);
   const eA=ecoD(j,o),pw3=pw2*Math.exp(-P.eco*(o.kind==='horde'?0.4:1.2)*Math.pow(Math.max(0,eA-0.4),1.3));
   const win=s.r()<pw3,wid0=q?o.enemies.get(q):null,war0=wid0!=null?s.wars[wid0]:null;
+  if(FLD){if(o.kind==='state')armyCredit(o,i,win);if(q){const d=s.pols[q];if(d.kind==='state'){armyCredit(d,j,!win);if(win){d.lostAt=j;d.lostY=s.year}}}}
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
@@ -1649,7 +1679,7 @@ function* politicsG(){
       if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
       if(cand>=0&&s_taken[i]!==y){const q=pol[cand];
         if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1){if(r()<pF(P.raid*0.02*o.aggrM*o.gate,i,cand)){s.raidC[cand]=y;const t0=pop[cand]*0.03;pop[cand]-=t0;o.loot+=t0*0.5;displace(cand,0.02,o.id)}}
-        else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(r()<pF(rate*o.aggrM*o.gate,i,cand))attack(o,i,cand,candSea)}}
+        else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(q&&o.arm&&o.enemies.has(q)){o.hotN=(o.hotN||0)+1;if(!o.hot)o.hot=[i];else if(o.hot.length<3)o.hot.push(i);else if(r()*o.hotN<3)o.hot[(r()*3)|0]=i}if(r()<pF(rate*o.aggrM*(o.aimM||1)*o.gate,i,cand))attack(o,i,cand,candSea)}}
       if(horde&&rcand>=0&&r()<pF(P.raid*0.025*o.aggrM*o.gate*(1-0.8*s_fort[rcand]),i,rcand))raid(o,i,rcand);
       const c=o.core;
       if(ei>=0&&c>=0&&ei!==c&&pi>=1&&!o.conqDyn&&r()<P.assim*0.004*o.S*(1-0.8*ethDist(ei,c))*(ri>=0&&ri===o.rel?1.5:1))s_eth[i]=c;
@@ -1865,7 +1895,7 @@ function* stepG(){
   if(FD>1){if(hv)for(let k=0;k<3;k++){techStep(0,1);yield}}
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
-  if(hv)yield* politicsG();
+  if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
   if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
