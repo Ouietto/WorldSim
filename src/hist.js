@@ -1087,6 +1087,8 @@ function garrAt(i,integ,calm,t){const s=S,w=WD,h=1-integ;if(t==null)t=i;
 const calmOf=o=>clamp(0.5+0.5*(o.leg??1)-Math.max(0,(o.burden||0.6)-0.8),0,1);
 // a people that has lived beside states for generations learns their weapons and their ways of war, and holds together better
 // against them (the Germans of the Rhine frontier, Wells 1999; Heather 2009): hard, 0 to 1, on each people
+// the custom of treaties a state's people keep, helped by law codes and records at its court
+const dipOf=o=>{const E=S.eths[o.core];return clamp((E&&E.dip||0)+0.15*S.law[o.capital]+0.1*S.recK[o.capital],0,1)};
 const hardOf=e=>e>=0&&S.eths[e]?S.eths[e].hard||0:0;
 /* ---------- armies, part 2: field armies and who leads them (Nein, 2026-11-10; switch nofield turns it off) ----------
    A state's field force is one to four armies, each standing somewhere under a commander. A fight draws on the armies near it
@@ -1251,7 +1253,7 @@ function endWar(war){
   const s=S;war.end=s.year;
   for(const a of war.a)for(const d of war.d){const pa=s.pols[a],pd=s.pols[d];
     if(pa.enemies.get(d)===war.id){pa.enemies.delete(d);pd.enemies.delete(a)}
-    pa.truce.set(d,s.year+25);pd.truce.set(a,s.year+25)}
+    const tr=war.treaty!=null?Math.round(10+30*war.treaty):25;pa.truce.set(d,s.year+tr);pd.truce.set(a,s.year+tr)}
   const A=s.pols[war.a[0]],D=s.pols[war.d[0]],yrs=s.year-war.start;
   let out;
   if(war.civil){out=A.alive&&D.alive?`${A.base} and the other rebels keep their independence`:A.alive?`the rebels prevail`:`the old regime restores its rule`}
@@ -1656,12 +1658,32 @@ function* politicsG(){
           chron('war',`${holy?'Holy war':'War'}: the ${o.full} attacks the ${t.full}${holy?` to win back ${holyName(Rl)}`:''}${al.length?`, joined by ${al.join(' and ')}`:''}${dl.length?`; ${dl.join(' and ')} ${dl.length>1?'come':'comes'} to the defence`:''}.`,t.capital,[R_(o),R_(t),RW(war)])}}}
   }
   // active wars
-  const still=[];
+  const still=[],PEACE=!swOn('nopeace');
   for(const wid of s.activeWars){const war=s_wars[wid];
     const aAlive=war.a.some(k=>pols[k].alive),dAlive=war.d.some(k=>pols[k].alive),yrs=y-war.start;
     const fresh=y-(war.lastGain||war.start);
     // exhausted sides make peace (cohort switch); punitive campaigns are short. A stalemate can still drag on for generations
     const exA=CO&&(pols[war.a[0]].mpR??1)<0.85,exD=CO&&(pols[war.d[0]].mpR??1)<0.8;
+    // (negotiated peace and the custom of treaties; Nein 2026-11-11, switch nopeace turns it off) a war can be ended on terms:
+    // the attacker who has what it came for offers peace and keeps it; a side losing ground sues and cedes border land for
+    // peace; a stalemate is talked out. How readily, and how long the truce holds (10 to 40 years), goes with the custom of
+    // treaties (dip, 0 to 1, kept by each people): it grows in long indecisive wars between peers, with law codes and records,
+    // and passes to the other side of every treaty made
+    if(PEACE&&aAlive&&dAlive&&!war.civil&&yrs>=2){const A=pols[war.a[0]],D=pols[war.d[0]];
+      if(A.alive&&D.alive&&A.kind==='state'&&D.kind==='state'){const g=(war.gA||0)-(war.gD||0),pr=power(A)/(power(D)+1),dA=dipOf(A),dD=dipOf(D),dip=0.5*(dA+dD),want=Math.max(2,0.15*(D.cA||D.cells));
+        let pp=0,kind='';
+        if(war.goal==='conquest'&&g>=want&&fresh>=1){pp=0.3;kind='won'}
+        else if(g<=-2&&fresh<4){pp=0.15;kind='lostA'}
+        else if(g>=2&&fresh<4&&(war.gA||0)>0.25*(D.cA||D.cells)){pp=0.2;kind='lostD'}
+        else if(fresh>5){pp=0.1;kind='stale';if(pr>0.6&&pr<1.6){const E1=s.eths[A.core],E2=s.eths[D.core];if(E1)E1.dip=Math.min(1,(E1.dip||0)+0.01);if(E2)E2.dip=Math.min(1,(E2.dip||0)+0.01)}}
+        if(kind&&r()<pp*(1+2*dip)){
+          // the loser cedes border land next to what it has already lost: a third again of the winner's gains, up to five provinces' worth
+          let ced=0;if(kind==='lostD'||kind==='lostA'){const W_=kind==='lostD'?A:D,Lo=kind==='lostD'?D:A,need=Math.min(5,0.3*Math.abs(g));
+            if(need>=0.5)for(const i of polCells(Lo.id)){if(ced>=need)break;if(i===Lo.capital||s.city[i]>=0)continue;let adj=false;for(let d2=w.nbS[i];d2<w.nbS[i+1];d2++){const j=w.nbA[d2];if(j>=0&&s.pol[j]===W_.id){adj=true;break}}
+              if(adj){s.pol[i]=W_.id;s.taken[i]=y;s.integ[i]=Math.min(s.integ[i],0.2);ced+=cw(i)}}
+            if(ced>=3&&Lo.maxCells>=25)chron('diplomacy',`The ${Lo.full} sues for peace and cedes ${Math.round(ced)} border provinces to the ${W_.full}.`,Lo.capital,[R_(Lo),R_(W_),RW(war)])}
+          war.treaty=dip;const E1=s.eths[A.core],E2=s.eths[D.core];if(E1&&E2){const hi=Math.max(E1.dip||0,E2.dip||0);E1.dip=(E1.dip||0)+0.2*(hi-(E1.dip||0));E2.dip=(E2.dip||0)+0.2*(hi-(E2.dip||0))}
+          if(!s.peaceN)s.peaceN={};s.peaceN[kind]=(s.peaceN[kind]||0)+1;endWar(war);continue}}}
     if(!aAlive||!dAlive||r()<0.02+(fresh>8?0.08:0)+(yrs>40?0.1:0)+(exA?0.06:0)+(exD?0.06:0)+((war.goal==='punitive'||war.goal==='raid')&&yrs>4?0.12:0)){endWar(war);continue}
     still.push(wid)}
   s.activeWars=still;
