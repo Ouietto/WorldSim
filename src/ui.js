@@ -902,7 +902,8 @@ async function boot(){
     EARTH=decodeEarth(e,k,c);
     if(typeof EARTH_PID_B64!=='undefined'){const [pd,fp,lk]=await Promise.all([inflateB64(EARTH_PID_B64),inflateB64(EARTH_FP_B64),typeof EARTH_LAKE_B64!=='undefined'?inflateB64(EARTH_LAKE_B64):null]);EARTH.pid=decodePid(pd);EARTH.fp=fp;EARTH.lake=lk}
     let seed=null;try{const m=/seed-([A-Za-z0-9]+)/.exec(location.hash||'');if(m)seed=m[1]}catch(err){}
-    try{if(new URL(location.href).searchParams.get('world')==='prov'&&$('provc'))$('provc').checked=true}catch(err){}
+    // provinces are the default (Nein, 2026-11-11); ?world=grid opens the 100 km squares
+    try{if($('provc'))$('provc').checked=new URL(location.href).searchParams.get('world')!=='grid'}catch(err){if($('provc'))$('provc').checked=true}
     $('hseed').value=seed||String(Math.floor(Math.random()*1e6));
     buildWorld('earth');
   }catch(err){console.error(err);busy(true,'Earth could not be loaded here, so a generated world is used instead.');setTimeout(()=>buildWorld('gen'),800)}
