@@ -4479,14 +4479,17 @@ function leaguePass(){
 function colonizePass(){
   const s=S,w=WD,r=s.r;
   for(const id of s.alive.slice()){const o=s.pols[id];if(o.kind!=='state')continue;const c=o.capital;
-    if(!w.coast[c]||s.sail[c]<0.5||o.press<0.8||o.cells>40)continue;
+    // (Nein, 2026-11-11) rich merchants fit out voyages too: where their wealth is large beside the crown's taxes a city sends
+    // settlers out without being crowded, more often, and toward shores with the ore, salt or spices it lacks
+    const mwR=goodsOn()?clamp((o.mw||0)/((o.tax||0)+1),0,1):0;
+    if(!w.coast[c]||s.sail[c]<0.5||(o.press<0.8&&mwR<0.3)||o.cells>40)continue;
     const cityLike=isCityState(o)||(o.coastN||0)>=0.4*o.cells;if(!cityLike)continue;
-    if(r()>0.1*(isCityState(o)?1.5:0.7)*(0.5+s.nav[c]))continue;
+    if(r()>0.1*(isCityState(o)?1.5:0.7)*(0.5+s.nav[c])*(1+2*mwR))continue;
     const reach=8+14*s.nav[c]+12*s.ocean[c],cx=w.cxA[c],cy=w.cyA[c],CI=w.coastIdx;let best=-1,bs=0;
     for(let t=0;t<60;t++){const j=CI[(r()*CI.length)|0];if(s.pol[j]||!w.land[j]||w.desert[j])continue;
       let dx=Math.abs(w.cxA[j]-cx);dx=Math.min(dx,W-dx);const d=Math.hypot(dx,w.cyA[j]-cy);if(d<4||d>reach)continue;
       const dT=Math.abs(w.T[j]-w.T[c]);if(dT>6||s.K[j]<3000)continue;
-      const sc=(s.K[j]-s.pop[j])/(1+dT)*(1-0.5*d/reach)*(s.eth[j]<0||pEq(j)<500?1.5:1);if(sc>bs){bs=sc;best=j}}
+      const sc=(s.K[j]-s.pop[j])/(1+dT)*(1-0.5*d/reach)*(s.eth[j]<0||pEq(j)<500?1.5:1)*(mwR>0&&(oreWanted(o,j)||(s.ore&&s.ore[6][j]>0.3&&o.gmet&&o.gmet[6]<0.8))?3:1);if(sc>bs){bs=sc;best=j}}
     if(best<0)continue;
     const j=best,n=Math.min(0.03*o.pop,s.K[j]*0.5,40000);if(n<3000)continue;
     s.pop[c]=Math.max(1,s.pop[c]-n*0.6);
@@ -4497,7 +4500,7 @@ function colonizePass(){
     d.S=Math.max(d.S,o.S*0.9);d.cult=o.cult;d.metro=id;o.daughters=(o.daughters||0)+1;
     if(!d.allies.includes(id)){d.allies.push(id);o.allies.push(nid)}
     const far=o.daughters===1||o.cells>=10;
-    if(far)chron('state',`Settlers from the ${o.full} sail away and found the ${d.full} on a distant shore.`,j,[R_(o),R_(d)],'The home city was crowded; the sea offered land like its own.');
+    if(far)chron('state',`Settlers from the ${o.full} sail away and found the ${d.full} on a distant shore.`,j,[R_(o),R_(d)],o.press<0.8?'Its merchants paid for the voyage: the new town would trade what the mother city lacked.':'The home city was crowded; the sea offered land like its own.');
   }
 }
 /* ================= WAR, SUPPLY AND STORES =================
@@ -4712,6 +4715,7 @@ function goodsPass(){const s=S,w=WD,pols=s.pols;if(!s.ore)goodsInit();const G=s.
   const port=new Map();for(const id of A){const o=pols[id];o.sea=null;const c=o.capital;if(w.coast[c]&&s.sail[c]>0.5)port.set(id,c)}
   const PL=[...port.keys()];for(let a=0;a<PL.length;a++)for(let b=a+1;b<PL.length;b++){const ca=port.get(PL[a]),cb=port.get(PL[b]),R=600*(1+2*Math.min(s.nav[ca],s.nav[cb]));
     if(kmB(ca,cb)<=R){const oa=pols[PL[a]],ob=pols[PL[b]];(oa.sea||(oa.sea=[])).push(PL[b]);(ob.sea||(ob.sea=[])).push(PL[a])}}
+  for(const id of A){const o=pols[id],m=o.metro!=null?pols[o.metro]:null;if(m&&m.alive&&m.gs){(o.sea||(o.sea=[])).push(m.id);(m.sea||(m.sea=[])).push(id)}}
   const got=new Float64Array(NG),hop=new Map(),par=new Map();
   for(const id of A){const o=pols[id];if(o.pop<1||!o.nb)continue;got.fill(0);let short=false;for(let g=0;g<NG;g++)if(o.gd[g]>o.gs[g])short=true;
     if(short){hop.clear();par.clear();hop.set(id,0);const Q=[id];
