@@ -2524,6 +2524,8 @@ function raid(o,i,j,deep){
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
     takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
     displace(j,0.04,o.id);
+    // a city can be sacked without being held (agreed 2026-11-05)
+    if(worksOn()&&s.city[j]>=0&&Ua>2*Ud&&s.r()<(deep?0.3:0.1)){sackCity(o,j,q);S.sackRaid=(S.sackRaid||0)+1}
   }
 }
 function decisive(o,d,war){
@@ -2551,7 +2553,7 @@ function distBFS(){
     for(const i of bk){pending--;if(s.dist[i]!==d)continue;const p=s.pol[i],horde=pols[p].kind==='horde';
       for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
         // built roads cut the climb most: stairways and switchbacks over the passes (the Inca roads, Hyslop 1984)
-        let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);c*=w.nbD[k];if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
+        let c=2+(w.tcost[j]-2)*tf*(RD(j)?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);c*=w.nbD[k];if(RD(j))c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
         const nd=d+Math.max(1,Math.min(30,Math.round(c)));if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
       if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
     }
@@ -2570,7 +2572,7 @@ function distProv(){
   while(H2.size){let [d,i]=H2.pop();if(d>df[i])continue;s.dist[i]=Math.min(65534,Math.round(d));const p=s.pol[i],horde=pols[p].kind==='horde';
     let slack=0;if(SEAT&&d>0&&!horde&&(s.city[i]>=0||s.fort[i]>0.3)){const ly=clamp((s.integ[i]-0.4)/0.4,0,1);if(ly>0){d*=1-0.5*ly;slack=0.5}}
     for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
-      let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
+      let c=2+(w.tcost[j]-2)*tf*(RD(j)?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(RD(j))c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
       c=Math.min(30,c)*w.nbD[k];const nd=d+Math.max(0.1,c);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}
     if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}}
 }
@@ -3279,7 +3281,7 @@ function* stepG(){
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(hv&&s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(ymod(s.year,10)===8&&worksOn()&&s.alive.length)roadPass();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
@@ -4758,6 +4760,25 @@ function lackV(o,t){if(!o.gmet||!t.gs)return 0;let v=0;for(let g=0;g<NG;g++)if(o
 // stateless land with ore or salt a state is short of is worth holding whatever its people pay
 function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of [0,2,3,4,5])if(G[g][j]>0.3&&o.gmet[g]<0.8)return true;return false}
 
+/* ---------- roads as works (agreed 2026-11-05; switch noworks turns it off) ----------
+   A road is built, province by province, by a state that knows road-building and has hands for it: the labour levy (free
+   service and the crown's slaves) and, for a moneyed state in funds, paid gangs. Roads grow outward from the capital through
+   the peopled country toward cities and forts, cost more over rough ground, and must be kept up: a state that cannot spare the
+   labour lets them decay, and roads nobody rules fall apart in a few generations. Travel, rule and tax reach follow the roads
+   that exist, not the knowledge of how to build them. Walls draw on the same labour. Every ten years. */
+const worksOn=()=>!swOn('noworks');
+const RD=j=>S.road?S.road[j]>0.5:S.roads[j]>0.5;
+function roadPass(){const s=S,w=WD,pols=s.pols;if(!s.road)s.road=new Float32Array(N);const R=s.road,cand=new Map();
+  for(const id of s.alive){const o=pols[id];o.roadN=0;if(o.kind==='state'&&s.roads[o.capital]>0.3)cand.set(id,[])}
+  for(const i of w.landIdx){const p=s.pol[i],o=p?pols[p]:null;if(R[i]>0){if(!o||o.kind!=='state'){R[i]*=0.8;if(R[i]<0.02)R[i]=0}else o.roadN+=cw(i)*R[i]}
+    if(!o||R[i]>=0.95)continue;const C=cand.get(p);if(!C)continue;let adj=i===o.capital;if(!adj)for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&s.pol[j]===p&&(j===o.capital||R[j]>0.5)){adj=true;break}}
+    if(!adj)continue;const sc=(s.city[i]>=0||s.fort[i]>0.3?3:1)*(1+Math.min(1,s.car[i]))*Math.min(3,s.pop[i]/w.area[i]/5+0.2)/(1+2*w.rough[i]);
+    if(C.length<24)C.push([sc,i]);else{let m=0;for(let k=1;k<24;k++)if(C[k][0]<C[m][0])m=k;if(sc>C[m][0])C[m]=[sc,i]}}
+  for(const [id,C] of cand){const o=pols[id];let B=8*(o.levy||0)+4*clamp(o.treas||0,0,1)*(o.mon||0);const keep=0.1*o.roadN+0.05*(o.fortN||0);
+    o.roadPaid=B>=keep;B-=keep;if(B>0){C.sort((a,b)=>b[0]-a[0]);for(const [sc,i] of C){const cost=cwL(i)*(1+2*w.rough[i]);if(B<cost*0.3)break;const add=Math.min(1-R[i],B/cost);R[i]+=add;B-=add*cost;o.roadN+=cw(i)*add;s.roadB=(s.roadB||0)+add*cw(i)}}
+    if(!o.roadC&&o.roadN>=10&&(o.cA||o.cells)>=20){o.roadC=1;chron('culture',`The ${o.full} builds roads out from its capital, with ${o.stSl>0.3*(o.pop*0.03)?'the labour of its slaves':(o.mon||0)>0.5?'paid gangs':'the labour its people owe'}.`,o.capital,[R_(o)],'Armies, messengers and tax grain move along them.')}}
+  // unpaid roads decay
+  for(const i of w.landIdx){if(R[i]<=0)continue;const p=s.pol[i],o=p?pols[p]:null;if(o&&o.kind==='state'&&!o.roadPaid){R[i]*=0.9;if(R[i]<0.02)R[i]=0}}}
 /* ---------- slavery (Nein, 2026-11-11; switch noslaves turns it off) ----------
    Captives are taken when land is conquered and in raids, and are a traded good. A polity keeps a pool of captives with the
    peoples they came from. Every ten years peoples who live by raiding sell most of theirs to the richest neighbouring state,

@@ -1201,6 +1201,8 @@ function raid(o,i,j,deep){
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
     takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
     displace(j,0.04,o.id);
+    // a city can be sacked without being held (agreed 2026-11-05)
+    if(worksOn()&&s.city[j]>=0&&Ua>2*Ud&&s.r()<(deep?0.3:0.1)){sackCity(o,j,q);S.sackRaid=(S.sackRaid||0)+1}
   }
 }
 function decisive(o,d,war){
@@ -1228,7 +1230,7 @@ function distBFS(){
     for(const i of bk){pending--;if(s.dist[i]!==d)continue;const p=s.pol[i],horde=pols[p].kind==='horde';
       for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
         // built roads cut the climb most: stairways and switchbacks over the passes (the Inca roads, Hyslop 1984)
-        let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);c*=w.nbD[k];if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
+        let c=2+(w.tcost[j]-2)*tf*(RD(j)?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);c*=w.nbD[k];if(RD(j))c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
         const nd=d+Math.max(1,Math.min(30,Math.round(c)));if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
       if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(s.dist[j]>nd){s.dist[j]=nd;B[nd&31].push(j);pending++}}
     }
@@ -1247,7 +1249,7 @@ function distProv(){
   while(H2.size){let [d,i]=H2.pop();if(d>df[i])continue;s.dist[i]=Math.min(65534,Math.round(d));const p=s.pol[i],horde=pols[p].kind==='horde';
     let slack=0;if(SEAT&&d>0&&!horde&&(s.city[i]>=0||s.fort[i]>0.3)){const ly=clamp((s.integ[i]-0.4)/0.4,0,1);if(ly>0){d*=1-0.5*ly;slack=0.5}}
     for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
-      let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
+      let c=2+(w.tcost[j]-2)*tf*(RD(j)?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(RD(j))c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
       c=Math.min(30,c)*w.nbD[k];const nd=d+Math.max(0.1,c);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}
     if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}}
 }
@@ -1956,7 +1958,7 @@ function* stepG(){
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(hv&&s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(ymod(s.year,10)===8&&worksOn()&&s.alive.length)roadPass();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}

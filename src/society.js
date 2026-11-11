@@ -345,6 +345,25 @@ function lackV(o,t){if(!o.gmet||!t.gs)return 0;let v=0;for(let g=0;g<NG;g++)if(o
 // stateless land with ore or salt a state is short of is worth holding whatever its people pay
 function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of [0,2,3,4,5])if(G[g][j]>0.3&&o.gmet[g]<0.8)return true;return false}
 
+/* ---------- roads as works (agreed 2026-11-05; switch noworks turns it off) ----------
+   A road is built, province by province, by a state that knows road-building and has hands for it: the labour levy (free
+   service and the crown's slaves) and, for a moneyed state in funds, paid gangs. Roads grow outward from the capital through
+   the peopled country toward cities and forts, cost more over rough ground, and must be kept up: a state that cannot spare the
+   labour lets them decay, and roads nobody rules fall apart in a few generations. Travel, rule and tax reach follow the roads
+   that exist, not the knowledge of how to build them. Walls draw on the same labour. Every ten years. */
+const worksOn=()=>!swOn('noworks');
+const RD=j=>S.road?S.road[j]>0.5:S.roads[j]>0.5;
+function roadPass(){const s=S,w=WD,pols=s.pols;if(!s.road)s.road=new Float32Array(N);const R=s.road,cand=new Map();
+  for(const id of s.alive){const o=pols[id];o.roadN=0;if(o.kind==='state'&&s.roads[o.capital]>0.3)cand.set(id,[])}
+  for(const i of w.landIdx){const p=s.pol[i],o=p?pols[p]:null;if(R[i]>0){if(!o||o.kind!=='state'){R[i]*=0.8;if(R[i]<0.02)R[i]=0}else o.roadN+=cw(i)*R[i]}
+    if(!o||R[i]>=0.95)continue;const C=cand.get(p);if(!C)continue;let adj=i===o.capital;if(!adj)for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&s.pol[j]===p&&(j===o.capital||R[j]>0.5)){adj=true;break}}
+    if(!adj)continue;const sc=(s.city[i]>=0||s.fort[i]>0.3?3:1)*(1+Math.min(1,s.car[i]))*Math.min(3,s.pop[i]/w.area[i]/5+0.2)/(1+2*w.rough[i]);
+    if(C.length<24)C.push([sc,i]);else{let m=0;for(let k=1;k<24;k++)if(C[k][0]<C[m][0])m=k;if(sc>C[m][0])C[m]=[sc,i]}}
+  for(const [id,C] of cand){const o=pols[id];let B=8*(o.levy||0)+4*clamp(o.treas||0,0,1)*(o.mon||0);const keep=0.1*o.roadN+0.05*(o.fortN||0);
+    o.roadPaid=B>=keep;B-=keep;if(B>0){C.sort((a,b)=>b[0]-a[0]);for(const [sc,i] of C){const cost=cwL(i)*(1+2*w.rough[i]);if(B<cost*0.3)break;const add=Math.min(1-R[i],B/cost);R[i]+=add;B-=add*cost;o.roadN+=cw(i)*add;s.roadB=(s.roadB||0)+add*cw(i)}}
+    if(!o.roadC&&o.roadN>=10&&(o.cA||o.cells)>=20){o.roadC=1;chron('culture',`The ${o.full} builds roads out from its capital, with ${o.stSl>0.3*(o.pop*0.03)?'the labour of its slaves':(o.mon||0)>0.5?'paid gangs':'the labour its people owe'}.`,o.capital,[R_(o)],'Armies, messengers and tax grain move along them.')}}
+  // unpaid roads decay
+  for(const i of w.landIdx){if(R[i]<=0)continue;const p=s.pol[i],o=p?pols[p]:null;if(o&&o.kind==='state'&&!o.roadPaid){R[i]*=0.9;if(R[i]<0.02)R[i]=0}}}
 /* ---------- slavery (Nein, 2026-11-11; switch noslaves turns it off) ----------
    Captives are taken when land is conquered and in raids, and are a traded good. A polity keeps a pool of captives with the
    peoples they came from. Every ten years peoples who live by raiding sell most of theirs to the richest neighbouring state,
