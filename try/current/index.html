@@ -286,7 +286,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
           <div class="field"><label for="hseed">History seed</label><input type="text" id="hseed" value="1"></div>
         </div>
         <label class="check"><input type="checkbox" id="fitc" checked><span>Anchor Earth's climate to the observed climate zones. Off runs on the climate model alone.</span></label>
-        <label class="check"><input type="checkbox" id="provc"><span>Provinces (in testing): run Earth on about 30,600 provinces drawn from the land, each holding about as many people as the next, instead of 100 km squares. Rebuild the world after changing this.</span></label>
+        <label class="check"><input type="checkbox" id="provc" checked><span>Provinces: run Earth on about 31,400 provinces drawn from the land, each holding about as many people as the next. Untick for 100 km squares, then rebuild the world.</span></label>
         <label class="check"><input type="checkbox" id="shufn"><span>Shuffle sound families on Earth, so a Romance-sounding people might rise on the Yellow River.</span></label>
         <label class="check"><input type="checkbox" id="followc"><span>Follow major events: pan the map to them as they happen.</span></label>
         <div class="field"><label for="hearthh">Origins of farming on Earth</label><select id="hearthh"><option value="emergent" selected>Emergent: grows from the wild ancestors' real ranges</option><option value="historical">Historical: starts where and when it did</option><option value="random">Random places</option></select></div>
@@ -2444,16 +2444,16 @@ function armyCredit(o,i,win){const A=o.arm;if(!A)return;let b=null,bd=800;for(co
   if(win)b.w++;else b.l++;o.cmdW[b.cmd]=clamp(o.cmdW[b.cmd]*(win?1.01:0.985),0.05,5);const E=S.eths[o.core];if(E){if(!E.cmdW)E.cmdW=o.cmdW.slice();else E.cmdW[b.cmd]+=(o.cmdW[b.cmd]-E.cmdW[b.cmd])*0.02}}
 // each year: armies go where the fighting is (the first to where land was last lost, the rest to the fronts), marching 500 km a year
 function armyYear(){const s=S,y=s.year,r=s.r;
-  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const A=armiesOf(o);let top=0;for(let k=1;k<5;k++)if(o.cmdW[k]>o.cmdW[top])top=k;o.aimM=CMD_AIM[top];o.cmdTop=top;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const A=armiesOf(o);let top=0;for(let k=1;k<5;k++)if(o.cmdW[k]>o.cmdW[top])top=k;o.aimM=CMD_AIM[top]*(1+0.5*Math.min(1,o.owed||0));o.cmdTop=top;
     const T=[];if(o.lostAt!=null&&y-o.lostY<=5&&s.pol[o.lostAt]!==undefined)T.push(o.lostAt);if(o.hot)for(const h of o.hot)T.push(h);
     for(let k=0;k<A.length;k++){const a=A[k];const t=T.length?T[k%T.length]:(o.enemies.size?a.at:o.capital);
       if(t!==a.at){const d=kmB(a.at,t);if(d>150){a.eta=y+Math.ceil(d/500)*(a.cmd===4&&!o.enemies.size?2:1);a.at=t}}
       // a winning general far from a weak court
-      if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))){
+      if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))*(1+3*(o.owed||0))){
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -2470,7 +2470,7 @@ function attack(o,i,j,sea){
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);const FLD=fieldOn();if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
-  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
+  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&!oreWanted(o,j)&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
   let Ud=defense(j);
   if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
@@ -2832,6 +2832,8 @@ function* politicsG(){
     o.cx+=w_cosLon[i]*ci;o.cy+=w_sinLon[i]*ci;o.yy+=w_cyA[i]*ci;{const pe=szF?pp*szF[i]:pp;if(pe>o.mp){o.mp=pe;o.mc=i}}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
     if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if(r()<24*ci/(szF?o.cA:o.cells))o.sample[(r()*24)|0]=i}}
+  // income from goods bought and sold (counted every ten years) joins the taxes
+  for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax!=null){o.tax+=o.gInc;o.trade=(o.trade||0)+o.gInc}}
   // (the choice of war aims, below) a vassal pays a fifth of its taxes to its overlord
   if(!swOn('nochoice'))for(const id of s.alive){const o=pols[id];if(o.over&&o.tax>0){const ov=pols[o.over];if(ov&&ov.alive&&ov.tax!=null){const t=0.2*o.tax;o.tax-=t;ov.tax+=t;ov.tribIn=t+(ov.tribIn||0)*0.9}}}
   const next=[];
@@ -2967,9 +2969,9 @@ function* politicsG(){
         // is worth and the cheapest way to get it: take its land (half its taxes and trade if won, less the men to hold unwilling
         // land), make it pay tribute (a fifth, no garrisons; only against the clearly weaker), raid it (a little, at little risk;
         // for the poorer side), or punish a raider. A neighbour worth nothing by any road is left alone.
-        if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0),own=o.tax||0,tA=t.cA||t.cells,
+        if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
-            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)-0.01*own:-1e18,
+            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)-0.01*own-tl3:-1e18,
             vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,bv=Math.max(vC,vT,vR,vP);
           if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':'raid'}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
@@ -3268,7 +3270,7 @@ function* stepG(){
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(hv&&s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
@@ -3339,7 +3341,7 @@ function statecraft(o,c,y){
    o.levy=clamp(o.pop/Math.max(1,o.cells)/60000,0,1)*clamp((o.cplx||0.2)/0.5,0,1);
    // money and hauling
    if(moneyOn()){o.haul=haulAt(c);const mkt=clamp(3*(o.cityPop||0)/(o.pop+1)+0.5*Math.min(1,s.car[c])+0.3*(o.coastN/Math.max(1,o.cells)),0,1),pay=clamp((o.garr||0)/(o.pop+1)*4+(atWar?0.3:0),0,1),
-       mT=Math.max(0.5*Math.min(1,s.metal[c])*mkt,(0.5+0.5*mkt)*s.coin[c],0.35*mkt*(1-o.haul));
+       bu=o.gmet?o.gmet[5]:1,mT=Math.max(0.5*Math.min(1,s.metal[c])*mkt*(0.5+0.5*bu),(0.5+0.5*mkt)*s.coin[c]*(0.4+0.6*bu),0.35*mkt*(1-o.haul));
      if(o.mon==null)o.mon=0;const was=o.mon;o.mon+=(0.01+0.02*pay)*(mT-o.mon);
      if(was<0.25&&o.mon>=0.25&&real>=15&&s.coin[c]<0.3&&s.metal[c]<0.3)chron('culture',`In the markets of the ${o.full} cloth, shells and other light goods pass as money: there is little to carry grain with, and no coin.`,c,[R_(o)]);
      if(o.deb>0)o.deb*=0.97;
@@ -3347,12 +3349,12 @@ function statecraft(o,c,y){
        if(real>=25)chron('fall',`Short of silver, the ${o.full} thins its coin. The soldiers are paid; prices rise, and trust in the coin falls.`,c,[R_(o)],'The treasury could not meet its debts in good metal.')}}
    const aim=0.4+0.4*(greed-0.5)+(atWar?0.15:0)+0.2*Math.max(0,-o.treas),cap=0.3+0.45*rec+0.25*o.levy*(moneyOn()?1+(1-(o.haul??0.5))*(1-(o.mon||0)):1);
    if(o.ext==null)o.ext=Math.min(aim,cap);o.ext+=0.08*(Math.min(aim,cap)-o.ext);
-   o.pW=Math.max(0,o.ext-(0.5+0.25*(o.leg??0.8)))*1.5;
+   o.pW=Math.max(0,o.ext-(0.5+0.25*(o.leg??0.8)))*1.5+(o.wantP||0);
    if(o.ext<0.45)o.mandate=Math.min(1,(o.mandate??1)+0.003*(0.45-o.ext)*10)}
   // garrisons and repairs: every walled province costs something every year
   // garrisons on a tribal frontier
   o.treas=clamp(o.treas+0.04*(1-o.burden)-(atWar?0.02:0)-0.0004*(o.fortN||0)-0.0003*(o.tFront||0),-2,1);
-  o.pF=Math.max(0,-o.treas)*0.6;
+  o.pF=Math.max(0,-o.treas)*0.6+0.3*Math.max(0,(o.owed||0)-0.5);
   if(o.treas<-1.2&&s.law[c]>0.5&&r()<0.02){
     if(o.ineq>0.5&&r()<0.5){o.treas=0;o.ineq=Math.max(0.2,o.ineq-0.12);o.mandate=Math.min(1,o.mandate+0.15);if(real>=25)chron('culture',`${cap(rulerName(o))} of the ${o.full} proclaims a jubilee: debts are cancelled and debt-slaves freed.`,c,[R_(o)],'Debts had piled up faster than anyone could repay them; cancelling them bought peace and loyalty.')}
     else{o.treas=-0.2;o.mandate=Math.max(0,o.mandate-0.2);o.shock+=0.3;if(real>=25)chron('fall',`The treasury of the ${o.full} is empty: the crown defaults on its debts and its soldiers go unpaid.`,c,[R_(o)],'Spending on armies and officials had long outrun what the land could pay.')}}
@@ -4415,8 +4417,16 @@ function colonyPass(){
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'){o.nob=0;continue}
     if(o.nob==null)o.nob=0;
     const c=o.capital,real=Math.max(1,o.cells-(o.wasteN||0));
+    // (land for soldiers; Nein 2026-11-11, switch nogrants turns it off) a state that cannot pay its soldiers in money owes them
+    // land. The debt (owed) grows with every decade at war, less where wages are paid in coin from a sound treasury; each
+    // settlement of veterans on conquered land pays some of it off. A state deep in this debt looks for land to conquer, its
+    // soldiers listen to generals who promise it, and at last they demand it (the Gracchi; Marius; Brunt 1971)
+    const GRANT=!swOn('nogrants');
+    if(GRANT){const pay=clamp((o.mon||0)*(o.treas>-0.3?1:0.4),0,1);o.owed=clamp((o.owed||0)*0.9+(o.enemies.size?0.1*(1-pay):0),0,1.5);
+      if(o.owed>1&&!o.owedC&&real>=20){o.owedC=1;o.shock=(o.shock||0)+0.2;chron('fall',`The soldiers of the ${o.full} demand the land they were promised for their service, and there is none left to give.`,c,[R_(o)],'Wars had been paid for in promises of land; the conquests had stopped.')}
+      if(o.owed<0.5)o.owedC=0}
     // plant a colony on a recently taken, thinly settled frontier province
-    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0)+0.6*Math.min(1,o.thr||0))){
+    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<(1+(GRANT?o.owed||0:0))*0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0)+0.6*Math.min(1,o.thr||0))){
       const j=o.front[(r()*o.front.length)|0];
       if(s.pol[j]===id&&s.colony[j]<0.3&&s.K[j]>s.pop[j]*1.4&&w.land[j]){
         const want=Math.min(0.012*o.pop,(s.K[j]-s.pop[j])*0.6);
@@ -4428,7 +4438,7 @@ function colonyPass(){
           if(o.rel>=0&&d>old)s.rel[j]=o.rel;
           for(let k=0;k<s.tk.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],s.tk[k][c]*0.85);
           s.colony[j]=1;s.integ[j]=Math.max(s.integ[j],0.75);s.s[j]=Math.max(s.s[j],o.S);ring(j,1,q=>{if(s.pol[q]===id)s.integ[q]=Math.min(1,s.integ[q]+0.15)});
-          o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
+          o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);if(o.owed)o.owed=Math.max(0,o.owed-0.25);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
           if(o.colN===1&&real>=20)chron('state',`The ${o.full} settles veterans on conquered land at its frontier, granting them farms in return for service.`,j,[R_(o)],'Soldiers who farm the land they hold make a frontier that stays held.')}}}
     // land held for service becomes land held by birth; large, loosely governed realms breed lords of their own
     const col=Math.min(1,(o.colN||0)/Math.max(4,real/15)),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
@@ -4477,14 +4487,17 @@ function leaguePass(){
 function colonizePass(){
   const s=S,w=WD,r=s.r;
   for(const id of s.alive.slice()){const o=s.pols[id];if(o.kind!=='state')continue;const c=o.capital;
-    if(!w.coast[c]||s.sail[c]<0.5||o.press<0.8||o.cells>40)continue;
+    // (Nein, 2026-11-11) rich merchants fit out voyages too: where their wealth is large beside the crown's taxes a city sends
+    // settlers out without being crowded, more often, and toward shores with the ore, salt or spices it lacks
+    const mwR=goodsOn()?clamp((o.mw||0)/((o.tax||0)+1),0,1):0;
+    if(!w.coast[c]||s.sail[c]<0.5||(o.press<0.8&&mwR<0.3)||o.cells>40)continue;
     const cityLike=isCityState(o)||(o.coastN||0)>=0.4*o.cells;if(!cityLike)continue;
-    if(r()>0.1*(isCityState(o)?1.5:0.7)*(0.5+s.nav[c]))continue;
+    if(r()>0.1*(isCityState(o)?1.5:0.7)*(0.5+s.nav[c])*(1+2*mwR))continue;
     const reach=8+14*s.nav[c]+12*s.ocean[c],cx=w.cxA[c],cy=w.cyA[c],CI=w.coastIdx;let best=-1,bs=0;
     for(let t=0;t<60;t++){const j=CI[(r()*CI.length)|0];if(s.pol[j]||!w.land[j]||w.desert[j])continue;
       let dx=Math.abs(w.cxA[j]-cx);dx=Math.min(dx,W-dx);const d=Math.hypot(dx,w.cyA[j]-cy);if(d<4||d>reach)continue;
       const dT=Math.abs(w.T[j]-w.T[c]);if(dT>6||s.K[j]<3000)continue;
-      const sc=(s.K[j]-s.pop[j])/(1+dT)*(1-0.5*d/reach)*(s.eth[j]<0||pEq(j)<500?1.5:1);if(sc>bs){bs=sc;best=j}}
+      const sc=(s.K[j]-s.pop[j])/(1+dT)*(1-0.5*d/reach)*(s.eth[j]<0||pEq(j)<500?1.5:1)*(mwR>0&&(oreWanted(o,j)||(s.ore&&s.ore[6][j]>0.3&&o.gmet&&o.gmet[6]<0.8))?3:1);if(sc>bs){bs=sc;best=j}}
     if(best<0)continue;
     const j=best,n=Math.min(0.03*o.pop,s.K[j]*0.5,40000);if(n<3000)continue;
     s.pop[c]=Math.max(1,s.pop[c]-n*0.6);
@@ -4495,7 +4508,7 @@ function colonizePass(){
     d.S=Math.max(d.S,o.S*0.9);d.cult=o.cult;d.metro=id;o.daughters=(o.daughters||0)+1;
     if(!d.allies.includes(id)){d.allies.push(id);o.allies.push(nid)}
     const far=o.daughters===1||o.cells>=10;
-    if(far)chron('state',`Settlers from the ${o.full} sail away and found the ${d.full} on a distant shore.`,j,[R_(o),R_(d)],'The home city was crowded; the sea offered land like its own.');
+    if(far)chron('state',`Settlers from the ${o.full} sail away and found the ${d.full} on a distant shore.`,j,[R_(o),R_(d)],o.press<0.8?'Its merchants paid for the voyage: the new town would trade what the mother city lacked.':'The home city was crowded; the sea offered land like its own.');
   }
 }
 /* ================= WAR, SUPPLY AND STORES =================
@@ -4671,6 +4684,70 @@ function settleOK(i,j){const s=S;const pj=s.pop[j];if(pj<1||s.farm[i]<0.5||s.far
   const prot=pi&&s.pols[pi].kind==='state'&&(pj2===pi||s.fort[i]>0.3)?1:pi&&s.pols[pi].kind==='state'?0.5:0;
   const broken=(s.evP[j]<0.9||s.infect[j])?0.8:0;
   return 0.12+0.88*Math.max(thin,prot,broken)}
+
+/* ---------- goods and markets (Nein, 2026-11-11; switch nogoods turns it off) ----------
+   Eight goods a civilisation runs on, beyond grain and herds: salt, timber, copper, tin, iron, gold and silver, the luxuries of
+   particular climates (spices, incense), and the wares of cities (cloth, pottery, wine, oil). Salt comes from dry coasts, desert
+   pans and a few hills; timber from standing forest; luxuries from the wet tropics and the hot dry margins; wares from cities.
+   Ores lie in mountain belts about 300 km across, placed by the world's seed (invented, not derived: the model has no geology):
+   copper in about a fifth of them, gold and silver in a tenth, tin in one in thirty, iron in half and in bog country.
+   Every ten years each polity's output and need of each good are counted in people served, and a polity short of a good buys
+   from neighbours with a surplus. Both sides gain (the seller more), and each remembers what the other is worth to it.
+   A realm short of metal for its weapons fights worse; one short of bullion coins less; one short of salt is restless.
+   A neighbour that has what a state lacks is worth more to conquer, and a trading partner is worth less to attack. */
+const GOODS=[{k:'salt',n:'salt',v:1},{k:'timber',n:'timber',v:0.6},{k:'copper',n:'copper',v:2},{k:'tin',n:'tin',v:5},{k:'iron',n:'iron',v:1.5},{k:'gold',n:'gold and silver',v:6},{k:'lux',n:'spices and incense',v:4},{k:'wares',n:'the wares of cities',v:2}],NG=8,GVS=22.1;
+const goodsOn=()=>!swOn('nogoods');
+function h3(a,b,c){let h=Math.imul(a|0,374761393)^Math.imul(b|0,668265263)^Math.imul(c|0,2246822519);h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function goodsInit(){const s=S,w=WD,sd=hashStr(String(w.seed??s.seed??'w'))|0,G=s.ore=[];for(let g=0;g<NG;g++)G.push(new Float32Array(N));
+  for(const i of w.landIdx){const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180,bx=Math.floor(lo/3),by=Math.floor(la/3),rg=w.rough[i],T=w.T[i],Pr=w.Pr[i];
+    const belt=k=>h3(bx,by,sd+k),own=k=>h3(i,77,sd+k),m=clamp((rg-0.15)/0.3,0,1);
+    G[0][i]=w.coast[i]&&Pr<600&&T>8?0.8:w.desert[i]&&own(1)>0.7?0.6:rg>0.2&&belt(1)>0.9?0.7:0;
+    G[2][i]=m*(belt(2)>0.78?1:0)*(0.5+0.5*own(2));G[3][i]=m*(belt(3)>0.965?1:0)*(0.5+0.5*own(3));
+    G[4][i]=(m>0?m:Pr>600?0.3:0)*(belt(4)>0.45?1:0)*(0.4+0.6*own(4));G[5][i]=m*(belt(5)>0.9?1:0)*(0.5+0.5*own(5));
+    G[6][i]=T>22&&Pr>1500?0.8:T>22&&Pr>80&&Pr<400&&own(6)>0.6?0.7:0}}
+function goodsPass(){const s=S,w=WD,pols=s.pols;if(!s.ore)goodsInit();const G=s.ore,A=s.alive;
+  for(const id of A){const o=pols[id];if(!o.gs){o.gs=new Float64Array(NG);o.gd=new Float64Array(NG);o.gmet=new Float32Array(NG).fill(1)}o.gs.fill(0);o.gd.fill(0);o.gInc=0;o.gp=new Map()}
+  for(const i of w.landIdx){let p=s.pol[i],half=1;
+    // peoples without a state sell what their land yields to a neighbouring polity, at half the rate
+    if(!p){if(s.pop[i]<1||!(G[0][i]>0||G[2][i]>0||G[3][i]>0||G[4][i]>0||G[5][i]>0||G[6][i]>0))continue;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&s.pol[j]){p=s.pol[j];break}}if(!p)continue;half=0.5}
+    const o=pols[p];if(!o.gs)continue;const pp=s.pop[i],c=cw(i)*half,wk=Math.min(1,pp/(2000*cw(i))),X=o.gs,mt=Math.min(1,s.metal[i]);if(half<1){X[0]+=G[0][i]*1e6*c*wk;X[2]+=G[2][i]*1.2e6*c*wk;X[3]+=G[3][i]*2e6*c*wk;X[4]+=G[4][i]*5e5*c*wk;X[5]+=G[5][i]*1e6*c*wk;X[6]+=G[6][i]*6e5*c*wk;continue}
+    X[0]+=G[0][i]*1e6*c*wk;X[1]+=s.forest[i]*2e5*c*wk;X[2]+=G[2][i]*1.2e6*c*wk*mt;X[3]+=G[3][i]*2e6*c*wk*mt;X[4]+=G[4][i]*5e5*c*wk*Math.min(1,s.iron[i]);X[5]+=G[5][i]*1e6*c*wk*mt;X[6]+=G[6][i]*6e5*c*wk}
+  for(const id of A){const o=pols[id],c=o.capital,D=o.gd,pop=o.pop,br=Math.min(1,s.metal[c])*(1-0.7*Math.min(1,s.iron[c]));
+    D[0]=pop;D[1]=3*(o.cityPop||0)+0.2*pop*Math.min(1,s.sail[c]);D[2]=0.5*pop*br;D[3]=0.06*pop*br;D[4]=0.6*pop*Math.min(1,s.iron[c]);D[5]=pop*(0.05+0.5*(o.mon||0));D[6]=0.15*pop*(0.5+(o.ineq||0.25));D[7]=0.3*pop;
+    o.gs[7]=8*(o.cityPop||0)}
+  // routes (Nein, 2026-11-11): goods travel along chains of polities that know each other, by shared borders and, for peoples who
+  // sail, between ports within reach (600 km, to 1,800 with deep-water sailing). A buyer is served by the nearest surplus first, up
+  // to four hands away; each hand between takes a toll (a tenth, up to three-tenths under a grasping ruler) and less arrives for
+  // it. A seller who is the only source in reach doubles the price, and the buyer remembers the squeeze. Merchants' wealth (mw)
+  // gathers where goods are sold and pass through
+  const port=new Map();for(const id of A){const o=pols[id];o.sea=null;const c=o.capital;if(w.coast[c]&&s.sail[c]>0.5)port.set(id,c)}
+  const PL=[...port.keys()];for(let a=0;a<PL.length;a++)for(let b=a+1;b<PL.length;b++){const ca=port.get(PL[a]),cb=port.get(PL[b]),R=600*(1+2*Math.min(s.nav[ca],s.nav[cb]));
+    if(kmB(ca,cb)<=R){const oa=pols[PL[a]],ob=pols[PL[b]];(oa.sea||(oa.sea=[])).push(PL[b]);(ob.sea||(ob.sea=[])).push(PL[a])}}
+  for(const id of A){const o=pols[id],m=o.metro!=null?pols[o.metro]:null;if(m&&m.alive&&m.gs){(o.sea||(o.sea=[])).push(m.id);(m.sea||(m.sea=[])).push(id)}}
+  const got=new Float64Array(NG),hop=new Map(),par=new Map();
+  for(const id of A){const o=pols[id];if(o.pop<1||!o.nb)continue;got.fill(0);let short=false;for(let g=0;g<NG;g++)if(o.gd[g]>o.gs[g])short=true;
+    if(short){hop.clear();par.clear();hop.set(id,0);const Q=[id];
+      for(let h=0;h<Q.length&&Q.length<60;h++){const u=Q[h],ou=pols[u],d=hop.get(u);if(d>=4)continue;
+        const vis=q=>{if(hop.has(q))return;const t=pols[q];if(!t||!t.alive||!t.gs||ou.enemies.has(q))return;hop.set(q,d+1);par.set(q,u);Q.push(q)};
+        if(ou.nb)for(const [q] of ou.nb)vis(q);if(ou.sea)for(const q of ou.sea)vis(q)}
+      for(let g=0;g<NG;g++){let df=o.gd[g]-o.gs[g];if(df<=0)continue;let nsrc=0;for(let k=1;k<Q.length;k++){const t=pols[Q[k]];if(t.gs[g]>t.gd[g])nsrc++}
+        for(let k=1;k<Q.length&&df>0;k++){const q=Q[k],t=pols[q],sq=t.gs[g]-t.gd[g];if(sq<=0)continue;
+          let keep=1;for(let u=par.get(q);u!==id&&u!=null;u=par.get(u)){const m=pols[u],tl=0.1+0.2*((m.ruler&&m.ruler.greed)??0.5)*(m.kind==='state'?1:0.5);keep*=1-tl}
+          const x=Math.min(df,0.5*sq*keep);if(x<=0)continue;t.gs[g]-=x/keep;got[g]+=x;df-=x;
+          const mono=nsrc===1?2:1,sh=GOODS[g].v/GVS*x,vi=0.8*0.4*(o.tax||0)*sh/(o.pop+1)/mono,ve=0.8*0.6*(t.tax||0)*sh/(t.pop+1)*mono;
+          o.gInc+=vi;t.gInc+=ve;t.mw=(t.mw||0)+ve;o.gp.set(q,(o.gp.get(q)||0)+vi);t.gp.set(id,(t.gp.get(id)||0)+ve);
+          if(mono>1){if(!o.grv)o.grv=new Map();o.grv.set(q,(o.grv.get(q)||0)+vi)}
+          for(let u=par.get(q);u!==id&&u!=null;u=par.get(u)){const m=pols[u],cut=0.15*ve;m.gInc+=cut;m.mw=(m.mw||0)+cut;s.transit=(s.transit||0)+1}
+          s.tradeN=(s.tradeN||0)+1}}}
+    for(let g=0;g<NG;g++)o.gmet[g]=o.gd[g]>0?clamp((Math.max(0,o.gs[g])+got[g])/o.gd[g],0,1):1;
+    const c=o.capital,fe=Math.min(1,s.iron[c]),bz=Math.min(1,s.metal[c]);
+    o.arms=fe>0.5?0.75+0.25*o.gmet[4]:bz>0.5?0.75+0.25*Math.min(o.gmet[2],o.gmet[3]):1;o.wantP=0.15*(1-o.gmet[0]);
+    // merchants: their wealth decays a tenth a decade; where it is large beside the crown's taxes, command by hired captains gains standing
+    o.mw=(o.mw||0)*0.9;if(o.cmdW&&o.tax>0){const mr=clamp(o.mw/(o.tax+1),0,1);o.cmdW[3]=clamp(o.cmdW[3]*(1+0.05*mr),0.05,5)}}}
+// what a neighbour's goods are worth to a state that lacks them, as a share of its own taxes
+function lackV(o,t){if(!o.gmet||!t.gs)return 0;let v=0;for(let g=0;g<NG;g++)if(o.gmet[g]<0.8&&t.gs[g]>t.gd[g])v+=GOODS[g].v/GVS*(1-o.gmet[g]);return 0.5*(o.tax||0)*v+2*(o.grv&&o.grv.get(t.id)||0)}
+// stateless land with ore or salt a state is short of is worth holding whatever its people pay
+function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of [0,2,3,4,5])if(G[g][j]>0.3&&o.gmet[g]<0.8)return true;return false}
 
 /* ---------- provinces (stage 1 of the province rebuild) ----------
    Provinces drawn from the land on the 25 km fine grid (HW x HH), each holding roughly as many people as the land can feed,
@@ -6015,7 +6092,8 @@ async function boot(){
     EARTH=decodeEarth(e,k,c);
     if(typeof EARTH_PID_B64!=='undefined'){const [pd,fp,lk]=await Promise.all([inflateB64(EARTH_PID_B64),inflateB64(EARTH_FP_B64),typeof EARTH_LAKE_B64!=='undefined'?inflateB64(EARTH_LAKE_B64):null]);EARTH.pid=decodePid(pd);EARTH.fp=fp;EARTH.lake=lk}
     let seed=null;try{const m=/seed-([A-Za-z0-9]+)/.exec(location.hash||'');if(m)seed=m[1]}catch(err){}
-    try{if(new URL(location.href).searchParams.get('world')==='prov'&&$('provc'))$('provc').checked=true}catch(err){}
+    // provinces are the default (Nein, 2026-11-11); ?world=grid opens the 100 km squares
+    try{if($('provc'))$('provc').checked=new URL(location.href).searchParams.get('world')!=='grid'}catch(err){if($('provc'))$('provc').checked=true}
     $('hseed').value=seed||String(Math.floor(Math.random()*1e6));
     buildWorld('earth');
   }catch(err){console.error(err);busy(true,'Earth could not be loaded here, so a generated world is used instead.');setTimeout(()=>buildWorld('gen'),800)}
