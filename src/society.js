@@ -353,7 +353,10 @@ function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of
    own culture with them, so a people carried off in numbers shows on the map where it was put to work. Slaves do not serve in
    the army; their labour concentrates wealth; where they are many and the state is weak they rise. Their descendants are
    absorbed over generations, so slavery lasts only where captives keep coming. Universal faiths mostly forbid enslaving
-   fellow believers. */
+   fellow believers.
+   It also serves the society that keeps it (Nein, 2026-11-11): the free close ranks (solidarity rises where slaves are held), the
+   poor among the free side with the masters, not against them (unrest from inequality is muted: Morgan 1975; Fredrickson 1981),
+   and free men spared the fields can go on campaign (Finley 1980). The price is a standing watch over the slaves. */
 const slaveOn=()=>!swOn('noslaves');
 function kinBan(o,rel){if(o.rel<0||rel!==o.rel)return false;const R=S.rels[o.rel];return!!R&&R.kind==='universal'&&(R.id*7+3)%10<7}
 function takeCaptives(o,j,share){const s=S;if(!slaveOn()||s.pop[j]<50||kinBan(o,s.rel[j]))return;const n=s.pop[j]*share;s.pop[j]-=n;o.capt=(o.capt||0)+n;
@@ -370,7 +373,7 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
   for(const i of w.landIdx){const p=s.pol[i];if(SL[i]>0){SL[i]*=0.95;if(SL[i]<0.005){SL[i]=0;s.slvE[i]=-1}}if(!p)continue;const o=pols[p];o.slvN+=SL[i]*s.pop[i];if(o.capt>100)o.slvW+=want(i)}
   for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=pols[p];if(!(o.capt>100)||!(o.slvW>0))continue;const n=o.capt*want(i)/o.slvW;if(n<1)continue;
     let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
-    const old=s.pop[i];s.pop[i]+=n;SL[i]=Math.min(0.7,(SL[i]*old+n)/(old+n));if(e>=0&&e!==s.eth[i]){mixIn(i,e,n/(old+n));s.slvE[i]=e}o.slvN+=n}
+    const old=s.pop[i];s.pop[i]+=n;SL[i]=Math.min(0.7,(SL[i]*old+n)/(old+n));s.s[i]=Math.min(1,s.s[i]+0.05*SL[i]);if(e>=0&&e!==s.eth[i]){mixIn(i,e,n/(old+n));s.slvE[i]=e}o.slvN+=n}
   for(const id of s.alive){const o=pols[id];
     if(o.capt>100&&o.slvW>0){let e=-1,bx=0;if(o.captE)for(const [k,x] of o.captE)if(x>bx){bx=x;e=k}
       if(bx>=50000&&e>=0&&s.eths[e]&&(o.cA||o.cells)>=15){s.slvMig=(s.slvMig||0)+1;chron('migration',`${Math.round(bx/1000)},000 captives of the ${s.eths[e].name} are carried off to the fields, mines and households of the ${o.full}.`,o.capital,[RE(s.eths[e]),R_(o)],'Taken in war and raids, or bought from those who took them.')}
