@@ -2444,16 +2444,16 @@ function armyCredit(o,i,win){const A=o.arm;if(!A)return;let b=null,bd=800;for(co
   if(win)b.w++;else b.l++;o.cmdW[b.cmd]=clamp(o.cmdW[b.cmd]*(win?1.01:0.985),0.05,5);const E=S.eths[o.core];if(E){if(!E.cmdW)E.cmdW=o.cmdW.slice();else E.cmdW[b.cmd]+=(o.cmdW[b.cmd]-E.cmdW[b.cmd])*0.02}}
 // each year: armies go where the fighting is (the first to where land was last lost, the rest to the fronts), marching 500 km a year
 function armyYear(){const s=S,y=s.year,r=s.r;
-  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const A=armiesOf(o);let top=0;for(let k=1;k<5;k++)if(o.cmdW[k]>o.cmdW[top])top=k;o.aimM=CMD_AIM[top];o.cmdTop=top;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const A=armiesOf(o);let top=0;for(let k=1;k<5;k++)if(o.cmdW[k]>o.cmdW[top])top=k;o.aimM=CMD_AIM[top]*(1+0.5*Math.min(1,o.owed||0));o.cmdTop=top;
     const T=[];if(o.lostAt!=null&&y-o.lostY<=5&&s.pol[o.lostAt]!==undefined)T.push(o.lostAt);if(o.hot)for(const h of o.hot)T.push(h);
     for(let k=0;k<A.length;k++){const a=A[k];const t=T.length?T[k%T.length]:(o.enemies.size?a.at:o.capital);
       if(t!==a.at){const d=kmB(a.at,t);if(d>150){a.eta=y+Math.ceil(d/500)*(a.cmd===4&&!o.enemies.size?2:1);a.at=t}}
       // a winning general far from a weak court
-      if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))){
+      if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))*(1+3*(o.owed||0))){
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -3354,7 +3354,7 @@ function statecraft(o,c,y){
   // garrisons and repairs: every walled province costs something every year
   // garrisons on a tribal frontier
   o.treas=clamp(o.treas+0.04*(1-o.burden)-(atWar?0.02:0)-0.0004*(o.fortN||0)-0.0003*(o.tFront||0),-2,1);
-  o.pF=Math.max(0,-o.treas)*0.6;
+  o.pF=Math.max(0,-o.treas)*0.6+0.3*Math.max(0,(o.owed||0)-0.5);
   if(o.treas<-1.2&&s.law[c]>0.5&&r()<0.02){
     if(o.ineq>0.5&&r()<0.5){o.treas=0;o.ineq=Math.max(0.2,o.ineq-0.12);o.mandate=Math.min(1,o.mandate+0.15);if(real>=25)chron('culture',`${cap(rulerName(o))} of the ${o.full} proclaims a jubilee: debts are cancelled and debt-slaves freed.`,c,[R_(o)],'Debts had piled up faster than anyone could repay them; cancelling them bought peace and loyalty.')}
     else{o.treas=-0.2;o.mandate=Math.max(0,o.mandate-0.2);o.shock+=0.3;if(real>=25)chron('fall',`The treasury of the ${o.full} is empty: the crown defaults on its debts and its soldiers go unpaid.`,c,[R_(o)],'Spending on armies and officials had long outrun what the land could pay.')}}
@@ -4417,8 +4417,16 @@ function colonyPass(){
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'){o.nob=0;continue}
     if(o.nob==null)o.nob=0;
     const c=o.capital,real=Math.max(1,o.cells-(o.wasteN||0));
+    // (land for soldiers; Nein 2026-11-11, switch nogrants turns it off) a state that cannot pay its soldiers in money owes them
+    // land. The debt (owed) grows with every decade at war, less where wages are paid in coin from a sound treasury; each
+    // settlement of veterans on conquered land pays some of it off. A state deep in this debt looks for land to conquer, its
+    // soldiers listen to generals who promise it, and at last they demand it (the Gracchi; Marius; Brunt 1971)
+    const GRANT=!swOn('nogrants');
+    if(GRANT){const pay=clamp((o.mon||0)*(o.treas>-0.3?1:0.4),0,1);o.owed=clamp((o.owed||0)*0.9+(o.enemies.size?0.1*(1-pay):0),0,1.5);
+      if(o.owed>1&&!o.owedC&&real>=20){o.owedC=1;o.shock=(o.shock||0)+0.2;chron('fall',`The soldiers of the ${o.full} demand the land they were promised for their service, and there is none left to give.`,c,[R_(o)],'Wars had been paid for in promises of land; the conquests had stopped.')}
+      if(o.owed<0.5)o.owedC=0}
     // plant a colony on a recently taken, thinly settled frontier province
-    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0)+0.6*Math.min(1,o.thr||0))){
+    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<(1+(GRANT?o.owed||0:0))*0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0)+0.6*Math.min(1,o.thr||0))){
       const j=o.front[(r()*o.front.length)|0];
       if(s.pol[j]===id&&s.colony[j]<0.3&&s.K[j]>s.pop[j]*1.4&&w.land[j]){
         const want=Math.min(0.012*o.pop,(s.K[j]-s.pop[j])*0.6);
@@ -4430,7 +4438,7 @@ function colonyPass(){
           if(o.rel>=0&&d>old)s.rel[j]=o.rel;
           for(let k=0;k<s.tk.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],s.tk[k][c]*0.85);
           s.colony[j]=1;s.integ[j]=Math.max(s.integ[j],0.75);s.s[j]=Math.max(s.s[j],o.S);ring(j,1,q=>{if(s.pol[q]===id)s.integ[q]=Math.min(1,s.integ[q]+0.15)});
-          o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
+          o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);if(o.owed)o.owed=Math.max(0,o.owed-0.25);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
           if(o.colN===1&&real>=20)chron('state',`The ${o.full} settles veterans on conquered land at its frontier, granting them farms in return for service.`,j,[R_(o)],'Soldiers who farm the land they hold make a frontier that stays held.')}}}
     // land held for service becomes land held by birth; large, loosely governed realms breed lords of their own
     const col=Math.min(1,(o.colN||0)/Math.max(4,real/15)),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;

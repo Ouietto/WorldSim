@@ -13,8 +13,16 @@ function colonyPass(){
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'){o.nob=0;continue}
     if(o.nob==null)o.nob=0;
     const c=o.capital,real=Math.max(1,o.cells-(o.wasteN||0));
+    // (land for soldiers; Nein 2026-11-11, switch nogrants turns it off) a state that cannot pay its soldiers in money owes them
+    // land. The debt (owed) grows with every decade at war, less where wages are paid in coin from a sound treasury; each
+    // settlement of veterans on conquered land pays some of it off. A state deep in this debt looks for land to conquer, its
+    // soldiers listen to generals who promise it, and at last they demand it (the Gracchi; Marius; Brunt 1971)
+    const GRANT=!swOn('nogrants');
+    if(GRANT){const pay=clamp((o.mon||0)*(o.treas>-0.3?1:0.4),0,1);o.owed=clamp((o.owed||0)*0.9+(o.enemies.size?0.1*(1-pay):0),0,1.5);
+      if(o.owed>1&&!o.owedC&&real>=20){o.owedC=1;o.shock=(o.shock||0)+0.2;chron('fall',`The soldiers of the ${o.full} demand the land they were promised for their service, and there is none left to give.`,c,[R_(o)],'Wars had been paid for in promises of land; the conquests had stopped.')}
+      if(o.owed<0.5)o.owedC=0}
     // plant a colony on a recently taken, thinly settled frontier province
-    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0)+0.6*Math.min(1,o.thr||0))){
+    if(o.cells>=8&&o.pop>4e5&&o.treas>-0.5&&o.front&&o.front.length&&r()<(1+(GRANT?o.owed||0:0))*0.35*Math.min(1,o.pop/2e6)*(0.6+0.4*(o.enemies.size?1:0)+0.6*Math.min(1,o.thr||0))){
       const j=o.front[(r()*o.front.length)|0];
       if(s.pol[j]===id&&s.colony[j]<0.3&&s.K[j]>s.pop[j]*1.4&&w.land[j]){
         const want=Math.min(0.012*o.pop,(s.K[j]-s.pop[j])*0.6);
@@ -26,7 +34,7 @@ function colonyPass(){
           if(o.rel>=0&&d>old)s.rel[j]=o.rel;
           for(let k=0;k<s.tk.length;k++)s.tk[k][j]=Math.max(s.tk[k][j],s.tk[k][c]*0.85);
           s.colony[j]=1;s.integ[j]=Math.max(s.integ[j],0.75);s.s[j]=Math.max(s.s[j],o.S);ring(j,1,q=>{if(s.pol[q]===id)s.integ[q]=Math.min(1,s.integ[q]+0.15)});
-          o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
+          o.colN=(o.colN||0)+1;o.nob=Math.min(1,o.nob+0.025);if(o.owed)o.owed=Math.max(0,o.owed-0.25);s.colonies.push({y:s.year,pol:id,cell:j,n:d});
           if(o.colN===1&&real>=20)chron('state',`The ${o.full} settles veterans on conquered land at its frontier, granting them farms in return for service.`,j,[R_(o)],'Soldiers who farm the land they hold make a frontier that stays held.')}}}
     // land held for service becomes land held by birth; large, loosely governed realms breed lords of their own
     const col=Math.min(1,(o.colN||0)/Math.max(4,real/15)),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;

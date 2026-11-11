@@ -1121,16 +1121,16 @@ function armyCredit(o,i,win){const A=o.arm;if(!A)return;let b=null,bd=800;for(co
   if(win)b.w++;else b.l++;o.cmdW[b.cmd]=clamp(o.cmdW[b.cmd]*(win?1.01:0.985),0.05,5);const E=S.eths[o.core];if(E){if(!E.cmdW)E.cmdW=o.cmdW.slice();else E.cmdW[b.cmd]+=(o.cmdW[b.cmd]-E.cmdW[b.cmd])*0.02}}
 // each year: armies go where the fighting is (the first to where land was last lost, the rest to the fronts), marching 500 km a year
 function armyYear(){const s=S,y=s.year,r=s.r;
-  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const A=armiesOf(o);let top=0;for(let k=1;k<5;k++)if(o.cmdW[k]>o.cmdW[top])top=k;o.aimM=CMD_AIM[top];o.cmdTop=top;
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const A=armiesOf(o);let top=0;for(let k=1;k<5;k++)if(o.cmdW[k]>o.cmdW[top])top=k;o.aimM=CMD_AIM[top]*(1+0.5*Math.min(1,o.owed||0));o.cmdTop=top;
     const T=[];if(o.lostAt!=null&&y-o.lostY<=5&&s.pol[o.lostAt]!==undefined)T.push(o.lostAt);if(o.hot)for(const h of o.hot)T.push(h);
     for(let k=0;k<A.length;k++){const a=A[k];const t=T.length?T[k%T.length]:(o.enemies.size?a.at:o.capital);
       if(t!==a.at){const d=kmB(a.at,t);if(d>150){a.eta=y+Math.ceil(d/500)*(a.cmd===4&&!o.enemies.size?2:1);a.at=t}}
       // a winning general far from a weak court
-      if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))){
+      if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))*(1+3*(o.owed||0))){
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -2031,7 +2031,7 @@ function statecraft(o,c,y){
   // garrisons and repairs: every walled province costs something every year
   // garrisons on a tribal frontier
   o.treas=clamp(o.treas+0.04*(1-o.burden)-(atWar?0.02:0)-0.0004*(o.fortN||0)-0.0003*(o.tFront||0),-2,1);
-  o.pF=Math.max(0,-o.treas)*0.6;
+  o.pF=Math.max(0,-o.treas)*0.6+0.3*Math.max(0,(o.owed||0)-0.5);
   if(o.treas<-1.2&&s.law[c]>0.5&&r()<0.02){
     if(o.ineq>0.5&&r()<0.5){o.treas=0;o.ineq=Math.max(0.2,o.ineq-0.12);o.mandate=Math.min(1,o.mandate+0.15);if(real>=25)chron('culture',`${cap(rulerName(o))} of the ${o.full} proclaims a jubilee: debts are cancelled and debt-slaves freed.`,c,[R_(o)],'Debts had piled up faster than anyone could repay them; cancelling them bought peace and loyalty.')}
     else{o.treas=-0.2;o.mandate=Math.max(0,o.mandate-0.2);o.shock+=0.3;if(real>=25)chron('fall',`The treasury of the ${o.full} is empty: the crown defaults on its debts and its soldiers go unpaid.`,c,[R_(o)],'Spending on armies and officials had long outrun what the land could pay.')}}
