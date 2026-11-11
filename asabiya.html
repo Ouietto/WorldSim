@@ -2833,7 +2833,7 @@ function* politicsG(){
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
     if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if(r()<24*ci/(szF?o.cA:o.cells))o.sample[(r()*24)|0]=i}}
   // income from goods bought and sold (counted every ten years) joins the taxes
-  for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax!=null){o.tax+=o.gInc;o.trade=(o.trade||0)+o.gInc}}
+  for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax!=null){const gi=Math.min(o.gInc,0.5*o.tax);o.tax+=gi;o.trade=(o.trade||0)+gi}}
   // (the choice of war aims, below) a vassal pays a fifth of its taxes to its overlord
   if(!swOn('nochoice'))for(const id of s.alive){const o=pols[id];if(o.over&&o.tax>0){const ov=pols[o.over];if(ov&&ov.alive&&ov.tax!=null){const t=0.2*o.tax;o.tax-=t;ov.tax+=t;ov.tribIn=t+(ov.tribIn||0)*0.9}}}
   const next=[];
