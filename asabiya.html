@@ -2470,7 +2470,13 @@ function attack(o,i,j,sea){
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);const FLD=fieldOn();if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
-  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&!oreWanted(o,j)&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
+  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&!oreWanted(o,j)&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i)){
+    // (Nein, 2026-11-11) land not worth holding may still be worth raiding for its people: columns go in to take slaves, as Rome's
+    // did in Gaul and Germany. The raided harden against it
+    if(slaveOn()&&s.pop[j]>=500&&!kinBan(o,s.rel[j])&&s.r()<0.3+0.7*(o.ineq||0.25)){const Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-dd(i)/o.h)*(fieldOn()?localForce(o,i):1),Ud=defense(j);
+      if(s.r()<Ua/(Ua+Ud)){const e=s.eth[j];takeCaptives(o,j,0.1);displace(j,0.1,o.id);s.s[j]=Math.min(1,s.s[j]+0.03);s.slvRaid=(s.slvRaid||0)+1;if(e>=0&&s.eths[e])s.eths[e].hard=Math.min(1,(s.eths[e].hard||0)+0.005);
+        if(e>=0&&s.eths[e]&&(o.cA||o.cells)>=25&&s.r()<0.02)chron('war',`The ${o.full} sends columns into the lands of the ${s.eths[e].name} to take slaves.`,j,[R_(o),RE(s.eths[e])])}}
+    return}
   let Ud=defense(j);
   if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
@@ -2512,11 +2518,11 @@ function breakRealm(o,d,war){
   if(bc<0)return;d.capital=bc;d.shock+=0.8;d.mandate=0;
   if(n>=8)chron('war',`The ${o.full} storms the capital of the ${old} and breaks its power: the realm falls apart among its lords.`,o.capital,[R_(o),['pol',d.id,old],RW(war)],'A show of force: the victor wanted a weak neighbour, not more provinces.');
   if(polCells(d.id).length>=3)civilWar(d,true)}
-function raid(o,i,j){
+function raid(o,i,j,deep){
   const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
-    takeCaptives(o,j,0.06);const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
+    takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
     displace(j,0.04,o.id);
   }
 }
@@ -2972,8 +2978,11 @@ function* politicsG(){
         if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
             vC=pw*0.5*(V-gc)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)*(slaveOn()&&!kinBan(o,t.rel)?1.5:1)-0.01*own-tl3:-1e18,
-            vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,bv=Math.max(vC,vT,vR,vP);
-          if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':'raid'}
+            vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,
+            // a war for people, not land: where land is plentiful and hands are few, the prize is the neighbour's population, carried
+            // home (mainland South-East Asia: Scott 2009; Lieberman 2003)
+            scar=clamp(1-o.pop/(0.7*o.K+1),0,1),vS=slaveOn()&&scar>0.2&&!kinBan(o,t.rel)?pw*0.08*scar*own*Math.min(3,t.pop/(o.pop+1))-(1-pw)*0.05*own-tl3:-1e18,bv=Math.max(vC,vT,vR,vP,vS);
+          if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':bv===vS?'captives':'raid'}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
         const isHoly=Rl&&q===hp&&t.rel!==o.rel&&Rn.piety>0.6;if(isHoly)wt*=1+4*P.zeal;
         bw+=wt;if(wt>0&&r()*bw<wt){best=q;holy=isHoly}}
@@ -3020,7 +3029,7 @@ function* politicsG(){
             if(ced>=3&&Lo.maxCells>=25)chron('diplomacy',`The ${Lo.full} sues for peace and cedes ${Math.round(ced)} border provinces to the ${W_.full}.`,Lo.capital,[R_(Lo),R_(W_),RW(war)])}
           war.treaty=dip;const E1=s.eths[A.core],E2=s.eths[D.core];if(E1&&E2){const hi=Math.max(E1.dip||0,E2.dip||0);E1.dip=(E1.dip||0)+0.2*(hi-(E1.dip||0));E2.dip=(E2.dip||0)+0.2*(hi-(E2.dip||0))}
           if(!s.peaceN)s.peaceN={};s.peaceN[kind]=(s.peaceN[kind]||0)+1;endWar(war);continue}}}
-    if(!aAlive||!dAlive||r()<0.02+(fresh>8?0.08:0)+(yrs>40?0.1:0)+(exA?0.06:0)+(exD?0.06:0)+((war.goal==='punitive'||war.goal==='raid')&&yrs>4?0.12:0)){endWar(war);continue}
+    if(!aAlive||!dAlive||r()<0.02+(fresh>8?0.08:0)+(yrs>40?0.1:0)+(exA?0.06:0)+(exD?0.06:0)+((war.goal==='punitive'||war.goal==='raid'||war.goal==='captives')&&yrs>4?0.12:0)){endWar(war);continue}
     still.push(wid)}
   s.activeWars=still;
   if(y%5===0)diplomacy();
@@ -3053,7 +3062,7 @@ function* politicsG(){
       if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
       if(cand>=0&&s_taken[i]!==y){const q=pol[cand];
         if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1){if(r()<pF(P.raid*0.02*o.aggrM*o.gate,i,cand)){s.raidC[cand]=y;const t0=pop[cand]*0.03;pop[cand]-=t0;o.loot+=t0*0.5;displace(cand,0.02,o.id)}}
-        else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(q&&o.arm&&o.enemies.has(q)){o.hotN=(o.hotN||0)+1;if(!o.hot)o.hot=[i];else if(o.hot.length<3)o.hot.push(i);else if(r()*o.hotN<3)o.hot[(r()*3)|0]=i}if(r()<pF(rate*o.aggrM*(o.aimM||1)*o.gate,i,cand)){if(wg&&wg.goal==='raid'&&wg.aSet.has(o.id)&&!candSea){raid(o,i,cand);if(o.kind==='state')o.treas=Math.min(1,(o.treas||0)+0.01)}else attack(o,i,cand,candSea)}}}
+        else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(q&&o.arm&&o.enemies.has(q)){o.hotN=(o.hotN||0)+1;if(!o.hot)o.hot=[i];else if(o.hot.length<3)o.hot.push(i);else if(r()*o.hotN<3)o.hot[(r()*3)|0]=i}if(r()<pF(rate*o.aggrM*(o.aimM||1)*o.gate,i,cand)){if(wg&&(wg.goal==='raid'||wg.goal==='captives')&&wg.aSet.has(o.id)&&!candSea){raid(o,i,cand,wg.goal==='captives');if(o.kind==='state')o.treas=Math.min(1,(o.treas||0)+0.01)}else attack(o,i,cand,candSea)}}}
       if(horde&&rcand>=0&&r()<pF(P.raid*0.025*o.aggrM*o.gate*(1-0.8*s_fort[rcand]),i,rcand))raid(o,i,rcand);
       const c=o.core;
       if(ei>=0&&c>=0&&ei!==c&&pi>=1&&!o.conqDyn&&r()<P.assim*0.004*o.S*(1-0.8*ethDist(ei,c))*(ri>=0&&ri===o.rel?1.5:1))s_eth[i]=c;
