@@ -1156,11 +1156,16 @@ function distBFS(){
 function distProv(){
   const s=S,w=WD,pols=s.pols,tf=P.terrain;s.dist.fill(65535);const df=s.distF&&s.distF.length===N&&s.distF instanceof Float64Array?s.distF:(s.distF=new Float64Array(N));df.fill(1e9);const H2=mkHeap();
   for(const id of s.alive){const c=pols[id].capital;if(s.pol[c]===id){df[c]=0;H2.push(0,c)}}
-  while(H2.size){const [d,i]=H2.pop();if(d>df[i])continue;s.dist[i]=Math.min(65534,Math.round(d));const p=s.pol[i],horde=pols[p].kind==='horde';
+  // (step 2, relay seats; Nein 2026-11-05: loyal cities and forts count as relay seats; switch noseats turns it off) the court's
+  // word is renewed at a loyal city or fort: land beyond one stands as if up to half as far from the capital, by how loyal the seat
+  // is (settled into the realm, integ 0.4 to 0.8). A string of loyal seats carries rule a long way; a disloyal one passes nothing on
+  const SEAT=!swOn('noseats');
+  while(H2.size){let [d,i]=H2.pop();if(d>df[i])continue;s.dist[i]=Math.min(65534,Math.round(d));const p=s.pol[i],horde=pols[p].kind==='horde';
+    let slack=0;if(SEAT&&d>0&&!horde&&(s.city[i]>=0||s.fort[i]>0.3)){const ly=clamp((s.integ[i]-0.4)/0.4,0,1);if(ly>0){d*=1-0.5*ly;slack=0.5}}
     for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
       let c=2+(w.tcost[j]-2)*tf*(s.roads[j]>0.5?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(s.roads[j]>0.5)c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
-      c=Math.min(30,c)*w.nbD[k];const nd=d+Math.max(0.1,c);if(nd<df[j]){df[j]=nd;H2.push(nd,j)}}
-    if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(nd<df[j]){df[j]=nd;H2.push(nd,j)}}}
+      c=Math.min(30,c)*w.nbD[k];const nd=d+Math.max(0.1,c);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}
+    if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}}
 }
 /* wars and diplomacy */
 function declareWar(As,Ds,name,notable,civil,holy){
@@ -1650,12 +1655,29 @@ function* politicsG(){
       if(ob&&ob.kind==='state'&&ob.cells>=60&&s_integ[i]>0.55&&s_pop[i]>=1&&s_eths[ob.core]&&ecoD(i,ob)<0.6){const f=s_eths[ob.core].fam;if(s_uniFam[i]!==f){if(s_uni[i]<0.15){s_uniFam[i]=f;s_uni[i]=0}else{s_uni[i]*=0.985;continue}}s_uni[i]+=0.0035*(1-s_uni[i])}
       else s_uni[i]*=0.9975}
     if(y%10===0){yield;exitPass(0,0.25);yield;exitPass(0.25,0.5);yield;exitPass(0.5,0.75);yield;exitPass(0.75,1);yield}
+    const CTRL=swOn('ctrl');
     for(const i of w.landIdx){const p=s_pol[i];if(!p)continue;const o=s_pols[p];if(o.kind!=='state'||i===o.capital)continue;const ce=herdLed(o)&&s.past[i]>0.5?0.5:cerealEff(i);
       if(isWaste(i)){let rim=0;for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&s_pol[j]===p&&!isWaste(j))rim++}
         const keep=rim>0||s_fort[i]>0.3||s_car[i]>0.3||(dd(i)<0.35*o.h&&o.S>0.4&&(o.burden||0)<1.1);if(!keep&&r()<0.3){s_pol[i]=0;continue}}
       if(ce<0.35&&r()<0.15*(1-ce/0.35)*(1.2-0.5*s_integ[i])){s_pol[i]=0;continue}
       // a ruler who cannot see, pay or reach a province does not keep it: its chiefs stop answering (prestige-goods chiefdoms,
       // Earle 1997). Only weakly integrated provinces of weakly holding states drift away.
+      // (step 2, control; Nein 2026-11-05: land a state cannot reach is lost or taken, so exclaves and thin salients don't last; switch
+      // ctrl turns it on until it has been run) control is exp(-effective distance / reach), 0 for land cut off from the capital. A poorly held province
+      // (under 0.35) goes over to a neighbouring state whose control next door is clearly better, sooner to kin, to its own faith and
+      // from a heavy hand; land cut off or all but out of reach (under 0.08) stops answering whatever the realm's strength
+      if(CTRL){const cut=s_dist[i]===65535,c=cut?0:Math.exp(-dd(i)/(o.h||6));
+        if(c<0.35){let bq=0,bj=-1,bc=c+0.3;
+          for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0)continue;const q=s_pol[j];if(!q||q===p)continue;const oq=s_pols[q];if(oq.kind!=='state'||o.over===q||oq.over===p)continue;
+            const cq=Math.exp(-dd(j)/(oq.h||6));if(cq>bc){bc=cq;bq=q;bj=j}}
+          if(bq){const oq=s_pols[bq],kin=s_eth[i]===oq.core,fa=s.rel[i]>=0&&s.rel[i]===oq.rel;
+            if(r()<0.03*(bc-c)*(kin?2:1)*(fa?1.5:1)*(1+Math.max(0,(o.burden||0.6)-0.8))*(1.2-s_integ[i])){
+              s_pol[i]=bq;s.taken[i]=y;s_integ[i]=Math.min(s_integ[i],kin?0.4:0.2);s_dist[i]=Math.min(65534,s_dist[bj]+stepCost(bj,i));s.defN=(s.defN||0)+1;
+              if(s.city[i]>=0)chron('fall',`${s.cities[s.city[i]].name} goes over to the ${oq.full}: the ${o.full} could no longer reach it.`,i,[R_(o),R_(oq)]);continue}}
+          if((cut||c<0.08)&&r()<(cut?0.15:0.04*(1-c/0.08))){s.lostN=(s.lostN||0)+1;
+            if(pEq(i)>=FLOOR.chief*P.floor*3&&s.farm[i]>0.5&&cerealEff(i)>=0.3){const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'Cut off from the court, its governor ruled for himself.'}});s_pol[i]=nid;
+              if(szF&&szF[i]>1)grabNear(i,nid,j=>s_pol[j]===p&&j!==o.capital&&(s_dist[j]===65535||Math.exp(-dd(j)/(o.h||6))<0.08),1,0.56)}
+            else s_pol[i]=0;continue}}}
       const hd=o.hold??0.5;if(hd<0.5&&s_integ[i]<0.35&&r()<0.04*(0.5-hd)*(1-s_integ[i]/0.35)*(1+dd(i)/(o.h||6))){
         // lords carve up fallen realms (default since run 79): a governor who stops answering keeps good farmland as his own lordship
         if(pEq(i)>=FLOOR.chief*P.floor*3&&s.farm[i]>0.5&&cerealEff(i)>=0.3){const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'A governor the court could not see or pay kept his province.'}});s_pol[i]=nid;
