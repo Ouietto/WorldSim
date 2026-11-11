@@ -228,6 +228,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
     <div class="clock">
       <button id="play" class="btn primary" type="button" disabled>Play</button>
       <div class="seg" id="speed" role="group" aria-label="Years per second"></div>
+      <button id="replay" class="btn" type="button" disabled aria-label="Replay the history so far" title="Replay the history so far, quickly through the early ages" style="min-width:0;padding-left:10px;padding-right:10px">↺</button>
       <div class="year" aria-live="off"><span id="yr">–</span><span class="era" id="era"></span></div>
     </div>
     <div class="stats" id="topstats"></div>
@@ -5537,12 +5538,22 @@ let mapDim={w:1,h:1,dpr:1};
 function resize(){mapDim=sizeCanvas(mapCv);ui.bs=Math.max(mapDim.w/HW,mapDim.h/HH);clampView();sizeCanvas(chartCv);drawChart();drawMap()}
 function clampView(){const mw=HW*ui.bs*ui.z,mh=HH*ui.bs*ui.z;ui.oy=clamp(ui.oy,mapDim.h-mh,0);ui.ox=((ui.ox%mw)-mw)%mw}
 const lonToMx=l=>(l/(2*Math.PI)+0.5)*HW,laToMy=la=>(0.5-la/Math.PI)*HH;
+/* ---------- replay (Nein, 2026-11-10: an end-of-run overview that passes quickly through the early ages) ----------
+   While a history runs, who holds each province is kept every 200 years until the first polity and every 25 after. Replay shows
+   those frames one after another at eleven a second, so the foraging millennia go by in a few seconds and the age of states
+   takes most of the time. Only the States view is replayed; the run itself is untouched. */
+const REC={f:[],last:-1e9};
+function recFrame(){const s=S;if(!s||!WD||ui.replay)return;if(s.year-REC.last<(s.alive.length?25:200))return;REC.last=s.year;const L=WD.landIdx,a=s.pols.length<65535?new Uint16Array(L.length):new Int32Array(L.length);
+  for(let k=0;k<L.length;k++)a[k]=s.pol[L[k]];REC.f.push({y:s.year,p:a});if(REC.f.length===5&&$('replay'))$('replay').disabled=false}
+function stopReplay(){const R=ui.replay;if(!R)return;S.pol.set(R.save);ui.replay=null;setMode(R.mode);if($('replay'))$('replay').textContent='↺';ui.dirty=true}
+function startReplay(){if(!S||REC.f.length<5)return;setRunning(false);ui.replay={k:0,next:0,save:S.pol.slice(),mode:ui.mode};setMode('political');$('replay').textContent='■'}
 function drawMap(){
   if(!baseCv||!S)return;
   const ctx=mapCtx,{w,h,dpr}=mapDim,k=ui.bs*ui.z,mw=HW*k,mh=HH*k,m=ui.mode;
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
   ctx.imageSmoothingEnabled=ui.z<2.5;
   for(let c=0;c<3;c++){const x=ui.ox+c*mw;if(x>w)break;ctx.drawImage(compCv,x,ui.oy,mw,mh)}
+  if(ui.replay)return;
   const k_=k,s=S,W2=WD,each=(mx,my,f)=>{for(let c=-1;c<3;c++){const sx=ui.ox+c*mw+mx*k,sy=ui.oy+my*k;if(sx>-80&&sx<w+80&&sy>-40&&sy<h+40)f(sx,sy)}};
   const cellXY=i=>[(W2.cxA[i]+0.5)*SC,(W2.cyA[i]+0.5)*SC];
   // alliance lines
@@ -5709,7 +5720,7 @@ function drawChart(){
 /* ---------- top stats ---------- */
 function updateTop(){
   const s=S,st=s.stats[s.stats.length-1];
-  $('yr').textContent=s.year<=0?(1-s.year).toLocaleString('en-US'):String(s.year);$('era').textContent=s.year<=0?'BCE':'CE';
+  const yv=ui.replay?ui.repY:s.year;$('yr').textContent=yv<=0?(1-yv).toLocaleString('en-US'):String(yv);$('era').textContent=yv<=0?'BCE':'CE';
   if(!st)return;
   $('topstats').innerHTML=`<span>Population <b>${fmtN(st.pop)}</b></span><span>States <b>${st.np}</b></span><span>Hordes <b>${st.nh||0}</b></span><span>Leading era <b>${ERAS[st.lead||0]}</b></span><span>Largest ${st.big?`<button type="button" class="biglink" id="biglink" title="Open and show the largest state">${esc(st.big)}</button>`:'<b>none</b>'}${st.bc?` (${st.bc})`:''}</span>`;
 }
@@ -6054,7 +6065,7 @@ document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.cl
 /* ---------- controls ---------- */
 $('speed').innerHTML=SPEEDS.map(([v,l],k)=>`<button type="button" data-k="${k}" aria-pressed="${k===ui.speed}" title="${k===4?'As fast as possible':v+' years per second'}">${l}</button>`).join('');
 $('speed').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.speed=+b.dataset.k;for(const x of $('speed').children)x.setAttribute('aria-pressed',x===b)});
-function setRunning(on){ui.running=on&&ui.ready;$('play').textContent=ui.running?'Pause':'Play'}
+function setRunning(on){if(on&&ui.replay)stopReplay();ui.running=on&&ui.ready;$('play').textContent=ui.running?'Pause':'Play'}
 $('play').addEventListener('click',()=>setRunning(!ui.running));
 const CITY_SHOW=[['all','All cities'],['big','Capitals and large cities'],['caps','Capitals only'],['holy','Capitals and holy cities'],['none','None']];
 // map views: a few quick buttons and every layer in one grouped menu
@@ -6103,6 +6114,7 @@ function startHistory(){
   P.hearthMode=$('hearthh').value;P.shuffleNames=$('shufn').checked;
   try{history.replaceState(null,'','#seed-'+($('hseed').value||'1').replace(/[^A-Za-z0-9]/g,''))}catch(e){}
   newHistory($('hseed').value||'1');
+  ui.replay=null;REC.f=[];REC.last=-1e9;if($('replay')){$('replay').disabled=true;$('replay').textContent='↺'}
   ui.page=null;ui.stack=[];ui.lastChronKey='';ui.lastSpotObj=null;$('toast').hidden=true;ui.pausedAtEnd=false;ui.dirty=true;ui.ready=true;$('play').disabled=false;
   showPane(ui.pane);updateTop();drawChart();drawLegend();
   const h0=S.hearths.find(h=>h.kind==='farm');if(h0)centerOn(h0.cell);
@@ -6163,14 +6175,15 @@ $('btn-import').addEventListener('click',async()=>{
 let lastT=performance.now(),accY=0;
 function frame(t){
   const dt=Math.min(0.1,(t-lastT)/1000);lastT=t;
-  if(ui.running&&S){
+  if(ui.replay&&S&&t>=ui.replay.next){const R=ui.replay,F=REC.f[R.k];if(!F)stopReplay();else{const L=WD.landIdx,P=S.pol,a=F.p;for(let k=0;k<L.length;k++)P[L[k]]=a[k];ui.repY=F.y;R.k++;R.next=t+90;ui.dirty=true}}
+  if(ui.running&&S&&!ui.replay){
     const sp=SPEEDS[ui.speed][0],t0=performance.now();
     // run the year in slices, keeping each frame short so the map and panels stay responsive
     const slice=()=>{if(!ui.gen||ui.genS!==S){ui.gen=stepG();ui.genS=S}if(ui.gen.next().done){ui.gen=null;return true}return false};
     // at Max speed the simulation gets most of each frame (about 30 frames a second); otherwise it stays under 14 ms
     if(sp>=1e9){while(performance.now()-t0<26)slice()}
     else{accY+=sp*dt;let n=Math.min(Math.floor(accY),60);accY-=n;while(performance.now()-t0<14){if(ui.gen){slice();continue}if(n<=0)break;n--;slice()}if(n>0)accY+=n}
-    ui.dirty=true;
+    ui.dirty=true;recFrame();
     if(S.year>=1800&&!ui.pausedAtEnd){ui.pausedAtEnd=true;setRunning(false);chron('nature','The age of agrarian empires gives way to the industrial era, where this version of the model stops being reliable.')}
   }
   if(S&&S.spot.length&&S.spot[S.spot.length-1]!==ui.lastSpotObj){const sp=S.spot[S.spot.length-1];ui.lastSpotObj=sp;
@@ -6206,6 +6219,7 @@ $('sheetbtn').addEventListener('click',()=>sheet(sideEl.dataset.sheet==='min'?'h
   g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end)}
 $('legbtn').addEventListener('click',()=>{const on=document.querySelector('.app').classList.toggle('legon');$('legbtn').setAttribute('aria-expanded',String(on))});
 new ResizeObserver(sheetMinPx).observe(document.querySelector('.tabs'));
+if($('replay'))$('replay').addEventListener('click',()=>{if(ui.replay)stopReplay();else startReplay()});
 async function boot(){
   buildFilters();buildRules();drawLegend();showPane('chron');
   new ResizeObserver(resize).observe($('mapwrap'));new ResizeObserver(()=>{sizeCanvas(chartCv);drawChart()}).observe(chartCv);
