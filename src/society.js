@@ -253,7 +253,7 @@ function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass()
   for(const i of L){const p=s.pol[i];if(!p)continue;const o=s.pols[p];if(o.kind!=='state'||s.pop[i]<1)continue;
     let best=-1,bu=0;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j]||s.pol[j]||s.pop[j]<1||s.eth[j]<0||s.eth[j]===s.eth[i])continue;
       const E=s.eths[s.eth[j]],ride=E&&E.ride?E.ride:0,hungry=(s.evP[j]<0.9?1.6:1)*(s.pop[j]>0.95*s.K[j]?1.4:1)*(s.hgr?1+1.5*s.hgr[j]:1);
-      const u=Math.pow(R[j]+1,0.75)*s.s[j]*milAt(j)*(1+1.5*ride)*hungry*(1+0.6*s.herd[j]*w.sH[j]);if(u>bu){bu=u;best=j}}
+      const u=Math.pow(R[j]+1,0.75)*s.s[j]*milAt(j)*(1+1.5*ride)*hungry*(1+0.6*s.herd[j]*w.sH[j])*(1+hardOf(s.eth[j]));if(u>bu){bu=u;best=j}}
     if(best<0)continue;o.tFront+=cwL(i);
     // a raid every few years where the tribes are strong; walls, garrisons and loyal settlers blunt it
     // a raid strikes before the army can come: what counts is the province's own people, walls and garrison, not the realm's strength

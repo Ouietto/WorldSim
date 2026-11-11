@@ -451,6 +451,26 @@ function settleRuined(i){const s=S,w=WD;let kn=false,bit=0,best=-1,room=0;
     if(s.farm[i]>0.5&&s.farm[i]<0.51&&s.eth[i]>=0)chron('migration',`Ruined by hard years, the herders of the ${s.eths[s.eth[i]].name} take up farming.`,i,[RE(s.eths[s.eth[i]])]);return}
   if(best>=0){const m=Math.min(0.1*s.pop[i],room);if(m<1)return;s.pop[i]-=m;s.pop[best]+=m;mixIn(best,s.eth[i],m/s.pop[best]);
     if((s.ruinY[i]%25)===5&&s.eth[i]>=0)chron('migration',`Ruined herders of the ${s.eths[s.eth[i]].name} cross into the ${s.pols[s.pol[best]].full} to settle.`,best,[RE(s.eths[s.eth[i]]),R_(s.pols[s.pol[best]])])}}
+// peoples without states fight over good ground (Nein, 2026-11-10): a crowded band falls on a neighbour of another people whose
+// land is worth having, the more where food is dense enough to defend (rich rivers and coasts: Keeley 1996; Kelly 2000). The
+// beaten flee (and may set a whole people moving), are killed, or, hemmed in, are taken in by the victors, who move onto the land.
+// Fighting binds both sides together. Peoples living beside states harden (hardOf). Every five years.
+function bandWars(){const s=S,w=WD,r=s.r,E=s.eths,seen=new Uint8Array(E.length);
+  for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1)continue;const e=s.eth[i];if(e<0)continue;let st=0,cand=-1,n=0;
+    for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(q){if(s.pols[q].kind==='state')st=1;continue}
+      if(s.pop[j]>=1&&s.eth[j]>=0&&s.eth[j]!==e&&r()<1/++n)cand=j}
+    if(st)seen[e]=1;
+    const pr=s.pop[i]/Math.max(1,s.K[i]);if(cand<0||pr<0.85)continue;const j=cand,kdI=s.K[i]/w.area[i],kdJ=s.K[j]/w.area[j];if(kdJ<0.5*kdI)continue;
+    if(r()>pU(0.05*clamp((pr-0.85)/0.15,0,1)*clamp(kdJ/0.2,0.2,1),i))continue;
+    const A=Math.pow(s.pop[i]+1,0.75)*s.s[i]*milAt(i)*(1+hardOf(e)),D=Math.pow(s.pop[j]+1,0.75)*s.s[j]*milAt(j)*(1+hardOf(s.eth[j]))*(1+w.rough[j]);
+    s.bandW=(s.bandW||0)+1;
+    if(r()<A/(A+D)){const hem=s.circE[j],R=A/D;s.pop[j]*=0.95;
+      if(R>2&&hem>0.5){mixIn(j,e,0.5)}else displace(j,0.3,0);
+      const m=0.15*s.pop[i];s.pop[i]-=m;s.pop[j]+=m;mixIn(j,e,m/Math.max(1,s.pop[j]));
+      if(s.eth2[j]===e&&s.mix[j]>0.5){const a=s.eth[j];s.eth[j]=e;s.eth2[j]=a;s.mix[j]=1-s.mix[j]}
+      s.s[i]=Math.min(1,s.s[i]+0.03);s.s[j]=Math.min(1,s.s[j]+0.02)}
+    else{s.pop[i]*=0.97;s.s[j]=Math.min(1,s.s[j]+0.03);s.s[i]=Math.min(1,s.s[i]+0.01)}}
+  for(let e=0;e<E.length;e++){const X=E[e];if(!X)continue;const h=X.hard||0;X.hard=seen[e]?h+0.01*(1-h):h*0.99}}
 // was the herd lost to the winter or to the summer?
 function dz0(i){const s=S,w=WD;return w.amp[i]/2-(w.T[i]+s.cdT[i])-4>0&&s.wm[i]>0.85}
 function computeK(){
@@ -1055,12 +1075,25 @@ function rideAtCell(c){const e=S.eth[c]>=0?S.eths[S.eth[c]]:null;return e&&e.rid
 // what a field-taxing state can take: herds move, and a herding cell yields little grain to the tax collector
 function cerealEff(i){return S.cTax[i]*(1-0.45*WD.leach[i])*(1-0.35*WD.trop[i])*(1-0.8*clamp((S.past[i]-0.45)/0.4,0,1))}
 const herdLed=o=>o&&o.kind==='state'&&(o.steppe||0)>0.5;
-function strength(o){const rd=rideOf(o);return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+/* ---------- armies, part 1: manpower holds land (Nein, 2026-11-10; switch noarmy turns it off) ----------
+   Holding a province ties down men: by its land, by how unsettled it is in the realm (1 - integration, squared), by forest and
+   rough ground where a people can melt away, less with iron, roads, records, forts and guns, and less in a calm, well-run realm
+   (a settled, prosperous interior all but holds itself). The garrison comes out of the men a state can field, so a realm that
+   holds much unwilling land has little left to fight with. A state takes stateless land only where the people it could tax
+   outweigh the men it would take to hold them; what it cannot afford to hold it lets go. Units are people's worth of manpower. */
+const armyOn=()=>!swOn('noarmy'),GAR=40000;
+function garrAt(i,integ,calm,t){const s=S,w=WD,h=1-integ;if(t==null)t=i;
+  return GAR*cw(i)*(0.02+h*h*(1+1.5*w.rough[i]+1.5*s.forest[i])*(1-0.6*calm))/(1+0.5*s.iron[t]+0.7*s.roads[t]+0.6*s.recK[t]+1.5*s.fort[i]+2*s.gun[t])}
+const calmOf=o=>clamp(0.5+0.5*(o.leg??1)-Math.max(0,(o.burden||0.6)-0.8),0,1);
+// a people that has lived beside states for generations learns their weapons and their ways of war, and holds together better
+// against them (the Germans of the Rhine frontier, Wells 1999; Heather 2009): hard, 0 to 1, on each people
+const hardOf=e=>e>=0&&S.eths[e]?S.eths[e].hard||0:0;
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6+Math.max(0.15*men,men-0.25*(o.garr||0)))*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
   if(q){const d=s.pols[q];Ud=Math.pow(strength(d)+1,P.scaleExp)*(0.5*d.S+0.5*s.s[j])*milAt(j)*Math.exp(-dd(j)/d.h)*(0.6+0.4*s.integ[j])}
-  else Ud=Math.pow((s.rally&&s.rally[j]>0?2*s.rally[j]:pEq(j)*4)+1,0.75)*s.s[j]*milAt(j)*0.8;
+  else Ud=Math.pow((s.rally&&s.rally[j]>0?2*s.rally[j]:pEq(j)*4)+1,0.75)*s.s[j]*milAt(j)*0.8*(1+1.5*hardOf(s.eth[j]));
   return Ud*(1+1.6*w.rough[j])*(1+2.5*s.fort[j])*(1+0.6*s.colony[j]+(q?0.3*(s.pols[q].nob||0)+(j===s.pols[q].capital&&s.pols[q].tier==='City-state'?0.4:0):0));
 }
 function displace(j,frac,byPol){const s=S;const p=s.pop[j]*frac;if(p<1)return 0;s.pop[j]-=p;pushPressure(s.eth[j],p,j,byPol,null);return p}
@@ -1071,10 +1104,12 @@ function attack(o,i,j,sea){
   const di=dd(i);
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
+  // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
+  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
   let Ud=defense(j);
   if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
-  if(!q&&o.kind==='state')Ud*=(2.2+2*s.forest[j]+2*w.rough[j])/(1+3*s.gun[i])/(1+0.8*s.colony[i]);
+  if(!q&&o.kind==='state')Ud*=(armyOn()?1.3+s.forest[j]+w.rough[j]:2.2+2*s.forest[j]+2*w.rough[j])/(1+3*s.gun[i])/(1+0.8*s.colony[i]);
   if(w.nomad[j]&&o.kind!=='horde'&&o.nomF<0.4){const ej=s.eth[j]>=0?s.eths[s.eth[j]]:null;Ud*=(1+3*(ej?ej.ride||0:0))/(1+2*s.gun[i])}
   if(w.tsetse[j]&&!w.tsetse[o.capital])Ud*=1.5;
   if(w.desert[j]&&w.rv[j]<0.3&&o.kind!=='horde'&&s.camel[i]<0.5)Ud*=1.5;
@@ -1420,12 +1455,13 @@ function* politicsG(){
   if(!S.recK)recPass();
   const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop,szF=w.szF||null;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
   const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),CO=cohArr();
-  for(const id of s.alive){const o=pols[id];o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.ig=0;o.wasteN=0;o.cA=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
+  const ARMY=armyOn();
+  for(const id of s.alive){const o=pols[id];o.calm=calmOf(o);o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.garr=0;o.ig=0;o.wasteN=0;o.cA=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
     // on provinces every mean and tally over a realm's land is weighted by the land each holds (ci cells; the grid: 1 each),
     // coasts, walled frontiers and caravan routes by their length
     const ci=szF?1/szF[i]:1,li=szF?Math.sqrt(ci):1;
-    o.pop+=pp;o.K+=s_K[i];o.cells++;if(szF)o.cA+=ci;o.sS+=s_s[i]*ci;const di=dd(i);o.dS+=di*ci;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i]*ci;o.ig+=s_integ[i]*ci;const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN+=ci;if(w_heavy[i]>0.4)o.hvN+=ci;if(isWaste(i,o.kind==="horde"))o.wasteN+=ci;if(s_car[i]>0.3){const tl=1500*s_car[i]*li;o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.K+=s_K[i];o.cells++;if(szF)o.cA+=ci;o.sS+=s_s[i]*ci;const di=dd(i);o.dS+=di*ci;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i]*ci;o.ig+=s_integ[i]*ci;if(ARMY&&o.kind==='state'&&i!==o.capital)o.garr+=garrAt(i,s_integ[i],o.calm??0.5);const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN+=ci;if(w_heavy[i]>0.4)o.hvN+=ci;if(isWaste(i,o.kind==="horde"))o.wasteN+=ci;if(s_car[i]>0.3){const tl=1500*s_car[i]*li;o.tax+=tl;o.trade+=tl}
     if(w_nomad[i])o.nom+=ci;if(w_coast[i])o.coastN+=li;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN+=ci;if(s_fort[i]>0.5)o.fortN+=li;
     o.cx+=w_cosLon[i]*ci;o.cy+=w_sinLon[i]*ci;o.yy+=w_cyA[i]*ci;{const pe=szF?pp*szF[i]:pp;if(pe>o.mp){o.mp=pe;o.mc=i}}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
@@ -1666,6 +1702,9 @@ function* politicsG(){
       // ctrl turns it on until it has been run) control is exp(-effective distance / reach), 0 for land cut off from the capital. A poorly held province
       // (under 0.35) goes over to a neighbouring state whose control next door is clearly better, sooner to kin, to its own faith and
       // from a heavy hand; land cut off or all but out of reach (under 0.08) stops answering whatever the realm's strength
+      // a realm whose garrisons take more men than it has lets go of land that does not pay for its own
+      if(ARMY&&o.garr>0.6*o.pop*(o.coord??1)&&s.city[i]<0&&s_fort[i]<0.3&&s_car[i]<0.3){const g=garrAt(i,s_integ[i],o.calm??0.5);
+        if(pop[i]*s.farm[i]*cerealEff(i)<0.5*g&&r()<0.1*Math.min(1,o.garr/(o.pop*(o.coord??1)+1)-0.6)){s_pol[i]=0;s.shedN=(s.shedN||0)+1;continue}}
       if(CTRL){const cut=s_dist[i]===65535,c=cut?0:Math.exp(-dd(i)/(o.h||6));
         if(c<0.35){let bq=0,bj=-1,bc=c+0.3;
           for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0)continue;const q=s_pol[j];if(!q||q===p)continue;const oq=s_pols[q];if(oq.kind!=='state'||o.over===q||oq.over===p)continue;
@@ -1827,7 +1866,7 @@ function* stepG(){
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   if(hv)yield* politicsG();
-  if(s.year%5===1)rallyPass();if(hv&&s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
