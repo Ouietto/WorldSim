@@ -1130,7 +1130,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -1147,7 +1147,7 @@ function attack(o,i,j,sea){
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);const FLD=fieldOn();if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
-  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
+  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&!oreWanted(o,j)&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
   let Ud=defense(j);
   if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
@@ -1509,6 +1509,8 @@ function* politicsG(){
     o.cx+=w_cosLon[i]*ci;o.cy+=w_sinLon[i]*ci;o.yy+=w_cyA[i]*ci;{const pe=szF?pp*szF[i]:pp;if(pe>o.mp){o.mp=pe;o.mc=i}}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
     if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if(r()<24*ci/(szF?o.cA:o.cells))o.sample[(r()*24)|0]=i}}
+  // income from goods bought and sold (counted every ten years) joins the taxes
+  for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax!=null){o.tax+=o.gInc;o.trade=(o.trade||0)+o.gInc}}
   // (the choice of war aims, below) a vassal pays a fifth of its taxes to its overlord
   if(!swOn('nochoice'))for(const id of s.alive){const o=pols[id];if(o.over&&o.tax>0){const ov=pols[o.over];if(ov&&ov.alive&&ov.tax!=null){const t=0.2*o.tax;o.tax-=t;ov.tax+=t;ov.tribIn=t+(ov.tribIn||0)*0.9}}}
   const next=[];
@@ -1644,9 +1646,9 @@ function* politicsG(){
         // is worth and the cheapest way to get it: take its land (half its taxes and trade if won, less the men to hold unwilling
         // land), make it pay tribute (a fifth, no garrisons; only against the clearly weaker), raid it (a little, at little risk;
         // for the poorer side), or punish a raider. A neighbour worth nothing by any road is left alone.
-        if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0),own=o.tax||0,tA=t.cA||t.cells,
+        if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
-            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)-0.01*own:-1e18,
+            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)-0.01*own-tl3:-1e18,
             vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,bv=Math.max(vC,vT,vR,vP);
           if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':'raid'}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
@@ -1945,7 +1947,7 @@ function* stepG(){
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(hv&&s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
@@ -2016,7 +2018,7 @@ function statecraft(o,c,y){
    o.levy=clamp(o.pop/Math.max(1,o.cells)/60000,0,1)*clamp((o.cplx||0.2)/0.5,0,1);
    // money and hauling
    if(moneyOn()){o.haul=haulAt(c);const mkt=clamp(3*(o.cityPop||0)/(o.pop+1)+0.5*Math.min(1,s.car[c])+0.3*(o.coastN/Math.max(1,o.cells)),0,1),pay=clamp((o.garr||0)/(o.pop+1)*4+(atWar?0.3:0),0,1),
-       mT=Math.max(0.5*Math.min(1,s.metal[c])*mkt,(0.5+0.5*mkt)*s.coin[c],0.35*mkt*(1-o.haul));
+       bu=o.gmet?o.gmet[5]:1,mT=Math.max(0.5*Math.min(1,s.metal[c])*mkt*(0.5+0.5*bu),(0.5+0.5*mkt)*s.coin[c]*(0.4+0.6*bu),0.35*mkt*(1-o.haul));
      if(o.mon==null)o.mon=0;const was=o.mon;o.mon+=(0.01+0.02*pay)*(mT-o.mon);
      if(was<0.25&&o.mon>=0.25&&real>=15&&s.coin[c]<0.3&&s.metal[c]<0.3)chron('culture',`In the markets of the ${o.full} cloth, shells and other light goods pass as money: there is little to carry grain with, and no coin.`,c,[R_(o)]);
      if(o.deb>0)o.deb*=0.97;
@@ -2024,7 +2026,7 @@ function statecraft(o,c,y){
        if(real>=25)chron('fall',`Short of silver, the ${o.full} thins its coin. The soldiers are paid; prices rise, and trust in the coin falls.`,c,[R_(o)],'The treasury could not meet its debts in good metal.')}}
    const aim=0.4+0.4*(greed-0.5)+(atWar?0.15:0)+0.2*Math.max(0,-o.treas),cap=0.3+0.45*rec+0.25*o.levy*(moneyOn()?1+(1-(o.haul??0.5))*(1-(o.mon||0)):1);
    if(o.ext==null)o.ext=Math.min(aim,cap);o.ext+=0.08*(Math.min(aim,cap)-o.ext);
-   o.pW=Math.max(0,o.ext-(0.5+0.25*(o.leg??0.8)))*1.5;
+   o.pW=Math.max(0,o.ext-(0.5+0.25*(o.leg??0.8)))*1.5+(o.wantP||0);
    if(o.ext<0.45)o.mandate=Math.min(1,(o.mandate??1)+0.003*(0.45-o.ext)*10)}
   // garrisons and repairs: every walled province costs something every year
   // garrisons on a tribal frontier

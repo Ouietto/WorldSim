@@ -269,3 +269,45 @@ function settleOK(i,j){const s=S;const pj=s.pop[j];if(pj<1||s.farm[i]<0.5||s.far
   const prot=pi&&s.pols[pi].kind==='state'&&(pj2===pi||s.fort[i]>0.3)?1:pi&&s.pols[pi].kind==='state'?0.5:0;
   const broken=(s.evP[j]<0.9||s.infect[j])?0.8:0;
   return 0.12+0.88*Math.max(thin,prot,broken)}
+
+/* ---------- goods and markets (Nein, 2026-11-11; switch nogoods turns it off) ----------
+   Eight goods a civilisation runs on, beyond grain and herds: salt, timber, copper, tin, iron, gold and silver, the luxuries of
+   particular climates (spices, incense), and the wares of cities (cloth, pottery, wine, oil). Salt comes from dry coasts, desert
+   pans and a few hills; timber from standing forest; luxuries from the wet tropics and the hot dry margins; wares from cities.
+   Ores lie in mountain belts about 300 km across, placed by the world's seed (invented, not derived: the model has no geology):
+   copper in about a fifth of them, gold and silver in a tenth, tin in one in thirty, iron in half and in bog country.
+   Every ten years each polity's output and need of each good are counted in people served, and a polity short of a good buys
+   from neighbours with a surplus. Both sides gain (the seller more), and each remembers what the other is worth to it.
+   A realm short of metal for its weapons fights worse; one short of bullion coins less; one short of salt is restless.
+   A neighbour that has what a state lacks is worth more to conquer, and a trading partner is worth less to attack. */
+const GOODS=[{k:'salt',n:'salt',v:1},{k:'timber',n:'timber',v:0.6},{k:'copper',n:'copper',v:2},{k:'tin',n:'tin',v:5},{k:'iron',n:'iron',v:1.5},{k:'gold',n:'gold and silver',v:6},{k:'lux',n:'spices and incense',v:4},{k:'wares',n:'the wares of cities',v:2}],NG=8,GVS=22.1;
+const goodsOn=()=>!swOn('nogoods');
+function h3(a,b,c){let h=Math.imul(a|0,374761393)^Math.imul(b|0,668265263)^Math.imul(c|0,2246822519);h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function goodsInit(){const s=S,w=WD,sd=hashStr(String(w.seed??s.seed??'w'))|0,G=s.ore=[];for(let g=0;g<NG;g++)G.push(new Float32Array(N));
+  for(const i of w.landIdx){const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180,bx=Math.floor(lo/3),by=Math.floor(la/3),rg=w.rough[i],T=w.T[i],Pr=w.Pr[i];
+    const belt=k=>h3(bx,by,sd+k),own=k=>h3(i,77,sd+k),m=clamp((rg-0.15)/0.3,0,1);
+    G[0][i]=w.coast[i]&&Pr<600&&T>8?0.8:w.desert[i]&&own(1)>0.7?0.6:rg>0.2&&belt(1)>0.9?0.7:0;
+    G[2][i]=m*(belt(2)>0.78?1:0)*(0.5+0.5*own(2));G[3][i]=m*(belt(3)>0.965?1:0)*(0.5+0.5*own(3));
+    G[4][i]=(m>0?m:Pr>600?0.3:0)*(belt(4)>0.45?1:0)*(0.4+0.6*own(4));G[5][i]=m*(belt(5)>0.9?1:0)*(0.5+0.5*own(5));
+    G[6][i]=T>22&&Pr>1500?0.8:T>22&&Pr>80&&Pr<400&&own(6)>0.6?0.7:0}}
+function goodsPass(){const s=S,w=WD,pols=s.pols;if(!s.ore)goodsInit();const G=s.ore,A=s.alive;
+  for(const id of A){const o=pols[id];if(!o.gs){o.gs=new Float64Array(NG);o.gd=new Float64Array(NG);o.gmet=new Float32Array(NG).fill(1)}o.gs.fill(0);o.gd.fill(0);o.gInc=0;o.gp=new Map()}
+  for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=pols[p];if(!o.gs)continue;const pp=s.pop[i],c=cw(i),wk=Math.min(1,pp/(2000*c)),X=o.gs,mt=Math.min(1,s.metal[i]);
+    X[0]+=G[0][i]*3e5*c*wk;X[1]+=s.forest[i]*2e5*c*wk;X[2]+=G[2][i]*4e5*c*wk*mt;X[3]+=G[3][i]*6e5*c*wk*mt;X[4]+=G[4][i]*5e5*c*wk*Math.min(1,s.iron[i]);X[5]+=G[5][i]*3e5*c*wk*mt;X[6]+=G[6][i]*2e5*c*wk}
+  for(const id of A){const o=pols[id],c=o.capital,D=o.gd,pop=o.pop,br=Math.min(1,s.metal[c])*(1-0.7*Math.min(1,s.iron[c]));
+    D[0]=pop;D[1]=3*(o.cityPop||0)+0.2*pop*Math.min(1,s.sail[c]);D[2]=0.5*pop*br;D[3]=0.06*pop*br;D[4]=0.6*pop*Math.min(1,s.iron[c]);D[5]=pop*(0.05+0.5*(o.mon||0));D[6]=0.15*pop*(0.5+(o.ineq||0.25));D[7]=0.3*pop;
+    o.gs[7]=4*(o.cityPop||0)}
+  // buying from neighbours
+  const got=new Float64Array(NG);
+  for(const id of A){const o=pols[id];if(!o.nb||o.pop<1)continue;got.fill(0);
+    for(let g=0;g<NG;g++){let df=o.gd[g]-o.gs[g];if(df<=0)continue;
+      for(const [q] of o.nb){const t=pols[q];if(!t||!t.alive||!t.gs||o.enemies.has(q))continue;const sq=t.gs[g]-t.gd[g];if(sq<=0)continue;const x=Math.min(df,0.5*sq);if(x<=0)continue;
+        t.gs[g]-=x;got[g]+=x;df-=x;const sh=GOODS[g].v/GVS*x,vi=0.3*0.4*(o.tax||0)*sh/(o.pop+1),ve=0.3*0.6*(t.tax||0)*sh/(t.pop+1);
+        o.gInc+=vi;t.gInc+=ve;o.gp.set(q,(o.gp.get(q)||0)+vi);t.gp.set(id,(t.gp.get(id)||0)+ve);if(df<=0)break}}
+    for(let g=0;g<NG;g++)o.gmet[g]=o.gd[g]>0?clamp((Math.max(0,o.gs[g])+got[g])/o.gd[g],0,1):1;
+    const c=o.capital,fe=Math.min(1,s.iron[c]),bz=Math.min(1,s.metal[c]);
+    o.arms=fe>0.5?0.75+0.25*o.gmet[4]:bz>0.5?0.75+0.25*Math.min(o.gmet[2],o.gmet[3]):1;o.wantP=0.15*(1-o.gmet[0])}}
+// what a neighbour's goods are worth to a state that lacks them, as a share of its own taxes
+function lackV(o,t){if(!o.gmet||!t.gs)return 0;let v=0;for(let g=0;g<NG;g++)if(o.gmet[g]<0.8&&t.gs[g]>t.gd[g])v+=GOODS[g].v/GVS*(1-o.gmet[g]);return 0.5*(o.tax||0)*v}
+// stateless land with ore or salt a state is short of is worth holding whatever its people pay
+function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of [0,2,3,4,5])if(G[g][j]>0.3&&o.gmet[g]<0.8)return true;return false}

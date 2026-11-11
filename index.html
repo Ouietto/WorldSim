@@ -2453,7 +2453,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -2470,7 +2470,7 @@ function attack(o,i,j,sea){
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);const FLD=fieldOn();if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
-  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
+  if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&!oreWanted(o,j)&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i))return;
   let Ud=defense(j);
   if(q&&(s.fort[j]>0.2||j===s.pols[q].capital||s.city[j]>=0))Ua*=siegeSupply(o,i);
   // stateless peoples melt into forest and hills and fight on; with no capital to take there is no single victory. Only gunpowder changes the odds.
@@ -2832,6 +2832,8 @@ function* politicsG(){
     o.cx+=w_cosLon[i]*ci;o.cy+=w_sinLon[i]*ci;o.yy+=w_cyA[i]*ci;{const pe=szF?pp*szF[i]:pp;if(pe>o.mp){o.mp=pe;o.mc=i}}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
     if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if(r()<24*ci/(szF?o.cA:o.cells))o.sample[(r()*24)|0]=i}}
+  // income from goods bought and sold (counted every ten years) joins the taxes
+  for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax!=null){o.tax+=o.gInc;o.trade=(o.trade||0)+o.gInc}}
   // (the choice of war aims, below) a vassal pays a fifth of its taxes to its overlord
   if(!swOn('nochoice'))for(const id of s.alive){const o=pols[id];if(o.over&&o.tax>0){const ov=pols[o.over];if(ov&&ov.alive&&ov.tax!=null){const t=0.2*o.tax;o.tax-=t;ov.tax+=t;ov.tribIn=t+(ov.tribIn||0)*0.9}}}
   const next=[];
@@ -2967,9 +2969,9 @@ function* politicsG(){
         // is worth and the cheapest way to get it: take its land (half its taxes and trade if won, less the men to hold unwilling
         // land), make it pay tribute (a fifth, no garrisons; only against the clearly weaker), raid it (a little, at little risk;
         // for the poorer side), or punish a raider. A neighbour worth nothing by any road is left alone.
-        if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0),own=o.tax||0,tA=t.cA||t.cells,
+        if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
-            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)-0.01*own:-1e18,
+            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)-0.01*own-tl3:-1e18,
             vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,bv=Math.max(vC,vT,vR,vP);
           if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':'raid'}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
@@ -3268,7 +3270,7 @@ function* stepG(){
   else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
   if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(hv&&s.year%2===0)frontierPass();
+  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(hv&&s.year%2===0)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
@@ -3339,7 +3341,7 @@ function statecraft(o,c,y){
    o.levy=clamp(o.pop/Math.max(1,o.cells)/60000,0,1)*clamp((o.cplx||0.2)/0.5,0,1);
    // money and hauling
    if(moneyOn()){o.haul=haulAt(c);const mkt=clamp(3*(o.cityPop||0)/(o.pop+1)+0.5*Math.min(1,s.car[c])+0.3*(o.coastN/Math.max(1,o.cells)),0,1),pay=clamp((o.garr||0)/(o.pop+1)*4+(atWar?0.3:0),0,1),
-       mT=Math.max(0.5*Math.min(1,s.metal[c])*mkt,(0.5+0.5*mkt)*s.coin[c],0.35*mkt*(1-o.haul));
+       bu=o.gmet?o.gmet[5]:1,mT=Math.max(0.5*Math.min(1,s.metal[c])*mkt*(0.5+0.5*bu),(0.5+0.5*mkt)*s.coin[c]*(0.4+0.6*bu),0.35*mkt*(1-o.haul));
      if(o.mon==null)o.mon=0;const was=o.mon;o.mon+=(0.01+0.02*pay)*(mT-o.mon);
      if(was<0.25&&o.mon>=0.25&&real>=15&&s.coin[c]<0.3&&s.metal[c]<0.3)chron('culture',`In the markets of the ${o.full} cloth, shells and other light goods pass as money: there is little to carry grain with, and no coin.`,c,[R_(o)]);
      if(o.deb>0)o.deb*=0.97;
@@ -3347,7 +3349,7 @@ function statecraft(o,c,y){
        if(real>=25)chron('fall',`Short of silver, the ${o.full} thins its coin. The soldiers are paid; prices rise, and trust in the coin falls.`,c,[R_(o)],'The treasury could not meet its debts in good metal.')}}
    const aim=0.4+0.4*(greed-0.5)+(atWar?0.15:0)+0.2*Math.max(0,-o.treas),cap=0.3+0.45*rec+0.25*o.levy*(moneyOn()?1+(1-(o.haul??0.5))*(1-(o.mon||0)):1);
    if(o.ext==null)o.ext=Math.min(aim,cap);o.ext+=0.08*(Math.min(aim,cap)-o.ext);
-   o.pW=Math.max(0,o.ext-(0.5+0.25*(o.leg??0.8)))*1.5;
+   o.pW=Math.max(0,o.ext-(0.5+0.25*(o.leg??0.8)))*1.5+(o.wantP||0);
    if(o.ext<0.45)o.mandate=Math.min(1,(o.mandate??1)+0.003*(0.45-o.ext)*10)}
   // garrisons and repairs: every walled province costs something every year
   // garrisons on a tribal frontier
@@ -4671,6 +4673,48 @@ function settleOK(i,j){const s=S;const pj=s.pop[j];if(pj<1||s.farm[i]<0.5||s.far
   const prot=pi&&s.pols[pi].kind==='state'&&(pj2===pi||s.fort[i]>0.3)?1:pi&&s.pols[pi].kind==='state'?0.5:0;
   const broken=(s.evP[j]<0.9||s.infect[j])?0.8:0;
   return 0.12+0.88*Math.max(thin,prot,broken)}
+
+/* ---------- goods and markets (Nein, 2026-11-11; switch nogoods turns it off) ----------
+   Eight goods a civilisation runs on, beyond grain and herds: salt, timber, copper, tin, iron, gold and silver, the luxuries of
+   particular climates (spices, incense), and the wares of cities (cloth, pottery, wine, oil). Salt comes from dry coasts, desert
+   pans and a few hills; timber from standing forest; luxuries from the wet tropics and the hot dry margins; wares from cities.
+   Ores lie in mountain belts about 300 km across, placed by the world's seed (invented, not derived: the model has no geology):
+   copper in about a fifth of them, gold and silver in a tenth, tin in one in thirty, iron in half and in bog country.
+   Every ten years each polity's output and need of each good are counted in people served, and a polity short of a good buys
+   from neighbours with a surplus. Both sides gain (the seller more), and each remembers what the other is worth to it.
+   A realm short of metal for its weapons fights worse; one short of bullion coins less; one short of salt is restless.
+   A neighbour that has what a state lacks is worth more to conquer, and a trading partner is worth less to attack. */
+const GOODS=[{k:'salt',n:'salt',v:1},{k:'timber',n:'timber',v:0.6},{k:'copper',n:'copper',v:2},{k:'tin',n:'tin',v:5},{k:'iron',n:'iron',v:1.5},{k:'gold',n:'gold and silver',v:6},{k:'lux',n:'spices and incense',v:4},{k:'wares',n:'the wares of cities',v:2}],NG=8,GVS=22.1;
+const goodsOn=()=>!swOn('nogoods');
+function h3(a,b,c){let h=Math.imul(a|0,374761393)^Math.imul(b|0,668265263)^Math.imul(c|0,2246822519);h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function goodsInit(){const s=S,w=WD,sd=hashStr(String(w.seed??s.seed??'w'))|0,G=s.ore=[];for(let g=0;g<NG;g++)G.push(new Float32Array(N));
+  for(const i of w.landIdx){const la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-180,bx=Math.floor(lo/3),by=Math.floor(la/3),rg=w.rough[i],T=w.T[i],Pr=w.Pr[i];
+    const belt=k=>h3(bx,by,sd+k),own=k=>h3(i,77,sd+k),m=clamp((rg-0.15)/0.3,0,1);
+    G[0][i]=w.coast[i]&&Pr<600&&T>8?0.8:w.desert[i]&&own(1)>0.7?0.6:rg>0.2&&belt(1)>0.9?0.7:0;
+    G[2][i]=m*(belt(2)>0.78?1:0)*(0.5+0.5*own(2));G[3][i]=m*(belt(3)>0.965?1:0)*(0.5+0.5*own(3));
+    G[4][i]=(m>0?m:Pr>600?0.3:0)*(belt(4)>0.45?1:0)*(0.4+0.6*own(4));G[5][i]=m*(belt(5)>0.9?1:0)*(0.5+0.5*own(5));
+    G[6][i]=T>22&&Pr>1500?0.8:T>22&&Pr>80&&Pr<400&&own(6)>0.6?0.7:0}}
+function goodsPass(){const s=S,w=WD,pols=s.pols;if(!s.ore)goodsInit();const G=s.ore,A=s.alive;
+  for(const id of A){const o=pols[id];if(!o.gs){o.gs=new Float64Array(NG);o.gd=new Float64Array(NG);o.gmet=new Float32Array(NG).fill(1)}o.gs.fill(0);o.gd.fill(0);o.gInc=0;o.gp=new Map()}
+  for(const i of w.landIdx){const p=s.pol[i];if(!p)continue;const o=pols[p];if(!o.gs)continue;const pp=s.pop[i],c=cw(i),wk=Math.min(1,pp/(2000*c)),X=o.gs,mt=Math.min(1,s.metal[i]);
+    X[0]+=G[0][i]*3e5*c*wk;X[1]+=s.forest[i]*2e5*c*wk;X[2]+=G[2][i]*4e5*c*wk*mt;X[3]+=G[3][i]*6e5*c*wk*mt;X[4]+=G[4][i]*5e5*c*wk*Math.min(1,s.iron[i]);X[5]+=G[5][i]*3e5*c*wk*mt;X[6]+=G[6][i]*2e5*c*wk}
+  for(const id of A){const o=pols[id],c=o.capital,D=o.gd,pop=o.pop,br=Math.min(1,s.metal[c])*(1-0.7*Math.min(1,s.iron[c]));
+    D[0]=pop;D[1]=3*(o.cityPop||0)+0.2*pop*Math.min(1,s.sail[c]);D[2]=0.5*pop*br;D[3]=0.06*pop*br;D[4]=0.6*pop*Math.min(1,s.iron[c]);D[5]=pop*(0.05+0.5*(o.mon||0));D[6]=0.15*pop*(0.5+(o.ineq||0.25));D[7]=0.3*pop;
+    o.gs[7]=4*(o.cityPop||0)}
+  // buying from neighbours
+  const got=new Float64Array(NG);
+  for(const id of A){const o=pols[id];if(!o.nb||o.pop<1)continue;got.fill(0);
+    for(let g=0;g<NG;g++){let df=o.gd[g]-o.gs[g];if(df<=0)continue;
+      for(const [q] of o.nb){const t=pols[q];if(!t||!t.alive||!t.gs||o.enemies.has(q))continue;const sq=t.gs[g]-t.gd[g];if(sq<=0)continue;const x=Math.min(df,0.5*sq);if(x<=0)continue;
+        t.gs[g]-=x;got[g]+=x;df-=x;const sh=GOODS[g].v/GVS*x,vi=0.3*0.4*(o.tax||0)*sh/(o.pop+1),ve=0.3*0.6*(t.tax||0)*sh/(t.pop+1);
+        o.gInc+=vi;t.gInc+=ve;o.gp.set(q,(o.gp.get(q)||0)+vi);t.gp.set(id,(t.gp.get(id)||0)+ve);if(df<=0)break}}
+    for(let g=0;g<NG;g++)o.gmet[g]=o.gd[g]>0?clamp((Math.max(0,o.gs[g])+got[g])/o.gd[g],0,1):1;
+    const c=o.capital,fe=Math.min(1,s.iron[c]),bz=Math.min(1,s.metal[c]);
+    o.arms=fe>0.5?0.75+0.25*o.gmet[4]:bz>0.5?0.75+0.25*Math.min(o.gmet[2],o.gmet[3]):1;o.wantP=0.15*(1-o.gmet[0])}}
+// what a neighbour's goods are worth to a state that lacks them, as a share of its own taxes
+function lackV(o,t){if(!o.gmet||!t.gs)return 0;let v=0;for(let g=0;g<NG;g++)if(o.gmet[g]<0.8&&t.gs[g]>t.gd[g])v+=GOODS[g].v/GVS*(1-o.gmet[g]);return 0.5*(o.tax||0)*v}
+// stateless land with ore or salt a state is short of is worth holding whatever its people pay
+function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of [0,2,3,4,5])if(G[g][j]>0.3&&o.gmet[g]<0.8)return true;return false}
 
 /* ---------- provinces (stage 1 of the province rebuild) ----------
    Provinces drawn from the land on the 25 km fine grid (HW x HH), each holding roughly as many people as the land can feed,
