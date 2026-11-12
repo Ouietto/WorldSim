@@ -10,24 +10,24 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "settle-half",
-   "env": "WORLD=prov KV=settle:0.5"
+   "name": "off-craft",
+   "env": "WORLD=prov SW=nocraft"
   },
   {
-   "name": "settle-double",
-   "env": "WORLD=prov KV=settle:2"
+   "name": "no-joining",
+   "env": "WORLD=prov KV=join:0"
   },
   {
-   "name": "aim-states-x3",
-   "env": "WORLD=prov KV=haim:3"
+   "name": "garrison-cost-half",
+   "env": "WORLD=prov KV=garr:0.5"
   },
   {
    "name": "off-lore",
    "env": "WORLD=prov SW=nolore"
   },
   {
-   "name": "garrison-half",
-   "env": "WORLD=prov KV=garr:0.5"
+   "name": "craft-double",
+   "env": "WORLD=prov KV=craft:2"
   }
  ]
 }
