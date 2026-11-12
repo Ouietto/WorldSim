@@ -442,7 +442,7 @@ function herdYear(){
   // name and by whether he has loot to share. Without this, hordes formed east of the Don never reached the Pontic steppe in
   // 4,000 years (2026-11-12 logs: no Pontic province ever bordered a horde), so nothing stood ready to enter Hungary
   if(KH&&(s.year&1)===0){const J=[];for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1||!(s.past[i]>0.5)||!(w.nomad[i]||w.desert[i]))continue;let bq=0,bv=0,bj=-1;
-      for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(!q)continue;const o=s.pols[q];if(o.kind!=='horde'||o.cells<5)continue;const v=0.01*knob('join')*(1+3*Math.min(1,o.prest||0))*(0.5+(o.sat??0.5));if(v>bv){bv=v;bq=q;bj=j}}
+      for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(!q)continue;const o=s.pols[q];if(o.kind!=='horde'||o.cells<5)continue;const v=prestOn()?0.04*knob('join')*Math.min(1,o.prest||0)*(0.5+(o.sat??0.5)):0.01*knob('join')*(1+3*Math.min(1,o.prest||0))*(0.5+(o.sat??0.5));if(v>bv){bv=v;bq=q;bj=j}}
       if(bq&&s.r()<2*bv)J.push(i,bq,bj)}
     for(let k=0;k<J.length;k+=3){const i=J[k];if(s.pol[i])continue;s.pol[i]=J[k+1];s.taken[i]=s.year;s.dist[i]=Math.min(65534,s.dist[J[k+2]]+2);s.khanW=(s.khanW||0)+1}}
   // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
@@ -972,6 +972,7 @@ function succession(o){
       const w=R0.base.toLowerCase().replace(/[aeiou]+$/,'')+pick(r,['ar','or','an','er','ar']);
       s.famTitle[fam]={word:w,fig:f.id,from:o.id};
       chron('culture',`The name of ${f.name} outlives its bearer: rulers of the ${s.eths[fam].name} family of peoples will style themselves ${w}.`,o.capital,[RF(f),R_(o)])}}
+  if(o.kind==='horde'&&prestOn()){o.expect=Math.max(0.7*(o.expect||0),Math.min(1,o.prest||0));o.prest=(o.prest||0)*0.6}
   if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)+(bountyOn()?0.2*Math.min(1,o.owed||0):0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);hordeBreakup(o);return}
   if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
@@ -1115,10 +1116,19 @@ const armyOn=()=>!swOn('noarmy'),GAR=20000*knob('garr');   // run 96: halved fro
 //         instead of driving people off, values conquest and caravan roads more and raiding less (the Mongols after Yelu Chucai;
 //         the Uyghurs and their Sogdian merchants; the Khazars on the Volga). What pays becomes the norm (Nein 2026-11-11)
 const kindOn=()=>!swOn('nokind');
+//  prest  prestige rules the steppe (Nein 2026-11-12). A khan's name is made by victories; it passes to his heir in part and with
+//         it the expectation of matching him, so each defeat costs more the greater the father was. Clans come over to a name,
+//         not to a neighbour; a rival khan submits only when his own name is broken in defeat, and then his people go over whole.
+//         Herders want the best grass, farmed or not, and take it; and only the herders of a horde ride, so one that holds
+//         farmland is not a steppe army for all the people it rules (Lindner 1981)
+const prestOn=()=>!swOn('noprest');
+function hordeSubmits(o,d){const s=S,c=d.capital,nm=d.full,gen=(o.ruler.char||0.5)>0.55;for(const i of polCells(d.id)){s.pol[i]=o.id;s.taken[i]=s.year}
+  o.prest=(o.prest||0)+0.05;s.submitN=(s.submitN||0)+1;if(gen)o.S=Math.min(1,o.S+0.03);
+  if(d.cells>=10)chron('diplomacy',gen?`Beaten in the field, the khan of the ${nm} is taken into the service of the ${o.full}, and his people with him.`:`Beaten in the field, the khan of the ${nm} is given up by his own men, who go over to the ${o.full}.`,c,[R_(o)],'His name was broken by defeat; followers stay with a khan who wins.')}
 //  craft  war-craft is learned by fighting (Nein 2026-11-12): every fight over land teaches both sides, the loser most when the
 //         winner knew more; it fades in peace. Beaten clans carry what they learned onto weaker neighbours, so skill travels
 //         down the chain of displacement. It counts in fights between stateless peoples and in a horde's strength
-const craftOn=()=>!swOn('nocraft'),craftOf=e=>craftOn()&&e>=0&&S.eths[e]?S.eths[e].war||0:0;
+const craftOn=()=>swOn('craft'),craftOf=e=>craftOn()&&e>=0&&S.eths[e]?S.eths[e].war||0:0;
 function craftLearn(a,b,won){if(!craftOn()||a<0||b<0)return;const A=S.eths[a],B=S.eths[b];if(!A||!B)return;const wa=A.war||0,wb=B.war||0,k=knob('craft');
   A.war=Math.min(1,wa+k*(won?0.015:0.02+0.04*Math.max(0,wb-wa)));B.war=Math.min(1,wb+k*(won?0.02+0.04*Math.max(0,wa-wb):0.015))}
 const khanOn=()=>!swOn('nokhan'),loreOn=()=>!swOn('nolore'),bountyOn=()=>!swOn('nobounty'),wingsOn=()=>!swOn('nowings');
@@ -1170,7 +1180,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?((prestOn()&&o.nomP!=null?o.nomP+0.25*Math.max(0,o.pop-o.nomP):o.pop)*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -1211,6 +1221,9 @@ function attack(o,i,j,sea){
   const pw2=tro*ub*(kin&&dpol.rel===o.rel?Math.min(0.9,pw*1.15+0.01):pw)*(o.kind==='state'?0.1+0.9*Math.pow(cerealEff(j),1.5):1);
   const eA=ecoD(j,o),pw3=pw2*Math.exp(-P.eco*(o.kind==='horde'?0.4:1.2)*Math.pow(Math.max(0,eA-0.4),1.3));
   const win=s.r()<pw3,wid0=q?o.enemies.get(q):null,war0=wid0!=null?s.wars[wid0]:null;
+  if(prestOn()){const kp=knob('prest');if(o.kind==='horde'&&!win)o.prest=Math.max(0,(o.prest||0)-0.01*kp*(1+3*(o.expect||0)));
+    if(q&&win){const d=s.pols[q];if(d.kind==='horde'){d.prest=Math.max(0,(d.prest||0)-0.015*kp*(1+3*(d.expect||0)));
+      if(o.kind==='horde'&&d.prest<0.02&&(o.prest||0)>0.2&&d.cells<o.cells&&d.cells>=3&&s.r()<0.3)hordeSubmits(o,d)}}}
   if(FLD){if(o.kind==='state')armyCredit(o,i,win);if(q){const d=s.pols[q];if(d.kind==='state'){armyCredit(d,j,!win);if(win){d.lostAt=j;d.lostY=s.year}}}}
   if(win){
     const ej=s.eth[j];
@@ -1811,7 +1824,8 @@ function* politicsG(){
         // a horde only raided the stateless farmers beyond the grass and never ruled them, so it seldom came to border a state.
         // (switch kind) one that has learned to live off settled people takes them as subjects instead (the Khazars and their
         // Slav tributaries; the Xiongnu and the oasis towns)
-        if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1&&kindOn()&&(o.kin||0)>0.15&&r()<pF(P.raid*0.01*o.aggrM*o.gate*o.kin,i,cand)){attack(o,i,cand,candSea);s.kinTake=(s.kinTake||0)+1}
+        if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1&&prestOn()&&w_sH[cand]>0.45&&s.forest[cand]<0.5&&r()<pF(P.raid*0.02*o.aggrM*o.gate*w_sH[cand],i,cand)){attack(o,i,cand,candSea);s.grassTake=(s.grassTake||0)+1}
+        else if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1&&kindOn()&&(o.kin||0)>0.15&&r()<pF(P.raid*0.01*o.aggrM*o.gate*o.kin,i,cand)){attack(o,i,cand,candSea);s.kinTake=(s.kinTake||0)+1}
         else if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1){if(r()<pF(P.raid*0.02*o.aggrM*o.gate,i,cand)){s.raidC[cand]=y;const t0=pop[cand]*0.03;pop[cand]-=t0;o.loot+=t0*0.5;displace(cand,0.02,o.id)}}
         else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(q&&o.arm&&o.enemies.has(q)){o.hotN=(o.hotN||0)+1;if(!o.hot)o.hot=[i];else if(o.hot.length<3)o.hot.push(i);else if(r()*o.hotN<3)o.hot[(r()*3)|0]=i}if(r()<pF(rate*o.aggrM*(o.aimM||1)*o.gate,i,cand)){if(wg&&(wg.goal==='raid'||wg.goal==='captives')&&wg.aSet.has(o.id)&&!candSea){raid(o,i,cand,wg.goal==='captives');if(o.kind==='state')o.treas=Math.min(1,(o.treas||0)+0.01)}else attack(o,i,cand,candSea)}}}
       if(horde&&rcand>=0&&r()<pF(P.raid*0.025*o.aggrM*o.gate*(1-0.8*s_fort[rcand]),i,rcand))raid(o,i,rcand);

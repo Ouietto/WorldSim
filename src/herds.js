@@ -27,7 +27,7 @@ function landUsePass(){
     const e=s.eth[i]>=0?eths[s.eth[i]]:null,trad=e&&e.past!=null?e.past:0.5;
     // raided, open country is safer grazed than sown
     const raided=y-s.raidC[i]<30&&w.rough[i]<0.35?1:0;
-    const o=pol[i]?pols[pol[i]]:null,policy=o&&o.kind==='state'&&o.steppe!=null?o.steppe-0.5:o&&o.kind==='horde'?0.4:0;
+    const o=pol[i]?pols[pol[i]]:null,policy=o&&o.kind==='state'&&o.steppe!=null?o.steppe-0.5:o&&o.kind==='horde'?0.4*(kindOn()?1-(o.kin||0):1):0;   // a horde that thinks in kind leaves farmers on the land
     const share=Fx=>1/(1+Math.exp(-(6*(Hh/(Fx+Hh)-0.5)+3*(trad-0.5)+0.8*raided+1.6*policy)));
     // on grassland, the broken fields and the unbroken turf are weighed apart: turf that hoes and ards cannot work is pasture
     let target;const tu=w.turf?w.turf[i]:0;
