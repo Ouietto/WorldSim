@@ -149,7 +149,7 @@ b.r{background:var(--ink)}b.y{background:var(--warn)}b.g{background:var(--accent
 .rankhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0 4px;font-size:12.5px;color:var(--muted)}
 .rankchart{width:100%;height:150px;display:block;margin:4px 0}
 .card .rk{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
-.card .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
 .score{display:flex;align-items:baseline;gap:10px}
 .score b{font-family:var(--f-display);font-size:40px;font-weight:400;line-height:1}
 .score span{color:var(--muted)}
@@ -6102,11 +6102,11 @@ function rankRec(){const s=S;if(!s||!s.alive.length)return;const A=rankArea(),fr
 function drawRankChart(){const cv=$('rankchart'),key=RANKS[RK.k][0];if(!RKH.includes(key)||RK.hist.length<3){cv.hidden=true;$('rankkey').innerHTML=RKH.includes(key)?'':'Rank over time is kept for area, people, wealth and strength.';return}
   cv.hidden=false;const d=sizeCanvas(cv),g=cv.getContext('2d'),H0=RK.hist,peak=new Map();g.setTransform(d.dpr,0,0,d.dpr,0,0);g.clearRect(0,0,d.w,d.h);
   for(const f of H0)for(const [id,v] of f.m[key]||[])if(v>(peak.get(id)||0))peak.set(id,v);
-  const top=[...peak.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10),mx=top.length?top[0][1]:1,x0=H0[0].y,x1=H0[H0.length-1].y,X=y=>4+(y-x0)/(x1-x0||1)*(d.w-8),Y=v=>d.h-14-(v/mx)*(d.h-22);
+  const top=[...peak.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10),mx=top.length?top[0][1]:1,x0=(H0.find(f=>(f.m[key]||[]).some(e=>e[1]>0.03*mx))||H0[0]).y,x1=H0[H0.length-1].y,X=y=>4+(y-x0)/(x1-x0||1)*(d.w-8),Y=v=>d.h-14-(v/mx)*(d.h-22);
   g.strokeStyle='rgba(128,128,128,.35)';g.lineWidth=1;g.beginPath();g.moveTo(4,d.h-14);g.lineTo(d.w-4,d.h-14);g.stroke();
   g.fillStyle='rgba(128,128,128,.9)';g.font='10px sans-serif';g.fillText(fy(x0),4,d.h-3);const t1=fy(x1);g.fillText(t1,d.w-4-g.measureText(t1).width,d.h-3);
   for(const [id] of top){const o=S.pols[id];g.strokeStyle=`rgb(${o.rgb.map(Math.round)})`;g.lineWidth=1.6;g.beginPath();let on=false;
-    for(const f of H0){const e=(f.m[key]||[]).find(x=>x[0]===id);if(e){if(on)g.lineTo(X(f.y),Y(e[1]));else{g.moveTo(X(f.y),Y(e[1]));on=true}}else on=false}g.stroke()}
+    for(const f of H0){if(f.y<x0)continue;const e=(f.m[key]||[]).find(x=>x[0]===id);if(e){if(on)g.lineTo(X(f.y),Y(e[1]));else{g.moveTo(X(f.y),Y(e[1]));on=true}}else on=false}g.stroke()}
   $('rankkey').innerHTML='The ten that ranked highest at their peak: '+top.map(([id])=>{const o=S.pols[id];return`<span class="sw" style="background:rgb(${o.rgb.map(Math.round)})"></span>${L_('pol',id,o.alive?o.full:o.peak)}`}).join(' · ')}
 function renderRank(){const s=S;if(!s)return;const R=RANKS[RK.k],list=rankVals(RK.k);
   RK.val=new Map(list.map(([o,v])=>[o.id,v]));RK.max=list.length?list[0][1]:0;RK.log=R[4];
