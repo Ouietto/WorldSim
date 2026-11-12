@@ -448,3 +448,31 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
          if((o.cA||o.cells)>=10)chron('culture',`Faced with a rising it cannot put down, the ${o.full} frees its slaves.`,c,[R_(o)])}
        else{for(const i of polCells(id))if(SL[i]>0.2){SL[i]*=weak?0.5:0.6;s.pop[i]*=weak?0.97:0.9}
          if((o.cA||o.cells)>=15)chron('fall',weak?`The slaves of the ${o.full} rise against their masters.`:`The slaves of the ${o.full} rise, and are put down with great slaughter.`,c,[R_(o)],'They were many, and the realm was busy elsewhere.')}}}}}
+
+// (switch wings; Nein 2026-11-11) A settled horde has two wings: the garrisons and court in the farmland, and the people still
+// herding in the homeland. Each wing's strength is its solidarity (asabiya), which the model already keeps per province: it wears
+// down faster in a conquest dynasty's rich provinces and holds on the steppe (Ibn Khaldun). The court takes on its subjects'
+// ways faster the more they outnumber it and the more of them live in cities. Friction is greatest when the wings are of
+// comparable size, have grown apart, and the homeland's solidarity runs well above the court's. Then, by conditions: a literate
+// court with money and an able ruler keeps the two under separate offices (Liao's northern and southern administrations, the
+// Qing banners), at a standing cost; a stronger saddle wing breaks away with a distant homeland (the Six Garrisons, 523; Ariq
+// Boke, 1260) or takes a near court; a stronger court finishes becoming its subjects' people and loses its grip on the steppe.
+function wingsPass(o,c,y){const s=S,w=WD,r=s.r,ce=s.eth[c],hw=o.hw||0,sH=o.sH||0,sC=o.sC??o.S,N=s.wingN||(s.wingN={sep:0,secede:0,saddle:0,court:0});
+  if(ce<0||ce===o.core){o.assimT=0;return}
+  const urb=clamp((o.cityPop||0)/(o.pop+1)*8,0,1);o.assimT+=10*(0.4+1.2*clamp(o.farmP/(o.pop+1),0,1))*(1+0.5*urb)*(o.sep?0.4:1);
+  const assim=home=>{const old=s.eths[o.core],nw=s.eths[ce];o.core=ce;o.conqDyn=false;o.sep=0;o.mandate=Math.min(1,(o.mandate??1)+0.1);N.court++;
+    if(home)for(const i of polCells(o.id))if((w.nomad[i]||w.desert[i])&&s.eth[i]!==ce)s.integ[i]*=0.6;
+    if(o.cells>=15)chron('people',`The ruling ${old.name} of the ${o.full} have become ${nw.name} in all but name${home?'; the herders of the old homeland no longer know them':''}.`,c,[R_(o),RE(old),RE(nw)],home?'The court had lived among its subjects for generations and held more men than the homeland.':'The court had lived among its subjects for generations.')};
+  if(o.sep){o.treas=(o.treas||0)-0.02;if(o.treas<-0.3||s.recK[c]<0.3)o.sep=0}
+  if(hw<0.03){if(o.assimT>=90)assim(false);return}
+  const fr=4*hw*(1-hw)*clamp((sH-sC)/0.25,0,1)*clamp(o.assimT/60,0,1)*(o.sep?0.4:1);o.wingF=fr;
+  if(!(fr>0.3&&r()<0.1*fr)){if(o.assimT>=180)assim(true);return}
+  if(!o.sep&&s.recK[c]>0.5&&(o.treas||0)>0.2&&o.ruler.comp>0.5){o.sep=1;N.sep++;
+    if(o.cells>=15)chron('state',`The ${o.full} sets its herders and its farmers under separate offices, each ruled by its own custom.`,c,[R_(o)],'The court and the homeland had grown apart; a literate court with a full treasury could afford to keep them apart.');return}
+  const Ws=sH*(0.5+hw)*(1+0.5*Math.min(1,o.owed||0))*(o.cmdTop===4?1.3:1),Wc=sC*(1.5-hw)*(1+0.4*(o.eun||0)+0.3*clamp(o.treas||0,0,1));
+  if(Ws>1.2*Wc){const home=polCells(o.id).filter(i=>(w.nomad[i]||w.desert[i])&&s.eth[i]===o.core&&i!==c);let far=0,best=-1,bp=-1;for(const i of home){far+=dd(i);if(s.pop[i]>bp){bp=s.pop[i];best=i}}
+    if(home.length>=3&&far/home.length>0.5*(o.h||6)){const old=o.full,nid=newPolity(best,o,{kind:'horde',origin:{type:'rebellion',from:o.id,why:'saddle'}});for(const i of home){s.pol[i]=nid;s.s[i]=Math.min(1,s.s[i]+0.1)}
+      o.shock=(o.shock||0)+0.4;N.secede++;chron('fall',`The herders of the homeland will not serve a court that has forgotten the saddle: they raise their own khan and leave the ${old}.`,best,[R_(o),R_(s.pols[nid])],'The homeland kept its solidarity while the court lost its own, and the homeland lay far from the capital.')}
+    else{o.assimT=0;o.sep=0;o.mandate=Math.max(0,(o.mandate??1)-0.2);o.shock=(o.shock||0)+0.3;o.saddleY=y;N.saddle++;for(const i of polCells(o.id))if(!(w.nomad[i]||w.desert[i]))s.integ[i]*=0.8;
+      chron('state',`Men of the saddle seize the court of the ${o.full} and undo its settled ways.`,c,[R_(o)],'The homeland kept its solidarity while the court lost its own, and the capital lay within reach.')}}
+  else if(Wc>1.2*Ws)assim(true)}
