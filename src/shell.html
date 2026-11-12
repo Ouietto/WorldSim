@@ -146,6 +146,10 @@ b.r{background:var(--ink)}b.y{background:var(--warn)}b.g{background:var(--accent
 .card .cd{grid-column:1/3;color:var(--muted);font-size:12px}
 .card .cbar{grid-column:1/3;height:4px;background:var(--chip);border-radius:2px;overflow:hidden;margin-top:3px}
 .card .cbar i{display:block;height:100%;background:var(--accent)}
+.rankhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0 4px;font-size:12.5px;color:var(--muted)}
+.rankchart{width:100%;height:150px;display:block;margin:4px 0}
+.card .rk{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
+.card .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
 .score{display:flex;align-items:baseline;gap:10px}
 .score b{font-family:var(--f-display);font-size:40px;font-weight:400;line-height:1}
 .score span{color:var(--muted)}
@@ -248,6 +252,7 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
       <div class="grab" id="grab"><span class="handle"></span><button class="sheetbtn" id="sheetbtn" type="button" aria-label="Open the panel" aria-expanded="false">▴</button></div>
       <nav class="tabs" role="tablist">
         <button role="tab" aria-selected="true" data-pane="chron">Chronicle</button>
+        <button role="tab" aria-selected="false" data-pane="rank">States</button>
         <button role="tab" aria-selected="false" data-pane="figs">Figures</button>
         <button role="tab" aria-selected="false" data-pane="plague">Plagues</button>
         <button role="tab" aria-selected="false" data-pane="insp">Inspect</button>
@@ -266,6 +271,15 @@ details.more2 summary{cursor:pointer;color:var(--muted);font-size:12px;margin-to
         <div class="search"><input type="search" id="fq" placeholder="Search figures" aria-label="Search figures"></div>
         <div class="filters" id="figfilters"></div>
         <div class="cards" id="figlist"></div>
+      </div>
+      <div class="pane" id="pane-rank" hidden>
+        <div class="filters" id="rankchips"></div>
+        <div class="rankhead"><span id="rankttl"></span><button type="button" class="chip" id="rankmap" aria-pressed="false">Shade the map</button></div>
+        <canvas id="rankchart" class="rankchart" hidden></canvas>
+        <div class="note" id="rankkey"></div>
+        <div class="cards" id="ranklist"></div>
+        <h3 class="sec">Records</h3>
+        <div id="rankrec" class="note"></div>
       </div>
       <div class="pane" id="pane-plague" hidden>
         <div class="filters" id="plaguesort"></div>

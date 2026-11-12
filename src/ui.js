@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const fmtN=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(n>=1e8?0:1)+'M':n>=1e3?Math.round(n/1e3)+'k':Math.round(n)+'';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const TYPES={rise:['Rise','#c08a2a'],war:['War','#b2452c'],fall:['Fall','#6e5a8c'],diplomacy:['Diplomacy','#4f7f6a'],faith:['Faith','#b0729a'],migration:['Migrations','#a0703a'],culture:['Culture','#4f78a8'],ideas:['Ideas','#3f8a5c'],plague:['Plague','#8a2f4a'],famine:['Famine','#9a7b45'],people:['Peoples','#3d7a99'],nature:['Nature & climate','#6f7d84']};
-const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Climate change'],['soil','Soil'],['soiltype','Soil types'],['crops','Staple crops'],['landuse','Fields and pasture'],['herds','Herds'],['forest','Forest'],['inequality','Inequality'],['armies','Armies'],['roads','Roads'],['money','Money'],['goods','Goods'],['slavery','Slavery'],['lords','Lords'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['path','Paths of invention'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
+const MODES=[['political','States'],['alliances','Alliances'],['peoples','Peoples'],['mixing','Mixing'],['unity','Identity'],['loyalty','Loyalty'],['niche','Home ground'],['ctemp','Temperature'],['crain','Rainfall'],['cwind','Winds'],['veg','Biomes'],['cchange','Climate change'],['soil','Soil'],['soiltype','Soil types'],['crops','Staple crops'],['landuse','Fields and pasture'],['herds','Herds'],['forest','Forest'],['inequality','Inequality'],['armies','Armies'],['roads','Roads'],['money','Money'],['goods','Goods'],['slavery','Slavery'],['rank','Ranking'],['lords','Lords'],['circ','Exit option'],['religion','Religion'],['knowledge','Knowledge'],['path','Paths of invention'],['era','Era'],['density','Population'],['capacity','Capacity'],['asabiya','Asabiya'],['disease','Disease'],['weather','Weather'],['climate','Climate check'],['terrain','Terrain']];
 const GOOD_COL=[[236,236,230],[60,120,70],[196,110,60],[150,170,190],[120,80,70],[232,196,70],[170,90,170],[90,130,180]];
 const SPEEDS=[[5,'5'],[25,'25'],[100,'100'],[400,'400'],[1e9,'Max']];
 const ERA_COL=[[120,128,130],[118,150,86],[196,140,64],[150,96,72],[178,74,58],[122,84,150],[64,96,150],[40,130,140]];
@@ -150,6 +150,7 @@ function buildOverlay(){
       // (2026-11-11) views for the army, works, money, goods and slavery systems
       case'armies':if(s.pol[i]){const o=s.pols[s.pol[i]];if(o.kind==='state'&&o.arm&&o.arm.length){c=ramp(clamp((localForce(o,i)-0.3)/0.8,0,1));a=190}else if(o.kind==='horde'){c=ramp(1);a=150}}break;
       case'roads':if(s.road&&s.road[i]>0.02){c=ramp(s.road[i]);a=200}break;
+      case'rank':if(s.pol[i]&&RK.max>0){const o=s.pols[s.pol[i]],v=RK.val.get(o.id);if(v!=null){c=ramp(RK.log?clamp(Math.log(1+v)/Math.log(1+RK.max),0,1):clamp(v/RK.max,0,1));a=isWaste(i)?60:190}}break;
       case'money':if(s.pol[i]){const o=s.pols[s.pol[i]];if(o.kind==='state'&&o.mon!=null){c=ramp(clamp(o.mon,0,1));a=isWaste(i)?60:190}}break;
       case'goods':if(!s.ore)goodsInit();if(s.ore){const G=s.ore;let g=-1,v=0.25;for(const k of [3,5,2,6,0,4])if(G[k][i]>v){v=G[k][i];g=k;if(k===3||k===5)break}if(g>=0){c=GOOD_COL[g];a=200}}break;
       case'slavery':if(s.slv&&s.slv[i]>0.005){c=ramp(clamp(s.slv[i]/0.5,0,1));a=200}break;
@@ -238,7 +239,7 @@ const lonToMx=l=>(l/(2*Math.PI)+0.5)*HW,laToMy=la=>(0.5-la/Math.PI)*HH;
    takes most of the time. Only the States view is replayed; the run itself is untouched. */
 const REC={f:[],last:-1e9};
 function recFrame(){const s=S;if(!s||!WD||ui.replay)return;if(s.year-REC.last<(s.alive.length?25:200))return;REC.last=s.year;const L=WD.landIdx,a=s.pols.length<65535?new Uint16Array(L.length):new Int32Array(L.length);
-  for(let k=0;k<L.length;k++)a[k]=s.pol[L[k]];REC.f.push({y:s.year,p:a});if(REC.f.length===5&&$('replay'))$('replay').disabled=false}
+  for(let k=0;k<L.length;k++)a[k]=s.pol[L[k]];REC.f.push({y:s.year,p:a});rankRec();if(REC.f.length===5&&$('replay'))$('replay').disabled=false}
 function stopReplay(){const R=ui.replay;if(!R)return;S.pol.set(R.save);ui.replay=null;setMode(R.mode);if($('replay'))$('replay').textContent='↺';ui.dirty=true}
 function startReplay(){if(!S||REC.f.length<5)return;setRunning(false);ui.replay={k:0,next:0,save:S.pol.slice(),mode:ui.mode};setMode('political');$('replay').textContent='■'}
 function drawMap(){
@@ -338,6 +339,7 @@ function drawLegend(){
     case'niche':h=rampBox('Distance from the state\'s home ground','like home','alien')+'<p style="margin:6px 0 0;opacity:.85">'+'How far each province lies from its state\'s home ground: climate, rainfall, way of life and diseases. Cool colours are lands like the heartland; warm colours are unlike it, harder to conquer, tax and keep. Empires grow easily along one climate belt, river or coast.</p>';break;
     case'armies':h=rampBox('Field armies within reach','local levy only','an army at hand')+'<p style="margin:6px 0 0;opacity:.85">Each state keeps one to four field armies. A province far from all of them is defended by its local levy alone. Hordes are their own army.</p>';break;
     case'roads':h=rampBox('Built roads','track','full road')+'<p style="margin:6px 0 0;opacity:.85">Roads are built outward from capitals with levy labour, slaves of the crown and paid gangs, and decay when they are not kept up.</p>';break;
+    case'rank':h=rampBox(RANKS[RK.k][1]+', by state','lowest','highest')+'<p style="margin:6px 0 0;opacity:.85">Pick the measure in the States tab.</p>';break;
     case'money':h=rampBox('How far each state runs on money','taxes in kind','coin')+'<p style="margin:6px 0 0;opacity:.85">Grain and cattle must be hauled; money travels and pays soldiers. Halfway is metal by weight.</p>';break;
     case'goods':h='<div style="display:flex;flex-wrap:wrap;gap:4px 10px">'+[[3,'tin'],[5,'gold and silver'],[2,'copper'],[6,'spices and incense'],[0,'salt'],[4,'iron']].map(([g,n])=>'<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb('+GOOD_COL[g].join(',')+');margin-right:4px"></i>'+n+'</span>').join('')+'</div><p style="margin:6px 0 0;opacity:.85">Where each good is found. Ores are placed by the world\'s seed in mountain belts; salt and luxuries follow the climate.</p>';break;
     case'slavery':h=rampBox('Share of people enslaved','few','half or more')+'<p style="margin:6px 0 0;opacity:.85">Captives are put to work on estates, in mines and in towns, and bring their culture with them.</p>';break;
@@ -658,6 +660,49 @@ function renderPlagues(){
 }
 $('plaguelist').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;const id=+c.dataset.id;openPage('plague',id);centerOn(S.outbreaks[id].origin)});
 
+/* ---------- states pane: rankings, rank over time, records ---------- */
+// every measure is read from what the model already keeps for each state
+const RANKS=[
+  ['area','Area',(o,A)=>A.get(o.id)||0,v=>fmtN(v)+' km²',1],
+  ['pop','People',o=>o.pop,v=>fmtN(v),1],
+  ['tax','Wealth (yearly taxes)',o=>o.kind==='state'?o.tax||0:0,v=>fmtN(v),1],
+  ['power','Strength',o=>power(o),v=>fmtN(v),1],
+  ['army','Men who can be raised',o=>o.kind==='horde'?o.pop*0.25*Math.min(1.3,o.mpR??1):0.25*o.pop*(o.coord??1)*(o.mpR??1),v=>fmtN(v),1],
+  ['tech','Techniques known',o=>{let n=0;const c=o.capital;for(let k=0;k<TECH.length;k++)if(S.tk[k][c]>0.5)n++;return n},v=>v+' of '+TECH.length,0],
+  ['trade','Trade income',o=>o.gInc||0,v=>fmtN(v),1],
+  ['city','People in cities',o=>o.cityPop||0,v=>fmtN(v),1],
+  ['coin','Runs on coin',o=>o.kind==='state'?o.mon||0:0,v=>Math.round(v*100)+'%',0],
+  ['slave','Share enslaved',o=>o.slvS||0,v=>(v*100).toFixed(1)+'%',0],
+  ['age','Age',o=>S.year-o.born,v=>v+' years',0]];
+const RK={k:0,val:new Map(),max:0,log:1,hist:[],best:{}},RKH=['area','pop','tax','power'];
+function rankArea(){const A=new Map(),s=S,w=WD;for(const i of w.landIdx){const q=s.pol[i];if(q)A.set(q,(A.get(q)||0)+w.area[i])}return A}
+function rankVals(k){const s=S,A=RANKS[k][0]==='area'?rankArea():null,out=[];for(const id of s.alive){const o=s.pols[id];if(!o||!o.alive)continue;const v=RANKS[k][2](o,A);if(v>0)out.push([o,v])}return out.sort((a,b)=>b[1]-a[1])}
+// kept with every replay frame: the leaders on the four measures that have a history, and the all-time records
+function rankRec(){const s=S;if(!s||!s.alive.length)return;const A=rankArea(),fr={y:s.year,m:{}};
+  for(const key of RKH){const k=RANKS.findIndex(r=>r[0]===key),top=rankVals(k).slice(0,12);fr.m[key]=top.map(([o,v])=>[o.id,v])}
+  RK.hist.push(fr);
+  for(let k=0;k<RANKS.length;k++){if(RANKS[k][0]==='age'||RANKS[k][0]==='area'&&!A.size)continue;const t=rankVals(k)[0];if(t){const b=RK.best[RANKS[k][0]];if(!b||t[1]>b.v)RK.best[RANKS[k][0]]={v:t[1],id:t[0].id,y:s.year}}}}
+function drawRankChart(){const cv=$('rankchart'),key=RANKS[RK.k][0];if(!RKH.includes(key)||RK.hist.length<3){cv.hidden=true;$('rankkey').innerHTML=RKH.includes(key)?'':'Rank over time is kept for area, people, wealth and strength.';return}
+  cv.hidden=false;const d=sizeCanvas(cv),g=cv.getContext('2d'),H0=RK.hist,peak=new Map();g.setTransform(d.dpr,0,0,d.dpr,0,0);g.clearRect(0,0,d.w,d.h);
+  for(const f of H0)for(const [id,v] of f.m[key]||[])if(v>(peak.get(id)||0))peak.set(id,v);
+  const top=[...peak.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10),mx=top.length?top[0][1]:1,x0=H0[0].y,x1=H0[H0.length-1].y,X=y=>4+(y-x0)/(x1-x0||1)*(d.w-8),Y=v=>d.h-14-(v/mx)*(d.h-22);
+  g.strokeStyle='rgba(128,128,128,.35)';g.lineWidth=1;g.beginPath();g.moveTo(4,d.h-14);g.lineTo(d.w-4,d.h-14);g.stroke();
+  g.fillStyle='rgba(128,128,128,.9)';g.font='10px sans-serif';g.fillText(fy(x0),4,d.h-3);const t1=fy(x1);g.fillText(t1,d.w-4-g.measureText(t1).width,d.h-3);
+  for(const [id] of top){const o=S.pols[id];g.strokeStyle=`rgb(${o.rgb.map(Math.round)})`;g.lineWidth=1.6;g.beginPath();let on=false;
+    for(const f of H0){const e=(f.m[key]||[]).find(x=>x[0]===id);if(e){if(on)g.lineTo(X(f.y),Y(e[1]));else{g.moveTo(X(f.y),Y(e[1]));on=true}}else on=false}g.stroke()}
+  $('rankkey').innerHTML='The ten that ranked highest at their peak: '+top.map(([id])=>{const o=S.pols[id];return`<span class="sw" style="background:rgb(${o.rgb.map(Math.round)})"></span>${L_('pol',id,o.alive?o.full:o.peak)}`}).join(' · ')}
+function renderRank(){const s=S;if(!s)return;const R=RANKS[RK.k],list=rankVals(RK.k);
+  RK.val=new Map(list.map(([o,v])=>[o.id,v]));RK.max=list.length?list[0][1]:0;RK.log=R[4];
+  $('rankttl').textContent=list.length?`${list.length} states and confederations, by ${R[1].toLowerCase()}`:'No states yet.';
+  drawRankChart();const mx=RK.max||1;
+  $('ranklist').innerHTML=list.slice(0,60).map(([o,v],n)=>`<div class="card" tabindex="0" data-id="${o.id}"><div class="cn"><span class="rk">${n+1}</span><span class="sw" style="background:rgb(${o.rgb.map(Math.round)})"></span>${esc(o.full)}</div><div class="cs">${R[3](v)}</div><div class="cbar"><i style="width:${(v/mx*100).toFixed(0)}%"></i></div></div>`).join('');
+  $('rankrec').innerHTML=RANKS.filter(r=>RK.best[r[0]]).map(r=>{const b=RK.best[r[0]],o=s.pols[b.id];return`<div>${r[1]}: <b>${r[3](b.v)}</b>, ${L_('pol',b.id,o.alive?o.full:o.peak)}, ${fy(b.y)}</div>`}).join('')||'None yet.';
+  if(ui.mode==='rank'){ui.dirty=true;drawLegend()}}
+$('rankchips').innerHTML=RANKS.map((r,k)=>`<button type="button" class="chip" data-k="${k}" aria-pressed="${k===0}">${r[1]}</button>`).join('');
+$('rankchips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;RK.k=+b.dataset.k;for(const x of $('rankchips').children)x.setAttribute('aria-pressed',x===b);renderRank()});
+$('rankmap').addEventListener('click',()=>{const on=ui.mode!=='rank';if(on)RK.prev=ui.mode;setMode(on?'rank':RK.prev||'political');$('rankmap').setAttribute('aria-pressed',on);renderRank()});
+$('ranklist').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;const id=+c.dataset.id;openPage('pol',id);centerOn(S.pols[id].capital)});
+
 /* ---------- checks pane ---------- */
 let tuneRun=null;
 function renderChecks(){
@@ -748,9 +793,9 @@ function fmtP(k,v){if(k==='startYear')return fy(v);if(k==='landFrac')return Math
 
 /* ---------- tabs ---------- */
 function showPane(p){ui.pane=p;for(const b of document.querySelectorAll('.tabs button'))b.setAttribute('aria-selected',b.dataset.pane===p);
-  for(const k of ['chron','figs','plague','insp','clim','tech','check','setup'])$('pane-'+k).hidden=k!==p;
+  for(const k of ['chron','rank','figs','plague','insp','clim','tech','check','setup'])$('pane-'+k).hidden=k!==p;
   if(p==='clim')renderClimate();if(p==='tech')renderTech();
-  if(p==='insp')renderPage();if(p==='chron')renderChron(true);if(p==='figs')renderFigs();if(p==='plague')renderPlagues();if(p==='check')renderChecks()}
+  if(p==='insp')renderPage();if(p==='chron')renderChron(true);if(p==='figs')renderFigs();if(p==='plague')renderPlagues();if(p==='rank')renderRank();if(p==='check')renderChecks()}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   // on a phone a tab opens the sheet; the open tab tapped again folds it away
   if(MOB.matches){if(sheetMin()){ui.pane=b.dataset.pane;sheet('half');return}if(b.dataset.pane===ui.pane){sheet('min');return}}
@@ -764,7 +809,7 @@ $('play').addEventListener('click',()=>setRunning(!ui.running));
 const CITY_SHOW=[['all','All cities'],['big','Capitals and large cities'],['caps','Capitals only'],['holy','Capitals and holy cities'],['none','None']];
 // map views: a few quick buttons and every layer in one grouped menu
 const QUICK=['political','peoples','religion','veg'];
-const MODE_GROUPS=[['Politics',['political','alliances','lords','unity','loyalty','inequality','circ']],['War and wealth',['armies','roads','money','goods','slavery']],['Peoples and ideas',['peoples','mixing','religion','knowledge','path','era']],['People and land',['density','capacity','crops','landuse','herds','asabiya','disease','soil','soiltype','forest','niche','terrain']],['Climate',['ctemp','crain','cwind','veg','cchange','weather','climate']]];
+const MODE_GROUPS=[['Politics',['political','alliances','lords','unity','loyalty','inequality','circ']],['War and wealth',['armies','roads','money','goods','slavery','rank']],['Peoples and ideas',['peoples','mixing','religion','knowledge','path','era']],['People and land',['density','capacity','crops','landuse','herds','asabiya','disease','soil','soiltype','forest','niche','terrain']],['Climate',['ctemp','crain','cwind','veg','cchange','weather','climate']]];
 const MODE_NAME=Object.fromEntries(MODES);MODE_NAME.veg='Biomes';
 $('modes').innerHTML=QUICK.map(k=>`<button type="button" data-m="${k}" aria-pressed="${k===ui.mode}">${MODE_NAME[k]}</button>`).join('')+`<label class="msel"><span>Map</span><select id="modesel" aria-label="Map view">${MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.filter(k=>MODE_NAME[k]).map(k=>`<option value="${k}"${k===ui.mode?' selected':''}>${MODE_NAME[k]}</option>`).join('')}</optgroup>`).join('')}</select></label><label class="msel"><span>Cities</span><select id="citysel" aria-label="Which cities to show">${CITY_SHOW.map(([k,l])=>`<option value="${k}"${k===ui.cities?' selected':''}>${l}</option>`).join('')}</select></label>`;
 function setMode(m){ui.mode=m;for(const x of $('modes').querySelectorAll('button'))x.setAttribute('aria-pressed',x.dataset.m===m);const sel=$('modesel');if(sel&&sel.value!==m)sel.value=m;drawLegend();ui.dirty=true}
@@ -808,7 +853,7 @@ function startHistory(){
   P.hearthMode=$('hearthh').value;P.shuffleNames=$('shufn').checked;
   try{history.replaceState(null,'','#seed-'+($('hseed').value||'1').replace(/[^A-Za-z0-9]/g,''))}catch(e){}
   newHistory($('hseed').value||'1');
-  ui.replay=null;REC.f=[];REC.last=-1e9;if($('replay')){$('replay').disabled=true;$('replay').textContent='↺'}
+  ui.replay=null;REC.f=[];REC.last=-1e9;RK.hist=[];RK.best={};if($('replay')){$('replay').disabled=true;$('replay').textContent='↺'}
   ui.page=null;ui.stack=[];ui.lastChronKey='';ui.lastSpotObj=null;$('toast').hidden=true;ui.pausedAtEnd=false;ui.dirty=true;ui.ready=true;$('play').disabled=false;
   showPane(ui.pane);updateTop();drawChart();drawLegend();
   const h0=S.hearths.find(h=>h.kind==='farm');if(h0)centerOn(h0.cell);
@@ -887,7 +932,7 @@ function frame(t){
   if(S&&baseCv&&S.seaVer!==ui.seaVer){ui.seaVer=S.seaVer;paintBase();SUB=null;ui.dirty=true}
   if(ui.dirty&&S&&baseCv&&t-ui.lastRender>110){ui.lastRender=t;ui.dirty=false;buildComp();drawMap();updateTop()}
   if(S&&t-ui.lastSide>700&&!sheetMin()){ui.lastSide=t;
-    if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='tech')renderTech();else if(ui.pane==='clim')renderClimate()}
+    if(ui.pane==='chron')renderChron();else if(ui.running){if(ui.pane==='insp')renderPage();else if(ui.pane==='figs')renderFigs();else if(ui.pane==='plague')renderPlagues();else if(ui.pane==='rank')renderRank();else if(ui.pane==='tech')renderTech();else if(ui.pane==='clim')renderClimate()}
     if(ui.mode==='knowledge'&&ui.running&&t%3000<700)drawLegend();
     drawChart()}
   requestAnimationFrame(frame);
