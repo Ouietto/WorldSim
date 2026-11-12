@@ -1102,6 +1102,10 @@ const armyOn=()=>!swOn('noarmy'),GAR=40000;
 //  wings  a horde chooses between the saddle and the city by what each pays; once settled, the solidarity of the homeland and of
 //         the court drift apart and the gap ends in secession, a saddle coup, assimilation or a costly separation (Northern Wei
 //         523; Kublai and Ariq Boke 1260-64; Liao, Qing)
+//  kind   a horde that draws tribute, tolls and taxes from settled people learns to think as they do: it taxes what it takes
+//         instead of driving people off, values conquest and caravan roads more and raiding less (the Mongols after Yelu Chucai;
+//         the Uyghurs and their Sogdian merchants; the Khazars on the Volga). What pays becomes the norm (Nein 2026-11-11)
+const kindOn=()=>!swOn('nokind');
 const khanOn=()=>!swOn('nokhan'),loreOn=()=>!swOn('nolore'),bountyOn=()=>!swOn('nobounty'),wingsOn=()=>!swOn('nowings');
 /* ---------- money (Nein, 2026-11-11; switch nomoney turns it off) ----------
    What a state can do with its taxes depends on what they are paid in. Taxes in kind (grain, cattle, cloth) must be hauled: what
@@ -1197,7 +1201,7 @@ function attack(o,i,j,sea){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
     s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
-    if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
+    if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2*(kindOn()?1-(o.kin||0):1),o.id);
     const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a;if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
     if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate||1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
@@ -1601,7 +1605,10 @@ function* politicsG(){
       // (switch bounty) followers are paid in loot and tribute; a khan of ten provinces or more who brings none owes them
       if(bountyOn()){if(o.cells>=10){const sat=clamp((o.loot+0.002*o.pop*o.tribs)/(0.003*o.pop+1),0,1);o.sat=sat;o.owed=clamp((o.owed||0)+0.015*(1-sat)-0.05*sat,0,1.5)}else{o.owed=(o.owed||0)*0.9;o.sat=1}
         o.gate=Math.min(2.4,o.gate*(1+0.5*Math.min(1,o.owed)))}}
-    else if(o.saddleY&&y-o.saddleY<40)o.gate=Math.min(1.9,o.gate+0.3);   // the saddle party at court rides out again   // a ruler counts his young men before he picks a fight
+    else if(o.saddleY&&y-o.saddleY<40)o.gate=Math.min(1.9,o.gate+0.3);
+    // (switch kind) the share of a horde's yearly income that comes from settled people's tribute, tolls and taxes, learned over
+    // about two generations, faster with literate subjects
+    if(o.kind==='horde'&&kindOn()){const settled=(o.tax||0)+0.0002*o.pop*o.tribs,all=settled+0.1*o.loot+0.0003*o.pop+1;o.kin=(o.kin||0)+0.02*(1+(o.adm||0))*(settled/all-(o.kin||0))}   // the saddle party at court rides out again   // a ruler counts his young men before he picks a fight
     // reach: how fast orders travel and how much the centre can see (drums, beacons, relays, records, scripts); without any of it
     // a ruler cannot delegate far (Spencer 2010)
     if(o.kind==='state'){infoCap(o);monopolies(o)}
@@ -1695,6 +1702,13 @@ function* politicsG(){
             // home (mainland South-East Asia: Scott 2009; Lieberman 2003)
             scar=clamp(1-o.pop/(0.7*o.K+1),0,1),vS=slaveOn()&&scar>0.2&&!kinBan(o,t.rel)?pw*0.08*scar*own*Math.min(3,t.pop/(o.pop+1))-(1-pw)*0.05*own-tl3:-1e18,bv=Math.max(vC,vT,vR,vP,vS);
           if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':bv===vS?'captives':'raid'}
+        // (switch bounty) a khan picks his wars for what they bring his followers: a state's wealth can be raided at little risk,
+        // milked for tribute if he is clearly the stronger, or taken; a rival horde brings only its people. Followers who are owed
+        // press him to choose. Without this a horde weighed neighbours only by how weak they were, and fought other hordes
+        else if(o.kind==='horde'&&bountyOn()){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),need=0.0003*o.pop+1,kn=kindOn()?o.kin||0:0;let bv,g;
+          if(t.kind==='state'){const V=(t.tax||0)+(1+2*kn)*(t.trade||0),vR=0.04*V*Math.min(1,pr)*(1-0.6*kn)-(1-pw)*0.2*need,vT=pr>1.5&&!t.over?pw*0.2*V*(1+kn):-1e18,vC=pw*0.5*V*(0.3+0.7*kn)-(1-pw)*0.5*need;bv=Math.max(vR,vT,vC);g=bv===vC?'conquest':bv===vT?'tribute':'raid'}
+          else{bv=pw*0.3*0.0003*t.pop-(1-pw)*0.5*need;g='conquest'}
+          if(bv<=0)continue;wt=b*Math.sqrt(bv/need)*(1+Math.min(1,o.owed||0));t._g=g}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
         const isHoly=Rl&&q===hp&&t.rel!==o.rel&&Rn.piety>0.6;if(isHoly)wt*=1+4*P.zeal;
         bw+=wt;if(wt>0&&r()*bw<wt){best=q;holy=isHoly}}
@@ -1704,6 +1718,9 @@ function* politicsG(){
         // break it rather than take it (Assyria and Urartu, 714 BCE); otherwise it fights for provinces
         if(!holy){const pr=po/(power(t)+1),weak=t.tier==='Chiefdom'||t.tier==='Clans'||(t.kind==='horde'&&t.cells<25),raider=o.raidBy===best&&y-(o.raidY||-1e9)<15;
           war.goal=pr>2&&(weak||raider)?'punitive':pr>1.3&&pr<4&&t.kind==='state'&&!weak&&r()<0.35?'break':'conquest';
+          if(o.kind==='horde'&&bountyOn()&&t._g){war.goal=t._g;if(t.kind==='state'){if(!s.hGoalN)s.hGoalN={};s.hGoalN[t._g]=(s.hGoalN[t._g]||0)+1}
+            if(war.goal==='tribute'&&pr>3&&t.kind==='state'&&!t.over&&r()<0.5){t.over=id;t.overY=y;o.tribs++;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);
+              if(t.cells>=25)chron('diplomacy',`Faced with the riders of the ${o.full}, the ${t.full} agrees to pay tribute rather than fight.`,t.capital,[R_(t),R_(o)])}}
           if(CHO&&o.kind==='state'&&t._g){if(t._g==='conquest'){if(war.goal==='punitive')war.goal='conquest'}else war.goal=t._g;
             if(!s.goalN)s.goalN={};s.goalN[war.goal]=(s.goalN[war.goal]||0)+1;
             // the clearly weaker may submit without a fight
