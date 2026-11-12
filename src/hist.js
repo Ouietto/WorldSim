@@ -437,7 +437,7 @@ function herdYear(){
     if(LORE&&s.past[i]>0.5&&p>=1&&s.eth[i]>=0){lL[s.eth[i]]+=ls*p;lP[s.eth[i]]+=p;if(ls>0.1)s.s[i]=Math.min(1,s.s[i]+0.15*ls*(0.5+lr))}
     if(ls>0.25&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
     if(s.past[i]>0.5&&p>=1){const a=cw(i);s.hzC+=a;if(ls>0.25)s.dzC+=a;if(cold>0.5){s.hzCc+=a;if(ls>0.25)s.dzCc+=a}}}
-  if(LORE)for(let e=0;e<E.length;e++)if(lP[e]>0){const x=E[e],Lm=lL[e]/lP[e];x.lore=Lm>0.08?Math.min(1,(x.lore||0)+0.25*kn('lore')*Lm):(x.lore||0)*0.993}
+  if(LORE)for(let e=0;e<E.length;e++)if(lP[e]>0){const x=E[e],Lm=lL[e]/lP[e];x.lore=Lm>0.08?Math.min(1,(x.lore||0)+0.25*knob('lore')*Lm):(x.lore||0)*0.993}
   // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
   // is how far its herds stand below a normal year's (none above 0.8 of it, full at 0.2); a clan below its ruin line for five years
   // running cannot rebuild alone and gives up the herds where it can (Khazanov 1984: the poor drop out of nomadism and settle;
@@ -1093,7 +1093,7 @@ const herdLed=o=>o&&o.kind==='state'&&(o.steppe||0)>0.5;
    (a settled, prosperous interior all but holds itself). The garrison comes out of the men a state can field, so a realm that
    holds much unwilling land has little left to fight with. A state takes stateless land only where the people it could tax
    outweigh the men it would take to hold them; what it cannot afford to hold it lets go. Units are people's worth of manpower. */
-const armyOn=()=>!swOn('noarmy'),GAR=40000/kn('garr');   // knob garr: garrison need
+const armyOn=()=>!swOn('noarmy'),GAR=40000/knob('garr');   // knob garr: garrison need
 // the steppe (Nein 2026-11-11). Four switches, each default on:
 //  khan   a shared hard winter unites: hungry clans follow the nearest khan, a hungry horde turns outward instead of splitting
 //         (Di Cosmo 2002: crisis, militarisation, centralisation)
@@ -1573,7 +1573,7 @@ function* politicsG(){
     // still holds, it is then a state with a homeland behind it (Liao, Jin, Yuan). Run 94: on taxes alone hordes settled so readily
     // that the steppe lost its powers, so the farmers it rules must also number at least half its herders (knob settle).
     // Without the switch: farmland a third of its land
-    if(o.kind==='horde'&&(wingsOn()?o.farmN>=3&&o.farmP>0.5*kn('settle')*o.nomP&&o.tax>0.1*o.loot+0.0003*o.pop*(1-0.5*Math.min(1,o.owed||0)):o.farmN>=Math.max(3,o.cells*0.3))){const old=o.full;s.settleN=(s.settleN||0)+1;o.kind='state';o.conqDyn=true;o.settledY=y;o.origin=Object.assign({},o.origin,{settled:y});o.tier=tierOf(o);o.full=fullName(o);
+    if(o.kind==='horde'&&(wingsOn()?o.farmN>=3&&o.farmP>0.5*knob('settle')*o.nomP&&o.tax>0.1*o.loot+0.0003*o.pop*(1-0.5*Math.min(1,o.owed||0)):o.farmN>=Math.max(3,o.cells*0.3))){const old=o.full;s.settleN=(s.settleN||0)+1;o.kind='state';o.conqDyn=true;o.settledY=y;o.origin=Object.assign({},o.origin,{settled:y});o.tier=tierOf(o);o.full=fullName(o);
       if(o.cells>=8){chron('rise',`Masters now of settled farmland, the ${old} put down roots and rule as the ${o.full}.`,o.capital,[R_(o)]);spot(`Nomad conquerors settle as the ${o.full}`,o.capital,[R_(o)])}}
     o.tier=tierOf(o);o.full=fullName(o);
     if(o.cells>o.maxCells){o.maxCells=o.cells;o.peak=o.full}
@@ -1606,12 +1606,12 @@ function* politicsG(){
       // (switch khan) hunger sends a horde outward: being over what the grass carries no longer makes it cautious
       if(khanOn())o.gate=clamp(o.gate+1.1*Math.max(0,o.press-1)+0.8*(o.hunger||0),0.15,2.2);
       // (switch bounty) followers are paid in loot and tribute; a khan of ten provinces or more who brings none owes them
-      if(bountyOn()){if(o.cells>=10){const sat=clamp((o.loot+0.002*o.pop*o.tribs)/(0.003*o.pop+1),0,1);o.sat=sat;o.owed=clamp((o.owed||0)+0.015*kn('bounty')*(1-sat)-0.05*sat,0,1.5)}else{o.owed=(o.owed||0)*0.9;o.sat=1}
+      if(bountyOn()){if(o.cells>=10){const sat=clamp((o.loot+0.002*o.pop*o.tribs)/(0.003*o.pop+1),0,1);o.sat=sat;o.owed=clamp((o.owed||0)+0.015*knob('bounty')*(1-sat)-0.05*sat,0,1.5)}else{o.owed=(o.owed||0)*0.9;o.sat=1}
         o.gate=Math.min(2.4,o.gate*(1+0.5*Math.min(1,o.owed)))}}
     else if(o.saddleY&&y-o.saddleY<40)o.gate=Math.min(1.9,o.gate+0.3);
     // (switch kind) the share of a horde's yearly income that comes from settled people's tribute, tolls and taxes, learned over
     // about two generations, faster with literate subjects
-    if(o.kind==='horde'&&kindOn()){const settled=kn('kin')*((o.tax||0)+0.0002*o.pop*o.tribs),all=settled+0.1*o.loot+0.0003*o.pop+1;o.kin=(o.kin||0)+0.02*(1+(o.adm||0))*(settled/all-(o.kin||0))}   // the saddle party at court rides out again   // a ruler counts his young men before he picks a fight
+    if(o.kind==='horde'&&kindOn()){const settled=knob('kin')*((o.tax||0)+0.0002*o.pop*o.tribs),all=settled+0.1*o.loot+0.0003*o.pop+1;o.kin=(o.kin||0)+0.02*(1+(o.adm||0))*(settled/all-(o.kin||0))}   // the saddle party at court rides out again   // a ruler counts his young men before he picks a fight
     // reach: how fast orders travel and how much the centre can see (drums, beacons, relays, records, scripts); without any of it
     // a ruler cannot delegate far (Spencer 2010)
     if(o.kind==='state'){infoCap(o);monopolies(o)}
@@ -1711,7 +1711,7 @@ function* politicsG(){
         else if(o.kind==='horde'&&bountyOn()){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),need=0.0003*o.pop+1,kn=kindOn()?o.kin||0:0;let bv,g;
           if(t.kind==='state'){const V=(t.tax||0)+(1+2*kn)*(t.trade||0),vR=0.04*V*Math.min(1,pr)*(1-0.6*kn)-(1-pw)*0.2*need,vT=pr>1.5&&!t.over?pw*0.2*V*(1+kn):-1e18,vC=pw*0.5*V*(0.3+0.7*kn)-(1-pw)*0.5*need;bv=Math.max(vR,vT,vC);g=bv===vC?'conquest':bv===vT?'tribute':'raid'}
           else{bv=pw*0.3*0.0003*t.pop-(1-pw)*0.5*need;g='conquest'}
-          if(bv<=0)continue;wt=b*Math.sqrt(bv/need)*(t.kind==='state'?kn('haim'):1)*(1+Math.min(1,o.owed||0));t._g=g}
+          if(bv<=0)continue;wt=b*Math.sqrt(bv/need)*(t.kind==='state'?knob('haim'):1)*(1+Math.min(1,o.owed||0));t._g=g}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
         const isHoly=Rl&&q===hp&&t.rel!==o.rel&&Rn.piety>0.6;if(isHoly)wt*=1+4*P.zeal;
         bw+=wt;if(wt>0&&r()*bw<wt){best=q;holy=isHoly}}

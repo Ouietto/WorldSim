@@ -7,9 +7,9 @@ let N=NC;
 // the same code; in the browser none are on. A switch that wins is made the default and removed.
 // test switches: experimental mechanics under trial, off by default. From SW=... in the test runner, or ?sw=a,b in the page address
 const SWX=((typeof process!=="undefined"&&process.env&&process.env.SW)||(()=>{try{return new URLSearchParams(location.search).get('sw')||''}catch(e){return ''}})()||"").split(',').map(x=>x.trim()).filter(Boolean),swOn=k=>SWX.includes(k);
-// strength knobs (2026-11-11): KV=name:value,name:value in the environment, or &kv= in the address. kn(name) is a multiplier,
+// strength knobs (2026-11-11): KV=name:value,name:value in the environment, or &kv= in the address. knob(name) is a multiplier,
 // 1 unless set, so a batch can try a strength at half or double the way SW tries a feature off
-const KVM=(()=>{const m={},src=(typeof process!=="undefined"&&process.env&&process.env.KV)||(()=>{try{return new URLSearchParams(location.search).get('kv')||''}catch(e){return ''}})()||"";for(const x of src.split(',')){const [k,v]=x.split(':');if(k&&v!=null&&isFinite(+v))m[k.trim()]=+v}return m})(),kn=k=>KVM[k]??1;
+const KVM=(()=>{const m={},src=(typeof process!=="undefined"&&process.env&&process.env.KV)||(()=>{try{return new URLSearchParams(location.search).get('kv')||''}catch(e){return ''}})()||"";for(const x of src.split(',')){const [k,v]=x.split(':');if(k&&v!=null&&isFinite(+v))m[k.trim()]=+v}return m})(),knob=k=>KVM[k]??1;
 const PDEF=[
 ['World','landFrac','Land share',0.2,0.5,0.01,0.33,'Share of the surface above sea level (generated worlds).',1],
 ['World','bands','Founding peoples',3,24,1,10,'Unrelated language families at the start (generated worlds).',1],

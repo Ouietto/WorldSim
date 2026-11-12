@@ -465,7 +465,7 @@ function wingsPass(o,c,y){const s=S,w=WD,r=s.r,ce=s.eth[c],hw=o.hw||0,sH=o.sH||0
     if(o.cells>=15)chron('people',`The ruling ${old.name} of the ${o.full} have become ${nw.name} in all but name${home?'; the herders of the old homeland no longer know them':''}.`,c,[R_(o),RE(old),RE(nw)],home?'The court had lived among its subjects for generations and held more men than the homeland.':'The court had lived among its subjects for generations.')};
   if(o.sep){o.treas=(o.treas||0)-0.02;if(o.treas<-0.3||s.recK[c]<0.3)o.sep=0}
   if(hw<0.03){if(o.assimT>=90)assim(false);return}
-  const fr=kn('wings')*4*hw*(1-hw)*clamp((sH-sC)/0.25,0,1)*clamp(o.assimT/60,0,1)*(o.sep?0.4:1);o.wingF=fr;
+  const fr=knob('wings')*4*hw*(1-hw)*clamp((sH-sC)/0.25,0,1)*clamp(o.assimT/60,0,1)*(o.sep?0.4:1);o.wingF=fr;
   if(!(fr>0.3&&r()<0.1*fr)){if(o.assimT>=180)assim(true);return}
   if(!o.sep&&s.recK[c]>0.5&&(o.treas||0)>0.2&&o.ruler.comp>0.5){o.sep=1;N.sep++;
     if(o.cells>=15)chron('state',`The ${o.full} sets its herders and its farmers under separate offices, each ruled by its own custom.`,c,[R_(o)],'The court and the homeland had grown apart; a literate court with a full treasury could afford to keep them apart.');return}
