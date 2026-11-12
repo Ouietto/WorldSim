@@ -972,7 +972,8 @@ function succession(o){
       const w=R0.base.toLowerCase().replace(/[aeiou]+$/,'')+pick(r,['ar','or','an','er','ar']);
       s.famTitle[fam]={word:w,fig:f.id,from:o.id};
       chron('culture',`The name of ${f.name} outlives its bearer: rulers of the ${s.eths[fam].name} family of peoples will style themselves ${w}.`,o.capital,[RF(f),R_(o)])}}
-  if(o.kind==='horde'&&prestOn()){o.expect=Math.max(0.7*(o.expect||0),Math.min(1,o.prest||0));o.prest=(o.prest||0)*0.6}
+  // the heir inherits the whole name, and with it the measure he is held to (Nein 2026-11-12)
+  if(o.kind==='horde'&&prestOn()){o.expect=Math.max(0.7*(o.expect||0),Math.min(1,o.prest||0))}
   if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)+(bountyOn()?0.2*Math.min(1,o.owed||0):0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);hordeBreakup(o);return}
   if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
@@ -1143,8 +1144,14 @@ const khanOn=()=>!swOn('nokhan'),loreOn=()=>!swOn('nolore'),bountyOn=()=>!swOn('
 const moneyOn=()=>!swOn('nomoney');
 function haulAt(c){const s=S,w=WD,an=Math.max(0.8*Math.min(1,s.horse[c]),s.camel[c],s.packX?s.packX[c]:0,0.6*s.ard[c],s.dom&&s.dom[4]?0.35*s.dom[4][c]:0);
   return clamp(an*(1+0.6*s.wheel[c])+0.35*Math.max(w.rv[c],w.coast[c]?Math.min(1,s.sail[c]):0),0,1)}
-function garrAt(i,integ,calm,t){const s=S,w=WD,h=1-integ;if(t==null)t=i;
-  return GAR*cw(i)*(0.02+h*h*(1+1.5*w.rough[i]+1.5*s.forest[i])*(1-0.6*calm))/(1+0.5*s.iron[t]+0.7*s.roads[t]+0.6*s.recK[t]+1.5*s.fort[i]+2*s.gun[t])}
+// (switch nogthr, knob gthr; Nein 2026-11-12) a state garrisons a place for two reasons: to hold subjects who would rather not be
+// held, and to meet an enemy it expects there. The second follows the province's memory of danger (s.thr): it rises while a
+// horde or an enemy at war sits across the border and when the province is raided or taken, and fades over about two
+// generations. A quiet border is held lightly and cheaply, and is soft when someone new arrives; a contested one is manned,
+// fortified and walled. The men posted also count in its defence.
+const gthrOn=()=>!swOn('nogthr'),thrAt=i=>S.thr&&gthrOn()?S.thr[i]:0;
+function garrAt(i,integ,calm,t){const s=S,w=WD,h=1-integ;if(t==null)t=i;const T=thrAt(i),G=gthrOn();
+  return GAR*cw(i)*(0.02+(G?0.7:1)*h*h*(1+1.5*w.rough[i]+1.5*s.forest[i])*(1-0.6*calm)+(G?0.5*knob('gthr')*T*(0.3+h):0))/(1+0.5*s.iron[t]+0.7*s.roads[t]+0.6*s.recK[t]+1.5*s.fort[i]+2*s.gun[t])}
 const calmOf=o=>clamp(0.5+0.5*(o.leg??1)-Math.max(0,(o.burden||0.6)-0.8),0,1);
 // a people that has lived beside states for generations learns their weapons and their ways of war, and holds together better
 // against them (the Germans of the Rhine frontier, Wells 1999; Heather 2009): hard, 0 to 1, on each people
@@ -1184,7 +1191,7 @@ function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
-  if(q){const d=s.pols[q];Ud=Math.pow(strength(d)+1,P.scaleExp)*(0.5*d.S+0.5*s.s[j])*milAt(j)*Math.exp(-dd(j)/d.h)*(0.6+0.4*s.integ[j]);if(d.kind==='state'&&fieldOn())Ud*=localForce(d,j)}
+  if(q){const d=s.pols[q];Ud=Math.pow(strength(d)+1,P.scaleExp)*(0.5*d.S+0.5*s.s[j])*milAt(j)*Math.exp(-dd(j)/d.h)*(0.6+0.4*s.integ[j]);if(d.kind==='state'&&fieldOn())Ud*=localForce(d,j);if(d.kind==='state')Ud*=1+0.5*thrAt(j)}
   else Ud=Math.pow((s.rally&&s.rally[j]>0?2*s.rally[j]:pEq(j)*4)+1,0.75)*s.s[j]*milAt(j)*0.8*(1+1.5*hardOf(s.eth[j]));
   return Ud*(1+1.6*w.rough[j])*(1+2.5*s.fort[j])*(1+0.6*s.colony[j]+(q?0.3*(s.pols[q].nob||0)+(j===s.pols[q].capital&&s.pols[q].tier==='City-state'?0.4:0):0));
 }
@@ -1228,9 +1235,9 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
-    s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
+    s.pol[j]=o.id;s.taken[j]=s.year;if(s.thr)s.thr[j]=Math.max(s.thr[j],0.6);s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2*(kindOn()?1-(o.kin||0):1),o.id);
-    const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a;if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
+    const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a*(prestOn()?1-0.8*Math.min(1,o.expect||0):1);if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
     if(q&&s.pols[q]&&(o.kind!=='horde'||s.pols[q].kind==='horde'))craftLearn(o.core,s.pols[q].core,true);   // states learn from their wars too; a horde from other hordes
     if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate||1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
@@ -1253,7 +1260,7 @@ function raid(o,i,j,deep){
   const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
-    takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
+    if(s.thr)s.thr[j]=Math.min(1,s.thr[j]+0.3);takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
     displace(j,0.04,o.id);
     // a city can be sacked without being held (agreed 2026-11-05)
     if(worksOn()&&s.city[j]>=0&&Ua>2*Ud&&s.r()<(deep?0.3:0.1)){sackCity(o,j,q);S.sackRaid=(S.sackRaid||0)+1}
@@ -1665,7 +1672,7 @@ function* politicsG(){
     o.mandate=Math.min(1,o.mandate+0.006);
     statecraft(o,c,y);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
-    const pO=bountyOn()&&o.kind==='horde'?0.8*Math.max(0,(o.owed||0)-0.6):0,pP=Math.max(0,o.press-0.85)*3*(khanOn()&&o.kind==='horde'?1-0.7*Math.min(1,(o.hunger||0)/0.3):1),pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
+    const pO=(bountyOn()&&o.kind==='horde'?0.8*Math.max(0,(o.owed||0)-0.6):0)+(prestOn()&&o.kind==='horde'?2.5*Math.max(0,Math.min(1,o.expect||0)-(o.prest||0)):0),pP=Math.max(0,o.press-0.85)*3*(khanOn()&&o.kind==='horde'?1-0.7*Math.min(1,(o.hunger||0)/0.3):1),pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,pO,sh:o.shock};o.psi=pO+pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
@@ -1835,6 +1842,7 @@ function* politicsG(){
       if(o.rel>=0&&ri!==o.rel&&pi>=1){const Rl=rels[o.rel];if(!(Rl.kind==='ethnic'&&ei>=0&&s_eths[ei].fam!==Rl.fam)&&r()<0.003*P.faith*o.S*(Rl.miss+0.3)*(0.7+0.6*Rl.cent))s_rel[i]=o.rel}
       // fortify threatened frontiers if the state is cohesive and can pay: walls are bought with treasure and labour gangs
       // (the Qin and Ming walls, Hadrian's; Waldron 1990), not with scribes
+      if(!horde&&gthrOn()){const TH=s.thr||(s.thr=new Float32Array(N));TH[i]=threat?Math.min(1,TH[i]+0.04):TH[i]*0.985}
       if(threat&&!horde&&o.S>0.45&&o.gate>0.7&&o.treas>0&&s_fort[i]<1){const pay=Math.min(1.5,o.treas+0.6*(o.levy||0));if(pay>0.3)s_fort[i]=Math.min(1,s_fort[i]+0.006*fz*pay*(1+s_roads[i]))}
       // (switch prest) a new khan rises where a state claims grass it does not hold: herding country of little loyalty, far from
       // the capital or without a garrison, among riders. Likelier under a court that has turned from the herds (a passed-over
