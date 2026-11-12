@@ -442,7 +442,7 @@ function herdYear(){
   // name and by whether he has loot to share. Without this, hordes formed east of the Don never reached the Pontic steppe in
   // 4,000 years (2026-11-12 logs: no Pontic province ever bordered a horde), so nothing stood ready to enter Hungary
   if(KH&&(s.year&1)===0){const J=[];for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1||!(s.past[i]>0.5)||!(w.nomad[i]||w.desert[i]))continue;let bq=0,bv=0,bj=-1;
-      for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(!q)continue;const o=s.pols[q];if(o.kind!=='horde'||o.cells<5)continue;const v=0.02*knob('join')*(1+3*Math.min(1,o.prest||0))*(0.5+(o.sat??0.5));if(v>bv){bv=v;bq=q;bj=j}}
+      for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(!q)continue;const o=s.pols[q];if(o.kind!=='horde'||o.cells<5)continue;const v=0.01*knob('join')*(1+3*Math.min(1,o.prest||0))*(0.5+(o.sat??0.5));if(v>bv){bv=v;bq=q;bj=j}}
       if(bq&&s.r()<2*bv)J.push(i,bq,bj)}
     for(let k=0;k<J.length;k+=3){const i=J[k];if(s.pol[i])continue;s.pol[i]=J[k+1];s.taken[i]=s.year;s.dist[i]=Math.min(65534,s.dist[J[k+2]]+2);s.khanW=(s.khanW||0)+1}}
   // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
@@ -1101,7 +1101,7 @@ const herdLed=o=>o&&o.kind==='state'&&(o.steppe||0)>0.5;
    (a settled, prosperous interior all but holds itself). The garrison comes out of the men a state can field, so a realm that
    holds much unwilling land has little left to fight with. A state takes stateless land only where the people it could tax
    outweigh the men it would take to hold them; what it cannot afford to hold it lets go. Units are people's worth of manpower. */
-const armyOn=()=>!swOn('noarmy'),GAR=40000*knob('garr');   // knob garr: garrison need (run 95: doubled, the score fell 4.7 points and states let go seven times the land)
+const armyOn=()=>!swOn('noarmy'),GAR=20000*knob('garr');   // run 96: halved from 40000 (+3.2 points, Mediterranean best share 47% to 58%);   // knob garr: garrison need (run 95: doubled, the score fell 4.7 points and states let go seven times the land)
 // the steppe (Nein 2026-11-11). Four switches, each default on:
 //  khan   a shared hard winter unites: hungry clans follow the nearest khan, a hungry horde turns outward instead of splitting
 //         (Di Cosmo 2002: crisis, militarisation, centralisation)
