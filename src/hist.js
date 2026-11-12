@@ -1533,7 +1533,7 @@ function* politicsG(){
     // on provinces every mean and tally over a realm's land is weighted by the land each holds (ci cells; the grid: 1 each),
     // coasts, walled frontiers and caravan routes by their length
     const ci=szF?1/szF[i]:1,li=szF?Math.sqrt(ci):1;
-    o.pop+=pp;o.K+=s_K[i];o.cells++;if(szF)o.cA+=ci;o.sS+=s_s[i]*ci;const di=dd(i);o.dS+=di*ci;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i]*ci;o.ig+=s_integ[i]*ci;if(ARMY&&o.kind==='state'&&i!==o.capital)o.garr+=garrAt(i,s_integ[i],o.calm??0.5)+(s.slv?0.3*GAR*ci*s.slv[i]:0);const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(MONEY?(o.mon||0)+(1-(o.mon||0))*Math.exp(-di*(1-(o.haul??0.5))/(0.6*(o.h||6))):1)*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN+=ci;if(w_heavy[i]>0.4)o.hvN+=ci;if(isWaste(i,o.kind==="horde"))o.wasteN+=ci;if(s_car[i]>0.3){const tl=1500*s_car[i]*li;o.tax+=tl;o.trade+=tl}
+    o.pop+=pp;o.K+=s_K[i];o.cells++;if(szF)o.cA+=ci;o.sS+=s_s[i]*ci;const di=dd(i);o.dS+=di*ci;let eD=0;if(pp>=1){o.n0+=pp*w_nT[i];o.n1+=pp*w_nM[i];o.n2+=pp*w_nN[i];o.n3+=pp*w_nD[i];o.nw+=pp;if(o.ni){eD=ecoD(i,o);if(eD>0.8)o.forP+=pp}}o.ad+=s_recK[i]*ci;o.ig+=s_integ[i]*ci;if(ARMY&&o.kind==='state'&&i!==o.capital&&!(o.conqDyn&&s_eth[i]===o.core&&(w_nomad[i]||w_desert[i])))o.garr+=garrAt(i,s_integ[i],o.calm??0.5)+(s.slv?0.3*GAR*ci*s.slv[i]:0);const pl=s_ard[i]>0.5&&!w_tsetse[i];o.tax+=pp>=1?pp*s_farm[i]*taxEff(i)*(o.leg??1)*((o.ext??0.45)/0.45)*Math.exp(-di/(o.h||6))*(MONEY?(o.mon||0)+(1-(o.mon||0))*Math.exp(-di*(1-(o.haul??0.5))/(0.6*(o.h||6))):1)*(0.5+0.5*s_integ[i])*(0.6+0.4*s_circE[i])*(pl?1.1:0.8)/(1+0.3*P.eco*eD):0;if(pl)o.plN+=ci;if(w_heavy[i]>0.4)o.hvN+=ci;if(isWaste(i,o.kind==="horde"))o.wasteN+=ci;if(s_car[i]>0.3){const tl=1500*s_car[i]*li;o.tax+=tl;o.trade+=tl}
     if(s.past[i]>0.5&&pp>=1&&(w_nomad[i]||w_desert[i])){o.nomP+=pp;if(s.hgr)o.hgS+=s.hgr[i]*pp;o.hsS+=(s.hs?s.hs[i]:1)*pp}
     if(w_nomad[i]||w_desert[i]){if(s_eth[i]===o.core){o.hmA+=ci;o.hmS+=s_s[i]*ci}}else{o.ctA+=ci;o.ctS+=s_s[i]*ci;if(s_farm[i]>0.5)o.farmP+=pp}
     if(w_nomad[i])o.nom+=ci;if(w_coast[i])o.coastN+=li;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN+=ci;if(s_fort[i]>0.5)o.fortN+=li;
@@ -1563,9 +1563,10 @@ function* politicsG(){
     const cl=szF?o.cA:o.cells;o.S=o.sS/cl;o.integ=o.ig/cl;if(o.mandate==null)o.mandate=1;o.press=o.K>0?o.pop/o.K:1;o.md=o.dS/cl;o.adm=o.ad/cl;o.nomF=o.nom/cl;o.hunger=o.nomP>0?o.hgS/o.nomP:0;o.hsM=o.nomP>0?o.hsS/o.nomP:1;o.hw=o.hmA/cl;o.sH=o.hmA>0?o.hmS/o.hmA:0;o.sC=o.ctA>0?o.ctS/o.ctA:o.S;
     if(pol[o.capital]!==id&&o.mc>=0){o.capital=o.mc;if(s_eth[o.mc]>=0&&!o.conqDyn)o.core=s_eth[o.mc]}
     // nomads who come to rule farmland settle down
-    // (switch wings) the saddle or the city: a horde living well on loot and tribute stays a horde until farmland is half of what it
-    // holds; one whose followers are owed more than raiding brings settles on less, once the farmers it rules outnumber its own
-    if(o.kind==='horde'&&(wingsOn()?o.farmN>=3&&(o.farmN>=o.cells*0.5||(o.farmN>=o.cells*0.3&&(o.sat??0)<0.8)||(o.farmN>=o.cells*0.1&&(o.owed||0)>0.6&&o.farmP>0.5*o.pop)):o.farmN>=Math.max(3,o.cells*0.3))){const old=o.full;s.settleN=(s.settleN||0)+1;o.kind='state';o.conqDyn=true;o.settledY=y;o.origin=Object.assign({},o.origin,{settled:y});o.tier=tierOf(o);o.full=fullName(o);
+    // (switch wings) the saddle or the city: a horde that holds farmland keeps it and rules from it once what the land pays in a
+    // year beats what raiding brings in and what its followers expect; followers who are owed lower the bar. However much steppe it
+    // still holds, it is then a state with a homeland behind it (Liao, Jin, Yuan). Without the switch: farmland a third of its land
+    if(o.kind==='horde'&&(wingsOn()?o.farmN>=3&&o.tax>0.1*o.loot+0.0003*o.pop*(1-0.5*Math.min(1,o.owed||0)):o.farmN>=Math.max(3,o.cells*0.3))){const old=o.full;s.settleN=(s.settleN||0)+1;o.kind='state';o.conqDyn=true;o.settledY=y;o.origin=Object.assign({},o.origin,{settled:y});o.tier=tierOf(o);o.full=fullName(o);
       if(o.cells>=8){chron('rise',`Masters now of settled farmland, the ${old} put down roots and rule as the ${o.full}.`,o.capital,[R_(o)]);spot(`Nomad conquerors settle as the ${o.full}`,o.capital,[R_(o)])}}
     o.tier=tierOf(o);o.full=fullName(o);
     if(o.cells>o.maxCells){o.maxCells=o.cells;o.peak=o.full}
@@ -1827,7 +1828,7 @@ function* politicsG(){
       // (under 0.35) goes over to a neighbouring state whose control next door is clearly better, sooner to kin, to its own faith and
       // from a heavy hand; land cut off or all but out of reach (under 0.08) stops answering whatever the realm's strength
       // a realm whose garrisons take more men than it has lets go of land that does not pay for its own
-      if(ARMY&&o.garr>0.6*o.pop*(o.coord??1)&&s.city[i]<0&&s_fort[i]<0.3&&s_car[i]<0.3){const g=garrAt(i,s_integ[i],o.calm??0.5);
+      if(ARMY&&o.garr>0.6*o.pop*(o.coord??1)&&s.city[i]<0&&s_fort[i]<0.3&&s_car[i]<0.3&&!(o.conqDyn&&s.eth[i]===o.core&&(w.nomad[i]||w.desert[i]))){const g=garrAt(i,s_integ[i],o.calm??0.5);
         if(pop[i]*s.farm[i]*cerealEff(i)<0.5*g&&r()<0.1*Math.min(1,o.garr/(o.pop*(o.coord??1)+1)-0.6)){s_pol[i]=0;s.shedN=(s.shedN||0)+1;continue}}
       if(CTRL){const cut=s_dist[i]===65535,c=cut?0:Math.exp(-dd(i)/(o.h||6));
         if(c<0.35){let bq=0,bj=-1,bc=c+0.3;
