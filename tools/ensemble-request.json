@@ -10,24 +10,24 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "off-craft",
-   "env": "WORLD=prov SW=nocraft"
+   "name": "off-prestige",
+   "env": "WORLD=prov SW=noprest"
   },
   {
-   "name": "no-joining",
-   "env": "WORLD=prov KV=join:0"
+   "name": "joining-double",
+   "env": "WORLD=prov KV=join:2"
   },
   {
-   "name": "garrison-cost-half",
-   "env": "WORLD=prov KV=garr:0.5"
+   "name": "joining-half",
+   "env": "WORLD=prov KV=join:0.5"
   },
   {
-   "name": "off-lore",
-   "env": "WORLD=prov SW=nolore"
+   "name": "no-frontier-khans",
+   "env": "WORLD=prov KV=fkhan:0"
   },
   {
-   "name": "craft-double",
-   "env": "WORLD=prov KV=craft:2"
+   "name": "defeat-costs-double",
+   "env": "WORLD=prov KV=prest:2"
   }
  ]
 }
