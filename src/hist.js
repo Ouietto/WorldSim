@@ -436,7 +436,7 @@ function herdYear(){
     if(LORE&&s.past[i]>0.5&&p>=1&&s.eth[i]>=0){lL[s.eth[i]]+=ls*p;lP[s.eth[i]]+=p;if(ls>0.1)s.s[i]=Math.min(1,s.s[i]+0.15*ls*(0.5+lr))}
     if(ls>0.25&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
     if(s.past[i]>0.5&&p>=1){const a=cw(i);s.hzC+=a;if(ls>0.25)s.dzC+=a;if(cold>0.5){s.hzCc+=a;if(ls>0.25)s.dzCc+=a}}}
-  if(LORE)for(let e=0;e<E.length;e++)if(lP[e]>0){const x=E[e],Lm=lL[e]/lP[e];x.lore=Lm>0.08?Math.min(1,(x.lore||0)+0.6*Lm):(x.lore||0)*0.993}
+  if(LORE)for(let e=0;e<E.length;e++)if(lP[e]>0){const x=E[e],Lm=lL[e]/lP[e];x.lore=Lm>0.08?Math.min(1,(x.lore||0)+0.25*Lm):(x.lore||0)*0.993}
   // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
   // is how far its herds stand below a normal year's (none above 0.8 of it, full at 0.2); a clan below its ruin line for five years
   // running cannot rebuild alone and gives up the herds where it can (Khazanov 1984: the poor drop out of nomadism and settle;
@@ -1198,7 +1198,7 @@ function attack(o,i,j,sea){
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
     s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2,o.id);
-    const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a;if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.02*s.pop[j]}
+    const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a;if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
     if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate||1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
         if(j===d.capital&&o.kind==='state'&&war.goal==='break'&&war.aSet.has(o.id))breakRealm(o,d,war);
@@ -1598,7 +1598,7 @@ function* politicsG(){
       // (switch khan) hunger sends a horde outward: being over what the grass carries no longer makes it cautious
       if(khanOn())o.gate=clamp(o.gate+1.1*Math.max(0,o.press-1)+0.8*(o.hunger||0),0.15,2.2);
       // (switch bounty) followers are paid in loot and tribute; a khan of ten provinces or more who brings none owes them
-      if(bountyOn()){if(o.cells>=10){const sat=clamp((o.loot+0.004*o.pop*o.tribs)/(0.01*o.pop+1),0,1);o.sat=sat;o.owed=clamp((o.owed||0)+0.02*(1-sat)-0.05*sat,0,1.5)}else{o.owed=(o.owed||0)*0.9;o.sat=1}
+      if(bountyOn()){if(o.cells>=10){const sat=clamp((o.loot+0.002*o.pop*o.tribs)/(0.003*o.pop+1),0,1);o.sat=sat;o.owed=clamp((o.owed||0)+0.015*(1-sat)-0.05*sat,0,1.5)}else{o.owed=(o.owed||0)*0.9;o.sat=1}
         o.gate=Math.min(2.4,o.gate*(1+0.5*Math.min(1,o.owed)))}}
     else if(o.saddleY&&y-o.saddleY<40)o.gate=Math.min(1.9,o.gate+0.3);   // the saddle party at court rides out again   // a ruler counts his young men before he picks a fight
     // reach: how fast orders travel and how much the centre can see (drums, beacons, relays, records, scripts); without any of it
