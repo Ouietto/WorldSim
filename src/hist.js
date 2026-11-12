@@ -475,15 +475,16 @@ function settleRuined(i){const s=S,w=WD;let kn=false,bit=0,best=-1,room=0;
 // beaten flee (and may set a whole people moving), are killed, or, hemmed in, are taken in by the victors, who move onto the land.
 // Fighting binds both sides together. Peoples living beside states harden (hardOf). Every five years.
 function bandWars(){const s=S,w=WD,r=s.r,E=s.eths,seen=new Uint8Array(E.length);
+  if(craftOn())for(const e of E)if(e&&e.war)e.war*=0.975;   // every five years: half gone in about 140 years of peace
   for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1)continue;const e=s.eth[i];if(e<0)continue;let st=0,cand=-1,n=0;
     for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(q){if(s.pols[q].kind==='state')st=1;continue}
       if(s.pop[j]>=1&&s.eth[j]>=0&&s.eth[j]!==e&&r()<1/++n)cand=j}
     if(st)seen[e]=1;
     const pr=s.pop[i]/Math.max(1,s.K[i]);if(cand<0||pr<0.85)continue;const j=cand,kdI=s.K[i]/w.area[i],kdJ=s.K[j]/w.area[j];if(kdJ<0.5*kdI)continue;
     if(r()>pU(0.05*clamp((pr-0.85)/0.15,0,1)*clamp(kdJ/0.2,0.2,1),i))continue;
-    const A=Math.pow(s.pop[i]+1,0.75)*s.s[i]*milAt(i)*(1+hardOf(e)),D=Math.pow(s.pop[j]+1,0.75)*s.s[j]*milAt(j)*(1+hardOf(s.eth[j]))*(1+w.rough[j]);
-    s.bandW=(s.bandW||0)+1;
-    if(r()<A/(A+D)){const hem=s.circE[j],R=A/D;s.pop[j]*=0.95;
+    const A=Math.pow(s.pop[i]+1,0.75)*s.s[i]*milAt(i)*(1+hardOf(e))*(1+0.8*craftOf(e)),D=Math.pow(s.pop[j]+1,0.75)*s.s[j]*milAt(j)*(1+hardOf(s.eth[j]))*(1+w.rough[j])*(1+0.8*craftOf(s.eth[j]));
+    s.bandW=(s.bandW||0)+1;const wonB=r()<A/(A+D);craftLearn(e,s.eth[j],wonB);
+    if(wonB){const hem=s.circE[j],R=A/D;s.pop[j]*=0.95;
       if(R>2&&hem>0.5){mixIn(j,e,0.5)}else displace(j,0.3,0);
       const m=0.15*s.pop[i];s.pop[i]-=m;s.pop[j]+=m;mixIn(j,e,m/Math.max(1,s.pop[j]));
       if(s.eth2[j]===e&&s.mix[j]>0.5){const a=s.eth[j];s.eth[j]=e;s.eth2[j]=a;s.mix[j]=1-s.mix[j]}
@@ -1114,6 +1115,12 @@ const armyOn=()=>!swOn('noarmy'),GAR=40000/knob('garr');   // knob garr: garriso
 //         instead of driving people off, values conquest and caravan roads more and raiding less (the Mongols after Yelu Chucai;
 //         the Uyghurs and their Sogdian merchants; the Khazars on the Volga). What pays becomes the norm (Nein 2026-11-11)
 const kindOn=()=>!swOn('nokind');
+//  craft  war-craft is learned by fighting (Nein 2026-11-12): every fight over land teaches both sides, the loser most when the
+//         winner knew more; it fades in peace. Beaten clans carry what they learned onto weaker neighbours, so skill travels
+//         down the chain of displacement. It counts in fights between stateless peoples and in a horde's strength
+const craftOn=()=>!swOn('nocraft'),craftOf=e=>craftOn()&&e>=0&&S.eths[e]?S.eths[e].war||0:0;
+function craftLearn(a,b,won){if(!craftOn()||a<0||b<0)return;const A=S.eths[a],B=S.eths[b];if(!A||!B)return;const wa=A.war||0,wb=B.war||0,k=knob('craft');
+  A.war=Math.min(1,wa+k*(won?0.015:0.02+0.04*Math.max(0,wb-wa)));B.war=Math.min(1,wb+k*(won?0.02+0.04*Math.max(0,wa-wb):0.015))}
 const khanOn=()=>!swOn('nokhan'),loreOn=()=>!swOn('nolore'),bountyOn=()=>!swOn('nobounty'),wingsOn=()=>!swOn('nowings');
 /* ---------- money (Nein, 2026-11-11; switch nomoney turns it off) ----------
    What a state can do with its taxes depends on what they are paid in. Taxes in kind (grain, cattle, cloth) must be hauled: what
@@ -1163,7 +1170,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1);return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?(o.pop*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -1210,7 +1217,7 @@ function attack(o,i,j,sea){
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
     s.pol[j]=o.id;s.taken[j]=s.year;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2*(kindOn()?1-(o.kin||0):1),o.id);
-    const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a;if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
+    const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a;if(q&&s.pols[q]&&s.pols[q].kind==='horde')craftLearn(o.core,s.pols[q].core,true);if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
     if(q&&s.city[j]>=0)sackCity(o,j,q);
     if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate||1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
         if(j===d.capital&&o.kind==='state'&&war.goal==='break'&&war.aSet.has(o.id))breakRealm(o,d,war);
