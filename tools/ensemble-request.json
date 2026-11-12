@@ -7,15 +7,15 @@
  "variants": [
   {
    "name": "before",
-   "env": "WORLD=prov SW=nokhan,nolore,nobounty,nowings"
+   "env": "WORLD=prov SW=nokhan,nolore,nobounty,nowings,nokind"
   },
   {
    "name": "steppe",
    "env": "WORLD=prov"
   },
   {
-   "name": "off-khan",
-   "env": "WORLD=prov SW=nokhan"
+   "name": "off-kind",
+   "env": "WORLD=prov SW=nokind"
   },
   {
    "name": "off-lore",
