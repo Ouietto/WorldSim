@@ -457,6 +457,8 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
 // court with money and an able ruler keeps the two under separate offices (Liao's northern and southern administrations, the
 // Qing banners), at a standing cost; a stronger saddle wing breaks away with a distant homeland (the Six Garrisons, 523; Ariq
 // Boke, 1260) or takes a near court; a stronger court finishes becoming its subjects' people and loses its grip on the steppe.
+// The older ruling-coalition rule (elitePass in herds.js: o.steppe, o.dual) already lets a torn court rule herders and farmers
+// under separate laws; separate offices here is the same institution, so the two share o.dual.
 function wingsPass(o,c,y){const s=S,w=WD,r=s.r,ce=s.eth[c],hw=o.hw||0,sH=o.sH||0,sC=o.sC??o.S,N=s.wingN||(s.wingN={sep:0,secede:0,saddle:0,court:0});
   // a court still on the steppe rules its farmers from the saddle. Once they outnumber its herders it may move among them, the
   // sooner the more it has learned to live off settled people (Northern Wei to Luoyang, 494; the Yuan to Dadu); from then on the
@@ -465,16 +467,16 @@ function wingsPass(o,c,y){const s=S,w=WD,r=s.r,ce=s.eth[c],hw=o.hw||0,sH=o.sH||0
     if((w.nomad[c]||w.desert[c])&&m>=0&&s.pol[m]===o.id&&!(w.nomad[m]||w.desert[m])&&o.farmP>o.nomP&&r()<0.05*(0.3+(o.kin||0))){o.capital=m;N.move=(N.move||0)+1;
       if(o.cells>=15)chron('state',`The ${o.full} moves its court off the steppe to ${s.city[m]>=0&&s.cities[s.city[m]]?s.cities[s.city[m]].name:'the farmland'}, among the people it taxes.`,m,[R_(o)],'Its farmers had come to outnumber its herders, and it had learned to live off them.')}
     return}
-  const urb=clamp((o.cityPop||0)/(o.pop+1)*8,0,1);o.assimT+=10*(0.4+1.2*clamp(o.farmP/(o.pop+1),0,1))*(1+0.5*urb)*(o.sep?0.4:1);
+  const urb=clamp((o.cityPop||0)/(o.pop+1)*8,0,1);o.assimT+=10*(0.4+1.2*clamp(o.farmP/(o.pop+1),0,1))*(1+0.5*urb)*(o.sep||o.dual?0.4:1);
   const assim=home=>{const old=s.eths[o.core],nw=s.eths[ce];o.core=ce;o.conqDyn=false;o.sep=0;o.mandate=Math.min(1,(o.mandate??1)+0.1);N.court++;
     if(home)for(const i of polCells(o.id))if((w.nomad[i]||w.desert[i])&&s.eth[i]!==ce)s.integ[i]*=0.6;
     if(o.cells>=15)chron('people',`The ruling ${old.name} of the ${o.full} have become ${nw.name} in all but name${home?'; the herders of the old homeland no longer know them':''}.`,c,[R_(o),RE(old),RE(nw)],home?'The court had lived among its subjects for generations and held more men than the homeland.':'The court had lived among its subjects for generations.')};
   if(o.sep){o.treas=(o.treas||0)-0.02;if(o.treas<-0.3||s.recK[c]<0.3)o.sep=0}
   if(hw<0.03){if(o.assimT>=90)assim(false);return}
   // the wings are sized by people: the ruling people's herders against the farmers the court commands
-  const hp=o.nomP/(o.nomP+o.farmP+1),fr=knob('wings')*4*hp*(1-hp)*clamp((sH-sC)/0.25,0,1)*clamp(o.assimT/60,0,1)*(o.sep?0.4:1);o.wingF=fr;
+  const hp=o.nomP/(o.nomP+o.farmP+1),fr=knob('wings')*4*hp*(1-hp)*clamp((sH-sC)/0.25,0,1)*clamp(o.assimT/60,0,1)*(o.sep||o.dual?0.4:1);o.wingF=fr;
   if(!(fr>0.3&&r()<0.1*fr)){if(o.assimT>=180)assim(true);return}
-  if(!o.sep&&s.recK[c]>0.5&&(o.treas||0)>0.2&&o.ruler.comp>0.5){o.sep=1;N.sep++;
+  if(!o.sep&&!o.dual&&s.recK[c]>0.5&&(o.treas||0)>0.2&&o.ruler.comp>0.5){o.sep=1;o.dual=1;N.sep++;
     if(o.cells>=15)chron('state',`The ${o.full} sets its herders and its farmers under separate offices, each ruled by its own custom.`,c,[R_(o)],'The court and the homeland had grown apart; a literate court with a full treasury could afford to keep them apart.');return}
   const Ws=sH*(0.5+hp)*(1+0.5*Math.min(1,o.owed||0))*(o.cmdTop===4?1.3:1),Wc=sC*(1.5-hp)*(1+0.4*(o.eun||0)+0.3*clamp(o.treas||0,0,1));
   if(Ws>1.2*Wc){const home=polCells(o.id).filter(i=>(w.nomad[i]||w.desert[i])&&s.eth[i]===o.core&&i!==c);let far=0,best=-1,bp=-1;for(const i of home){far+=dd(i);if(s.pop[i]>bp){bp=s.pop[i];best=i}}
