@@ -424,10 +424,11 @@ function herdYear(){
     const F=Math.min(1.3,clamp(s.wm[i]*s.evP[i],0.3,1.6));
     let dz=0;if(cold>0){const fx=wf[i*2],fy=wf[i*2+1],z=(g[wi[i*4]]*(1-fx)+g[wi[i*4+1]]*fx)*(1-fy)+(g[wi[i*4+2]]*(1-fx)+g[wi[i*4+3]]*fx)*fy;dz=cold*clamp((z-0.8)/1.6,0,0.85)}
     // (switch lore) herders who have known hard winters keep more animals than the grass strictly carries in a good year, as
-    // insurance, and lose a smaller share when the winter comes; the surplus is what a bad year then takes first
+    // insurance; the surplus is what a bad year then takes first, so the richer the build-up the harder the fall
     const lr=LORE&&s.eth[i]>=0?E[s.eth[i]].lore||0:0;
     const cap=F*(1-dz)*(dz>0?1:1+0.25*lr);let v=hs[i];
-    if(v>cap){const lost=(v-cap)*0.75*(1-0.35*lr);lossA[i]=lost/v;v-=lost}
+    // (runs 93 and 94: with a smaller share lost as well, the habit only made the steppe calmer; the insurance is the bigger herd)
+    if(v>cap){const lost=(v-cap)*0.75;lossA[i]=lost/v;v-=lost}
     else{const th=0.15+0.2*(((i*2654435761)>>>0)/4294967296);v+=0.3*v*(1-v/cap)*Math.min(1,v/th)}
     const p=s.pop[i],K=s.K[i];if(p>K&&s.past[i]>0.5)v-=0.1*Math.min(1,p/K-1)*v;
     hs[i]=clamp(v,0.02,1.6);
