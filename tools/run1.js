@@ -60,7 +60,7 @@ const DOM={inv:/break through the frontier/,dom:/abandon their pastures/,wall:/f
 const CK={inv1k:0,wallNC:null,es:0,esN:0,arch1000bce:null},ncSet=new Set(WD.landIdx.filter(i=>LA(i)>=34&&LA(i)<=42&&LO(i)>=104&&LO(i)<=122)),
   ES=WD.landIdx.filter(i=>LA(i)>=42&&LA(i)<=52&&LO(i)>=88&&LO(i)<=120);
 // where each invasion came from: a beaten confederation fleeing, a confederation in drought or grown rich, or a people on the move
-const invSrc={beaten:0,drought:0,riches:0,people:0};
+const invSrc={beaten:0,drought:0,riches:0,people:0,conquest:0};
 // farmed = growing a staple. Knowing how to farm with no crop to grow (herders at the Cape, foragers on the Northwest Coast) is
 // not farming; it was counted as farming before run 76
 const fShare=k=>{let n=0,f=0;for(const i of fbCells[k])if(S.pop[i]>=1){n+=CW(i);if(S.farm[i]>0.5&&S.crop&&S.crop[i]>=0)f+=CW(i)}return n?f/n:0},fArr={};
@@ -79,7 +79,7 @@ const held=R=>{const cnt=new Map();let tot=0;for(const i of R.cells){const pp=S.
 const sus=a=>{for(let t=0;t<a.length;t++){if(!a[t][1])continue;const n=Math.min(20,a.length-t);if(n<5)return null;let k=0;for(let u=t;u<t+n;u++)if(a[u][1])k++;if(k>=0.75*n)return a[t][0]}return null};
 while(S.year<END){step();
   if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)])}
-  {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'&&c.y>=-1000)CK.inv1k++;if(k==='wall'&&CK.wallNC==null&&ncSet.has(c.cell))CK.wallNC=c.y;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
+  {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'&&c.y>=-1000)CK.inv1k++;if(k==='wall'&&CK.wallNC==null&&ncSet.has(c.cell))CK.wallNC=c.y;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=/take its farmland/.test(c.txt)?'conquest':!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
   if(S.year===-999)CK.arch1000bce=frontierRide()['Frontier states: share with mounted archers'];
   if(S.year>=-200&&S.year%10===0){const cnt=new Map();let tot=0;for(const i of ES){if(S.pop[i]<1)continue;const a=CW(i);tot+=a;const p=S.pol[i];if(!p)continue;const k=headOf(S.pols[p]);cnt.set(k,(cnt.get(k)||0)+a)}
