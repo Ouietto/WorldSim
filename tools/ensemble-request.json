@@ -10,24 +10,24 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "garrisons-ignore-threat",
-   "env": "WORLD=prov SW=nogthr"
-  },
-  {
-   "name": "threat-garrisons-double",
-   "env": "WORLD=prov KV=gthr:2"
-  },
-  {
-   "name": "garrison-cost-double",
-   "env": "WORLD=prov KV=garr:2"
+   "name": "inherit-60pc",
+   "env": "WORLD=prov KV=inh:0.6"
   },
   {
    "name": "frontier-khans-x5",
    "env": "WORLD=prov KV=fkhan:5"
   },
   {
-   "name": "hordes-aim-at-states-x3",
-   "env": "WORLD=prov KV=haim:3"
+   "name": "threat-garrisons-double-again",
+   "env": "WORLD=prov KV=gthr:2"
+  },
+  {
+   "name": "off-herd-lore",
+   "env": "WORLD=prov SW=nolore"
+  },
+  {
+   "name": "off-thinking-in-kind",
+   "env": "WORLD=prov SW=nokind"
   }
  ]
 }
