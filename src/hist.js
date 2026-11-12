@@ -438,6 +438,13 @@ function herdYear(){
     if(ls>0.25&&dom){for(let sp=0;sp<4;sp++)if(dom[sp][i]>0)dom[sp][i]*=1-ls}
     if(s.past[i]>0.5&&p>=1){const a=cw(i);s.hzC+=a;if(ls>0.25)s.dzC+=a;if(cold>0.5){s.hzCc+=a;if(ls>0.25)s.dzCc+=a}}}
   if(LORE)for(let e=0;e<E.length;e++)if(lP[e]>0){const x=E[e],Lm=lL[e]/lP[e];x.lore=Lm>0.08?Math.min(1,(x.lore||0)+0.25*knob('lore')*Lm):(x.lore||0)*0.993}
+  // (switch khan) clans join a winning khan, hungry or not: stateless herders beside a horde come over at a rate set by the khan's
+  // name and by whether he has loot to share. Without this, hordes formed east of the Don never reached the Pontic steppe in
+  // 4,000 years (2026-11-12 logs: no Pontic province ever bordered a horde), so nothing stood ready to enter Hungary
+  if(KH&&(s.year&1)===0){const J=[];for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1||!(s.past[i]>0.5)||!(w.nomad[i]||w.desert[i]))continue;let bq=0,bv=0,bj=-1;
+      for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(!q)continue;const o=s.pols[q];if(o.kind!=='horde'||o.cells<5)continue;const v=0.02*knob('join')*(1+3*Math.min(1,o.prest||0))*(0.5+(o.sat??0.5));if(v>bv){bv=v;bq=q;bj=j}}
+      if(bq&&s.r()<2*bv)J.push(i,bq,bj)}
+    for(let k=0;k<J.length;k+=3){const i=J[k];if(s.pol[i])continue;s.pol[i]=J[k+1];s.taken[i]=s.year;s.dist[i]=Math.min(65534,s.dist[J[k+2]]+2);s.khanW=(s.khanW||0)+1}}
   // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
   // is how far its herds stand below a normal year's (none above 0.8 of it, full at 0.2); a clan below its ruin line for five years
   // running cannot rebuild alone and gives up the herds where it can (Khazanov 1984: the poor drop out of nomadism and settle;
