@@ -1836,6 +1836,14 @@ function* politicsG(){
       // fortify threatened frontiers if the state is cohesive and can pay: walls are bought with treasure and labour gangs
       // (the Qin and Ming walls, Hadrian's; Waldron 1990), not with scribes
       if(threat&&!horde&&o.S>0.45&&o.gate>0.7&&o.treas>0&&s_fort[i]<1){const pay=Math.min(1.5,o.treas+0.6*(o.levy||0));if(pay>0.3)s_fort[i]=Math.min(1,s_fort[i]+0.006*fz*pay*(1+s_roads[i]))}
+      // (switch prest) a new khan rises where a state claims grass it does not hold: herding country of little loyalty, far from
+      // the capital or without a garrison, among riders. Likelier under a court that has turned from the herds (a passed-over
+      // khan, or one who scorns settled ways) and when the state is in trouble (Kaidu; the Oirats under the Ming's nominal claim)
+      if(!horde&&prestOn()&&pi>=1&&(w_nomad[i]||w_desert[i])&&s.past[i]>0.5&&s_integ[i]<0.3&&i!==o.capital&&s_fort[i]<0.3&&dd(i)>0.5*o.h
+         &&r()<pU(P.nomad*0.0002*knob('fkhan')*(0.08+1.4*s_horse[i]+s_camel[i])*(1-s_integ[i]/0.3)*(0.4+s_s[i])*((o.steppe??0.5)<0.5?1.6:1)*(1+Math.min(1,o.psi||0)),i)){
+        const nid=newPolity(i,o,{kind:'horde',origin:{type:'rebellion',from:p,why:'frontier khan'}});s.fkhanN=(s.fkhanN||0)+1;
+        for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]&&pol[j]===p&&j!==o.capital&&(w_nomad[j]||w_desert[j])&&s_integ[j]<0.4&&s_eth[j]===ei){pol[j]=nid;s_dist[j]=2}}
+        if(o.cells>=25)chron('fall',`On grass the ${o.full} claims but does not hold, a new khan raises his standard.`,i,[R_(o),R_(pols[nid])],(o.steppe??0.5)<0.5?'The court had turned from the herds, and its far pastures had no garrison.':'Its far pastures had no garrison.')}
     }else{
       sv+=fr?asR*0.6*sv*(1-sv):(0.3+0.25*s.ritW[i]-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
       if(pi>=1){const dens=pi/w_area[i],agr=s_farm[i]*s_sFc[i],past=s_herd[i]*Math.max(w_sH[i],w_desert[i]*s_camel[i]*0.6);
