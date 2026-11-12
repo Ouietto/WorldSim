@@ -103,7 +103,7 @@ if(S.bFirst){out.x_beasts=BEASTS.map((b,k)=>S.bFirst[k]?b.k+' '+S.bFirst[k].y:nu
 out.diag=diag;
 // rare events, per millennium after 3000 BCE (counts kept by the model itself)
 {const yrs=Math.max(1,END+3000)/1000,per=x=>+((x||0)/yrs).toFixed(2),W=S.wingN||{};
- out.ev={settle:per(S.settleN),khan:per(S.khanJ),wSep:per(W.sep),wSecede:per(W.secede),wSaddle:per(W.saddle),wCourt:per(W.court),usurp:per(S.usurpN),debase:per(S.debN),rising:per(S.slvRev),officials:per(S.eunN),slaveCoup:per(S.mamN),slaveState:per(S.haitiN),emancip:per(S.emanN),sack:per(S.sackRaid),colony:per(S.pols.filter(o=>o&&o.origin&&o.origin.type==='colony').length),shed:per(S.shedN),popWar:per(S.popWar)}}
+ out.ev={settle:per(S.settleN),khan:per(S.khanJ),wMove:per(W.move),wSep:per(W.sep),wSecede:per(W.secede),wSaddle:per(W.saddle),wCourt:per(W.court),usurp:per(S.usurpN),debase:per(S.debN),rising:per(S.slvRev),officials:per(S.eunN),slaveCoup:per(S.mamN),slaveState:per(S.haitiN),emancip:per(S.emanN),sack:per(S.sackRaid),colony:per(S.pols.filter(o=>o&&o.origin&&o.origin.type==='colony').length),shed:per(S.shedN),popWar:per(S.popWar)}}
 {const yrs=Math.max(1,END+1000)/1000;out.d_inv1k=+(CK.inv1k/yrs).toFixed(2);out.d_wallNC=CK.wallNC;out.d_eSteppe=CK.esN?+(CK.es/CK.esN).toFixed(3):null;
  out.d_arch1000bce=CK.arch1000bce;out.d_arch1=diag[1]&&diag[1].x?diag[1].x['Frontier states: share with mounted archers']:null;out.d_arch1000=diag[1000]&&diag[1000].x?diag[1000].x['Frontier states: share with mounted archers']:null;
  const L=S.pols.filter(o=>o&&o.kind==='horde'&&o.maxCells>=100&&o.born>=-1000).map(o=>(o.alive?S.year:o.died)-o.born).sort((a,b)=>a-b);out.d_bigConfN=L.length;out.d_bigConfLife=L.length?L[L.length>>1]:null}

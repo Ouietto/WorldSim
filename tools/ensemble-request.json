@@ -6,28 +6,28 @@
  "baseEnv": "",
  "variants": [
   {
-   "name": "before",
-   "env": "WORLD=prov SW=nokhan,nolore,nobounty,nowings,nokind"
-  },
-  {
-   "name": "steppe",
+   "name": "now",
    "env": "WORLD=prov"
   },
   {
-   "name": "off-kind",
-   "env": "WORLD=prov SW=nokind"
+   "name": "settle-half",
+   "env": "WORLD=prov KV=settle:0.5"
+  },
+  {
+   "name": "settle-double",
+   "env": "WORLD=prov KV=settle:2"
+  },
+  {
+   "name": "aim-states-x3",
+   "env": "WORLD=prov KV=haim:3"
   },
   {
    "name": "off-lore",
    "env": "WORLD=prov SW=nolore"
   },
   {
-   "name": "off-bounty",
-   "env": "WORLD=prov SW=nobounty"
-  },
-  {
-   "name": "off-wings",
-   "env": "WORLD=prov SW=nowings"
+   "name": "garrison-half",
+   "env": "WORLD=prov KV=garr:0.5"
   }
  ]
 }
