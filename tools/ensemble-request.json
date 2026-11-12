@@ -10,24 +10,24 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "off-prestige",
-   "env": "WORLD=prov SW=noprest"
+   "name": "garrisons-ignore-threat",
+   "env": "WORLD=prov SW=nogthr"
   },
   {
-   "name": "joining-double",
-   "env": "WORLD=prov KV=join:2"
+   "name": "threat-garrisons-double",
+   "env": "WORLD=prov KV=gthr:2"
   },
   {
-   "name": "joining-half",
-   "env": "WORLD=prov KV=join:0.5"
+   "name": "garrison-cost-double",
+   "env": "WORLD=prov KV=garr:2"
   },
   {
-   "name": "no-frontier-khans",
-   "env": "WORLD=prov KV=fkhan:0"
+   "name": "frontier-khans-x5",
+   "env": "WORLD=prov KV=fkhan:5"
   },
   {
-   "name": "defeat-costs-double",
-   "env": "WORLD=prov KV=prest:2"
+   "name": "hordes-aim-at-states-x3",
+   "env": "WORLD=prov KV=haim:3"
   }
  ]
 }
