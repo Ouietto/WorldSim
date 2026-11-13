@@ -475,11 +475,11 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
 // one (the Cossack hosts). With no grass in reach and discontent very high they ravage the provinces around them, which
 // loosens those too and opens a way out. Walled in, they simmer. (Six Garrisons revolt, Northern Wei, 523.)
 const frontOn=()=>!swOn('nofront');
-function frontierPass(){const s=S,w=WD,r=s.r,L=s.cavL;if(!L)return;const N_=s.frontN||(s.frontN={rise:0,crushed:0,flee:0,join:0,ravage:0,sack:0,dynasty:0,walled:0}),kf=knob('front');
+function horsemenPass(){const s=S,w=WD,r=s.r,L=s.cavL;if(!L)return;const N_=s.frontN||(s.frontN={rise:0,crushed:0,flee:0,join:0,ravage:0,sack:0,dynasty:0,walled:0}),kf=knob('front');
   const seen=new Set(),nA=w.nbA,nS=w.nbS,grass=j=>w.land[j]&&(w.nomad[j]||w.desert[j]||(s.past&&s.past[j]>0.5))&&s.forest[j]<0.5;
   for(const id of [...s.alive]){const o=s.pols[id];if(!o||!o.alive||o.kind!=='state'||o.cells<8)continue;
-    for(const i0 of polCells(id)){if(seen.has(i0)||L[i0]<0.3||s.integ[i0]>=0.4||i0===o.capital)continue;
-      const C=[i0];seen.add(i0);for(let k=0;k<C.length;k++){const i=C[k];for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j>=0&&!seen.has(j)&&s.pol[j]===id&&L[j]>=0.3&&s.integ[j]<0.4&&j!==o.capital){seen.add(j);C.push(j)}}}
+    for(const i0 of polCells(id)){if(seen.has(i0)||L[i0]<0.5||s.integ[i0]>=0.4||i0===o.capital)continue;
+      const C=[i0];seen.add(i0);for(let k=0;k<C.length;k++){const i=C[k];for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j>=0&&!seen.has(j)&&s.pol[j]===id&&L[j]>=0.5&&s.integ[j]<0.4&&j!==o.capital){seen.add(j);C.push(j)}}}
       let pp=0,sk=0,ig=0,sol=0,wall=0,far=0;for(const i of C){pp+=s.pop[i];sk+=s.pop[i]*L[i];ig+=s.integ[i];sol+=s.s[i];far+=dd(i);if(s.fort[i]>0.5)wall++}
       if(pp<50)continue;sk/=pp;ig/=C.length;sol/=C.length;far/=C.length;const D=1-ig;
       if(!(r()<0.15*kf*D))continue;
