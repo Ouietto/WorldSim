@@ -213,7 +213,7 @@ function ridePass(){
   const s=S,eths=s.eths,n=eths.length,hs=new Float64Array(n),ws=new Float64Array(n),war=new Uint8Array(n),stateXp=new Float64Array(n).fill(-1);
   const hsP=new Float64Array(s.pols.length),wsP=new Float64Array(s.pols.length);
   for(const i of WD.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;hs[e]+=s.pop[i]*s.horse[i];ws[e]+=s.pop[i];const q=s.pol[i];if(q){hsP[q]+=s.pop[i]*s.horse[i];wsP[q]+=s.pop[i]}}
-  if(transOn())transPass();
+  if(transOn())transPass();if(S.year%10===5&&dealOn())dealPass();
   const thr=new Float64Array(n),thrR=new Float64Array(n);
   for(const id of s.alive){const o=s.pols[id];if(o.core==null||o.core<0)continue;if(o.enemies.size)war[o.core]=1;stateXp[o.core]=Math.max(stateXp[o.core],o.prep??0.6);
     // threat switch: a people raided by horsemen learns to ride from them, as far as its horses allow
@@ -251,13 +251,19 @@ const transOn=()=>!swOn('notrans');
 const cavAt=(c,off)=>{const L=S.cavL;return L&&L[c]>0?L[c]*(off?S.integ[c]:1):0};
 function learnRide(o,j){const s=S;if(!transOn())return;const L=s.cavL||(s.cavL=new Float32Array(N)),rq=rideOf(o),gap=rq-L[j];if(gap<=0.05)return;
   const ha=Math.min(1,0.15+3*s.horse[j]);if(s.r()<0.3*knob('trans')*gap*ha)L[j]+=0.4*gap}
-function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL;if(!L)return;const TH=s.thr,pol=s.pol,nA=w.nbA,nS=w.nbS;
+function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL||(s.cavL=new Float32Array(N));const TH=s.thr,pol=s.pol,nA=w.nbA,nS=w.nbS;
   const num=new Float64Array(s.pols.length),den=new Float64Array(s.pols.length),top=new Float32Array(s.pols.length);
   for(const i of w.landIdx){const q=pol[i];if(!q||s.pols[q].kind!=='state'){if(L[i]>0)L[i]*=0.98;continue}
     const th=TH?TH[i]:0,ha=Math.min(1,0.15+3*s.horse[i]);let v=L[i];
-    if(v>0.02){if(th>0.05)v+=0.08*kt*th*ha*(1-v);else v*=0.99;
+    // in peace the frontier studies its neighbours too: markets, hired herdsmen, marriage. Slower than under raids, faster the
+    // more trade crosses and the more the horde next door is worth copying (its prestige)
+    for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0)continue;const qj=pol[j];if(!qj||qj===q)continue;const t=s.pols[qj];if(t.kind!=='horde')continue;const e=t.core>=0?s.eths[t.core]:null,gap=(e&&e.ride||0)-v;
+      if(gap>0.05)v+=0.01*kt*gap*ha*(0.3+Math.min(1,s.car[i]))*(0.3+Math.min(1,t.prest||0));break}
+    // the skill lasts where raids are remembered, where people keep horses, or where the state supports mounted service
+    if(v>0.02){if(th>0.05)v+=0.08*kt*th*ha*(1-v);else v*=1-0.01*(1-Math.min(1,3*s.horse[i]))*(1-0.6*Math.min(1,(s.pols[q].cavS||0)*2));
       if(v>0.1)for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||pol[j]!==q||L[j]>=v)continue;const tj=TH?TH[j]:0;L[j]+=0.02*kt*(0.05+tj)*Math.min(1,0.15+3*s.horse[j])*(v-L[j])}
-      L[i]=v}
+      }
+    L[i]=v;
     const wg=s.pop[i]*(0.02+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.15)top[q]=v}   // the army is drawn where the garrisons stand
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const org=den[id]?num[id]/den[id]:0,R=o.ruler,comp=R?R.comp:0.5;let sp=o.cavS||0;
     if(y%10===0){const F=top[id],beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';

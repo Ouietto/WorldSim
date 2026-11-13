@@ -467,6 +467,37 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
 // Boke, 1260) or takes a near court; a stronger court finishes becoming its subjects' people and loses its grip on the steppe.
 // The older ruling-coalition rule (elitePass in herds.js: o.steppe, o.dual) already lets a torn court rule herders and farmers
 // under separate laws; separate offices here is the same institution, so the two share o.dual.
+// Deals with the conquered (switch nodeal, knob deal; Nein 2026-11-13). A ruler can settle with people he has taken instead
+// of only holding them down: their own leaders and law, lighter dues, a place at court. He may do it for one province, which
+// its own people elsewhere in the realm resent as special treatment, or for a whole people, which the realm's other subject
+// peoples resent; his own core people resent either. Resentment bites only in hard times. In return the land settles into the
+// realm about three times as fast, needs a lighter garrison, and its men serve willingly (a province's skill counts in the
+// field by its integration). A deal costs the treasury, and an heir who revokes it loses their loyalty at a stroke.
+const dealOn=()=>!swOn('nodeal');
+const dealAt=(o,i)=>{const s=S;if(!s.deal)return 0;const d=s.deal[i],m=o&&o.dealE?o.dealE.get(s.eth[i])||0:0;return m>d?m:d};
+function dealPass(){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=new Float32Array(N)),N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0});
+  const G=new Map();   // per state: per subject people: [pop, pop*integ, provinces, worst province, its integ, pop*skill, pop under a deal]
+  for(const i of w.landIdx){const p=s.pol[i];if(!p){if(D[i])D[i]=0;continue}const o=s.pols[p];if(o.kind!=='state'){D[i]=0;continue}const e=s.eth[i];if(e<0||s.pop[i]<1)continue;
+    let M=G.get(p);if(!M)G.set(p,M=new Map());let g=M.get(e);if(!g)M.set(e,g=[0,0,0,-1,2,0,0]);const pp=s.pop[i];g[0]+=pp;g[1]+=pp*s.integ[i];g[2]++;if(e!==o.core&&i!==o.capital&&s.integ[i]<g[4]&&D[i]<0.9){g[3]=i;g[4]=s.integ[i]}
+    g[5]+=pp*(s.cavL?s.cavL[i]:0);g[6]+=pp*dealAt(o,i)}
+  for(const [p,M] of G){const o=s.pols[p],R=o.ruler;if(!R||!o.alive)continue;const gen=(R.char||0.5)>0.55,hard=clamp((o.psi||0)+((o.treas||0)<0?0.5:0)+Math.min(1,o.shock||0),0,1),bite=0.1+0.9*hard;
+    let dealt=0;for(const [e,g] of M)dealt+=g[6];const share=dealt/(o.pop+1);o.dealS=share;
+    // what deals cost: revenue forgone, and the core people's solidarity when times are hard
+    if(share>0){o.treas=(o.treas||0)-0.04*share;o.S=Math.max(0.05,o.S-0.01*share*bite)}
+    for(const [e,g] of M){if(e===o.core||g[3]<0||g[0]<1)continue;const ig=g[1]/g[0],sk=g[5]/g[0],have=o.dealE?o.dealE.get(e)||0:0;
+      if(ig>0.6||(o.treas||0)<-0.2)continue;
+      if(!(r()<0.1*kd*(1-ig)*(gen?2:1)*(1+2*sk)))continue;
+      // a people large and spread enough is dealt with as a people; otherwise the troublesome province alone
+      if(g[2]>=4&&g[0]>0.08*o.pop&&have<1){(o.dealE||(o.dealE=new Map())).set(e,Math.min(1,have+0.35));N_.people++;o.dealY=s.year;
+        for(const [e2,g2] of M)if(e2!==e&&e2!==o.core&&!(o.dealE.get(e2)>0))o.dealRes=(o.dealRes||new Map()).set(e2,0.15*bite);
+        if(o.cells>=15)chron('diplomacy',`${R.name} of the ${o.full} comes to terms with the ${s.eths[e].name}: their own leaders and law, and a place at court.`,g[3],[R_(o),RE(s.eths[e])],sk>0.3?'They were hard to hold and their horsemen were worth having.':'They were hard to hold, and terms were cheaper than garrisons.')}
+      else if(D[g[3]]<1){const i=g[3];D[i]=Math.min(1,D[i]+0.5);N_.prov++;o.dealRes=(o.dealRes||new Map()).set(e,0.1*bite)}}
+    // resentment: those passed over settle in more slowly, or slip, for a decade
+    if(o.dealRes){for(const i of polCells(p)){const v=o.dealRes.get(s.eth[i]);if(v&&dealAt(o,i)<=0)s.integ[i]=Math.max(0,s.integ[i]-v*0.3)}o.dealRes=null}}}
+// an heir may revoke what his father granted
+function dealHeir(o){const s=S,R=o.ruler;if(!o.dealE||!o.dealE.size||!(R.greed>0.7||(o.treas||0)<-0.3)||s.r()>0.25)return;const N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0});N_.revoke++;
+  const E=o.dealE;for(const i of polCells(o.id)){if(E.get(s.eth[i])>0)s.integ[i]*=0.5;if(s.deal)s.deal[i]=0}o.dealE=null;o.shock=(o.shock||0)+0.2;
+  if(o.cells>=15)chron('state',`${R.name} of the ${o.full} revokes the terms his predecessors gave their subject peoples.`,o.capital,[R_(o)],(o.treas||0)<-0.3?'The treasury was empty and their privileges cost it revenue.':'He wanted their dues in full.')}
 // The frontier men's decision (switch nofront, knob front; Nein 2026-11-12). Each decade a connected stretch of skilled,
 // poorly integrated frontier provinces weighs what is open to it. If they judge they can beat what the state can bring
 // (judged from its recent record, so they can be wrong) they rise; if far stronger than the state they march on the capital,

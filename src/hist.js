@@ -976,6 +976,7 @@ function succession(o){
   // the heir inherits the whole name, and with it the measure he is held to (Nein 2026-11-12)
   if(o.kind==='horde'&&prestOn()){o.prest=(o.prest||0)*Math.min(1,knob('inh'));o.expect=Math.max(0.7*(o.expect||0),Math.min(1,o.prest||0))}
   if(o.kind==='horde'&&portOn()&&o.alive)portionHeir(o,R0);
+  if(o.kind==='state'&&dealOn()&&o.alive)dealHeir(o);
   if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)+(bountyOn()?0.2*Math.min(1,o.owed||0):0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);hordeBreakup(o);return}
   if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
@@ -1152,7 +1153,7 @@ function haulAt(c){const s=S,w=WD,an=Math.max(0.8*Math.min(1,s.horse[c]),s.camel
 // generations. A quiet border is held lightly and cheaply, and is soft when someone new arrives; a contested one is manned,
 // fortified and walled. The men posted also count in its defence.
 const gthrOn=()=>!swOn('nogthr'),thrAt=i=>S.thr&&gthrOn()?S.thr[i]:0;
-function garrAt(i,integ,calm,t){const s=S,w=WD,h=1-integ;if(t==null)t=i;const T=thrAt(i),G=gthrOn();
+function garrAt(i,integ,calm,t){const s=S,w=WD,h=(1-integ)*(dealOn()&&s.deal&&s.pol[i]?1-0.4*dealAt(s.pols[s.pol[i]],i):1);if(t==null)t=i;const T=thrAt(i),G=gthrOn();
   return GAR*cw(i)*(0.02+(G?0.7:1)*h*h*(1+1.5*w.rough[i]+1.5*s.forest[i])*(1-0.6*calm)+(G?2*knob('gthr')*T*(0.3+h):0))/(1+0.5*s.iron[t]+0.7*s.roads[t]+0.6*s.recK[t]+1.5*s.fort[i]+2*s.gun[t])}
 const calmOf=o=>clamp(0.5+0.5*(o.leg??1)-Math.max(0,(o.burden||0.6)-0.8),0,1);
 // a people that has lived beside states for generations learns their weapons and their ways of war, and holds together better
@@ -1237,7 +1238,7 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
-    s.pol[j]=o.id;s.taken[j]=s.year;if(s.thr)s.thr[j]=Math.max(s.thr[j],0.6);s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
+    s.pol[j]=o.id;s.taken[j]=s.year;if(s.thr)s.thr[j]=Math.max(s.thr[j],0.6);if(s.deal)s.deal[j]=0;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2*(kindOn()?1-(o.kin||0):1),o.id);
     const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a*(prestOn()?1-0.8*Math.min(1,o.expect||0):1);if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
     // a horde that takes three farmed provinces from a large state within 25 years has broken through its frontier (once per pair in 50 years)
@@ -1832,7 +1833,7 @@ function* politicsG(){
       sv+=fr?asR*sv*(1-sv):-decay*sv;sv+=0.004*infl*(o.ruler.char-0.5);if(ri>=0&&ri===o.rel)sv+=0.0015*(0.5+rels[ri].cent);
       s_s[i]=clamp(sv,0.02,1);
       // provinces settle into a realm only as fast as the centre can hold them (monopolies, records, speed)
-      if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
+      if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+(dealOn()&&s.deal?1+2*dealAt(o,i):1)*hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
       if(cand>=0&&s_taken[i]!==y){const q=pol[cand];
         // a horde only raided the stateless farmers beyond the grass and never ruled them, so it seldom came to border a state.
         // (switch kind) one that has learned to live off settled people takes them as subjects instead (the Khazars and their

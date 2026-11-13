@@ -2317,6 +2317,7 @@ function succession(o){
   // the heir inherits the whole name, and with it the measure he is held to (Nein 2026-11-12)
   if(o.kind==='horde'&&prestOn()){o.prest=(o.prest||0)*Math.min(1,knob('inh'));o.expect=Math.max(0.7*(o.expect||0),Math.min(1,o.prest||0))}
   if(o.kind==='horde'&&portOn()&&o.alive)portionHeir(o,R0);
+  if(o.kind==='state'&&dealOn()&&o.alive)dealHeir(o);
   if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)+(bountyOn()?0.2*Math.min(1,o.owed||0):0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);hordeBreakup(o);return}
   if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
@@ -2493,7 +2494,7 @@ function haulAt(c){const s=S,w=WD,an=Math.max(0.8*Math.min(1,s.horse[c]),s.camel
 // generations. A quiet border is held lightly and cheaply, and is soft when someone new arrives; a contested one is manned,
 // fortified and walled. The men posted also count in its defence.
 const gthrOn=()=>!swOn('nogthr'),thrAt=i=>S.thr&&gthrOn()?S.thr[i]:0;
-function garrAt(i,integ,calm,t){const s=S,w=WD,h=1-integ;if(t==null)t=i;const T=thrAt(i),G=gthrOn();
+function garrAt(i,integ,calm,t){const s=S,w=WD,h=(1-integ)*(dealOn()&&s.deal&&s.pol[i]?1-0.4*dealAt(s.pols[s.pol[i]],i):1);if(t==null)t=i;const T=thrAt(i),G=gthrOn();
   return GAR*cw(i)*(0.02+(G?0.7:1)*h*h*(1+1.5*w.rough[i]+1.5*s.forest[i])*(1-0.6*calm)+(G?2*knob('gthr')*T*(0.3+h):0))/(1+0.5*s.iron[t]+0.7*s.roads[t]+0.6*s.recK[t]+1.5*s.fort[i]+2*s.gun[t])}
 const calmOf=o=>clamp(0.5+0.5*(o.leg??1)-Math.max(0,(o.burden||0.6)-0.8),0,1);
 // a people that has lived beside states for generations learns their weapons and their ways of war, and holds together better
@@ -2578,7 +2579,7 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
-    s.pol[j]=o.id;s.taken[j]=s.year;if(s.thr)s.thr[j]=Math.max(s.thr[j],0.6);s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
+    s.pol[j]=o.id;s.taken[j]=s.year;if(s.thr)s.thr[j]=Math.max(s.thr[j],0.6);if(s.deal)s.deal[j]=0;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2*(kindOn()?1-(o.kin||0):1),o.id);
     const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a*(prestOn()?1-0.8*Math.min(1,o.expect||0):1);if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
     // a horde that takes three farmed provinces from a large state within 25 years has broken through its frontier (once per pair in 50 years)
@@ -3173,7 +3174,7 @@ function* politicsG(){
       sv+=fr?asR*sv*(1-sv):-decay*sv;sv+=0.004*infl*(o.ruler.char-0.5);if(ri>=0&&ri===o.rel)sv+=0.0015*(0.5+rels[ri].cent);
       s_s[i]=clamp(sv,0.02,1);
       // provinces settle into a realm only as fast as the centre can hold them (monopolies, records, speed)
-      if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
+      if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+(dealOn()&&s.deal?1+2*dealAt(o,i):1)*hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
       if(cand>=0&&s_taken[i]!==y){const q=pol[cand];
         // a horde only raided the stateless farmers beyond the grass and never ruled them, so it seldom came to border a state.
         // (switch kind) one that has learned to live off settled people takes them as subjects instead (the Khazars and their
@@ -4192,7 +4193,7 @@ function ridePass(){
   const s=S,eths=s.eths,n=eths.length,hs=new Float64Array(n),ws=new Float64Array(n),war=new Uint8Array(n),stateXp=new Float64Array(n).fill(-1);
   const hsP=new Float64Array(s.pols.length),wsP=new Float64Array(s.pols.length);
   for(const i of WD.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;hs[e]+=s.pop[i]*s.horse[i];ws[e]+=s.pop[i];const q=s.pol[i];if(q){hsP[q]+=s.pop[i]*s.horse[i];wsP[q]+=s.pop[i]}}
-  if(transOn())transPass();
+  if(transOn())transPass();if(S.year%10===5&&dealOn())dealPass();
   const thr=new Float64Array(n),thrR=new Float64Array(n);
   for(const id of s.alive){const o=s.pols[id];if(o.core==null||o.core<0)continue;if(o.enemies.size)war[o.core]=1;stateXp[o.core]=Math.max(stateXp[o.core],o.prep??0.6);
     // threat switch: a people raided by horsemen learns to ride from them, as far as its horses allow
@@ -4230,13 +4231,19 @@ const transOn=()=>!swOn('notrans');
 const cavAt=(c,off)=>{const L=S.cavL;return L&&L[c]>0?L[c]*(off?S.integ[c]:1):0};
 function learnRide(o,j){const s=S;if(!transOn())return;const L=s.cavL||(s.cavL=new Float32Array(N)),rq=rideOf(o),gap=rq-L[j];if(gap<=0.05)return;
   const ha=Math.min(1,0.15+3*s.horse[j]);if(s.r()<0.3*knob('trans')*gap*ha)L[j]+=0.4*gap}
-function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL;if(!L)return;const TH=s.thr,pol=s.pol,nA=w.nbA,nS=w.nbS;
+function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL||(s.cavL=new Float32Array(N));const TH=s.thr,pol=s.pol,nA=w.nbA,nS=w.nbS;
   const num=new Float64Array(s.pols.length),den=new Float64Array(s.pols.length),top=new Float32Array(s.pols.length);
   for(const i of w.landIdx){const q=pol[i];if(!q||s.pols[q].kind!=='state'){if(L[i]>0)L[i]*=0.98;continue}
     const th=TH?TH[i]:0,ha=Math.min(1,0.15+3*s.horse[i]);let v=L[i];
-    if(v>0.02){if(th>0.05)v+=0.08*kt*th*ha*(1-v);else v*=0.99;
+    // in peace the frontier studies its neighbours too: markets, hired herdsmen, marriage. Slower than under raids, faster the
+    // more trade crosses and the more the horde next door is worth copying (its prestige)
+    for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0)continue;const qj=pol[j];if(!qj||qj===q)continue;const t=s.pols[qj];if(t.kind!=='horde')continue;const e=t.core>=0?s.eths[t.core]:null,gap=(e&&e.ride||0)-v;
+      if(gap>0.05)v+=0.01*kt*gap*ha*(0.3+Math.min(1,s.car[i]))*(0.3+Math.min(1,t.prest||0));break}
+    // the skill lasts where raids are remembered, where people keep horses, or where the state supports mounted service
+    if(v>0.02){if(th>0.05)v+=0.08*kt*th*ha*(1-v);else v*=1-0.01*(1-Math.min(1,3*s.horse[i]))*(1-0.6*Math.min(1,(s.pols[q].cavS||0)*2));
       if(v>0.1)for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||pol[j]!==q||L[j]>=v)continue;const tj=TH?TH[j]:0;L[j]+=0.02*kt*(0.05+tj)*Math.min(1,0.15+3*s.horse[j])*(v-L[j])}
-      L[i]=v}
+      }
+    L[i]=v;
     const wg=s.pop[i]*(0.02+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.15)top[q]=v}   // the army is drawn where the garrisons stand
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const org=den[id]?num[id]/den[id]:0,R=o.ruler,comp=R?R.comp:0.5;let sp=o.cavS||0;
     if(y%10===0){const F=top[id],beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';
@@ -5036,6 +5043,37 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
 // Boke, 1260) or takes a near court; a stronger court finishes becoming its subjects' people and loses its grip on the steppe.
 // The older ruling-coalition rule (elitePass in herds.js: o.steppe, o.dual) already lets a torn court rule herders and farmers
 // under separate laws; separate offices here is the same institution, so the two share o.dual.
+// Deals with the conquered (switch nodeal, knob deal; Nein 2026-11-13). A ruler can settle with people he has taken instead
+// of only holding them down: their own leaders and law, lighter dues, a place at court. He may do it for one province, which
+// its own people elsewhere in the realm resent as special treatment, or for a whole people, which the realm's other subject
+// peoples resent; his own core people resent either. Resentment bites only in hard times. In return the land settles into the
+// realm about three times as fast, needs a lighter garrison, and its men serve willingly (a province's skill counts in the
+// field by its integration). A deal costs the treasury, and an heir who revokes it loses their loyalty at a stroke.
+const dealOn=()=>!swOn('nodeal');
+const dealAt=(o,i)=>{const s=S;if(!s.deal)return 0;const d=s.deal[i],m=o&&o.dealE?o.dealE.get(s.eth[i])||0:0;return m>d?m:d};
+function dealPass(){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=new Float32Array(N)),N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0});
+  const G=new Map();   // per state: per subject people: [pop, pop*integ, provinces, worst province, its integ, pop*skill, pop under a deal]
+  for(const i of w.landIdx){const p=s.pol[i];if(!p){if(D[i])D[i]=0;continue}const o=s.pols[p];if(o.kind!=='state'){D[i]=0;continue}const e=s.eth[i];if(e<0||s.pop[i]<1)continue;
+    let M=G.get(p);if(!M)G.set(p,M=new Map());let g=M.get(e);if(!g)M.set(e,g=[0,0,0,-1,2,0,0]);const pp=s.pop[i];g[0]+=pp;g[1]+=pp*s.integ[i];g[2]++;if(e!==o.core&&i!==o.capital&&s.integ[i]<g[4]&&D[i]<0.9){g[3]=i;g[4]=s.integ[i]}
+    g[5]+=pp*(s.cavL?s.cavL[i]:0);g[6]+=pp*dealAt(o,i)}
+  for(const [p,M] of G){const o=s.pols[p],R=o.ruler;if(!R||!o.alive)continue;const gen=(R.char||0.5)>0.55,hard=clamp((o.psi||0)+((o.treas||0)<0?0.5:0)+Math.min(1,o.shock||0),0,1),bite=0.1+0.9*hard;
+    let dealt=0;for(const [e,g] of M)dealt+=g[6];const share=dealt/(o.pop+1);o.dealS=share;
+    // what deals cost: revenue forgone, and the core people's solidarity when times are hard
+    if(share>0){o.treas=(o.treas||0)-0.04*share;o.S=Math.max(0.05,o.S-0.01*share*bite)}
+    for(const [e,g] of M){if(e===o.core||g[3]<0||g[0]<1)continue;const ig=g[1]/g[0],sk=g[5]/g[0],have=o.dealE?o.dealE.get(e)||0:0;
+      if(ig>0.6||(o.treas||0)<-0.2)continue;
+      if(!(r()<0.1*kd*(1-ig)*(gen?2:1)*(1+2*sk)))continue;
+      // a people large and spread enough is dealt with as a people; otherwise the troublesome province alone
+      if(g[2]>=4&&g[0]>0.08*o.pop&&have<1){(o.dealE||(o.dealE=new Map())).set(e,Math.min(1,have+0.35));N_.people++;o.dealY=s.year;
+        for(const [e2,g2] of M)if(e2!==e&&e2!==o.core&&!(o.dealE.get(e2)>0))o.dealRes=(o.dealRes||new Map()).set(e2,0.15*bite);
+        if(o.cells>=15)chron('diplomacy',`${R.name} of the ${o.full} comes to terms with the ${s.eths[e].name}: their own leaders and law, and a place at court.`,g[3],[R_(o),RE(s.eths[e])],sk>0.3?'They were hard to hold and their horsemen were worth having.':'They were hard to hold, and terms were cheaper than garrisons.')}
+      else if(D[g[3]]<1){const i=g[3];D[i]=Math.min(1,D[i]+0.5);N_.prov++;o.dealRes=(o.dealRes||new Map()).set(e,0.1*bite)}}
+    // resentment: those passed over settle in more slowly, or slip, for a decade
+    if(o.dealRes){for(const i of polCells(p)){const v=o.dealRes.get(s.eth[i]);if(v&&dealAt(o,i)<=0)s.integ[i]=Math.max(0,s.integ[i]-v*0.3)}o.dealRes=null}}}
+// an heir may revoke what his father granted
+function dealHeir(o){const s=S,R=o.ruler;if(!o.dealE||!o.dealE.size||!(R.greed>0.7||(o.treas||0)<-0.3)||s.r()>0.25)return;const N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0});N_.revoke++;
+  const E=o.dealE;for(const i of polCells(o.id)){if(E.get(s.eth[i])>0)s.integ[i]*=0.5;if(s.deal)s.deal[i]=0}o.dealE=null;o.shock=(o.shock||0)+0.2;
+  if(o.cells>=15)chron('state',`${R.name} of the ${o.full} revokes the terms his predecessors gave their subject peoples.`,o.capital,[R_(o)],(o.treas||0)<-0.3?'The treasury was empty and their privileges cost it revenue.':'He wanted their dues in full.')}
 // The frontier men's decision (switch nofront, knob front; Nein 2026-11-12). Each decade a connected stretch of skilled,
 // poorly integrated frontier provinces weighs what is open to it. If they judge they can beat what the state can bring
 // (judged from its recent record, so they can be wrong) they rise; if far stronger than the state they march on the capital,
