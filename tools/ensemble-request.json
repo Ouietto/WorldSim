@@ -18,12 +18,12 @@
    "env": "WORLD=prov SW=notrans"
   },
   {
-   "name": "skill-learning-x3",
-   "env": "WORLD=prov KV=trans:3"
+   "name": "off-road-use",
+   "env": "WORLD=prov SW=noroaduse"
   },
   {
-   "name": "frontier-decision-x3",
-   "env": "WORLD=prov KV=front:3"
+   "name": "skill-learning-x3",
+   "env": "WORLD=prov KV=trans:3"
   }
  ]
 }
