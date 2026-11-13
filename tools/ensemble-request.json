@@ -18,8 +18,8 @@
    "env": "WORLD=prov KV=port:2"
   },
   {
-   "name": "off-mounted-archery-learning",
-   "env": "WORLD=prov SW=notrans"
+   "name": "portions-grievance-half",
+   "env": "WORLD=prov KV=port:0.5"
   },
   {
    "name": "learning-x3",

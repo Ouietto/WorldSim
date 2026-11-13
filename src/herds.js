@@ -252,7 +252,7 @@ function transPass(hsP,wsP){const s=S,y=s.year,kt=knob('trans');
       const war=o.enemies.has(q),raid=o.raidBy===q&&y-(o.raidY||-1e9)<15,ct=Math.min(1,wg/3+(war?0.5:0)+(raid?0.5:0)),
         rc=Math.min(1,0.2+(raid?0.5:0)+(war?0.3:0)+Math.min(0.3,o.shock||0)),v=ct*rc*(rq-cav);
       if(!war&&t.kind==='horde')peace=Math.max(peace,ct);if(v>best){best=v;from=t}}
-    if(best>0){const hp=wsP[id]?hsP[id]/wsP[id]:0,ha=Math.min(1,0.1+4*hp+0.4*peace);o.cav=cav+0.12*kt*ha*best;
+    if(best>0){const hp=wsP[id]?hsP[id]/wsP[id]:0,ha=Math.min(1,0.1+4*hp+0.4*peace);o.cav=cav+0.36*kt*ha*best;
       if(cav<0.5&&o.cav>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`The ${o.full} raise mounted archers after the manner of the ${from.full}.`,o.capital,[R_(o),R_(from)])}}
     else if(cav>0)o.cav=cav*0.99}}
 

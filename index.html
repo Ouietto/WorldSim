@@ -4231,7 +4231,7 @@ function transPass(hsP,wsP){const s=S,y=s.year,kt=knob('trans');
       const war=o.enemies.has(q),raid=o.raidBy===q&&y-(o.raidY||-1e9)<15,ct=Math.min(1,wg/3+(war?0.5:0)+(raid?0.5:0)),
         rc=Math.min(1,0.2+(raid?0.5:0)+(war?0.3:0)+Math.min(0.3,o.shock||0)),v=ct*rc*(rq-cav);
       if(!war&&t.kind==='horde')peace=Math.max(peace,ct);if(v>best){best=v;from=t}}
-    if(best>0){const hp=wsP[id]?hsP[id]/wsP[id]:0,ha=Math.min(1,0.1+4*hp+0.4*peace);o.cav=cav+0.12*kt*ha*best;
+    if(best>0){const hp=wsP[id]?hsP[id]/wsP[id]:0,ha=Math.min(1,0.1+4*hp+0.4*peace);o.cav=cav+0.36*kt*ha*best;
       if(cav<0.5&&o.cav>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`The ${o.full} raise mounted archers after the manner of the ${from.full}.`,o.capital,[R_(o),R_(from)])}}
     else if(cav>0)o.cav=cav*0.99}}
 
@@ -5029,7 +5029,7 @@ function portionPass(o){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0,gr
   const gen=(o.ruler.char||0.5)>0.55,g0=o.grant||0,kin=o.kind==='horde'?o.kin||0:1,un=(1-Math.min(1,g0*farm/(herd+1)))*kin;o.unprov=un;
   if(un<=0.1){o.short=0;o.griev=(o.griev||0)*0.7;return}
   if(farm>0&&g0<1&&r()<(gen?0.6:0.25*(o.griev||0)+(o.ruler.greed<0.4?0.2:0))){o.grant=Math.min(1,g0+0.15);o.short=0;o.griev=Math.max(0,(o.griev||0)-0.15);N.grant++;return}
-  o.short=(o.short||0)+1;if(!gen||o.short>=3)o.griev=Math.min(1,(o.griev||0)+0.1*knob('port')*un*(gen?0.6:1))}
+  o.short=(o.short||0)+1;if(!gen||o.short>=3)o.griev=Math.min(1,(o.griev||0)+0.2*knob('port')*un*(gen?0.6:1))}
 // at a khan's death the unprovided turn to the heir
 function portionHeir(o,R0){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0,grace:0,split:0}),g=o.griev||0,R=o.ruler;
   if((o.grant||0)>0.5&&o.cells>=30&&r()<0.4*o.grant){N.split++;if(o.cells>=15)chron('state',`On the death of ${R0.name}, the portions he granted become realms of their own: the ${o.full} is divided among his heirs.`,o.capital,[R_(o)],'Most of its settled land had been granted out to lesser khans.');o.grant*=0.5;o.griev=g*0.5;hordeBreakup(o);return}
