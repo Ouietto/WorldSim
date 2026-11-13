@@ -475,15 +475,22 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
 // field by its integration). A deal costs the treasury, and an heir who revokes it loses their loyalty at a stroke.
 const dealOn=()=>!swOn('nodeal');
 const dealAt=(o,i)=>{const s=S;if(!s.deal)return 0;const d=s.deal[i],m=o&&o.dealE?o.dealE.get(s.eth[i])||0:0;return m>d?m:d};
-function dealPass(){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=new Float32Array(N)),N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0});
+// A ruler decides when something gives him a reason (switch noevents puts decisions back on the decade clock; Nein 2026-11-13):
+// on taking the throne, after a raid or a lost war, when the treasury runs dry. A state reviews at most once in three years,
+// and a reign with no such event still reviews every thirty.
+const eventsOn=()=>!swOn('noevents');
+function review(o,why){const s=S;if(!eventsOn()||!o||!o.alive||!o.ruler||s.year-(o.revY??-1e9)<3)return;o.revY=s.year;o.revWhy=why;s.revN=(s.revN||0)+1;
+  if(o.kind==='state'){if(dealOn())dealPass(o);if(transOn())sponsor(o)}else if(o.kind==='horde'&&portOn())portionPass(o,1)}
+function dealPass(only){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=new Float32Array(N)),N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0}),EV=eventsOn();
   const G=new Map();   // per state: per subject people: [pop, pop*integ, provinces, worst province, its integ, pop*skill, pop under a deal]
-  for(const i of w.landIdx){const p=s.pol[i];if(!p){if(D[i])D[i]=0;continue}const o=s.pols[p];if(o.kind!=='state'){D[i]=0;continue}const e=s.eth[i];if(e<0||s.pop[i]<1)continue;
+  for(const i of (only?polCells(only.id):w.landIdx)){const p=s.pol[i];if(!p){if(D[i])D[i]=0;continue}const o=s.pols[p];if(o.kind!=='state'){D[i]=0;continue}const e=s.eth[i];if(e<0||s.pop[i]<1)continue;
     let M=G.get(p);if(!M)G.set(p,M=new Map());let g=M.get(e);if(!g)M.set(e,g=[0,0,0,-1,2,0,0]);const pp=s.pop[i];g[0]+=pp;g[1]+=pp*s.integ[i];g[2]++;if(e!==o.core&&i!==o.capital&&s.integ[i]<g[4]&&D[i]<0.9){g[3]=i;g[4]=s.integ[i]}
     g[5]+=pp*(s.cavL?s.cavL[i]:0);g[6]+=pp*dealAt(o,i)}
   for(const [p,M] of G){const o=s.pols[p],R=o.ruler;if(!R||!o.alive)continue;const gen=(R.char||0.5)>0.55,hard=clamp((o.psi||0)+((o.treas||0)<0?0.5:0)+Math.min(1,o.shock||0),0,1),bite=0.1+0.9*hard;
     let dealt=0;for(const [e,g] of M)dealt+=g[6];const share=dealt/(o.pop+1);o.dealS=share;
     // what deals cost: revenue forgone, and the core people's solidarity when times are hard
-    if(share>0){o.treas=(o.treas||0)-0.04*share;o.S=Math.max(0.05,o.S-0.01*share*bite)}
+    if(!only){if(share>0){o.treas=(o.treas||0)-0.04*share;o.S=Math.max(0.05,o.S-0.01*share*bite)}
+      if(EV){const dry=(o.treas||0)<0;if(dry&&!o.dryW)review(o,'treasury');o.dryW=dry;if(s.year-(o.revY??-1e9)<=30)continue;o.revY=s.year}}
     for(const [e,g] of M){if(e===o.core||g[3]<0||g[0]<1)continue;const ig=g[1]/g[0],sk=g[5]/g[0],have=o.dealE?o.dealE.get(e)||0:0;
       if(ig>0.6||(o.treas||0)<-0.2)continue;
       if(!(r()<0.1*kd*(1-ig)*(gen?2:1)*(1+2*sk)))continue;
@@ -546,11 +553,13 @@ function horsemenPass(){const s=S,w=WD,r=s.r,L=s.cavL;if(!L)return;const N_=s.fr
 // after decade does their grievance grow. They press for conquest, and in the end ride off. At his death they make demands
 // of the heir, or give him grace if the father had been generous.
 const portOn=()=>!swOn('noport');
-function portionPass(o){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0,grace:0,split:0}),herd=o.nomP||0,farm=o.farmP||0;
+function portionPass(o,ev){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0,grace:0,split:0}),herd=o.nomP||0,farm=o.farmP||0;
   if(herd<1||!o.ruler){o.griev=0;o.unprov=0;return}
   const gen=(o.ruler.char||0.5)>0.55,g0=o.grant||0,kin=o.kind==='horde'?o.kin||0:1,un=(1-Math.min(1,g0*farm/(herd+1)))*kin;o.unprov=un;
   if(un<=0.1){o.short=0;o.griev=(o.griev||0)*0.7;return}
-  if(farm>0&&g0<1&&r()<(gen?0.6:0.25*(o.griev||0)+(o.ruler.greed<0.4?0.2:0))){o.grant=Math.min(1,g0+0.15);o.short=0;o.griev=Math.max(0,(o.griev||0)-0.15);N.grant++;return}
+  const may=!eventsOn()||ev||s.year-(o.revY??-1e9)>30;if(may&&!ev&&eventsOn())o.revY=s.year;
+  if(may&&farm>0&&g0<1&&r()<(gen?0.6:0.25*(o.griev||0)+(o.ruler.greed<0.4?0.2:0))){o.grant=Math.min(1,g0+0.15);o.short=0;o.griev=Math.max(0,(o.griev||0)-0.15);N.grant++;return}
+  if(ev)return;
   o.short=(o.short||0)+1;if(!gen||o.short>=3)o.griev=Math.min(1,(o.griev||0)+0.1*knob('port')*un*(gen?0.6:1))}
 // at a khan's death the unprovided turn to the heir
 function portionHeir(o,R0){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0,grace:0,split:0}),g=o.griev||0,R=o.ruler;

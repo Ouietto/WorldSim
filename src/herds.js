@@ -252,6 +252,10 @@ const transOn=()=>!swOn('notrans');
 const cavAt=(c,off)=>{const L=S.cavL;return L&&L[c]>0?L[c]*(off?S.integ[c]:1):0};
 function learnRide(o,j){const s=S;if(!transOn())return;const L=s.cavL||(s.cavL=new Float32Array(N)),rq=rideOf(o),gap=rq-L[j];if(gap<=0.05)return;
   const ha=Math.min(1,0.15+3*s.horse[j]);if(s.r()<0.3*knob('trans')*gap*ha)L[j]+=0.4*gap}
+function sponsor(o){const s=S,y=s.year,R=o.ruler,comp=R?R.comp:0.5,F=o.cavTop||0,org=o.cavOrg||0;let sp=o.cavS||0;
+  const beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';
+  if(F>sp+0.15&&(o.treas||0)>0.1&&((comp>0.5&&beaten)||comp>0.85)&&s.r()<0.5){const was=Math.max(sp,org);sp+=0.7*(F-sp);o.treas-=0.08;o.cavS=sp;o.cav=Math.max(sp,org);
+    if(was<0.5&&sp>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`${R.name} of the ${o.full} has the army take up mounted archery after the manner of its frontier.`,o.capital,[R_(o)],beaten?'Horsemen had beaten it, and its frontier provinces had learned to fight as they do.':'He saw his frontier outfighting his army.')}}}
 function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL||(s.cavL=new Float32Array(N));const TH=s.thr,pol=s.pol,nA=w.nbA,nS=w.nbS;
   const num=new Float64Array(s.pols.length),den=new Float64Array(s.pols.length),top=new Float32Array(s.pols.length);
   for(const i of w.landIdx){const q=pol[i];if(!q||s.pols[q].kind!=='state'){if(L[i]>0)L[i]*=0.8;continue}
@@ -267,10 +271,7 @@ function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL||(s.cavL=
     L[i]=v;
     const wg=s.pop[i]*(0.02+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.15)top[q]=v}   // the army is drawn where the garrisons stand
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const org=den[id]?num[id]/den[id]:0,R=o.ruler,comp=R?R.comp:0.5;let sp=o.cavS||0;
-    {const F=top[id],beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';
-      if(F>sp+0.15&&(o.treas||0)>0.1&&((comp>0.5&&beaten)||comp>0.85)&&s.r()<0.5){const was=Math.max(sp,org);sp+=0.7*(F-sp);o.treas-=0.08;
-        if(was<0.5&&sp>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`${R.name} of the ${o.full} has the army take up mounted archery after the manner of its frontier.`,o.capital,[R_(o)],beaten?'Horsemen had beaten it, and its frontier provinces had learned to fight as they do.':'He saw his frontier outfighting his army.')}}
-      else if(F<sp)sp*=0.9}
+    o.cavTop=top[id];o.cavOrg=org;if(!eventsOn()||y-(o.revY??-1e9)>30){if(eventsOn())o.revY=y;sponsor(o)}sp=o.cavS||0;if(top[id]<sp)sp*=0.9;
     o.cavS=sp;o.cav=Math.max(sp,org)}
   if(frontOn())horsemenPass()}
 
