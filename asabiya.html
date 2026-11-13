@@ -4193,7 +4193,7 @@ function ridePass(){
   const s=S,eths=s.eths,n=eths.length,hs=new Float64Array(n),ws=new Float64Array(n),war=new Uint8Array(n),stateXp=new Float64Array(n).fill(-1);
   const hsP=new Float64Array(s.pols.length),wsP=new Float64Array(s.pols.length);
   for(const i of WD.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;hs[e]+=s.pop[i]*s.horse[i];ws[e]+=s.pop[i];const q=s.pol[i];if(q){hsP[q]+=s.pop[i]*s.horse[i];wsP[q]+=s.pop[i]}}
-  if(transOn())transPass();if(ymod(S.year,10)===5&&dealOn())dealPass();
+  if(transOn())transPass();if(dealOn())dealPass();
   const thr=new Float64Array(n),thrR=new Float64Array(n);
   for(const id of s.alive){const o=s.pols[id];if(o.core==null||o.core<0)continue;if(o.enemies.size)war[o.core]=1;stateXp[o.core]=Math.max(stateXp[o.core],o.prep??0.6);
     // threat switch: a people raided by horsemen learns to ride from them, as far as its horses allow
@@ -4220,6 +4220,7 @@ function rideAdm(o,c){const r=rideOf(o),h=Math.min(1,S.horse[c]);if(h<=0||r<0.12
 function recPass(){const s=S,T=s.tk,wr=T[TI.writing],kh=T[TI.khipu],gr=T[TI.griots],dsc=T[TI.drumscript];if(!s.recK)s.recK=new Float32Array(N);
   for(const i of WD.landIdx)s.recK[i]=Math.min(1,Math.max(wr[i],0.75*kh[i]+0.15*gr[i],0.4*dsc[i]))}
 function rideOf(o){const e=o&&o.core>=0?S.eths[o.core]:null,r=e&&e.ride?e.ride:0;return o&&o.cav>r&&transOn()?o.cav:r}
+// (This pass runs once a decade, with the herd pass; rates below are per decade.)
 // Transmission, first practice (switch notrans, knob trans; Nein 2026-11-12): mounted fighting learned from horsemen.
 // The skill lives in the province (S.cavL). Each raid by better riders is a chance for the province struck to pick it up
 // (learnRide, called from raid); where threat is remembered and the practice has a foothold it grows year by year; it passes
@@ -4233,25 +4234,25 @@ function learnRide(o,j){const s=S;if(!transOn())return;const L=s.cavL||(s.cavL=n
   const ha=Math.min(1,0.15+3*s.horse[j]);if(s.r()<0.3*knob('trans')*gap*ha)L[j]+=0.4*gap}
 function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL||(s.cavL=new Float32Array(N));const TH=s.thr,pol=s.pol,nA=w.nbA,nS=w.nbS;
   const num=new Float64Array(s.pols.length),den=new Float64Array(s.pols.length),top=new Float32Array(s.pols.length);
-  for(const i of w.landIdx){const q=pol[i];if(!q||s.pols[q].kind!=='state'){if(L[i]>0)L[i]*=0.98;continue}
+  for(const i of w.landIdx){const q=pol[i];if(!q||s.pols[q].kind!=='state'){if(L[i]>0)L[i]*=0.8;continue}
     const th=TH?TH[i]:0,ha=Math.min(1,0.15+3*s.horse[i]);let v=L[i];
     // in peace the frontier studies its neighbours too: markets, hired herdsmen, marriage. Slower than under raids, faster the
     // more trade crosses and the more the horde next door is worth copying (its prestige)
     for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0)continue;const qj=pol[j];if(!qj||qj===q)continue;const t=s.pols[qj];if(t.kind!=='horde')continue;const e=t.core>=0?s.eths[t.core]:null,gap=(e&&e.ride||0)-v;
-      if(gap>0.05)v+=0.01*kt*gap*ha*(0.3+Math.min(1,s.car[i]))*(0.3+Math.min(1,t.prest||0));break}
+      if(gap>0.05)v+=Math.min(0.5,0.1*kt)*gap*ha*(0.3+Math.min(1,s.car[i]))*(0.3+Math.min(1,t.prest||0));break}
     // the skill lasts where raids are remembered, where people keep horses, or where the state supports mounted service
-    if(v>0.02){if(th>0.05)v+=0.08*kt*th*ha*(1-v);else v*=1-0.01*(1-Math.min(1,3*s.horse[i]))*(1-0.6*Math.min(1,(s.pols[q].cavS||0)*2));
-      if(v>0.1)for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||pol[j]!==q||L[j]>=v)continue;const tj=TH?TH[j]:0;L[j]+=0.02*kt*(0.05+tj)*Math.min(1,0.15+3*s.horse[j])*(v-L[j])}
+    if(v>0.02){if(th>0.05)v+=Math.min(0.8,0.5*kt)*th*ha*(1-v);else v*=1-0.1*(1-Math.min(1,3*s.horse[i]))*(1-0.6*Math.min(1,(s.pols[q].cavS||0)*2));
+      if(v>0.1)for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||pol[j]!==q||L[j]>=v)continue;const tj=TH?TH[j]:0;L[j]+=Math.min(0.8,0.2*kt)*(0.05+tj)*Math.min(1,0.15+3*s.horse[j])*(v-L[j])}
       }
     L[i]=v;
     const wg=s.pop[i]*(0.02+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.15)top[q]=v}   // the army is drawn where the garrisons stand
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const org=den[id]?num[id]/den[id]:0,R=o.ruler,comp=R?R.comp:0.5;let sp=o.cavS||0;
-    if(y%10===0){const F=top[id],beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';
+    {const F=top[id],beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';
       if(F>sp+0.15&&(o.treas||0)>0.1&&((comp>0.5&&beaten)||comp>0.85)&&s.r()<0.5){const was=Math.max(sp,org);sp+=0.7*(F-sp);o.treas-=0.08;
         if(was<0.5&&sp>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`${R.name} of the ${o.full} has the army take up mounted archery after the manner of its frontier.`,o.capital,[R_(o)],beaten?'Horsemen had beaten it, and its frontier provinces had learned to fight as they do.':'He saw his frontier outfighting his army.')}}
       else if(F<sp)sp*=0.9}
     o.cavS=sp;o.cav=Math.max(sp,org)}
-  if(y%10===0&&frontOn())horsemenPass()}
+  if(frontOn())horsemenPass()}
 
 // ---------- coalitions: prestige, snowballs, collapse and dominoes ----------
 // Loot and victories draw clans to a successful leader; defeat, a hard winter or a leader's death pull them apart.
