@@ -947,6 +947,7 @@ function newPolity(c,from,opt){
   o.ruler=newRuler(L,o);o.founderR=o.ruler;o.tier=tierOf(o);o.full=fullName(o);o.peak=o.full;
   if(from)from.kids.push(id);
   if(from&&from.cplx!=null){o.cplx=from.cplx*0.55;o.ineq=from.ineq*0.85;o.treas=0.2}
+  if(from&&from.cav)o.cav=from.cav*0.8;
   s.pols.push(o);s.alive.push(id);s.pol[c]=id;s.dist[c]=0;s.integ[c]=Math.max(s.integ[c],0.7);o.mandate=1;
   // a new state in the heartland of a fallen great power may claim its name
   if(!opt.base&&o.kind==='state'){for(const F of s.fallen){if(s.year-F.died>900||F.restoredBy)continue;

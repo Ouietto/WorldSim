@@ -32,7 +32,7 @@ const mrName=new Array(N).fill('Other');for(const i of WD.landIdx){const la=LA(i
 const MRN=MR.map(b=>b[0]).filter(n=>n!=='South America').concat(['Andes and Pacific coast','Lowland South America','Other']);
 function frontierRide(){const hf=new Uint8Array(S.pols.length);for(const i of WD.landIdx){const q=S.pol[i];if(!q||hf[q])continue;for(let d=WD.nbS[i];d<WD.nbS[i+1];d++){const j=WD.nbA[d];if(j<0||S.pol[j]===q||S.pop[j]<1||S.past[j]<=0.55)continue;const p=S.pol[j]?S.pols[S.pol[j]]:null;if(!p||p.kind==='horde'){hf[q]=1;break}}}
   let a=0,b=0,ar=0;for(const id of S.alive){const o=S.pols[id];if(o.kind!=='state'||!o.nb||o.farmN<0.5*o.cells)continue;
-    if(!hf[id])continue;const e=o.core>=0?S.eths[o.core]:null,rd=e&&e.ride?e.ride:0;a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
+    if(!hf[id])continue;const rd=rideOf(o);a+=o.pop*rd;b+=o.pop;if(rd>=0.5)ar+=o.pop}
    return {'Frontier states: riding skill':b?+(a/b).toFixed(2):null,'Frontier states: share with mounted archers':b?+(ar/b).toFixed(2):null}}
 const diag={};const snap=y=>{const rp={},cp={},fq={},fw={};for(const n of MRN)rp[n]=0;for(const i of WD.landIdx){const p=S.pop[i];if(p<1)continue;rp[mrName[i]]+=p;
     if(S.farm[i]>0.5){const c=S.crop&&S.crop[i]>=0?CROPS[S.crop[i]].k:'none';cp[c]=(cp[c]||0)+p;
@@ -103,7 +103,7 @@ if(S.bFirst){out.x_beasts=BEASTS.map((b,k)=>S.bFirst[k]?b.k+' '+S.bFirst[k].y:nu
 out.diag=diag;
 // rare events, per millennium after 3000 BCE (counts kept by the model itself)
 {const yrs=Math.max(1,END+3000)/1000,per=x=>+((x||0)/yrs).toFixed(2),W=S.wingN||{};
- out.ev={settle:per(S.settleN),khan:per(S.khanJ),khanW:per(S.khanW),submit:per(S.submitN),fkhan:per(S.fkhanN),grass:per(S.grassTake),wMove:per(W.move),wSep:per(W.sep),wSecede:per(W.secede),wSaddle:per(W.saddle),wCourt:per(W.court),usurp:per(S.usurpN),debase:per(S.debN),rising:per(S.slvRev),officials:per(S.eunN),slaveCoup:per(S.mamN),slaveState:per(S.haitiN),emancip:per(S.emanN),sack:per(S.sackRaid),colony:per(S.pols.filter(o=>o&&o.origin&&o.origin.type==='colony').length),shed:per(S.shedN),popWar:per(S.popWar)}}
+ out.ev={settle:per(S.settleN),khan:per(S.khanJ),khanW:per(S.khanW),submit:per(S.submitN),fkhan:per(S.fkhanN),cav:per(S.cavN),grass:per(S.grassTake),wMove:per(W.move),wSep:per(W.sep),wSecede:per(W.secede),wSaddle:per(W.saddle),wCourt:per(W.court),usurp:per(S.usurpN),debase:per(S.debN),rising:per(S.slvRev),officials:per(S.eunN),slaveCoup:per(S.mamN),slaveState:per(S.haitiN),emancip:per(S.emanN),sack:per(S.sackRaid),colony:per(S.pols.filter(o=>o&&o.origin&&o.origin.type==='colony').length),shed:per(S.shedN),popWar:per(S.popWar)}}
 {const yrs=Math.max(1,END+1000)/1000;out.d_inv1k=+(CK.inv1k/yrs).toFixed(2);out.d_wallNC=CK.wallNC;out.d_eSteppe=CK.esN?+(CK.es/CK.esN).toFixed(3):null;
  out.d_arch1000bce=CK.arch1000bce;out.d_arch1=diag[1]&&diag[1].x?diag[1].x['Frontier states: share with mounted archers']:null;out.d_arch1000=diag[1000]&&diag[1000].x?diag[1000].x['Frontier states: share with mounted archers']:null;
  const L=S.pols.filter(o=>o&&o.kind==='horde'&&o.maxCells>=100&&o.born>=-1000).map(o=>(o.alive?S.year:o.died)-o.born).sort((a,b)=>a-b);out.d_bigConfN=L.length;out.d_bigConfLife=L.length?L[L.length>>1]:null}

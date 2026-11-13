@@ -211,7 +211,9 @@ function rideTier(e,c){const s=S,r=e.ride||0;if(r<0.12)return 0;if(r<0.3)return 
 function inheritRide(e,p,p2){e.ride=p?((p2?(p.ride+p2.ride)/2:p.ride)||0)*0.9:0;e.xp=p?((p2?(p.xp+p2.xp)/2:p.xp)??0.3)*0.9:0.3}
 function ridePass(){
   const s=S,eths=s.eths,n=eths.length,hs=new Float64Array(n),ws=new Float64Array(n),war=new Uint8Array(n),stateXp=new Float64Array(n).fill(-1);
-  for(const i of WD.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;hs[e]+=s.pop[i]*s.horse[i];ws[e]+=s.pop[i]}
+  const hsP=new Float64Array(s.pols.length),wsP=new Float64Array(s.pols.length);
+  for(const i of WD.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;hs[e]+=s.pop[i]*s.horse[i];ws[e]+=s.pop[i];const q=s.pol[i];if(q){hsP[q]+=s.pop[i]*s.horse[i];wsP[q]+=s.pop[i]}}
+  if(transOn())transPass(hsP,wsP);
   const thr=new Float64Array(n),thrR=new Float64Array(n);
   for(const id of s.alive){const o=s.pols[id];if(o.core==null||o.core<0)continue;if(o.enemies.size)war[o.core]=1;stateXp[o.core]=Math.max(stateXp[o.core],o.prep??0.6);
     // threat switch: a people raided by horsemen learns to ride from them, as far as its horses allow
@@ -237,7 +239,22 @@ function rideAdm(o,c){const r=rideOf(o),h=Math.min(1,S.horse[c]);if(h<=0||r<0.12
 // one measure of record keeping, whatever the medium: script, knotted cords, drum language or trained memory
 function recPass(){const s=S,T=s.tk,wr=T[TI.writing],kh=T[TI.khipu],gr=T[TI.griots],dsc=T[TI.drumscript];if(!s.recK)s.recK=new Float32Array(N);
   for(const i of WD.landIdx)s.recK[i]=Math.min(1,Math.max(wr[i],0.75*kh[i]+0.15*gr[i],0.4*dsc[i]))}
-function rideOf(o){const e=o&&o.core>=0?S.eths[o.core]:null;return e&&e.ride?e.ride:0}
+function rideOf(o){const e=o&&o.core>=0?S.eths[o.core]:null,r=e&&e.ride?e.ride:0;return o&&o.cav>r&&o.kind==='state'&&transOn()?o.cav:r}
+// Transmission, first practice (switch notrans, knob trans): a farming state takes up the mounted arm from the horsemen it meets.
+// Contact is the share of its border on them, raised by war and raids; receptivity is low in quiet times and high toward
+// whoever has raided or beaten it (prestige-biased learning, Henrich & Gil-White 2001; Zhao's King Wuling, 307 BCE); horses
+// come from its own pastures or are bought from horsemen at peace across the border. The practice lapses on a quiet frontier.
+const transOn=()=>!swOn('notrans');
+function transPass(hsP,wsP){const s=S,y=s.year,kt=knob('trans');
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||!o.nb)continue;const cav=o.cav||0;let brd=0;for(const [,wg] of o.nb)brd+=wg;
+    let best=0,from=null,peace=0;
+    for(const [q,wg] of o.nb){const t=s.pols[q];if(!t||!t.alive)continue;const e=t.core>=0?s.eths[t.core]:null,rq=Math.max(e&&e.ride||0,t.kind==='state'?t.cav||0:0);if(rq<=cav)continue;
+      const war=o.enemies.has(q),raid=o.raidBy===q&&y-(o.raidY||-1e9)<15,ct=Math.min(1,3*wg/(brd+1)+(war?0.5:0)+(raid?0.5:0)),
+        rc=Math.min(1,0.2+(raid?0.5:0)+(war?0.3:0)+Math.min(0.3,o.shock||0)),v=ct*rc*(rq-cav);
+      if(!war&&t.kind==='horde')peace=Math.max(peace,ct);if(v>best){best=v;from=t}}
+    if(best>0){const hp=wsP[id]?hsP[id]/wsP[id]:0,ha=Math.min(1,0.1+4*hp+0.4*peace);o.cav=cav+0.04*kt*ha*best;
+      if(cav<0.5&&o.cav>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`The ${o.full} raise mounted archers after the manner of the ${from.full}.`,o.capital,[R_(o),R_(from)])}}
+    else if(cav>0)o.cav=cav*0.99}}
 
 // ---------- coalitions: prestige, snowballs, collapse and dominoes ----------
 // Loot and victories draw clans to a successful leader; defeat, a hard winter or a leader's death pull them apart.
