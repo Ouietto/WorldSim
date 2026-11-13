@@ -512,7 +512,7 @@ function portionPass(o){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0,gr
   const gen=(o.ruler.char||0.5)>0.55,g0=o.grant||0,kin=o.kind==='horde'?o.kin||0:1,un=(1-Math.min(1,g0*farm/(herd+1)))*kin;o.unprov=un;
   if(un<=0.1){o.short=0;o.griev=(o.griev||0)*0.7;return}
   if(farm>0&&g0<1&&r()<(gen?0.6:0.25*(o.griev||0)+(o.ruler.greed<0.4?0.2:0))){o.grant=Math.min(1,g0+0.15);o.short=0;o.griev=Math.max(0,(o.griev||0)-0.15);N.grant++;return}
-  o.short=(o.short||0)+1;if(!gen||o.short>=3)o.griev=Math.min(1,(o.griev||0)+0.2*knob('port')*un*(gen?0.6:1))}
+  o.short=(o.short||0)+1;if(!gen||o.short>=3)o.griev=Math.min(1,(o.griev||0)+0.1*knob('port')*un*(gen?0.6:1))}
 // at a khan's death the unprovided turn to the heir
 function portionHeir(o,R0){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0,grace:0,split:0}),g=o.griev||0,R=o.ruler;
   if((o.grant||0)>0.5&&o.cells>=30&&r()<0.4*o.grant){N.split++;if(o.cells>=15)chron('state',`On the death of ${R0.name}, the portions he granted become realms of their own: the ${o.full} is divided among his heirs.`,o.capital,[R_(o)],'Most of its settled land had been granted out to lesser khans.');o.grant*=0.5;o.griev=g*0.5;hordeBreakup(o);return}

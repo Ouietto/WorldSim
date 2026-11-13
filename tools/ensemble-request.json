@@ -10,20 +10,20 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "off-portions",
-   "env": "WORLD=prov SW=noport"
+   "name": "off-frontier-decision",
+   "env": "WORLD=prov SW=nofront"
   },
   {
-   "name": "portions-grievance-x2",
-   "env": "WORLD=prov KV=port:2"
+   "name": "off-mounted-skill-and-frontier",
+   "env": "WORLD=prov SW=notrans"
   },
   {
-   "name": "portions-grievance-half",
-   "env": "WORLD=prov KV=port:0.5"
-  },
-  {
-   "name": "learning-x3",
+   "name": "skill-learning-x3",
    "env": "WORLD=prov KV=trans:3"
+  },
+  {
+   "name": "frontier-decision-x3",
+   "env": "WORLD=prov KV=front:3"
   }
  ]
 }
