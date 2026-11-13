@@ -2434,9 +2434,9 @@ function partitionLands(o,cells,why){
     for(const i of comp){const l=lab[i];if(l>0){s.pol[i]=l;s.s[i]=Math.min(1,s.s[i]+0.1);out.claimed+=cw(i)}else{s.pol[i]=0;out.freed+=cw(i)}lab[i]=0}
     out.ids.push(...ids)}
   return out}
-function milAt(c){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*Math.min(1,s.horse[c])*(0.3+1.5*rideAtCell(c))+1.2*s.gun[c]+0.2*admOf()[c]+0.3*s.camel[c]*w.desert[c]+(s.warX?0.4*s.warX[c]:0)}
+function milAt(c,off){const s=S,w=WD,ts=w.tsetse[c]?0.15:1;return 1+0.07*genAt(6,c)+0.05*genAt(4,c)+0.4*s.metal[c]+0.3*s.wheel[c]*ts+0.5*s.iron[c]+ts*Math.min(1,s.horse[c])*(0.3+1.5*rideAtCell(c,off))+1.2*s.gun[c]+0.2*admOf()[c]+0.3*s.camel[c]*w.desert[c]+(s.warX?0.4*s.warX[c]:0)}
 // horse switch: horses count in war once, by how well the people of the province ride them (riding tiers in herds.js)
-function rideAtCell(c){const e=S.eth[c]>=0?S.eths[S.eth[c]]:null;return e&&e.ride?e.ride:0}
+function rideAtCell(c,off){const e=S.eth[c]>=0?S.eths[S.eth[c]]:null,r=e&&e.ride?e.ride:0,l=cavAt(c,off);return l>r?l:r}
 // what a field-taxing state can take: herds move, and a herding cell yields little grain to the tax collector
 function cerealEff(i){return S.cTax[i]*(1-0.45*WD.leach[i])*(1-0.35*WD.trop[i])*(1-0.8*clamp((S.past[i]-0.45)/0.4,0,1))}
 const herdLed=o=>o&&o.kind==='state'&&(o.steppe||0)>0.5;
@@ -2544,7 +2544,7 @@ function stepCost(i,j){const w=WD,c=w.tcost[j]||2;return w.szF?Math.max(1,Math.r
 function attack(o,i,j,sea){
   const s=S,w=WD,q=s.pol[j];
   const di=dd(i);
-  let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i)*Math.exp(-di/o.h);const FLD=fieldOn();if(sea&&o.stSl>0)Ua*=1+0.3*Math.min(1,o.stSl/50000);if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
+  let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i,1)*Math.exp(-di/o.h);const FLD=fieldOn();if(sea&&o.stSl>0)Ua*=1+0.3*Math.min(1,o.stSl/50000);if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
   if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&!oreWanted(o,j)&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i)){
@@ -2606,7 +2606,7 @@ function raid(o,i,j,deep){
   const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
   const Ua=Math.pow(o.pop+1,0.75)*(0.5*o.S+0.5*s.s[i])*milAt(i),Ud=defense(j);
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
-    if(s.thr)s.thr[j]=Math.min(1,s.thr[j]+0.3);takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
+    if(s.thr)s.thr[j]=Math.min(1,s.thr[j]+0.3);if(o.kind==='horde'&&t.kind==='state')learnRide(o,j);takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;s.raidC[j]=s.year;
     displace(j,0.04,o.id);
     // a city can be sacked without being held (agreed 2026-11-05)
     if(worksOn()&&s.city[j]>=0&&Ua>2*Ud&&s.r()<(deep?0.3:0.1)){sackCity(o,j,q);S.sackRaid=(S.sackRaid||0)+1}
@@ -4192,7 +4192,7 @@ function ridePass(){
   const s=S,eths=s.eths,n=eths.length,hs=new Float64Array(n),ws=new Float64Array(n),war=new Uint8Array(n),stateXp=new Float64Array(n).fill(-1);
   const hsP=new Float64Array(s.pols.length),wsP=new Float64Array(s.pols.length);
   for(const i of WD.landIdx){const e=s.eth[i];if(e<0||s.pop[i]<1)continue;hs[e]+=s.pop[i]*s.horse[i];ws[e]+=s.pop[i];const q=s.pol[i];if(q){hsP[q]+=s.pop[i]*s.horse[i];wsP[q]+=s.pop[i]}}
-  if(transOn())transPass(hsP,wsP);
+  if(transOn())transPass();
   const thr=new Float64Array(n),thrR=new Float64Array(n);
   for(const id of s.alive){const o=s.pols[id];if(o.core==null||o.core<0)continue;if(o.enemies.size)war[o.core]=1;stateXp[o.core]=Math.max(stateXp[o.core],o.prep??0.6);
     // threat switch: a people raided by horsemen learns to ride from them, as far as its horses allow
@@ -4219,21 +4219,31 @@ function rideAdm(o,c){const r=rideOf(o),h=Math.min(1,S.horse[c]);if(h<=0||r<0.12
 function recPass(){const s=S,T=s.tk,wr=T[TI.writing],kh=T[TI.khipu],gr=T[TI.griots],dsc=T[TI.drumscript];if(!s.recK)s.recK=new Float32Array(N);
   for(const i of WD.landIdx)s.recK[i]=Math.min(1,Math.max(wr[i],0.75*kh[i]+0.15*gr[i],0.4*dsc[i]))}
 function rideOf(o){const e=o&&o.core>=0?S.eths[o.core]:null,r=e&&e.ride?e.ride:0;return o&&o.cav>r&&o.kind==='state'&&transOn()?o.cav:r}
-// Transmission, first practice (switch notrans, knob trans): a farming state takes up the mounted arm from the horsemen it meets.
-// Contact is the length of border it shares with them (a long quiet interior does not dilute a frontier), raised by war and raids; receptivity is low in quiet times and high toward
-// whoever has raided or beaten it (prestige-biased learning, Henrich & Gil-White 2001; Zhao's King Wuling, 307 BCE); horses
-// come from its own pastures or are bought from horsemen at peace across the border. The practice lapses on a quiet frontier.
+// Transmission, first practice (switch notrans, knob trans; Nein 2026-11-12): mounted fighting learned from horsemen.
+// The skill lives in the province (S.cavL). Each raid by better riders is a chance for the province struck to pick it up
+// (learnRide, called from raid); where threat is remembered and the practice has a foothold it grows year by year; it passes
+// to neighbouring provinces of the same state by their need; it fades only where the threat has gone. An able ruler beaten by
+// horsemen, or a really cunning one who sees his frontier outfight his army, adopts it for the whole army at a cost to the
+// treasury (o.cavS; Zhao's King Wuling, 307 BCE). Loyal provinces carry the skill into the state's field army; disloyal ones
+// fight well only at home (attack scales it by integration). Prestige-biased learning: Henrich & Gil-White 2001.
 const transOn=()=>!swOn('notrans');
-function transPass(hsP,wsP){const s=S,y=s.year,kt=knob('trans');
-  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||!o.nb)continue;const cav=o.cav||0;let brd=0;for(const [,wg] of o.nb)brd+=wg;
-    let best=0,from=null,peace=0;
-    for(const [q,wg] of o.nb){const t=s.pols[q];if(!t||!t.alive)continue;const e=t.core>=0?s.eths[t.core]:null,rq=Math.max(e&&e.ride||0,t.kind==='state'?t.cav||0:0);if(rq<=cav)continue;
-      const war=o.enemies.has(q),raid=o.raidBy===q&&y-(o.raidY||-1e9)<15,ct=Math.min(1,wg/3+(war?0.5:0)+(raid?0.5:0)),
-        rc=Math.min(1,0.2+(raid?0.5:0)+(war?0.3:0)+Math.min(0.3,o.shock||0)),v=ct*rc*(rq-cav);
-      if(!war&&t.kind==='horde')peace=Math.max(peace,ct);if(v>best){best=v;from=t}}
-    if(best>0){const hp=wsP[id]?hsP[id]/wsP[id]:0,ha=Math.min(1,0.1+4*hp+0.4*peace);o.cav=cav+0.36*kt*ha*best;
-      if(cav<0.5&&o.cav>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`The ${o.full} raise mounted archers after the manner of the ${from.full}.`,o.capital,[R_(o),R_(from)])}}
-    else if(cav>0)o.cav=cav*0.99}}
+const cavAt=(c,off)=>{const L=S.cavL;return L&&L[c]>0?L[c]*(off?S.integ[c]:1):0};
+function learnRide(o,j){const s=S;if(!transOn())return;const L=s.cavL||(s.cavL=new Float32Array(N)),rq=rideOf(o),gap=rq-L[j];if(gap<=0.05)return;
+  const ha=Math.min(1,0.15+3*s.horse[j]);if(s.r()<0.3*knob('trans')*gap*ha)L[j]+=0.2*gap}
+function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL;if(!L)return;const TH=s.thr,pol=s.pol,nA=w.nbA,nS=w.nbS;
+  const num=new Float64Array(s.pols.length),den=new Float64Array(s.pols.length),top=new Float32Array(s.pols.length);
+  for(const i of w.landIdx){const q=pol[i];if(!q||s.pols[q].kind!=='state'){if(L[i]>0)L[i]*=0.98;continue}
+    const th=TH?TH[i]:0,ha=Math.min(1,0.15+3*s.horse[i]);let v=L[i];
+    if(v>0.02){if(th>0.05)v+=0.03*kt*th*ha*(1-v);else v*=0.99;
+      if(v>0.1)for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||pol[j]!==q||L[j]>=v)continue;const tj=TH?TH[j]:0;L[j]+=0.02*kt*(0.05+tj)*Math.min(1,0.15+3*s.horse[j])*(v-L[j])}
+      L[i]=v}
+    const wg=s.pop[i]*(0.1+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.3)top[q]=v}
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const org=den[id]?num[id]/den[id]:0,R=o.ruler,comp=R?R.comp:0.5;let sp=o.cavS||0;
+    if(y%10===0){const F=top[id],beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';
+      if(F>sp+0.15&&(o.treas||0)>0.1&&((comp>0.5&&beaten)||comp>0.85)&&s.r()<0.5){const was=Math.max(sp,org);sp+=0.5*(F-sp);o.treas-=0.08;
+        if(was<0.5&&sp>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`${R.name} of the ${o.full} has the army take up mounted archery after the manner of its frontier.`,o.capital,[R_(o)],beaten?'Horsemen had beaten it, and its frontier provinces had learned to fight as they do.':'He saw his frontier outfighting his army.')}}
+      else if(F<sp)sp*=0.9}
+    o.cavS=sp;o.cav=Math.max(sp,org)}}
 
 // ---------- coalitions: prestige, snowballs, collapse and dominoes ----------
 // Loot and victories draw clans to a successful leader; defeat, a hard winter or a leader's death pull them apart.
