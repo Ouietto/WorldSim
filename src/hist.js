@@ -975,6 +975,7 @@ function succession(o){
       chron('culture',`The name of ${f.name} outlives its bearer: rulers of the ${s.eths[fam].name} family of peoples will style themselves ${w}.`,o.capital,[RF(f),R_(o)])}}
   // the heir inherits the whole name, and with it the measure he is held to (Nein 2026-11-12)
   if(o.kind==='horde'&&prestOn()){o.prest=(o.prest||0)*Math.min(1,knob('inh'));o.expect=Math.max(0.7*(o.expect||0),Math.min(1,o.prest||0))}
+  if(o.kind==='horde'&&portOn()&&o.alive)portionHeir(o,R0);
   if(o.kind==='horde'&&r()<0.1+0.45*(1-o.S)-0.3*Math.min(0.5,o.prest||0)+((o.prest||0)<0.05?0.15:0)+(bountyOn()?0.2*Math.min(1,o.owed||0):0)){o.shock+=0.6;if(o.cells>=10)chron('war',`On the death of ${R0.name}, the ${o.full} begins to splinter among rival chiefs.`,o.capital,[R_(o)]);hordeBreakup(o);return}
   if(usurp){o.dyn=personName(L,r);o.gen=1;o.shock+=0.3*(1-0.3*mem);o.mandate=0.75;
     if(o.cells>=60){const f=figFor(o,o.ruler,'usurper');deed(f,`Seized the throne of the ${o.full}, ending the House of ${old}`,[R_(o)]);
@@ -1612,7 +1613,7 @@ function* politicsG(){
     // still holds, it is then a state with a homeland behind it (Liao, Jin, Yuan). Run 94: on taxes alone hordes settled so readily
     // that the steppe lost its powers, so the farmers it rules must also number at least a quarter of its herders (knob settle; run 95 preferred a quarter to a half).
     // Without the switch: farmland a third of its land
-    if(o.kind==='horde'&&(wingsOn()?o.farmN>=3&&o.farmP>0.25*knob('settle')*o.nomP&&o.tax>0.1*o.loot+0.0003*o.pop*(1-0.5*Math.min(1,o.owed||0)):o.farmN>=Math.max(3,o.cells*0.3))){const old=o.full;s.settleN=(s.settleN||0)+1;o.kind='state';o.conqDyn=true;o.settledY=y;o.origin=Object.assign({},o.origin,{settled:y});o.tier=tierOf(o);o.full=fullName(o);
+    if(o.kind==='horde'&&(wingsOn()?o.farmN>=3&&o.farmP>0.25*knob('settle')*o.nomP&&o.tax*(portOn()?1-0.5*(o.grant||0):1)>0.1*o.loot+0.0003*o.pop*(1-0.5*Math.min(1,o.owed||0)):o.farmN>=Math.max(3,o.cells*0.3))){const old=o.full;s.settleN=(s.settleN||0)+1;o.kind='state';o.conqDyn=true;o.settledY=y;o.origin=Object.assign({},o.origin,{settled:y});o.tier=tierOf(o);o.full=fullName(o);
       if(o.cells>=8){chron('rise',`Masters now of settled farmland, the ${old} put down roots and rule as the ${o.full}.`,o.capital,[R_(o)]);spot(`Nomad conquerors settle as the ${o.full}`,o.capital,[R_(o)])}}
     o.tier=tierOf(o);o.full=fullName(o);
     if(o.cells>o.maxCells){o.maxCells=o.cells;o.peak=o.full}
@@ -1647,6 +1648,7 @@ function* politicsG(){
       // (switch bounty) followers are paid in loot and tribute; a khan of ten provinces or more who brings none owes them
       if(bountyOn()){if(o.cells>=10){const sat=clamp((o.loot+0.002*o.pop*o.tribs)/(0.003*o.pop+1),0,1);o.sat=sat;o.owed=clamp((o.owed||0)+0.015*knob('bounty')*(1-sat)-0.05*sat,0,1.5)}else{o.owed=(o.owed||0)*0.9;o.sat=1}
         o.gate=Math.min(2.4,o.gate*(1+0.5*Math.min(1,o.owed)))}}
+    if(o.kind==='horde'){if(portOn()){if(y%10===0)portionPass(o);o.gate=Math.min(2.4,o.gate*(1+0.4*(o.griev||0)))}}
     else if(o.saddleY&&y-o.saddleY<40)o.gate=Math.min(1.9,o.gate+0.3);
     // (switch kind) the share of a horde's yearly income that comes from settled people's tribute, tolls and taxes, learned over
     // about two generations, faster with literate subjects
@@ -1676,7 +1678,7 @@ function* politicsG(){
     o.mandate=Math.min(1,o.mandate+0.006);
     statecraft(o,c,y);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
-    const pO=(bountyOn()&&o.kind==='horde'?0.8*Math.max(0,(o.owed||0)-0.6):0)+(prestOn()&&o.kind==='horde'?2.5*Math.max(0,Math.min(1,o.expect||0)-(o.prest||0)):0),pP=Math.max(0,o.press-0.85)*3*(khanOn()&&o.kind==='horde'?1-0.7*Math.min(1,(o.hunger||0)/0.3):1),pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
+    const pO=(bountyOn()&&o.kind==='horde'?0.8*Math.max(0,(o.owed||0)-0.6):0)+(portOn()&&o.kind==='horde'?1.5*Math.max(0,(o.griev||0)-0.3):0)+(prestOn()&&o.kind==='horde'?2.5*Math.max(0,Math.min(1,o.expect||0)-(o.prest||0)):0),pP=Math.max(0,o.press-0.85)*3*(khanOn()&&o.kind==='horde'?1-0.7*Math.min(1,(o.hunger||0)/0.3):1),pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,pO,sh:o.shock};o.psi=pO+pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
     const isl=o.island?0.4:1;
     if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
