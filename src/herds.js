@@ -271,7 +271,7 @@ function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL||(s.cavL=
     L[i]=v;
     const wg=s.pop[i]*(0.02+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.15)top[q]=v}   // the army is drawn where the garrisons stand
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const org=den[id]?num[id]/den[id]:0,R=o.ruler,comp=R?R.comp:0.5;let sp=o.cavS||0;
-    o.cavTop=top[id];o.cavOrg=org;if(!eventsOn()||y-(o.revY??-1e9)>30){if(eventsOn())o.revY=y;sponsor(o)}sp=o.cavS||0;if(top[id]<sp)sp*=0.9;
+    o.cavTop=top[id];o.cavOrg=org;if(!eventsOn()||y-(o.revC??-1e9)>30){if(eventsOn())o.revC=y;sponsor(o)}sp=o.cavS||0;if(top[id]<sp)sp*=0.9;
     o.cavS=sp;o.cav=Math.max(sp,org)}
   if(frontOn())horsemenPass()}
 

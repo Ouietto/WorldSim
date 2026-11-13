@@ -441,9 +441,9 @@ function herdYear(){
   // (switch khan) clans join a winning khan, hungry or not: stateless herders beside a horde come over at a rate set by the khan's
   // name and by whether he has loot to share. Without this, hordes formed east of the Don never reached the Pontic steppe in
   // 4,000 years (2026-11-12 logs: no Pontic province ever bordered a horde), so nothing stood ready to enter Hungary
-  if(KH&&(s.year&1)===0){const J=[];for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1||!(s.past[i]>0.5)||!(w.nomad[i]||w.desert[i]))continue;let bq=0,bv=0,bj=-1;
+  if(KH){const J=[];   // yearly (was every second year at twice the chance)for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1||!(s.past[i]>0.5)||!(w.nomad[i]||w.desert[i]))continue;let bq=0,bv=0,bj=-1;
       for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(!q)continue;const o=s.pols[q];if(o.kind!=='horde'||o.cells<5)continue;const v=prestOn()?0.12*knob('join')*Math.min(1,2*(o.prest||0))*(0.5+(o.sat??0.5)):0.01*knob('join')*(1+3*Math.min(1,o.prest||0))*(0.5+(o.sat??0.5));if(v>bv){bv=v;bq=q;bj=j}}
-      if(bq&&s.r()<2*bv)J.push(i,bq,bj)}
+      if(bq&&s.r()<1-Math.sqrt(1-Math.min(1,2*bv)))J.push(i,bq,bj)}
     for(let k=0;k<J.length;k+=3){const i=J[k];if(s.pol[i])continue;s.pol[i]=J[k+1];s.taken[i]=s.year;s.dist[i]=Math.min(65534,s.dist[J[k+2]]+2);s.khanW=(s.khanW||0)+1}}
   // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
   // is how far its herds stand below a normal year's (none above 0.8 of it, full at 0.2); a clan below its ruin line for five years
@@ -892,7 +892,7 @@ function disease(){
     if(o.deaths>250000){const d=o.deaths>=1e6?`${(o.deaths/1e6).toFixed(1)} million`:`${Math.round(o.deaths/1000)} thousand`;
       chron('plague',`The ${o.name} burns out after killing about ${d} across ${Math.round(o.cells)} provinces${o.virgin?', most of them people who had never met such a disease':''}.`,o.origin,[RPl(o)]);
       if(o.deaths>5e6)spot(`The ${o.name} has killed ${d}`,o.origin,[RPl(o)])}}
-  if(s.year%5===0)for(let k=0;k<L.length;k++)s_immune[L[k]]*=0.927;
+  for(let k=0;k<L.length;k++)s_immune[L[k]]*=0.98493;   // yearly (0.927 every five years)
 }
 
 /* ---------- figures ---------- */
@@ -1363,25 +1363,26 @@ function affinity(o,p){
   return[a,threat];
 }
 function diplomacy(){
-  const s=S,r=s.r,pols=s.pols;
+  // (2026-11-13) yearly; the chances below were per five years and are converted (p5)
+  const s=S,r=s.r,pols=s.pols,p5=x=>x>=1?1:1-Math.pow(1-Math.max(0,x),0.2);
   for(const id of s.alive){const o=pols[id];
     o.allies=o.allies.filter(q=>{const p=pols[q];if(!p||!p.alive||o.enemies.has(q))return false;
       if(o.league!=null&&p.league===o.league)return true;
-      if(q>id){const [a]=affinity(o,p);if(a<0.15&&r()<0.3){p.allies=p.allies.filter(x=>x!==id);
+      if(q>id){const [a]=affinity(o,p);if(a<0.15&&r()<p5(0.3)){p.allies=p.allies.filter(x=>x!==id);
         if(o.cells>=40&&p.cells>=40)chron('diplomacy',`The alliance between the ${o.full} and the ${p.full} lapses.`,o.capital,[R_(o),R_(p)]);return false}}
       return true});
     if(o.cells<2)continue;
     for(const [q] of o.nb){if(q<=id)continue;const p=pols[q];if(!p||!p.alive||o.allies.includes(q)||o.enemies.has(q)||p.cells<2)continue;
       if((o.allies.length>=3&&o.league==null)||(p.allies.length>=3&&p.league==null)||o.allies.length>=8||p.allies.length>=8)continue;
-      let [a,threat]=affinity(o,p);const marriage=r()<0.06&&o.kind==='state'&&p.kind==='state';if(marriage)a+=0.3;
-      if(a>0.55&&r()<0.25*P.allyRate){o.allies.push(q);p.allies.push(id);
+      let [a,threat]=affinity(o,p);const marriage=r()<p5(0.06)&&o.kind==='state'&&p.kind==='state';if(marriage)a+=0.3;
+      if(a>0.55&&r()<p5(0.25*P.allyRate)){o.allies.push(q);p.allies.push(id);
         if(o.cells>=30&&p.cells>=30){const faith=o.rel>=0&&o.rel===p.rel&&threat&&threat.rel!==o.rel;
           chron('diplomacy',`The ${o.full} and the ${p.full} conclude an alliance${threat?` against the ${threat.full}`:''}${faith?`, brothers in ${s.rels[o.rel].name} against an unbelieving power`:''}${marriage?', sealed by a royal marriage':''}.`,o.capital,threat?[R_(o),R_(p),R_(threat)]:[R_(o),R_(p)])}}}
     if(o.kind==='horde'&&o.cells>=6){for(const [q] of o.nb){const p=pols[q];if(!p||!p.alive||p.kind==='horde'||p.over||o.enemies.has(q)||p.cells<3)continue;
-      if(power(o)>1.3*power(p)&&(p.raided||0)>3&&r()<0.15){p.over=id;o.tribs++;if(p.cells>=25)chron('diplomacy',`Worn down by raids, the ${p.full} agrees to pay tribute to the ${o.full}.`,p.capital,[R_(p),R_(o)])}}}
-    o.raided=0;
+      if(power(o)>1.3*power(p)&&(p.raided||0)>3&&r()<p5(0.15)){p.over=id;o.tribs++;if(p.cells>=25)chron('diplomacy',`Worn down by raids, the ${p.full} agrees to pay tribute to the ${o.full}.`,p.capital,[R_(p),R_(o)])}}}
+    o.raided=(o.raided||0)*0.8;   // raids remembered over about five years
     const y=s.year;if(o.over&&!o.overY)o.overY=y;if(!o.over)o.overY=0;
-    if(o.over&&o.kind==='state'){const ov=pols[o.over];if(ov&&ov.alive&&ov.kind==='state'&&y-o.overY>40&&power(ov)>3*power(o)&&r()<0.01*Math.max(0.1,2*(ov.hold??0.5)-selfHold(o))*(s.eths[ov.core]&&s.eths[o.core]&&s.eths[ov.core].fam===s.eths[o.core].fam?2:1)){const n=o.cells,old=o.full;for(const c of polCells(o.id)){s.pol[c]=ov.id;s.integ[c]=Math.max(s.integ[c]*0.6,0.3);s.dist[c]=Math.min(65534,(s.dist[o.capital]<65535?s.dist[o.capital]:0)+s.dist[c]+4)}ov.tribs=Math.max(0,ov.tribs-1);o.over=0;if(n>=10)chron('diplomacy',`The ${ov.full} absorbs its long-time vassal, the ${old}.`,o.capital,[R_(ov),['pol',o.id,old]]);continue}}
+    if(o.over&&o.kind==='state'){const ov=pols[o.over];if(ov&&ov.alive&&ov.kind==='state'&&y-o.overY>40&&power(ov)>3*power(o)&&r()<p5(0.01)*Math.max(0.1,2*(ov.hold??0.5)-selfHold(o))*(s.eths[ov.core]&&s.eths[o.core]&&s.eths[ov.core].fam===s.eths[o.core].fam?2:1)){const n=o.cells,old=o.full;for(const c of polCells(o.id)){s.pol[c]=ov.id;s.integ[c]=Math.max(s.integ[c]*0.6,0.3);s.dist[c]=Math.min(65534,(s.dist[o.capital]<65535?s.dist[o.capital]:0)+s.dist[c]+4)}ov.tribs=Math.max(0,ov.tribs-1);o.over=0;if(n>=10)chron('diplomacy',`The ${ov.full} absorbs its long-time vassal, the ${old}.`,o.capital,[R_(ov),['pol',o.id,old]]);continue}}
     if(o.over){const ov=pols[o.over];if(!ov||!ov.alive||power(o)>power(ov)){if(ov&&ov.alive&&o.cells>=25)chron('diplomacy',`The ${o.full} stops paying tribute to the ${ov.full}.`,o.capital,[R_(o),R_(ov)]);if(ov)ov.tribs=Math.max(0,ov.tribs-1);o.over=0}}
   }
 }
@@ -1807,7 +1808,7 @@ function* politicsG(){
     if(!aAlive||!dAlive||r()<0.02+(fresh>8?0.08:0)+(yrs>40?0.1:0)+(exA?0.06:0)+(exD?0.06:0)+((war.goal==='punitive'||war.goal==='raid'||war.goal==='captives')&&yrs>4?0.12:0)){endWar(war);continue}
     still.push(wid)}
   s.activeWars=still;
-  if(y%5===0)diplomacy();
+  diplomacy();
   yield;
   // border pass
   for(const id of s.alive)pols[id].nb=new Map();
@@ -1888,16 +1889,18 @@ function* politicsG(){
   // first great walls
   for(const id of s.alive){const o=pols[id];if(o.fortN>=8&&!o.wallLogged&&o.cells>=20){o.wallLogged=1;chron('culture',`The ${o.full} begins to fortify its frontier with a great line of walls and forts.`,o.capital,[R_(o)]);spot(`The ${o.full} builds a great wall`,o.capital,[R_(o)])}}
   for(const id of s.activeMigs.slice())migStep(s_migs[id]);
-  if(y%5===0){yield;distBFS();yield;if(y%10===0)stxPass();
+  // (2026-11-13) the distance map is a cache, refreshed every five years; everything below runs yearly, its chances converted
+  // from five years to one (p5: the yearly chance that gives p over five years)
+  if(y%5===0){yield;distBFS();yield}if(y%10===0)stxPass();{const p5=x=>x>=1?1:1-Math.pow(1-Math.max(0,x),0.2);
     for(const i of w.landIdx){const p=s_pol[i];const ob=p?s_pols[p]:null;
-      if(ob&&ob.kind==='state'&&ob.cells>=60&&s_integ[i]>0.55&&s_pop[i]>=1&&s_eths[ob.core]&&ecoD(i,ob)<0.6){const f=s_eths[ob.core].fam;if(s_uniFam[i]!==f){if(s_uni[i]<0.15){s_uniFam[i]=f;s_uni[i]=0}else{s_uni[i]*=0.985;continue}}s_uni[i]+=0.0035*(1-s_uni[i])}
-      else s_uni[i]*=0.9975}
+      if(ob&&ob.kind==='state'&&ob.cells>=60&&s_integ[i]>0.55&&s_pop[i]>=1&&s_eths[ob.core]&&ecoD(i,ob)<0.6){const f=s_eths[ob.core].fam;if(s_uniFam[i]!==f){if(s_uni[i]<0.15){s_uniFam[i]=f;s_uni[i]=0}else{s_uni[i]*=0.99698;continue}}s_uni[i]+=0.0007*(1-s_uni[i])}
+      else s_uni[i]*=0.9995}
     if(y%10===0){yield;exitPass(0,0.25);yield;exitPass(0.25,0.5);yield;exitPass(0.5,0.75);yield;exitPass(0.75,1);yield}
     const CTRL=swOn('ctrl');
     for(const i of w.landIdx){const p=s_pol[i];if(!p)continue;const o=s_pols[p];if(o.kind!=='state'||i===o.capital)continue;const ce=herdLed(o)&&s.past[i]>0.5?0.5:cerealEff(i);
       if(isWaste(i)){let rim=0;for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&s_pol[j]===p&&!isWaste(j))rim++}
-        const keep=rim>0||s_fort[i]>0.3||s_car[i]>0.3||(dd(i)<0.35*o.h&&o.S>0.4&&(o.burden||0)<1.1);if(!keep&&r()<0.3){s_pol[i]=0;continue}}
-      if(ce<0.35&&r()<0.15*(1-ce/0.35)*(1.2-0.5*s_integ[i])){s_pol[i]=0;continue}
+        const keep=rim>0||s_fort[i]>0.3||s_car[i]>0.3||(dd(i)<0.35*o.h&&o.S>0.4&&(o.burden||0)<1.1);if(!keep&&r()<p5(0.3)){s_pol[i]=0;continue}}
+      if(ce<0.35&&r()<p5(0.15*(1-ce/0.35)*(1.2-0.5*s_integ[i]))){s_pol[i]=0;continue}
       // a ruler who cannot see, pay or reach a province does not keep it: its chiefs stop answering (prestige-goods chiefdoms,
       // Earle 1997). Only weakly integrated provinces of weakly holding states drift away.
       // (step 2, control; Nein 2026-11-05: land a state cannot reach is lost or taken, so exclaves and thin salients don't last; switch
@@ -1906,20 +1909,20 @@ function* politicsG(){
       // from a heavy hand; land cut off or all but out of reach (under 0.08) stops answering whatever the realm's strength
       // a realm whose garrisons take more men than it has lets go of land that does not pay for its own
       if(ARMY&&o.garr>0.6*o.pop*(o.coord??1)&&s.city[i]<0&&s_fort[i]<0.3&&s_car[i]<0.3&&!(o.conqDyn&&s.eth[i]===o.core&&(w.nomad[i]||w.desert[i]))){const g=garrAt(i,s_integ[i],o.calm??0.5);
-        if(pop[i]*s.farm[i]*cerealEff(i)<0.5*g&&r()<0.1*Math.min(1,o.garr/(o.pop*(o.coord??1)+1)-0.6)){s_pol[i]=0;s.shedN=(s.shedN||0)+1;continue}}
+        if(pop[i]*s.farm[i]*cerealEff(i)<0.5*g&&r()<p5(0.1*Math.min(1,o.garr/(o.pop*(o.coord??1)+1)-0.6))){s_pol[i]=0;s.shedN=(s.shedN||0)+1;continue}}
       if(CTRL){const cut=s_dist[i]===65535,c=cut?0:Math.exp(-dd(i)/(o.h||6));
         if(c<0.35){let bq=0,bj=-1,bc=c+0.3;
           for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j<0)continue;const q=s_pol[j];if(!q||q===p)continue;const oq=s_pols[q];if(oq.kind!=='state'||o.over===q||oq.over===p)continue;
             const cq=Math.exp(-dd(j)/(oq.h||6));if(cq>bc){bc=cq;bq=q;bj=j}}
           if(bq){const oq=s_pols[bq],kin=s_eth[i]===oq.core,fa=s.rel[i]>=0&&s.rel[i]===oq.rel;
-            if(r()<0.03*(bc-c)*(kin?2:1)*(fa?1.5:1)*(1+Math.max(0,(o.burden||0.6)-0.8))*(1.2-s_integ[i])){
+            if(r()<p5(0.03*(bc-c)*(kin?2:1)*(fa?1.5:1)*(1+Math.max(0,(o.burden||0.6)-0.8))*(1.2-s_integ[i]))){
               s_pol[i]=bq;s.taken[i]=y;s_integ[i]=Math.min(s_integ[i],kin?0.4:0.2);s_dist[i]=Math.min(65534,s_dist[bj]+stepCost(bj,i));s.defN=(s.defN||0)+1;
               if(s.city[i]>=0)chron('fall',`${s.cities[s.city[i]].name} goes over to the ${oq.full}: the ${o.full} could no longer reach it.`,i,[R_(o),R_(oq)]);continue}}
-          if((cut||c<0.08)&&r()<(cut?0.15:0.04*(1-c/0.08))){s.lostN=(s.lostN||0)+1;
+          if((cut||c<0.08)&&r()<p5(cut?0.15:0.04*(1-c/0.08))){s.lostN=(s.lostN||0)+1;
             if(pEq(i)>=FLOOR.chief*P.floor*3&&s.farm[i]>0.5&&cerealEff(i)>=0.3){const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'Cut off from the court, its governor ruled for himself.'}});s_pol[i]=nid;
               if(szF&&szF[i]>1)grabNear(i,nid,j=>s_pol[j]===p&&j!==o.capital&&(s_dist[j]===65535||Math.exp(-dd(j)/(o.h||6))<0.08),1,0.56)}
             else s_pol[i]=0;continue}}}
-      const hd=o.hold??0.5;if(hd<0.5&&s_integ[i]<0.35&&r()<0.04*(0.5-hd)*(1-s_integ[i]/0.35)*(1+dd(i)/(o.h||6))){
+      const hd=o.hold??0.5;if(hd<0.5&&s_integ[i]<0.35&&r()<p5(0.04*(0.5-hd)*(1-s_integ[i]/0.35)*(1+dd(i)/(o.h||6)))){
         // lords carve up fallen realms (default since run 79): a governor who stops answering keeps good farmland as his own lordship
         if(pEq(i)>=FLOOR.chief*P.floor*3&&s.farm[i]>0.5&&cerealEff(i)>=0.3){const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'A governor the court could not see or pay kept his province.'}});s_pol[i]=nid;
           if(szF&&szF[i]>1)grabNear(i,nid,j=>s_pol[j]===p&&j!==o.capital&&s_integ[j]<0.35,1,0.56)}
@@ -2060,8 +2063,11 @@ function fastD(){const s=S;if(swOn('nofast')||s.fastOff)return 1;
 /* THE THREE CLOCKS (Nein 2026-11-13). Everything runs on one of three clocks; rates are written per year and a pass is told
    how many years it covers. Environmental passes keep their own slow intervals.
    YEARLY      climate, weather, climate events, origins of farming, herds, carrying capacity, growth, migration, techniques
-               (a third of the land each year), disease, politics and war, field armies, rally strength and raids of stateless
-               peoples, wars between stateless clans.
+               (a third of the land each year), disease and immunity, politics and war (with diplomacy, shedding of land,
+               breakaway governors, unification of peoples), field armies, rally strength and raids of stateless peoples,
+               wars between stateless clans, clans joining a khan.
+   CACHES      distance from each capital (every 5 years); measurement windows such as famine (a fall in five years) and
+               plague losses (in ten) are comparisons, not clocks.
    DECADE      by year of the decade, in this order: 0 records, cities, regions, colonies, leagues, rituals, mixing, sea level,
                saddle against court, portions; 3 crops, trade goods; 5 disease pools; 6 land use, slavery; 7 caravan routes;
                8 herd animals and riding, mounted skill, the frontier men's decision, costs of deals, coalitions, roads.
@@ -2164,6 +2170,7 @@ function statecraft(o,c,y){
   // garrisons on a tribal frontier
   o.treas=clamp(o.treas+0.04*(1-o.burden)-(atWar?0.02:0)-0.0004*(o.fortN||0)-0.0003*(o.tFront||0),-2,1);
   o.pF=Math.max(0,-o.treas)*0.6+0.3*Math.max(0,(o.owed||0)-0.5);
+  if(eventsOn()){const dry=o.treas<0;if(dry&&!o.dryW)review(o,'treasury');o.dryW=dry}   // the treasury running dry is a reason to review (checked yearly)
   if(o.treas<-1.2&&s.law[c]>0.5&&r()<0.02){
     if(o.ineq>0.5&&r()<0.5){o.treas=0;o.ineq=Math.max(0.2,o.ineq-0.12);o.mandate=Math.min(1,o.mandate+0.15);if(real>=25)chron('culture',`${cap(rulerName(o))} of the ${o.full} proclaims a jubilee: debts are cancelled and debt-slaves freed.`,c,[R_(o)],'Debts had piled up faster than anyone could repay them; cancelling them bought peace and loyalty.')}
     else{o.treas=-0.2;o.mandate=Math.max(0,o.mandate-0.2);o.shock+=0.3;if(real>=25)chron('fall',`The treasury of the ${o.full} is empty: the crown defaults on its debts and its soldiers go unpaid.`,c,[R_(o)],'Spending on armies and officials had long outrun what the land could pay.')}}

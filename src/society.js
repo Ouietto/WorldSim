@@ -255,9 +255,15 @@ function tributePass(){const s=S,r=s.r,w=WD;
 // the Amorites and Gutians on Sumer to the Germans on the Roman limes and the Xiongnu on Han China (Lattimore 1940; Barfield
 // 1989). A frontier province without walls, garrison or settled loyalty can be lost back to them.
 // rally: the fighters a stateless people can bring to bear on one province, from its kin within two provinces (riders from further)
-function rallyPass(){const s=S,w=WD,L=w.landIdx;if(!s.rally)s.rally=new Float32Array(N);const R=s.rally;
-  for(const i of L){R[i]=0;if(s.pol[i]||s.pop[i]<1)continue;const e=s.eth[i];if(e<0)continue;let t=0;
-    ring(i,2,(j,dx,dy)=>{if(j===i||!w.land[j]||s.pol[j]||s.eth[j]!==e)return;t+=s.pop[j]*(Math.abs(dx)+Math.abs(dy)<=2?0.6:0.3)});
+// (2026-11-13) the neighbourhood within two steps depends only on the map, so it is listed once: same sums, same order, about a
+// twentieth of the work of scanning the raster every year (the scan was 45% of a run's time once this pass went yearly)
+function rallyNb(){const w=WD;if(w._rlS)return;const L=w.landIdx,S0=new Int32Array(N+1),A=[],Wt=[];
+  for(const i of L){S0[i]=A.length;ring(i,2,(j,dx,dy)=>{if(j===i)return;A.push(j);Wt.push(Math.abs(dx)+Math.abs(dy)<=2?0.6:0.3)});S0[i+1]=A.length}
+  // provinces not in landIdx keep an empty range
+  w._rlS=S0;w._rlA=Int32Array.from(A);w._rlW=Float64Array.from(Wt);w._rlE=new Int32Array(N+1);for(const i of L)w._rlE[i]=S0[i+1]}
+function rallyPass(){const s=S,w=WD,L=w.landIdx;if(!s.rally)s.rally=new Float32Array(N);const R=s.rally;rallyNb();const nS=w._rlS,nE=w._rlE,nA=w._rlA,nW=w._rlW,land=w.land,pol=s.pol,eth=s.eth,pop=s.pop;
+  for(const i of L){R[i]=0;if(pol[i]||pop[i]<1)continue;const e=eth[i];if(e<0)continue;let t=0;
+    for(let q=nS[i],qe=nE[i];q<qe;q++){const j=nA[q];if(!land[j]||pol[j]||eth[j]!==e)continue;t+=pop[j]*nW[q]}
     const E=s.eths[e],ride=E&&E.ride?E.ride:0;R[i]=s.pop[i]+t*(0.7+0.6*ride)*(0.6+0.8*s.s[i])}}
 function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass();const R=s.rally;
   for(const id of s.alive){const o=s.pols[id];o.tFront=0}
@@ -479,7 +485,7 @@ const dealAt=(o,i)=>{const s=S;if(!s.deal)return 0;const d=s.deal[i],m=o&&o.deal
 // on taking the throne, after a raid or a lost war, when the treasury runs dry. A state reviews at most once in three years,
 // and a reign with no such event still reviews every thirty.
 const eventsOn=()=>!swOn('noevents');
-function review(o,why){const s=S;if(!eventsOn()||!o||!o.alive||!o.ruler||s.year-(o.revY??-1e9)<3)return;o.revY=s.year;o.revWhy=why;s.revN=(s.revN||0)+1;
+function review(o,why){const s=S;if(!eventsOn()||!o||!o.alive||!o.ruler||s.year-(o.revY??-1e9)<3)return;o.revY=o.revD=o.revC=o.revG=s.year;o.revWhy=why;s.revN=(s.revN||0)+1;
   if(o.kind==='state'){if(dealOn())dealPass(o);if(transOn())sponsor(o)}else if(o.kind==='horde'&&portOn())portionPass(o,1)}
 function dealPass(only){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=new Float32Array(N)),N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0}),EV=eventsOn();
   const G=new Map();   // per state: per subject people: [pop, pop*integ, provinces, worst province, its integ, pop*skill, pop under a deal]
@@ -490,7 +496,7 @@ function dealPass(only){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=n
     let dealt=0;for(const [e,g] of M)dealt+=g[6];const share=dealt/(o.pop+1);o.dealS=share;
     // what deals cost: revenue forgone, and the core people's solidarity when times are hard
     if(!only){if(share>0){o.treas=(o.treas||0)-0.04*share;o.S=Math.max(0.05,o.S-0.01*share*bite)}
-      if(EV){const dry=(o.treas||0)<0;if(dry&&!o.dryW)review(o,'treasury');o.dryW=dry;if(s.year-(o.revY??-1e9)<=30)continue;o.revY=s.year}}
+      if(EV){if(s.year-(o.revD??-1e9)<=30)continue;o.revD=s.year}}   // each decision keeps its own fallback (2026-11-13: one shared stamp let the cavalry fallback starve this one)
     for(const [e,g] of M){if(e===o.core||g[3]<0||g[0]<1)continue;const ig=g[1]/g[0],sk=g[5]/g[0],have=o.dealE?o.dealE.get(e)||0:0;
       if(ig>0.6||(o.treas||0)<-0.2)continue;
       if(!(r()<(only?0.2:0.1)*kd*(1-ig)*(gen?2:1)*(1+2*sk)))continue;   // a review comes about half as often as a decade, so each weighs double
@@ -557,7 +563,7 @@ function portionPass(o,ev){const s=S,r=s.r,N=s.portN||(s.portN={grant:0,demand:0
   if(herd<1||!o.ruler){o.griev=0;o.unprov=0;return}
   const gen=(o.ruler.char||0.5)>0.55,g0=o.grant||0,kin=o.kind==='horde'?o.kin||0:1,un=(1-Math.min(1,g0*farm/(herd+1)))*kin;o.unprov=un;
   if(un<=0.1){o.short=0;o.griev=(o.griev||0)*0.7;return}
-  const may=!eventsOn()||ev||s.year-(o.revY??-1e9)>30;if(may&&!ev&&eventsOn())o.revY=s.year;
+  const may=!eventsOn()||ev||s.year-(o.revG??-1e9)>30;if(may&&!ev&&eventsOn())o.revG=s.year;
   if(may&&farm>0&&g0<1&&r()<(gen?0.6:0.25*(o.griev||0)+(o.ruler.greed<0.4?0.2:0))){o.grant=Math.min(1,g0+0.15);o.short=0;o.griev=Math.max(0,(o.griev||0)-0.15);N.grant++;return}
   if(ev)return;
   o.short=(o.short||0)+1;if(!gen||o.short>=3)o.griev=Math.min(1,(o.griev||0)+0.1*knob('port')*un*(gen?0.6:1))}
