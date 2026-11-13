@@ -5084,7 +5084,7 @@ function dealPass(only){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=n
       if(EV){const dry=(o.treas||0)<0;if(dry&&!o.dryW)review(o,'treasury');o.dryW=dry;if(s.year-(o.revY??-1e9)<=30)continue;o.revY=s.year}}
     for(const [e,g] of M){if(e===o.core||g[3]<0||g[0]<1)continue;const ig=g[1]/g[0],sk=g[5]/g[0],have=o.dealE?o.dealE.get(e)||0:0;
       if(ig>0.6||(o.treas||0)<-0.2)continue;
-      if(!(r()<0.1*kd*(1-ig)*(gen?2:1)*(1+2*sk)))continue;
+      if(!(r()<(only?0.2:0.1)*kd*(1-ig)*(gen?2:1)*(1+2*sk)))continue;   // a review comes about half as often as a decade, so each weighs double
       // a people large and spread enough is dealt with as a people; otherwise the troublesome province alone
       if(g[2]>=4&&g[0]>0.08*o.pop&&have<1){(o.dealE||(o.dealE=new Map())).set(e,Math.min(1,have+0.35));N_.people++;o.dealY=s.year;
         for(const [e2,g2] of M)if(e2!==e&&e2!==o.core&&!(o.dealE.get(e2)>0))o.dealRes=(o.dealRes||new Map()).set(e2,0.15*bite);

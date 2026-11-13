@@ -14,12 +14,12 @@
    "env": "WORLD=prov SW=noevents"
   },
   {
-   "name": "off-frontier-decision",
-   "env": "WORLD=prov SW=nofront"
-  },
-  {
    "name": "off-deals",
    "env": "WORLD=prov SW=nodeal"
+  },
+  {
+   "name": "deals-x2",
+   "env": "WORLD=prov KV=deal:2"
   }
  ]
 }
