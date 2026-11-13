@@ -239,7 +239,7 @@ function rideAdm(o,c){const r=rideOf(o),h=Math.min(1,S.horse[c]);if(h<=0||r<0.12
 // one measure of record keeping, whatever the medium: script, knotted cords, drum language or trained memory
 function recPass(){const s=S,T=s.tk,wr=T[TI.writing],kh=T[TI.khipu],gr=T[TI.griots],dsc=T[TI.drumscript];if(!s.recK)s.recK=new Float32Array(N);
   for(const i of WD.landIdx)s.recK[i]=Math.min(1,Math.max(wr[i],0.75*kh[i]+0.15*gr[i],0.4*dsc[i]))}
-function rideOf(o){const e=o&&o.core>=0?S.eths[o.core]:null,r=e&&e.ride?e.ride:0;return o&&o.cav>r&&o.kind==='state'&&transOn()?o.cav:r}
+function rideOf(o){const e=o&&o.core>=0?S.eths[o.core]:null,r=e&&e.ride?e.ride:0;return o&&o.cav>r&&transOn()?o.cav:r}
 // Transmission, first practice (switch notrans, knob trans; Nein 2026-11-12): mounted fighting learned from horsemen.
 // The skill lives in the province (S.cavL). Each raid by better riders is a chance for the province struck to pick it up
 // (learnRide, called from raid); where threat is remembered and the practice has a foothold it grows year by year; it passes
@@ -264,7 +264,8 @@ function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL;if(!L)ret
       if(F>sp+0.15&&(o.treas||0)>0.1&&((comp>0.5&&beaten)||comp>0.85)&&s.r()<0.5){const was=Math.max(sp,org);sp+=0.5*(F-sp);o.treas-=0.08;
         if(was<0.5&&sp>=0.5){s.cavN=(s.cavN||0)+1;if(o.cells>=10)chron('war',`${R.name} of the ${o.full} has the army take up mounted archery after the manner of its frontier.`,o.capital,[R_(o)],beaten?'Horsemen had beaten it, and its frontier provinces had learned to fight as they do.':'He saw his frontier outfighting his army.')}}
       else if(F<sp)sp*=0.9}
-    o.cavS=sp;o.cav=Math.max(sp,org)}}
+    o.cavS=sp;o.cav=Math.max(sp,org)}
+  if(y%10===0&&frontOn())frontierPass()}
 
 // ---------- coalitions: prestige, snowballs, collapse and dominoes ----------
 // Loot and victories draw clans to a successful leader; defeat, a hard winter or a leader's death pull them apart.

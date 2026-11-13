@@ -459,6 +459,47 @@ function slavePass(){const s=S,w=WD,pols=s.pols,r=s.r;if(!s.slv){s.slv=new Float
 // Boke, 1260) or takes a near court; a stronger court finishes becoming its subjects' people and loses its grip on the steppe.
 // The older ruling-coalition rule (elitePass in herds.js: o.steppe, o.dual) already lets a torn court rule herders and farmers
 // under separate laws; separate offices here is the same institution, so the two share o.dual.
+// The frontier men's decision (switch nofront, knob front; Nein 2026-11-12). Each decade a connected stretch of skilled,
+// poorly integrated frontier provinces weighs what is open to it. If they judge they can beat what the state can bring
+// (judged from its recent record, so they can be wrong) they rise; if far stronger than the state they march on the capital,
+// and either sack it and go back to the grass or, under an able leader against a court that has lost its mandate, take the
+// throne. If they cannot win and no wall stands in the way they ride out to open grass, to a horde already there or as a new
+// one (the Cossack hosts). With no grass in reach and discontent very high they ravage the provinces around them, which
+// loosens those too and opens a way out. Walled in, they simmer. (Six Garrisons revolt, Northern Wei, 523.)
+const frontOn=()=>!swOn('nofront');
+function frontierPass(){const s=S,w=WD,r=s.r,L=s.cavL;if(!L)return;const N_=s.frontN||(s.frontN={rise:0,crushed:0,flee:0,join:0,ravage:0,sack:0,dynasty:0,walled:0}),kf=knob('front');
+  const seen=new Set(),nA=w.nbA,nS=w.nbS,grass=j=>w.land[j]&&(w.nomad[j]||w.desert[j]||(s.past&&s.past[j]>0.5))&&s.forest[j]<0.5;
+  for(const id of [...s.alive]){const o=s.pols[id];if(!o||!o.alive||o.kind!=='state'||o.cells<8)continue;
+    for(const i0 of polCells(id)){if(seen.has(i0)||L[i0]<0.3||s.integ[i0]>=0.4||i0===o.capital)continue;
+      const C=[i0];seen.add(i0);for(let k=0;k<C.length;k++){const i=C[k];for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j>=0&&!seen.has(j)&&s.pol[j]===id&&L[j]>=0.3&&s.integ[j]<0.4&&j!==o.capital){seen.add(j);C.push(j)}}}
+      let pp=0,sk=0,ig=0,sol=0,wall=0,far=0;for(const i of C){pp+=s.pop[i];sk+=s.pop[i]*L[i];ig+=s.integ[i];sol+=s.s[i];far+=dd(i);if(s.fort[i]>0.5)wall++}
+      if(pp<50)continue;sk/=pp;ig/=C.length;sol/=C.length;far/=C.length;const D=1-ig;
+      if(!(r()<0.15*kf*D))continue;
+      // what they can bring against what the state can bring this far from its capital, as they see it
+      const F=Math.pow(0.25*pp+1,P.scaleExp)*(0.3+sol)*(1+1.5*sk),G0=Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*(1+1.5*(o.cav||0))*Math.exp(-far/(o.h||6)),
+        seenWeak=1-0.4*Math.min(1,o.shock||0)-(o.raidY!=null&&s.year-o.raidY<10?0.2:0),rho=F/(G0*seenWeak+1),truth=F/(G0+1);
+      let out=-1,hordeNb=0;for(const i of C){for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||!grass(j))continue;const q=s.pol[j];if(!q&&s.pop[j]>=0){if(out<0)out=j}else if(q&&q!==id&&s.pols[q].kind==='horde'){hordeNb=q;if(out<0)out=j}}}
+      const top=C.reduce((a,i)=>s.pop[i]>s.pop[a]?i:a,C[0]);
+      if(rho>1){ // they rise
+        if(r()>truth/(1+truth)*1.6){N_.crushed++;for(const i of C){s.pop[i]*=0.95;L[i]*=0.7;s.integ[i]=Math.min(1,s.integ[i]+0.1)}
+          if(o.cells>=15)chron('war',`The frontier horsemen of the ${o.full} rise against it and are put down.`,top,[R_(o)],'They thought the state weaker than it was.');continue}
+        if(truth>3&&s.pol[o.capital]===id){const cap=o.capital,lead=newRuler(s.eths[s.eth[top]>=0?s.eth[top]:o.core].lang,o);
+          if(lead.comp>0.6&&(o.mandate??1)<0.6){N_.dynasty++;o.rulers.push({name:o.ruler.name,base:o.ruler.base,epithet:o.ruler.epithet,from:o.ruler.since,to:s.year,conq:o.ruler.conq,fig:o.ruler.fig,dyn:o.dyn});o.ruler=lead;o.mandate=0.7;o.shock=(o.shock||0)+0.3;for(const i of C)s.integ[i]=Math.max(s.integ[i],0.6);
+            chron('state',`The frontier horsemen of the ${o.full} march on the capital, and their leader ${lead.name} takes the throne.`,cap,[R_(o)],'They outmatched the army, the court had lost its standing, and he was able enough to rule what he had taken.');continue}
+          N_.sack++;if(typeof sackCity==='function'&&s.city[cap]>=0&&worksOn())sackCity(o,cap,id);else s.pop[cap]*=0.9;o.shock=(o.shock||0)+0.8;o.treas=Math.min(o.treas||0,0);
+          chron('war',`The frontier horsemen of the ${o.full} march on the capital, sack it, and ride back to the frontier.`,cap,[R_(o)],'They outmatched the army and wanted plunder, not a throne.')}
+        const gr=C.filter(grass).length>C.length/2,nid=newPolity(top,o,{kind:gr?'horde':'state',origin:{type:'rebellion',from:id,why:'frontier'}}),n=s.pols[nid];for(const i of C){s.pol[i]=nid;s.taken[i]=s.year}n.cav=sk;N_.rise++;o.shock=(o.shock||0)+0.3;
+        if(o.cells>=15)chron('fall',`The frontier horsemen of the ${o.full} rise and set up for themselves as the ${n.full}.`,top,[R_(o),R_(n)],'They had learned to fight as the raiders do, owed the court little, and judged it could not put them down.');continue}
+      if(out>=0&&wall<C.length*0.3){ // they ride out
+        const share=0.3;let mv=0;for(const i of C){const m=s.pop[i]*share;s.pop[i]-=m;mv+=m;L[i]*=0.6}
+        if(hordeNb&&s.pols[hordeNb].alive){const h=s.pols[hordeNb];s.pop[out]+=mv;h.prest=(h.prest||0)+0.05;h.kin=Math.min(1,(h.kin||0)+0.1);N_.join++;
+          if(o.cells>=15)chron('migration',`Frontier horsemen of the ${o.full} ride over to the ${h.full}.`,out,[R_(o),R_(h)],'They owed the court little and could not have beaten it.')}
+        else{const e=s.eth[top];if(s.pop[out]<1||s.eth[out]<0)s.eth[out]=e;s.pop[out]+=mv;const nid=newPolity(out,o,{kind:'horde',origin:{type:'rebellion',from:id,why:'frontier flight'}}),n=s.pols[nid];n.cav=sk;n.kin=0.3;N_.flee++;
+          if(o.cells>=15)chron('migration',`Frontier horsemen of the ${o.full} ride out beyond the border and raise their own standard as the ${n.full}.`,out,[R_(o),R_(n)],'They owed the court little, could not have beaten it, and no wall stood in their way.')}
+        continue}
+      if(out<0&&D>0.8){N_.ravage++;for(const i of C)for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j>=0&&s.pol[j]===id&&!seen.has(j)){s.pop[j]*=0.97;s.integ[j]=Math.max(0,s.integ[j]-0.15);if(s.thr)s.thr[j]=Math.min(1,s.thr[j]+0.3);L[j]=Math.max(L[j],0.5*sk)}}
+        o.shock=(o.shock||0)+0.1;if(o.cells>=15&&C.length>=3)chron('war',`Frontier horsemen of the ${o.full}, hemmed in, ravage the provinces around them.`,top,[R_(o)],'They wanted out, and there was no open country to ride to.');continue}
+      if(wall){N_.walled++;o.shock=(o.shock||0)+0.03}}}}
 // Portions (switch noport, knob port; Nein 2026-11-12). Plunder is shared out on the spot; tax flows to the court. So as a
 // horde's income turns from plunder to tax, the lesser khans who hold no land of their own stop being paid. A portion is land:
 // the khan grants settled country out of his own hand (o.grant), which costs the court revenue and later divides the realm
