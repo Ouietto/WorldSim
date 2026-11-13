@@ -4237,7 +4237,7 @@ function transPass(){const s=S,w=WD,y=s.year,kt=knob('trans'),L=s.cavL;if(!L)ret
     if(v>0.02){if(th>0.05)v+=0.03*kt*th*ha*(1-v);else v*=0.99;
       if(v>0.1)for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||pol[j]!==q||L[j]>=v)continue;const tj=TH?TH[j]:0;L[j]+=0.02*kt*(0.05+tj)*Math.min(1,0.15+3*s.horse[j])*(v-L[j])}
       L[i]=v}
-    const wg=s.pop[i]*(0.1+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.3)top[q]=v}
+    const wg=s.pop[i]*(0.02+th);num[q]+=wg*v*s.integ[i];den[q]+=wg;if(v>top[q]&&s.integ[i]>0.15)top[q]=v}   // the army is drawn where the garrisons stand
   for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state')continue;const org=den[id]?num[id]/den[id]:0,R=o.ruler,comp=R?R.comp:0.5;let sp=o.cavS||0;
     if(y%10===0){const F=top[id],beaten=o.raidBy&&y-(o.raidY||-1e9)<20&&s.pols[o.raidBy]&&s.pols[o.raidBy].kind==='horde';
       if(F>sp+0.15&&(o.treas||0)>0.1&&((comp>0.5&&beaten)||comp>0.85)&&s.r()<0.5){const was=Math.max(sp,org);sp+=0.5*(F-sp);o.treas-=0.08;
