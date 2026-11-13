@@ -474,14 +474,14 @@ function settleRuined(i){const s=S,w=WD;let kn=false,bit=0,best=-1,room=0;
 // land is worth having, the more where food is dense enough to defend (rich rivers and coasts: Keeley 1996; Kelly 2000). The
 // beaten flee (and may set a whole people moving), are killed, or, hemmed in, are taken in by the victors, who move onto the land.
 // Fighting binds both sides together. Peoples living beside states harden (hardOf). Every five years.
-function bandWars(){const s=S,w=WD,r=s.r,E=s.eths,seen=new Uint8Array(E.length);
-  if(craftOn())for(const e of E)if(e&&e.war)e.war*=0.975;   // every five years: half gone in about 140 years of peace
+function bandWars(dt){dt=dt||5;const s=S,w=WD,r=s.r,E=s.eths,seen=new Uint8Array(E.length),f5=dt/5;   // rates below were set for five years; f5 scales them to the years covered
+  if(craftOn())for(const e of E)if(e&&e.war)e.war*=Math.pow(0.975,f5);   // every five years: half gone in about 140 years of peace
   for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1)continue;const e=s.eth[i];if(e<0)continue;let st=0,cand=-1,n=0;
     for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(q){if(s.pols[q].kind==='state')st=1;continue}
       if(s.pop[j]>=1&&s.eth[j]>=0&&s.eth[j]!==e&&r()<1/++n)cand=j}
     if(st)seen[e]=1;
     const pr=s.pop[i]/Math.max(1,s.K[i]);if(cand<0||pr<0.85)continue;const j=cand,kdI=s.K[i]/w.area[i],kdJ=s.K[j]/w.area[j];if(kdJ<0.5*kdI)continue;
-    if(r()>pU(0.05*clamp((pr-0.85)/0.15,0,1)*clamp(kdJ/0.2,0.2,1),i))continue;
+    if(r()>pU(0.05*f5*clamp((pr-0.85)/0.15,0,1)*clamp(kdJ/0.2,0.2,1),i))continue;
     const A=Math.pow(s.pop[i]+1,0.75)*s.s[i]*milAt(i)*(1+hardOf(e))*(1+0.8*craftOf(e)),D=Math.pow(s.pop[j]+1,0.75)*s.s[j]*milAt(j)*(1+hardOf(s.eth[j]))*(1+w.rough[j])*(1+0.8*craftOf(s.eth[j]));
     s.bandW=(s.bandW||0)+1;const wonB=r()<A/(A+D);craftLearn(e,s.eth[j],wonB);
     if(wonB){const hem=s.circE[j],R=A/D;s.pop[j]*=0.95;
@@ -490,7 +490,7 @@ function bandWars(){const s=S,w=WD,r=s.r,E=s.eths,seen=new Uint8Array(E.length);
       if(s.eth2[j]===e&&s.mix[j]>0.5){const a=s.eth[j];s.eth[j]=e;s.eth2[j]=a;s.mix[j]=1-s.mix[j]}
       s.s[i]=Math.min(1,s.s[i]+0.03);s.s[j]=Math.min(1,s.s[j]+0.02)}
     else{s.pop[i]*=0.97;s.s[j]=Math.min(1,s.s[j]+0.03);s.s[i]=Math.min(1,s.s[i]+0.01)}}
-  for(let e=0;e<E.length;e++){const X=E[e];if(!X)continue;const h=X.hard||0;X.hard=seen[e]?h+0.01*(1-h):h*0.99}}
+  for(let e=0;e<E.length;e++){const X=E[e];if(!X)continue;const h=X.hard||0;X.hard=seen[e]?h+0.01*f5*(1-h):h*Math.pow(0.99,f5)}}
 // was the herd lost to the winter or to the summer?
 function dz0(i){const s=S,w=WD;return w.amp[i]/2-(w.T[i]+s.cdT[i])-4>0&&s.wm[i]>0.85}
 function computeK(){
@@ -2057,18 +2057,29 @@ function fastD(){const s=S;if(swOn('nofast')||s.fastOff)return 1;
   if(ymod(s.year,10)===0){let on=s.alive.length>0||(s.domLog&&s.domLog.length>0);if(!on){const f=s.farm,h=s.herd;for(const i of WD.landIdx)if(f[i]>0.01||h[i]>0.01){on=true;break}}
     if(on){s.fastOff=s.year;return 1}}
   return 10}
+/* THE THREE CLOCKS (Nein 2026-11-13). Everything runs on one of three clocks; rates are written per year and a pass is told
+   how many years it covers. Environmental passes keep their own slow intervals.
+   YEARLY      climate, weather, climate events, origins of farming, herds, carrying capacity, growth, migration, techniques
+               (a third of the land each year), disease, politics and war, field armies, rally strength and raids of stateless
+               peoples, wars between stateless clans.
+   DECADE      by year of the decade, in this order: 0 records, cities, regions, colonies, leagues, rituals, mixing, sea level,
+               saddle against court, portions; 3 crops, trade goods; 5 disease pools; 6 land use, slavery; 7 caravan routes;
+               8 herd animals and riding, mounted skill, the frontier men's decision, costs of deals, coalitions, roads.
+   GENERATION  (20 years) peoples and faiths.
+   SLOW        water and humidity 50 years; full climate 250 years or on a shift in carbon dioxide.
+   Rulers' choices are not on a clock: see review() (accession, raid, lost war, empty treasury). */
 function* stepG(){
   const s=S;s.year++;const FD=fastD(),hv=FD===1||ymod(s.year,FD)===0;s.dt=FD;
-  climateStep();if(WD.isEarth){if(s.year%5===0){eventPass();originsPass()}if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();if(hv&&herdsOn())herdYear();if(s.year%50===0||!s.lake)waterPass();hearthCheck();
+  climateStep();if(WD.isEarth){eventPass();originsPass(1);if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();if(hv&&herdsOn())herdYear();if(s.year%50===0||!s.lake)waterPass();hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
   if(hv){computeK();followWater();growth();yield;if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();seaHop();if(S.gzD)grazePass()}
   if(FD>1){if(hv)for(let k=0;k<3;k++){techStep(0,1);yield}}
-  else if(s.year%3===0){techStep(0,0.34);yield;techStep(0.34,0.67);yield;techStep(0.67,1);yield}
-  if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,20)===7)caravanPass();yield;
+  else{const k=ymod(s.year,3);techStep(k===0?0:k===1?0.34:0.67,k===0?0.34:k===1?0.67:1);yield}   // yearly clock; a third of the land each year, so each province is still visited once in three years at the same cost
+  if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,10)===7)caravanPass();yield;
   if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  if(s.year%5===1)rallyPass();if(ymod(s.year,5)===2&&armyOn())bandWars();if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(ymod(s.year,10)===8&&worksOn()&&s.alive.length)roadPass();if(hv&&s.year%2===0)frontierPass();
+  rallyPass();if(armyOn())bandWars(1);if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(ymod(s.year,10)===8&&worksOn()&&s.alive.length)roadPass();if(hv)frontierPass();
   if(s.year%20===0){yield;ethPass(true);yield;relPass()}
   if(ymod(s.year,10)===3){cropPass();yield}
   if(ymod(s.year,10)===6){landUsePass();yield}
@@ -2262,10 +2273,10 @@ function volcano(){
 function caravanPass(){
   // (on provinces a crossing is measured in 100 km cells, not in steps: desert provinces are large)
   const s=S,w=WD,r=s.r,L=w.landIdx,par=s.bfsPar,z=w.szF,dist=z?(s.bfsDF&&s.bfsDF.length===N?s.bfsDF:(s.bfsDF=new Float32Array(N))):s.bfsD;
-  for(const i of L)if(s.car[i]>0)s.car[i]*=0.82;
+  for(const i of L)if(s.car[i]>0)s.car[i]*=0.9055;   // decade clock: the same fading as 0.82 in twenty years
   const arid=j=>w.land[j]&&(w.desert[j]||w.Pr[j]<300);
   const srcs=[];
-  for(let t=0;t<2500&&srcs.length<14;t++){const i=rLand(r);if(arid(i)||!s.pol[i]||s.pop[i]/w.area[i]<1.5)continue;
+  for(let t=0;t<1250&&srcs.length<7;t++){const i=rLand(r);if(arid(i)||!s.pol[i]||s.pop[i]/w.area[i]<1.5)continue;
     if(s.camel[i]<0.5&&s.tk[25][i]<0.5)continue;let ok=false;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&arid(j))ok=true}if(ok)srcs.push(i)}
   const mark=s.bfsMark||(s.bfsMark=new Int32Array(N));
   for(const a of srcs){

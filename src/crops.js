@@ -214,30 +214,31 @@ function originsOn(){return WD.isEarth&&P.hearthMode==='emergent'}
 const wildOn=()=>swOn('wildmove'),seedOn=()=>swOn('seedcarry');
 function wildInit(){const s=S,w=WD;s.occ=WILD.map(()=>new Float32Array(N));for(const i of w.landIdx){const k=w.wildR[i];if(k>=0)s.occ[k][i]=w.wildW[i]}
   s.wildR=Int8Array.from(w.wildR);s.wildW=Float32Array.from(w.wildW)}
-function wildPass(){const s=S,w=WD,L=w.landIdx,v=P.wildV??0.5,R=s.wildR,Wt=s.wildW;R.fill(-1);Wt.fill(0);
+function wildPass(dt){dt=dt||5;const f5=dt/5,s=S,w=WD,L=w.landIdx,v=P.wildV??0.5,R=s.wildR,Wt=s.wildW;R.fill(-1);Wt.fill(0);
   WILD.forEach((Wd,k)=>{const o=s.occ[k],C=CROPS[CI[Wd.pk]],fit=i=>1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]);
     const src=[];for(const i of L)if(o[i]>0)src.push(i);
     // (in its refuge a plant holds on in pockets, a twentieth of its old stand, through any spell)
-    for(const i of src)if(fit(i)<0.05){const fl=w.wildR[i]===k?0.05*w.wildW[i]:0;o[i]=Math.max(fl,o[i]*0.9);if(o[i]<1e-3)o[i]=0}
+    for(const i of src)if(fit(i)<0.05){const fl=w.wildR[i]===k?0.05*w.wildW[i]:0;o[i]=Math.max(fl,o[i]*Math.pow(0.9,f5));if(o[i]<1e-3)o[i]=0}
     for(const i of src){const oi=o[i];if(oi<0.05)continue;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||o[j]>=oi||fit(j)<0.15)continue;
-      o[j]+=(oi-o[j])*Math.min(1,5*v/(100*w.nbD[e]))}}
+      o[j]+=(oi-o[j])*Math.min(1,dt*v/(100*w.nbD[e]))}}
     // a thin stand where the climate suits it thickens (a tenth of the gap in five years)
-    for(const i of src)if(o[i]>0&&o[i]<1&&fit(i)>=0.15)o[i]+=0.1*o[i]*(1-o[i]);
+    for(const i of src)if(o[i]>0&&o[i]<1&&fit(i)>=0.15)o[i]+=0.1*f5*o[i]*(1-o[i]);
     for(const i of L)if(o[i]>Wt[i]){Wt[i]=o[i];R[i]=k}})}
 // every five years
-function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.year,agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
-  if(s.occ)wildPass();const WR=s.occ?s.wildR:w.wildR,WW=s.occ?s.wildW:w.wildW;
+function originsPass(dt){if(!originsOn())return;dt=dt||5;const f5=dt/5,s=S,w=WD,L=w.landIdx,y=s.year,   // rates were set for five years; f5 scales them, and the 15 and 5 below were years per call
+  agg=WILD.map(()=>({sed:0,cul:0,dom:0,c:-1}));
+  if(s.occ&&(ymod(y,10)===0||!s.wildDone)){wildPass(10);s.wildDone=1}const WR=s.occ?s.wildR:w.wildR,WW=s.occ?s.wildW:w.wildW;
   // on provinces crowding and wild plenty are judged over the 100 km cell, as on the grid: the first village to sow is the one
   // with the best stands and the most neighbours, not the smallest valley-floor province
   const cD=w.szF?cellDensF(s.pop,'pop'):null,cK=w.szF?cellDensF(s.Kf,'kf'):null;
-  for(const i of L){const p=s.pop[i];if(p<1){s.sed[i]*=0.9;s.cultv[i]*=0.9;continue}
+  for(const i of L){const p=s.pop[i];if(p<1){const k9=Math.pow(0.9,f5);s.sed[i]*=k9;s.cultv[i]*=k9;continue}
     const la=Math.abs(w.lat[i])*57.2958,ri=WR[i];
     // farmers whose borrowed crops do poorly here take up the local wild plants too (secondary domestication: millet beside
     // borrowed rice, sorghum beside wheat that fails in the summer rains)
     if(s.farm[i]>0.5){s.sed[i]=1;if(ri<0||s.origins[WILD[ri].k])continue;const R=WILD[ri],C=CROPS[CI[R.pk]];
       const g=WW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i],Math.max(0,w.Pr[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*R.q,have=s.crop[i]>=0?s.cY[i]:0.3,pr=clamp(1.2*g-0.8*have,0,1);
-      let cv=s.cultv[i];cv=clamp(cv+0.05*pr*(1-cv)-0.01*(1-pr)*cv,0,1);s.cultv[i]=cv;let dm=s.domst[i];
-      if(cv>0.15)dm=Math.min(1,dm+15*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
+      let cv=s.cultv[i];cv=clamp(cv+f5*(0.05*pr*(1-cv)-0.01*(1-pr)*cv),0,1);s.cultv[i]=cv;let dm=s.domst[i];
+      if(cv>0.15)dm=Math.min(1,dm+3*dt*cv*Math.min(1,1.5*g)/R.t);s.domst[i]=dm;const A=agg[ri];if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}continue}
     const rich=clamp(((cK?cK[i]:s.Kf[i]/w.area[i])-0.1)/0.25,0,1);
     // wild stands: big-seeded grasses store for years; roots and fruit keep poorly and invite less settling
     let grain=0;if(ri>=0){const C=CROPS[CI[WILD[ri].pk]];grain=WW[i]*clamp(1.3*C.fit(w.T[i]+s.cdT[i]+s.evT[i],Math.max(0,w.Pr[i]*s.evP[i]+s.cdP[i]),w.rvF[i],w.elev[i]),0,1)*(WILD[ri].grain?1:0.6)*WILD[ri].q}
@@ -245,13 +246,13 @@ function originsPass(){if(!originsOn())return;const s=S,w=WD,L=w.landIdx,y=s.yea
     const cool=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0,nuts=w.forest0[i]*clamp((w.T[i]-4)/6,0,1)*clamp((24-w.T[i])/6,0,1);
     const stor=Math.max(grain,0.8*cool,0.45*nuts);
     const stress=Math.min(1,clamp(-s.evT[i]/2,0,1)+clamp((1-s.evP[i])*3,0,1)+clamp((0.85-s.wm[i])*2,0,1));
-    const tgt=rich*stor*(1-0.6*stress);let sd=s.sed[i];sd+=(tgt-sd)*(tgt>sd?0.02:0.05);s.sed[i]=sd;
+    const tgt=rich*stor*(1-0.6*stress);let sd=s.sed[i];sd+=(tgt-sd)*(tgt>sd?0.02:0.05)*f5;s.sed[i]=sd;
     let cv=s.cultv[i],dm=s.domst[i];
     if(grain>0.1&&sd>0.35){const crowd=clamp(((cD?cD[i]:p/w.area[i])-0.15)/0.4,0,1),press=Math.min(1,crowd+0.7*stress+0.6*(s.ritW?s.ritW[i]:0));
-      cv+=0.03*sd*grain*press*(1-cv)-0.006*(1-press)*cv}
-    else cv-=0.05*cv;
+      cv+=f5*(0.03*sd*grain*press*(1-cv)-0.006*(1-press)*cv)}
+    else cv-=0.05*f5*cv;
     s.cultv[i]=cv=clamp(cv,0,1);
-    if(ri>=0){const R=WILD[ri];if(cv>0.15)dm=Math.min(1,dm+5*cv*Math.min(1,1.5*grain)/R.t);else if(cv<0.1)dm=Math.max(0,dm-5*0.5/R.t);s.domst[i]=dm;
+    if(ri>=0){const R=WILD[ri];if(cv>0.15)dm=Math.min(1,dm+dt*cv*Math.min(1,1.5*grain)/R.t);else if(cv<0.1)dm=Math.max(0,dm-dt*0.5/R.t);s.domst[i]=dm;
       const A=agg[ri];if(sd>A.sed)A.sed=sd;if(cv>A.cul)A.cul=cv;if(dm>A.dom){A.dom=dm;A.c=i}}}
   WILD.forEach((R,k)=>{const A=agg[k],f=s.oriLog[R.k]||(s.oriLog[R.k]={});if(s.origins[R.k]||A.c<0)return;
     const e=s.eth[A.c]>=0?s.eths[s.eth[A.c]]:null,nm=e?`the ${e.name}`:'foragers';

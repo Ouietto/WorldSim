@@ -269,7 +269,7 @@ function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass()
     // a raid every few years where the tribes are strong; walls, garrisons and loyal settlers blunt it
     // a raid strikes before the army can come: what counts is the province's own people, walls and garrison, not the realm's strength
     const Ud=Math.pow(pEq(i)*2+1,0.75)*milAt(i)*(1+2.5*s.fort[i])*(1+1.6*w.rough[i])*(0.5+s.integ[i])*(0.6+0.8*o.S)*(0.7+0.6*(o.prep??0.6)),pw=clamp(bu/(bu+Ud),0,0.8);
-    if(r()<pF(0.06*pw,i,i)){const a=cw(i);s.pop[i]*=0.96;s.integ[i]=Math.max(0,s.integ[i]-0.12);o.shock+=0.002*a;s.raidC[i]=s.year;o.raided=(o.raided||0)+a;o.raidY=s.year;
+    if(r()<pF(0.03*pw,i,i)){const a=cw(i);   // per year (was 0.06 every second year)s.pop[i]*=0.96;s.integ[i]=Math.max(0,s.integ[i]-0.12);o.shock+=0.002*a;s.raidC[i]=s.year;o.raided=(o.raided||0)+a;o.raidY=s.year;
       // the frontier falls back: a recently taken, unwalled, unreconciled province is abandoned to the raiders
       if(s.integ[i]<0.12&&s.fort[i]<0.3&&i!==o.capital&&s.city[i]<0&&s.year-(s.taken[i]||-1e9)<300&&r()<0.5){s.pol[i]=0;
         if(o.cells>=20&&r()<0.05)chron('war',`Raiders from the ${s.eths[s.eth[best]]?s.eths[s.eth[best]].name:'hill tribes'} drive the settlers of the ${o.full} from a frontier province.`,i,[R_(o)])}}}}
