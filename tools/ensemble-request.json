@@ -10,24 +10,16 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "inherit-60pc",
-   "env": "WORLD=prov KV=inh:0.6"
+   "name": "off-mounted-archery-learning",
+   "env": "WORLD=prov SW=notrans"
   },
   {
-   "name": "frontier-khans-x5",
-   "env": "WORLD=prov KV=fkhan:5"
+   "name": "learning-x3",
+   "env": "WORLD=prov KV=trans:3"
   },
   {
-   "name": "threat-garrisons-double-again",
-   "env": "WORLD=prov KV=gthr:2"
-  },
-  {
-   "name": "off-herd-lore",
-   "env": "WORLD=prov SW=nolore"
-  },
-  {
-   "name": "off-thinking-in-kind",
-   "env": "WORLD=prov SW=nokind"
+   "name": "learning-x10",
+   "env": "WORLD=prov KV=trans:10"
   }
  ]
 }
