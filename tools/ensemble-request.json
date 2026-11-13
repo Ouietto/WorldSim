@@ -18,12 +18,16 @@
    "env": "WORLD=prov SW=notrans"
   },
   {
-   "name": "off-road-use",
-   "env": "WORLD=prov SW=noroaduse"
+   "name": "off-deals",
+   "env": "WORLD=prov SW=nodeal"
   },
   {
-   "name": "skill-learning-x3",
-   "env": "WORLD=prov KV=trans:3"
+   "name": "deals-third-as-often",
+   "env": "WORLD=prov KV=deal:0.33"
+  },
+  {
+   "name": "frontier-decision-third-as-often",
+   "env": "WORLD=prov KV=front:0.33"
   }
  ]
 }
