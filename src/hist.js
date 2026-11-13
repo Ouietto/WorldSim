@@ -1151,7 +1151,7 @@ function haulAt(c){const s=S,w=WD,an=Math.max(0.8*Math.min(1,s.horse[c]),s.camel
 // fortified and walled. The men posted also count in its defence.
 const gthrOn=()=>!swOn('nogthr'),thrAt=i=>S.thr&&gthrOn()?S.thr[i]:0;
 function garrAt(i,integ,calm,t){const s=S,w=WD,h=1-integ;if(t==null)t=i;const T=thrAt(i),G=gthrOn();
-  return GAR*cw(i)*(0.02+(G?0.7:1)*h*h*(1+1.5*w.rough[i]+1.5*s.forest[i])*(1-0.6*calm)+(G?1*knob('gthr')*T*(0.3+h):0))/(1+0.5*s.iron[t]+0.7*s.roads[t]+0.6*s.recK[t]+1.5*s.fort[i]+2*s.gun[t])}
+  return GAR*cw(i)*(0.02+(G?0.7:1)*h*h*(1+1.5*w.rough[i]+1.5*s.forest[i])*(1-0.6*calm)+(G?2*knob('gthr')*T*(0.3+h):0))/(1+0.5*s.iron[t]+0.7*s.roads[t]+0.6*s.recK[t]+1.5*s.fort[i]+2*s.gun[t])}
 const calmOf=o=>clamp(0.5+0.5*(o.leg??1)-Math.max(0,(o.burden||0.6)-0.8),0,1);
 // a people that has lived beside states for generations learns their weapons and their ways of war, and holds together better
 // against them (the Germans of the Rhine frontier, Wells 1999; Heather 2009): hard, 0 to 1, on each people
