@@ -353,11 +353,19 @@ function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of
    that exist, not the knowledge of how to build them. Walls draw on the same labour. Every ten years. */
 const worksOn=()=>!swOn('noworks');
 const RD=j=>S.road?S.road[j]>0.5:S.roads[j]>0.5;
+// (switch noroaduse; Nein 2026-11-12) a road serves whoever is on it: an invader advances faster into roaded country, built
+// roads carry techniques (the transmission network), a horde that has learned to live off settled people keeps up the roads it
+// holds, and a ruler builds toward his aims: a warlike one toward the borders he means to cross, an able one toward far,
+// loosely held provinces.
+const roadUse=()=>!swOn('noroaduse');
+function roadAim(o,i){const s=S,w=WD,R=o.ruler;if(!R)return 1;let m=1;
+  if(R.aggr>0.6){let b=0;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&s.pol[j]&&s.pol[j]!==o.id){b=o.enemies.has(s.pol[j])?2:1;if(b===2)break}}m*=1+b*(R.aggr-0.6)*5+(s.thr?s.thr[i]:0)}
+  if(R.comp>0.6&&s.integ[i]<0.5)m*=1+(R.comp-0.6)*5*(0.5-s.integ[i])*2;return m}
 function roadPass(){const s=S,w=WD,pols=s.pols;if(!s.road)s.road=new Float32Array(N);const R=s.road,cand=new Map();
   for(const id of s.alive){const o=pols[id];o.roadN=0;if(o.kind==='state'&&s.roads[o.capital]>0.3)cand.set(id,[])}
-  for(const i of w.landIdx){const p=s.pol[i],o=p?pols[p]:null;if(R[i]>0){if(!o||o.kind!=='state'){R[i]*=0.8;if(R[i]<0.02)R[i]=0}else o.roadN+=cw(i)*R[i]}
+  for(const i of w.landIdx){const p=s.pol[i],o=p?pols[p]:null;if(R[i]>0){if(!o||o.kind!=='state'){R[i]*=o&&roadUse()?0.8+0.2*Math.min(1,o.kin||0):0.8;if(R[i]<0.02)R[i]=0}else o.roadN+=cw(i)*R[i]}
     if(!o||R[i]>=0.95)continue;const C=cand.get(p);if(!C)continue;let adj=i===o.capital;if(!adj)for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&s.pol[j]===p&&(j===o.capital||R[j]>0.5)){adj=true;break}}
-    if(!adj)continue;const sc=(s.city[i]>=0||s.fort[i]>0.3?3:1)*(1+Math.min(1,s.car[i]))*Math.min(3,s.pop[i]/w.area[i]/5+0.2)/(1+2*w.rough[i]);
+    if(!adj)continue;const sc=(s.city[i]>=0||s.fort[i]>0.3?3:1)*(1+Math.min(1,s.car[i]))*Math.min(3,s.pop[i]/w.area[i]/5+0.2)/(1+2*w.rough[i])*(roadUse()?roadAim(o,i):1);
     if(C.length<24)C.push([sc,i]);else{let m=0;for(let k=1;k<24;k++)if(C[k][0]<C[m][0])m=k;if(sc>C[m][0])C[m]=[sc,i]}}
   for(const [id,C] of cand){const o=pols[id];let B=8*(o.levy||0)+4*clamp(o.treas||0,0,1)*(o.mon||0);const keep=0.1*o.roadN+0.05*(o.fortN||0);
     o.roadPaid=B>=keep;B-=keep;if(B>0){C.sort((a,b)=>b[0]-a[0]);for(const [sc,i] of C){const cost=cwL(i)*(1+2*w.rough[i]);if(B<cost*0.3)break;const add=Math.min(1-R[i],B/cost);R[i]+=add;B-=add*cost;o.roadN+=cw(i)*add;s.roadB=(s.roadB||0)+add*cw(i)}}

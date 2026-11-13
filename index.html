@@ -2091,7 +2091,7 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
     // (on provinces: the people of the province and its neighbours as if spread over five 100 km cells)
     if(szF){let a=w_area[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]){conn+=s_pop[j];a+=w_area[j]}}conn*=5*w_area[i]*szF[i]/a}
     else for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0)conn+=s_pop[j]}
-    const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+0.2*s_roads[i]+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
+    const rvb=(1+0.5*w_rv[i])*(1+0.3*s_paper[i]+(roadUse()&&s.road?0.1*s_roads[i]+0.4*s.road[i]:0.2*s_roads[i])+0.3*T[TI.alphabet][i]+0.4*T[TI.printing][i]);
     // narrow straits were crossed in skin boats and dugouts long before seafaring (Crete by 7000 BCE, Britain by 4000 BCE)
     const ls0=w_ls[i],ls1=s_sail[i]>0.3?w_ls[i+1]:ls0,lsE=w_ls[i+1];
     const dark=po?po.cult<0.1:true;
@@ -3181,7 +3181,7 @@ function* politicsG(){
         if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1&&prestOn()&&w_sH[cand]>0.45&&s.forest[cand]<0.5&&r()<pF(P.raid*0.02*o.aggrM*o.gate*w_sH[cand],i,cand)){attack(o,i,cand,candSea);s.grassTake=(s.grassTake||0)+1}
         else if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1&&kindOn()&&(o.kin||0)>0.15&&r()<pF(P.raid*0.01*o.aggrM*o.gate*o.kin,i,cand)){attack(o,i,cand,candSea);s.kinTake=(s.kinTake||0)+1}
         else if(horde&&!q&&!w_nomad[cand]&&!w_desert[cand]&&pop[cand]>=1){if(r()<pF(P.raid*0.02*o.aggrM*o.gate,i,cand)){s.raidC[cand]=y;const t0=pop[cand]*0.03;pop[cand]-=t0;o.loot+=t0*0.5;displace(cand,0.02,o.id)}}
-        else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(q&&o.arm&&o.enemies.has(q)){o.hotN=(o.hotN||0)+1;if(!o.hot)o.hot=[i];else if(o.hot.length<3)o.hot.push(i);else if(r()*o.hotN<3)o.hot[(r()*3)|0]=i}if(r()<pF(rate*o.aggrM*(o.aimM||1)*o.gate,i,cand)){if(wg&&(wg.goal==='raid'||wg.goal==='captives')&&wg.aSet.has(o.id)&&!candSea){raid(o,i,cand,wg.goal==='captives');if(o.kind==='state')o.treas=Math.min(1,(o.treas||0)+0.01)}else attack(o,i,cand,candSea)}}}
+        else{const wg=q?s_wars[o.enemies.get(q)]:null,rate=(wg&&wg.goal==='punitive'&&wg.aSet.has(o.id)?2:1)*(q?wr*2*(1+3*s_circE[cand]):wr*(horde?0.25+0.75*rideOf(o):Math.min(1,Math.max(0.1,pop[i]/w_area[i]/6))*(0.3+0.7*Math.min(1,o.press))*(1+2*s_gun[i])));if(q&&o.arm&&o.enemies.has(q)){o.hotN=(o.hotN||0)+1;if(!o.hot)o.hot=[i];else if(o.hot.length<3)o.hot.push(i);else if(r()*o.hotN<3)o.hot[(r()*3)|0]=i}if(r()<pF(rate*(q&&roadUse()&&s.road?1+0.6*s.road[cand]:1)*o.aggrM*(o.aimM||1)*o.gate,i,cand)){if(wg&&(wg.goal==='raid'||wg.goal==='captives')&&wg.aSet.has(o.id)&&!candSea){raid(o,i,cand,wg.goal==='captives');if(o.kind==='state')o.treas=Math.min(1,(o.treas||0)+0.01)}else attack(o,i,cand,candSea)}}}
       if(horde&&rcand>=0&&r()<pF(P.raid*0.025*o.aggrM*o.gate*(1-0.8*s_fort[rcand]),i,rcand))raid(o,i,rcand);
       const c=o.core;
       if(ei>=0&&c>=0&&ei!==c&&pi>=1&&!o.conqDyn&&r()<P.assim*0.004*o.S*(1-0.8*ethDist(ei,c))*(ri>=0&&ri===o.rel?1.5:1))s_eth[i]=c;
@@ -4922,11 +4922,19 @@ function oreWanted(o,j){const G=S.ore;if(!G||!o.gmet)return false;for(const g of
    that exist, not the knowledge of how to build them. Walls draw on the same labour. Every ten years. */
 const worksOn=()=>!swOn('noworks');
 const RD=j=>S.road?S.road[j]>0.5:S.roads[j]>0.5;
+// (switch noroaduse; Nein 2026-11-12) a road serves whoever is on it: an invader advances faster into roaded country, built
+// roads carry techniques (the transmission network), a horde that has learned to live off settled people keeps up the roads it
+// holds, and a ruler builds toward his aims: a warlike one toward the borders he means to cross, an able one toward far,
+// loosely held provinces.
+const roadUse=()=>!swOn('noroaduse');
+function roadAim(o,i){const s=S,w=WD,R=o.ruler;if(!R)return 1;let m=1;
+  if(R.aggr>0.6){let b=0;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&s.pol[j]&&s.pol[j]!==o.id){b=o.enemies.has(s.pol[j])?2:1;if(b===2)break}}m*=1+b*(R.aggr-0.6)*5+(s.thr?s.thr[i]:0)}
+  if(R.comp>0.6&&s.integ[i]<0.5)m*=1+(R.comp-0.6)*5*(0.5-s.integ[i])*2;return m}
 function roadPass(){const s=S,w=WD,pols=s.pols;if(!s.road)s.road=new Float32Array(N);const R=s.road,cand=new Map();
   for(const id of s.alive){const o=pols[id];o.roadN=0;if(o.kind==='state'&&s.roads[o.capital]>0.3)cand.set(id,[])}
-  for(const i of w.landIdx){const p=s.pol[i],o=p?pols[p]:null;if(R[i]>0){if(!o||o.kind!=='state'){R[i]*=0.8;if(R[i]<0.02)R[i]=0}else o.roadN+=cw(i)*R[i]}
+  for(const i of w.landIdx){const p=s.pol[i],o=p?pols[p]:null;if(R[i]>0){if(!o||o.kind!=='state'){R[i]*=o&&roadUse()?0.8+0.2*Math.min(1,o.kin||0):0.8;if(R[i]<0.02)R[i]=0}else o.roadN+=cw(i)*R[i]}
     if(!o||R[i]>=0.95)continue;const C=cand.get(p);if(!C)continue;let adj=i===o.capital;if(!adj)for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&s.pol[j]===p&&(j===o.capital||R[j]>0.5)){adj=true;break}}
-    if(!adj)continue;const sc=(s.city[i]>=0||s.fort[i]>0.3?3:1)*(1+Math.min(1,s.car[i]))*Math.min(3,s.pop[i]/w.area[i]/5+0.2)/(1+2*w.rough[i]);
+    if(!adj)continue;const sc=(s.city[i]>=0||s.fort[i]>0.3?3:1)*(1+Math.min(1,s.car[i]))*Math.min(3,s.pop[i]/w.area[i]/5+0.2)/(1+2*w.rough[i])*(roadUse()?roadAim(o,i):1);
     if(C.length<24)C.push([sc,i]);else{let m=0;for(let k=1;k<24;k++)if(C[k][0]<C[m][0])m=k;if(sc>C[m][0])C[m]=[sc,i]}}
   for(const [id,C] of cand){const o=pols[id];let B=8*(o.levy||0)+4*clamp(o.treas||0,0,1)*(o.mon||0);const keep=0.1*o.roadN+0.05*(o.fortN||0);
     o.roadPaid=B>=keep;B-=keep;if(B>0){C.sort((a,b)=>b[0]-a[0]);for(const [sc,i] of C){const cost=cwL(i)*(1+2*w.rough[i]);if(B<cost*0.3)break;const add=Math.min(1-R[i],B/cost);R[i]+=add;B-=add*cost;o.roadN+=cw(i)*add;s.roadB=(s.roadB||0)+add*cw(i)}}
@@ -5753,6 +5761,11 @@ function buildComp(){
   {const sd=subImg.data,od=OVD,rep=SUB.rep;for(let q=0;q<SN;q++){const j=rep[q],o=q*4;if(j<0){sd[o+3]=0;continue}const r=j*4;sd[o]=od[r];sd[o+1]=od[r+1];sd[o+2]=od[r+2];sd[o+3]=od[r+3]}
    subCtx.putImageData(subImg,0,0)}
   ctx.imageSmoothingEnabled=true;ctx.drawImage(subCv,0,0,HW,HH);
+  if(m==='roads'&&s.road){ // built roads as lines between the middles of neighbouring roaded provinces, heavier where finished
+    const R=s.road,px=i=>(w.cxA[i]+0.5)/W*HW,py=i=>(90-w.lat[i]*180/Math.PI)/180*HH,full=new Path2D(),part=new Path2D();
+    for(const i of w.landIdx){if(R[i]<0.3)continue;const x=px(i),y=py(i);for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<=i||R[j]<0.3)continue;const x2=px(j);if(Math.abs(x2-x)>HW/2)continue;const P_=R[i]>0.7&&R[j]>0.7?full:part;P_.moveTo(x,y);P_.lineTo(x2,py(j))}}
+    ctx.lineCap='round';ctx.strokeStyle='rgba(255,246,232,.9)';ctx.lineWidth=2.6;ctx.stroke(full);ctx.strokeStyle='rgba(60,30,10,.95)';ctx.lineWidth=1.3;ctx.stroke(full);
+    ctx.strokeStyle='rgba(60,30,10,.6)';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);ctx.stroke(part);ctx.setLineDash([])}
   if(m==='political'||m==='alliances'||m==='peoples'||m==='religion'){
     const key=m==='peoples'?s.eth:m==='religion'?s.rel:s.pol,polMode=m==='political'||m==='alliances';
     let selP=0;if(ui.page){if(polMode&&ui.page.t==='pol')selP=ui.page.id;else if(m==='peoples'&&ui.page.t==='eth')selP=ui.page.id;else if(m==='religion'&&ui.page.t==='rel')selP=ui.page.id;else if(ui.page.t==='cell')selP=key[ui.page.id]}

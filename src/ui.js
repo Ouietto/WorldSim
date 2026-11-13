@@ -194,6 +194,11 @@ function buildComp(){
   {const sd=subImg.data,od=OVD,rep=SUB.rep;for(let q=0;q<SN;q++){const j=rep[q],o=q*4;if(j<0){sd[o+3]=0;continue}const r=j*4;sd[o]=od[r];sd[o+1]=od[r+1];sd[o+2]=od[r+2];sd[o+3]=od[r+3]}
    subCtx.putImageData(subImg,0,0)}
   ctx.imageSmoothingEnabled=true;ctx.drawImage(subCv,0,0,HW,HH);
+  if(m==='roads'&&s.road){ // built roads as lines between the middles of neighbouring roaded provinces, heavier where finished
+    const R=s.road,px=i=>(w.cxA[i]+0.5)/W*HW,py=i=>(90-w.lat[i]*180/Math.PI)/180*HH,full=new Path2D(),part=new Path2D();
+    for(const i of w.landIdx){if(R[i]<0.3)continue;const x=px(i),y=py(i);for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<=i||R[j]<0.3)continue;const x2=px(j);if(Math.abs(x2-x)>HW/2)continue;const P_=R[i]>0.7&&R[j]>0.7?full:part;P_.moveTo(x,y);P_.lineTo(x2,py(j))}}
+    ctx.lineCap='round';ctx.strokeStyle='rgba(255,246,232,.9)';ctx.lineWidth=2.6;ctx.stroke(full);ctx.strokeStyle='rgba(60,30,10,.95)';ctx.lineWidth=1.3;ctx.stroke(full);
+    ctx.strokeStyle='rgba(60,30,10,.6)';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);ctx.stroke(part);ctx.setLineDash([])}
   if(m==='political'||m==='alliances'||m==='peoples'||m==='religion'){
     const key=m==='peoples'?s.eth:m==='religion'?s.rel:s.pol,polMode=m==='political'||m==='alliances';
     let selP=0;if(ui.page){if(polMode&&ui.page.t==='pol')selP=ui.page.id;else if(m==='peoples'&&ui.page.t==='eth')selP=ui.page.id;else if(m==='religion'&&ui.page.t==='rel')selP=ui.page.id;else if(ui.page.t==='cell')selP=key[ui.page.id]}
