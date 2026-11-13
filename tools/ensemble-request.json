@@ -18,8 +18,8 @@
    "env": "WORLD=prov SW=nodeal"
   },
   {
-   "name": "deals-x2",
-   "env": "WORLD=prov KV=deal:2"
+   "name": "off-frontier-decision",
+   "env": "WORLD=prov SW=nofront"
   }
  ]
 }

@@ -27,6 +27,17 @@ def main():
             ("EARTH_LAKE_B64", "earth_lake.b64"),
         )
     )
+    # A comment written at the end of a line hides everything after it on that line. Warn where the text after "//" looks
+    # like code (2026-11-13: an edit that put a comment in the middle of a line silently switched off frontier raids).
+    import re
+    code_like = re.compile(r"(\b[sowSE]\.[A-Za-z_]+(\[|=|\*=|\+=)|=Math\.|\)\{|;\}|\bconst [a-zA-Z_]+=)")
+    for name in ("world.js", "climate.js", "lang.js", "hist.js", "crops.js", "herds.js", "tech.js", "society.js", "provinces.js", "ui.js"):
+        for n, line in enumerate(read(name).splitlines(), 1):
+            if line.lstrip().startswith("//"):
+                continue
+            k = line.find("   // ")
+            if k > 0 and code_like.search(line[k:]):
+                print(f"WARNING {name}:{n}: code after an end-of-line comment: ...{line[k:k+90]}")
     page = (
         read("shell.html") + '\n<script id="assets">' + assets
         + '</script>\n<script id="core">\n' + core
