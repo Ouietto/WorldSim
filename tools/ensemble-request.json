@@ -10,16 +10,20 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "decisions-on-the-decade-clock",
-   "env": "WORLD=prov SW=noevents"
+   "name": "off-mobility",
+   "env": "WORLD=prov SW=nomob"
   },
   {
-   "name": "off-deals",
-   "env": "WORLD=prov SW=nodeal"
+   "name": "off-horde-reach-and-edge",
+   "env": "WORLD=prov SW=nohreach"
   },
   {
-   "name": "off-frontier-decision",
-   "env": "WORLD=prov SW=nofront"
+   "name": "off-supply-lines",
+   "env": "WORLD=prov SW=nosupply"
+  },
+  {
+   "name": "mobility-half",
+   "env": "WORLD=prov KV=mob:0.5"
   }
  ]
 }
