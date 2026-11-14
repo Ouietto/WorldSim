@@ -18,6 +18,8 @@ const CHECKS=[
   ['notrans','provinces with mounted skill at a working level', o=>o.skill&&o.skill.n5],
   ['nofront','frontier horsemen acting (leave, join, ravage)', o=>(o.ev.fFlee||0)+(o.ev.fJoin||0)+(o.ev.fRavage||0)],
   ['noport', 'portions granted to lesser khans', o=>o.ev.pGrant],
+  ['nomob',  'faster side choosing its moment or slipping away', o=>(o.ev.mChoose||0)+(o.ev.mEvade||0)],
+  ['nomob',  'strike and flee wearing down ground', o=>o.ev.mHarass],
 ];
 const run=seed=>new Promise(res=>{let out='',err='';const p=spawn(process.execPath,[path.join(__dirname,'run1.js'),seed,END],{env});
   p.stdout.on('data',d=>out+=d);p.stderr.on('data',d=>err+=d);
@@ -28,4 +30,6 @@ const run=seed=>new Promise(res=>{let out='',err='';const p=spawn(process.execPa
   const ok=res.filter(r=>r.o);
   if(ok.length)for(const [sw,label,f] of CHECKS){if(sw&&sw!=='events'&&!on(sw))continue;if(sw==='events'&&!on('noevents'))continue;
     const v=ok.map(r=>+f(r.o)||0),tot=v.reduce((a,b)=>a+b,0);console.log(`${tot>0?'ok  ':'FAIL'} ${label}: ${v.map(x=>+x.toFixed(2)).join(', ')}`);if(!(tot>0))fail++}
+  {const tp={};for(const r of ok)for(const [k,v] of Object.entries(r.o.time&&r.o.time.pass||{}))tp[k]=(tp[k]||0)+v/ok.length;
+    console.log('time per pass (mean s): '+Object.entries(tp).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>k+' '+v.toFixed(0)).join(', '))}
   console.log(`${fail?'SMOKE TEST FAILED':'Smoke test passed'} (${res.length} histories to ${END}, ${((Date.now()-t0)/60000).toFixed(1)} min)`);process.exit(fail?1:0)})();

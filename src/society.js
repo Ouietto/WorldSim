@@ -513,6 +513,21 @@ function dealPass(only){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=n
 function dealHeir(o){const s=S,R=o.ruler;if(!o.dealE||!o.dealE.size||!(R.greed>0.7||(o.treas||0)<-0.3)||s.r()>0.25)return;const N_=s.dealN||(s.dealN={prov:0,people:0,revoke:0});N_.revoke++;
   const E=o.dealE;for(const i of polCells(o.id)){if(E.get(s.eth[i])>0)s.integ[i]*=0.5;if(s.deal)s.deal[i]=0}o.dealE=null;o.shock=(o.shock||0)+0.2;
   if(o.cells>=15)chron('state',`${R.name} of the ${o.full} revokes the terms his predecessors gave their subject peoples.`,o.capital,[R_(o)],(o.treas||0)<-0.3?'The treasury was empty and their privileges cost it revenue.':'He wanted their dues in full.')}
+// The edge of a loose horde (switch nohreach, knob hedge; Nein 2026-11-13). While a horde holds together its khan is obeyed to the
+// edge of the grass; when it does not, the lesser khans at the far end weigh their own strength against what he can bring that far,
+// and may ride off with their stretch of pasture as a horde of their own. Checked each decade.
+function hordeEdge(o){const s=S,r=s.r,w=WD;if(swOn('nohreach')||o.kind!=='horde'||!o.alive||(o.S??1)>=0.5)return;
+  if(!(r()<0.3*knob('hedge')*(0.5-o.S)/0.5))return;
+  const P_=polCells(o.id);if(P_.length<8)return;let far=-1,md=0;for(const i of P_){const d=dd(i);if(d>md&&i!==o.capital){md=d;far=i}}
+  if(far<0||md<0.5*(o.h||6))return;
+  const seen=new Set([far]),C=[far],nA=w.nbA,nS=w.nbS;for(let k=0;k<C.length;k++){const i=C[k];for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j>=0&&!seen.has(j)&&s.pol[j]===o.id&&j!==o.capital&&dd(j)>0.6*md){seen.add(j);C.push(j)}}}
+  if(C.length<3||C.length>0.5*P_.length)return;
+  let pp=0,sol=0;for(const i of C){pp+=s.pop[i];sol+=s.s[i]}sol/=C.length;
+  const F=Math.pow(pp+1,P.scaleExp)*(0.3+sol),G=Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*hReach(o,md),rho=F/(G+1);
+  if(!(r()<rho/(1+rho)))return;
+  const top=C.reduce((a,i)=>s.pop[i]>s.pop[a]?i:a,C[0]),nid=newPolity(top,o,{kind:'horde',origin:{type:'rebellion',from:o.id,why:'edge'}}),n=s.pols[nid];
+  for(const i of C){s.pol[i]=nid;s.taken[i]=s.year}n.prest=0.3*(o.prest||0);s.hEdgeN=(s.hEdgeN||0)+1;o.shock=(o.shock||0)+0.2;
+  if((o.cA||o.cells)>=15)chron('fall',`The lesser khans at the far edge of the ${o.full} ride off on their own as the ${n.full}.`,top,[R_(o),R_(n)],'The horde no longer held together, and the khan could not reach them there.')}
 // The frontier men's decision (switch nofront, knob front; Nein 2026-11-12). Each decade a connected stretch of skilled,
 // poorly integrated frontier provinces weighs what is open to it. If they judge they can beat what the state can bring
 // (judged from its recent record, so they can be wrong) they rise; if far stronger than the state they march on the capital,
