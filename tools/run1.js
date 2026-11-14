@@ -77,7 +77,30 @@ const headOf=o=>{if(o.over&&S.pols[o.over]&&S.pols[o.over].alive)return'p'+o.ove
 const held=R=>{const cnt=new Map();let tot=0;for(const i of R.cells){const pp=S.pop[i];tot+=pp;const p=S.pol[i];if(!p)continue;const o=S.pols[p],key=headOf(o);
   if(key==='p'+o.id&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;cnt.set(key,(cnt.get(key)||0)+pp*(o.coord??1))}let best=0;for(const c of cnt.values())if(c>best)best=c;return tot>0&&best>=0.3*tot&&best>=1e5};
 const sus=a=>{for(let t=0;t<a.length;t++){if(!a[t][1])continue;const n=Math.min(20,a.length-t);if(n<5)return null;let k=0;for(let u=t;u<t+n;u++)if(a[u][1])k++;if(k>=0.75*n)return a[t][0]}return null};
-while(S.year<END){step();
+// time spent in each pass of the main loop (inclusive of what each calls), reported as out.time in seconds
+const TIME={};{const PASSES='armyYear bandWars caravanPass carbonPass cityPass climUpdateG climateStep coalitionPass colonizePass colonyPass computeK cropPass deepPass disease ethPass eventPass frontierPass genCache goodsPass grazePass growth herdPass herdYear humidStep landUsePass leaguePass matrixPass migrate mixPass originsPass politicsG poolPass rallyPass recPass recordStats regionPass relPass ritualPass roadPass seaHop seaStep slavePass techStep volcano waterPass weather'.split(' ');
+  const now=()=>{const h=process.hrtime();return h[0]+h[1]*1e-9};
+  for(const n of PASSES){let f;try{f=eval(n)}catch(e){continue}if(typeof f!=='function')continue;
+    if(f.constructor.name==='GeneratorFunction')eval(n+'=function*(...a){const it=f.apply(this,a);for(;;){const t0=now();const r=it.next();TIME[n]=(TIME[n]||0)+now()-t0;if(r.done)return r.value;yield r.value}}');
+    else eval(n+'=function(...a){const t0=now();try{return f.apply(this,a)}finally{TIME[n]=(TIME[n]||0)+now()-t0}}')}}
+// Saved starts (2026-11-13). SNAP_AT=<year> SNAP_OUT=<file>: run to that year, save the whole history (with this tool's own
+// records) and stop. SNAP_IN=<file>: resume a saved history instead of starting one, to END, under this run's switches and knobs.
+// The history, the world and the run's records are saved whole; the generators by their state; invented techniques by value.
+const TRK={out,pop,big,bigH,who,sec,diag,WAR,dCnt,invSrc,CK,RS,UR,UK,UE};
+const snapSave=file=>{const v8=require('v8'),rs={r:S.r.s,rN:S.rN.s,rW:S.rW?S.rW.s:null},G={r:S.r,rN:S.rN,rW:S.rW};delete S.r;delete S.rN;delete S.rW;
+  const W={};for(const k of Object.keys(WD))if(typeof WD[k]!=='function')W[k]=WD[k];
+  const buf=zlib.gzipSync(v8.serialize({seed:String(seed),year:S.year,S,W,trk:TRK,lets:{lap,hMax,pontic,chI},rs,tech:TECH.slice(TECH_BASE),N}),{level:1});
+  Object.assign(S,G);fs.writeFileSync(file,buf);return buf.length};
+if(process.env.SNAP_IN){const v8=require('v8'),z=v8.deserialize(zlib.gunzipSync(fs.readFileSync(process.env.SNAP_IN)));
+  if(z.seed!==String(seed)||z.N!==N)throw new Error('saved start is for seed '+z.seed+', not '+seed);
+  S=z.S;for(const k of Object.keys(z.W))WD[k]=z.W[k];
+  S.r=mulberry32s(0);S.r.s=z.rs.r;S.rN=mulberry32s(0);S.rN.s=z.rs.rN;if(z.rs.rW!=null){S.rW=mulberry32s(0);S.rW.s=z.rs.rW}
+  TECH.length=TECH_BASE;for(const T of z.tech){TI[T.k]=TECH.length;TECH.push(T)}
+  for(const k in TRK){const a=TRK[k],b=z.trk[k];if(Array.isArray(a)){a.length=0;for(const x of b)a.push(x)}else{for(const q of Object.keys(a))delete a[q];Object.assign(a,b)}}
+  lap=Date.now();hMax=z.lets.hMax;pontic=z.lets.pontic;chI=z.lets.chI;out.end=END;out.from=z.year}
+const SNAP_AT=process.env.SNAP_AT!=null?+process.env.SNAP_AT:null;
+const T0=process.hrtime();
+while(S.year<END){if(SNAP_AT!=null&&S.year>=SNAP_AT){const n=snapSave(process.env.SNAP_OUT);console.log(JSON.stringify({seed,saved:S.year,bytes:n}));process.exit(0)}step();
   if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)])}
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'&&c.y>=-1000)CK.inv1k++;if(k==='wall'&&CK.wallNC==null&&ncSet.has(c.cell))CK.wallNC=c.y;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=/take its farmland/.test(c.txt)?'conquest':!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
@@ -104,7 +127,7 @@ out.diag=diag;
 // rare events, per millennium after 3000 BCE (counts kept by the model itself)
 {const yrs=Math.max(1,END+3000)/1000,per=x=>+((x||0)/yrs).toFixed(2),W=S.wingN||{};
  {let n1=0,n3=0,n5=0,mc=0,ms=0;if(S.cavL)for(const i of WD.landIdx){const v=S.cavL[i];if(v>0.1)n1++;if(v>0.3)n3++;if(v>0.5)n5++}for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'){if((o.cav||0)>mc)mc=o.cav;if((o.cavS||0)>ms)ms=o.cavS}}out.skill={n1,n3,n5,maxCav:+mc.toFixed(2),maxSpons:+ms.toFixed(2)}}
- out.ev={settle:per(S.settleN),khan:per(S.khanJ),khanW:per(S.khanW),submit:per(S.submitN),fkhan:per(S.fkhanN),cav:per(S.cavN),review:per(S.revN),dProv:per((S.dealN||{}).prov),dPeople:per((S.dealN||{}).people),dRevoke:per((S.dealN||{}).revoke),fRise:per((S.frontN||{}).rise),fCrushed:per((S.frontN||{}).crushed),fFlee:per((S.frontN||{}).flee),fJoin:per((S.frontN||{}).join),fRavage:per((S.frontN||{}).ravage),fSack:per((S.frontN||{}).sack),fDynasty:per((S.frontN||{}).dynasty),fWalled:per((S.frontN||{}).walled),pGrant:per((S.portN||{}).grant),pDemand:per((S.portN||{}).demand),pGrace:per((S.portN||{}).grace),pSplit:per((S.portN||{}).split),grass:per(S.grassTake),wMove:per(W.move),wSep:per(W.sep),wSecede:per(W.secede),wSaddle:per(W.saddle),wCourt:per(W.court),usurp:per(S.usurpN),debase:per(S.debN),rising:per(S.slvRev),officials:per(S.eunN),slaveCoup:per(S.mamN),slaveState:per(S.haitiN),emancip:per(S.emanN),sack:per(S.sackRaid),colony:per(S.pols.filter(o=>o&&o.origin&&o.origin.type==='colony').length),shed:per(S.shedN),popWar:per(S.popWar)}}
+ out.ev={settle:per(S.settleN),khan:per(S.khanJ),khanW:per(S.khanW),submit:per(S.submitN),fkhan:per(S.fkhanN),cav:per(S.cavN),review:per(S.revN),fRaid:per(S.fRaidN),roads:(()=>{let n=0;if(S.road)for(const i of WD.landIdx)if(S.road[i]>0.5)n++;return n})(),dProv:per((S.dealN||{}).prov),dPeople:per((S.dealN||{}).people),dRevoke:per((S.dealN||{}).revoke),fRise:per((S.frontN||{}).rise),fCrushed:per((S.frontN||{}).crushed),fFlee:per((S.frontN||{}).flee),fJoin:per((S.frontN||{}).join),fRavage:per((S.frontN||{}).ravage),fSack:per((S.frontN||{}).sack),fDynasty:per((S.frontN||{}).dynasty),fWalled:per((S.frontN||{}).walled),pGrant:per((S.portN||{}).grant),pDemand:per((S.portN||{}).demand),pGrace:per((S.portN||{}).grace),pSplit:per((S.portN||{}).split),grass:per(S.grassTake),wMove:per(W.move),wSep:per(W.sep),wSecede:per(W.secede),wSaddle:per(W.saddle),wCourt:per(W.court),usurp:per(S.usurpN),debase:per(S.debN),rising:per(S.slvRev),officials:per(S.eunN),slaveCoup:per(S.mamN),slaveState:per(S.haitiN),emancip:per(S.emanN),sack:per(S.sackRaid),colony:per(S.pols.filter(o=>o&&o.origin&&o.origin.type==='colony').length),shed:per(S.shedN),popWar:per(S.popWar)}}
 {const yrs=Math.max(1,END+1000)/1000;out.d_inv1k=+(CK.inv1k/yrs).toFixed(2);out.d_wallNC=CK.wallNC;out.d_eSteppe=CK.esN?+(CK.es/CK.esN).toFixed(3):null;
  out.d_arch1000bce=CK.arch1000bce;out.d_arch1=diag[1]&&diag[1].x?diag[1].x['Frontier states: share with mounted archers']:null;out.d_arch1000=diag[1000]&&diag[1000].x?diag[1000].x['Frontier states: share with mounted archers']:null;
  const L=S.pols.filter(o=>o&&o.kind==='horde'&&o.maxCells>=100&&o.born>=-1000).map(o=>(o.alive?S.year:o.died)-o.born).sort((a,b)=>a-b);out.d_bigConfN=L.length;out.d_bigConfLife=L.length?L[L.length>>1]:null}
@@ -126,7 +149,8 @@ out.x={regPop,who,regionKinds:Object.fromEntries(Object.entries(S.regionFirst).m
   hordeMax:hMax,spills:S.spills||0,pushed:S.migs?S.migs.filter(m=>m&&m.cause==='pushed').length:null,domestic:S.domLog?S.domLog.slice(0,8).map(d=>HERDS[d.sp].k+' '+d.y+'@'+Math.round(LA(d.cell))+','+Math.round(LO(d.cell))):null,
   horsesAmericas:S.horse?WD.landIdx.filter(i=>LO(i)<-52&&LA(i)<62&&S.horse[i]>0.05).length:null,contact:!!S.malAm,sacks:S.cities.reduce((a,c)=>a+(c.sacks?c.sacks.length:0),0),nan:al.filter(o=>!(o.cult>=0&&o.psi>=0)).length};
 {let hh=0;for(const i of WD.landIdx)hh=(hh*31+Math.round(S.pop[i])+S.pol[i]*7)%2147483647;out.x.hash=hh}
-out.time={init:tInit/1000,total:(Date.now()-t0)/1000,byMillennium:sec};
+{const h=require('crypto').createHash('md5');for(const A of [S.pop,S.pol,S.eth,S.integ,S.farm])h.update(Buffer.from(A.buffer,A.byteOffset,A.byteLength));out.chk=h.digest('hex').slice(0,12)}
+out.time={init:tInit/1000,total:(Date.now()-t0)/1000,byMillennium:sec,pass:{}};for(const k of Object.keys(TIME).sort((a,b)=>TIME[b]-TIME[a]))if(TIME[k]>0.05)out.time.pass[k]=+TIME[k].toFixed(1);
 process.stdout.write(JSON.stringify(out)+'\\n');
 })();
 `);

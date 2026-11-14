@@ -135,14 +135,14 @@ const SEED_ARRIVE={nam:-14000,sam:-13000};
 const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,110,'sino'],[5,105,'aus'],[-25,134,'pama'],[60,100,'alt'],[40,-100,'nam'],[-10,-60,'sam']];
 
 function newHistory(hseed){
-  const w=WD,r=mulberry32(hashStr('hist:'+hseed+':'+w.seed));
+  const w=WD,r=mulberry32s(hashStr('hist:'+hseed+':'+w.seed));
   if(w.rv0){w.rv.set(w.rv0);w.rvF.set(w.rvF0)}
   seaReset(P.startYear);
   if(typeof TECH_BASE!=='undefined'&&TECH_BASE)TECH.length=TECH_BASE;
   const tk=TECH.map(()=>new Float32Array(N));
   // nature (climate noise, dry epochs, eruptions) draws from its own stream, a fixed number of draws a year, so two versions of
   // the model run with the same seed meet the same droughts and eruptions and can be compared history by history
-  S={r,rN:mulberry32(hashStr('nature:'+hseed+':'+w.seed)),seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
+  S={r,rN:mulberry32s(hashStr('nature:'+hseed+':'+w.seed)),seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
     pop:new Float32Array(N),K:new Float32Array(N),evT:new Float32Array(N),evP:new Float32Array(N).fill(1),seaLvl:WD.seaLvl??0,seaVer:0,eth:new Int32Array(N).fill(-1),eth2:new Int32Array(N).fill(-1),mix:new Float32Array(N),mixT:new Uint8Array(N),
     pol:new Int32Array(N),s:new Float32Array(N).fill(0.3),rel:new Int32Array(N).fill(-1),fort:new Float32Array(N),
     fert:new Float32Array(N).fill(1),immune:new Float32Array(N),infect:new Uint8Array(N),ob:new Int32Array(N).fill(-1),
@@ -405,7 +405,7 @@ function moveFolk(i,j,mv){const s=S,T=s.tk,pj=s.pop[j];s.pop[i]-=mv;s.pop[j]+=mv
 const herdsOn=()=>!swOn('noherds');
 function herdYear(){
   const s=S,w=WD,L=w.landIdx;
-  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
+  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32s(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
   const g=s.WG,rW=s.rW;
   // (switch dzwide; 2026-11-07) a hard winter covers a whole country: the cold of the Siberian High and its snow reach across 2,000 km
   // at once (the 2010 dzud struck about four-fifths of Mongolia). The winter is a local field on 9-degree cells plus a field on

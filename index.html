@@ -425,6 +425,8 @@ const CDEF=[
 ];
 const CL={};for(const d of CDEF)CL[d[0]]=d[5];
 
+// the same generator with its state on the function (g.s), so a history can be saved and resumed exactly (2026-11-13)
+function mulberry32s(a){const g=function(){let s=g.s=(g.s+0x6D2B79F5)|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};g.s=a|0;return g}
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -1476,14 +1478,14 @@ const SEED_ARRIVE={nam:-14000,sam:-13000};
 const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,110,'sino'],[5,105,'aus'],[-25,134,'pama'],[60,100,'alt'],[40,-100,'nam'],[-10,-60,'sam']];
 
 function newHistory(hseed){
-  const w=WD,r=mulberry32(hashStr('hist:'+hseed+':'+w.seed));
+  const w=WD,r=mulberry32s(hashStr('hist:'+hseed+':'+w.seed));
   if(w.rv0){w.rv.set(w.rv0);w.rvF.set(w.rvF0)}
   seaReset(P.startYear);
   if(typeof TECH_BASE!=='undefined'&&TECH_BASE)TECH.length=TECH_BASE;
   const tk=TECH.map(()=>new Float32Array(N));
   // nature (climate noise, dry epochs, eruptions) draws from its own stream, a fixed number of draws a year, so two versions of
   // the model run with the same seed meet the same droughts and eruptions and can be compared history by history
-  S={r,rN:mulberry32(hashStr('nature:'+hseed+':'+w.seed)),seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
+  S={r,rN:mulberry32s(hashStr('nature:'+hseed+':'+w.seed)),seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
     pop:new Float32Array(N),K:new Float32Array(N),evT:new Float32Array(N),evP:new Float32Array(N).fill(1),seaLvl:WD.seaLvl??0,seaVer:0,eth:new Int32Array(N).fill(-1),eth2:new Int32Array(N).fill(-1),mix:new Float32Array(N),mixT:new Uint8Array(N),
     pol:new Int32Array(N),s:new Float32Array(N).fill(0.3),rel:new Int32Array(N).fill(-1),fort:new Float32Array(N),
     fert:new Float32Array(N).fill(1),immune:new Float32Array(N),infect:new Uint8Array(N),ob:new Int32Array(N).fill(-1),
@@ -1746,7 +1748,7 @@ function moveFolk(i,j,mv){const s=S,T=s.tk,pj=s.pop[j];s.pop[i]-=mv;s.pop[j]+=mv
 const herdsOn=()=>!swOn('noherds');
 function herdYear(){
   const s=S,w=WD,L=w.landIdx;
-  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
+  if(!s.hs){s.hs=new Float32Array(N).fill(1);s.KhN=Float32Array.from(s.Kh);s.hsK=new Float32Array(N).fill(1);s.hsLoss=new Float32Array(N);s.WG=new Float32Array(AGW*AGH);s.rW=mulberry32s(hashStr('winter:'+s.seed+':'+w.seed));s.dzC=0;s.hzC=0;s.dzCc=0;s.hzCc=0}
   const g=s.WG,rW=s.rW;
   // (switch dzwide; 2026-11-07) a hard winter covers a whole country: the cold of the Siberian High and its snow reach across 2,000 km
   // at once (the 2010 dzud struck about four-fifths of Mongolia). The winter is a local field on 9-degree cells plus a field on
@@ -4856,10 +4858,10 @@ function tributePass(){const s=S,r=s.r,w=WD;
 // rally: the fighters a stateless people can bring to bear on one province, from its kin within two provinces (riders from further)
 // (2026-11-13) the neighbourhood within two steps depends only on the map, so it is listed once: same sums, same order, about a
 // twentieth of the work of scanning the raster every year (the scan was 45% of a run's time once this pass went yearly)
-function rallyNb(){const w=WD;if(w._rlS)return;const L=w.landIdx,S0=new Int32Array(N+1),A=[],Wt=[];
-  for(const i of L){S0[i]=A.length;ring(i,2,(j,dx,dy)=>{if(j===i)return;A.push(j);Wt.push(Math.abs(dx)+Math.abs(dy)<=2?0.6:0.3)});S0[i+1]=A.length}
-  // provinces not in landIdx keep an empty range
-  w._rlS=S0;w._rlA=Int32Array.from(A);w._rlW=Float64Array.from(Wt);w._rlE=new Int32Array(N+1);for(const i of L)w._rlE[i]=S0[i+1]}
+function rallyNb(){const w=WD;if(w._rlS)return;const S0=new Int32Array(N+1),A=[],Wt=[];
+  // every province, not only today's land: the coastline moves with the sea, and the land list with it
+  for(let i=0;i<N;i++){S0[i]=A.length;ring(i,2,(j,dx,dy)=>{if(j===i)return;A.push(j);Wt.push(Math.abs(dx)+Math.abs(dy)<=2?0.6:0.3)})}S0[N]=A.length;
+  w._rlS=S0;w._rlA=Int32Array.from(A);w._rlW=Float64Array.from(Wt);w._rlE=S0.subarray(1)}
 function rallyPass(){const s=S,w=WD,L=w.landIdx;if(!s.rally)s.rally=new Float32Array(N);const R=s.rally;rallyNb();const nS=w._rlS,nE=w._rlE,nA=w._rlA,nW=w._rlW,land=w.land,pol=s.pol,eth=s.eth,pop=s.pop;
   for(const i of L){R[i]=0;if(pol[i]||pop[i]<1)continue;const e=eth[i];if(e<0)continue;let t=0;
     for(let q=nS[i],qe=nE[i];q<qe;q++){const j=nA[q];if(!land[j]||pol[j]||eth[j]!==e)continue;t+=pop[j]*nW[q]}
@@ -4875,7 +4877,7 @@ function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass()
     // a raid strikes before the army can come: what counts is the province's own people, walls and garrison, not the realm's strength
     const Ud=Math.pow(pEq(i)*2+1,0.75)*milAt(i)*(1+2.5*s.fort[i])*(1+1.6*w.rough[i])*(0.5+s.integ[i])*(0.6+0.8*o.S)*(0.7+0.6*(o.prep??0.6)),pw=clamp(bu/(bu+Ud),0,0.8);
     // (per year; was 0.06 every second year)
-    if(r()<pF(0.03*pw,i,i)){const a=cw(i);s.pop[i]*=0.96;s.integ[i]=Math.max(0,s.integ[i]-0.12);o.shock+=0.002*a;s.raidC[i]=s.year;o.raided=(o.raided||0)+a;o.raidY=s.year;
+    if(r()<pF(0.03*pw,i,i)){const a=cw(i);s.fRaidN=(s.fRaidN||0)+1;s.pop[i]*=0.96;s.integ[i]=Math.max(0,s.integ[i]-0.12);o.shock+=0.002*a;s.raidC[i]=s.year;o.raided=(o.raided||0)+a;o.raidY=s.year;
       // the frontier falls back: a recently taken, unwalled, unreconciled province is abandoned to the raiders
       if(s.integ[i]<0.12&&s.fort[i]<0.3&&i!==o.capital&&s.city[i]<0&&s.year-(s.taken[i]||-1e9)<300&&r()<0.5){s.pol[i]=0;
         if(o.cells>=20&&r()<0.05)chron('war',`Raiders from the ${s.eths[s.eth[best]]?s.eths[s.eth[best]].name:'hill tribes'} drive the settlers of the ${o.full} from a frontier province.`,i,[R_(o)])}}}}
@@ -5104,7 +5106,8 @@ function dealPass(only){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=n
       if(g[2]>=4&&g[0]>0.08*o.pop&&have<1){(o.dealE||(o.dealE=new Map())).set(e,Math.min(1,have+0.35));N_.people++;o.dealY=s.year;
         for(const [e2,g2] of M)if(e2!==e&&e2!==o.core&&!(o.dealE.get(e2)>0))o.dealRes=(o.dealRes||new Map()).set(e2,0.15*bite);
         if(o.cells>=15)chron('diplomacy',`${R.name} of the ${o.full} comes to terms with the ${s.eths[e].name}: their own leaders and law, and a place at court.`,g[3],[R_(o),RE(s.eths[e])],sk>0.3?'They were hard to hold and their horsemen were worth having.':'They were hard to hold, and terms were cheaper than garrisons.')}
-      else if(D[g[3]]<1){const i=g[3];D[i]=Math.min(1,D[i]+0.5);N_.prov++;o.dealRes=(o.dealRes||new Map()).set(e,0.1*bite)}}
+      // a single province is worth terms only if it matters: many people, skilled horsemen, or a threatened frontier
+      else if(D[g[3]]<1&&(s.pop[g[3]]>0.01*o.pop||(s.cavL&&s.cavL[g[3]]>0.3)||(s.thr&&s.thr[g[3]]>0.3))&&r()<0.5){const i=g[3];D[i]=Math.min(1,D[i]+0.5);N_.prov++;o.dealRes=(o.dealRes||new Map()).set(e,0.1*bite)}}
     // resentment: those passed over settle in more slowly, or slip, for a decade
     if(o.dealRes){for(const i of polCells(p)){const v=o.dealRes.get(s.eth[i]);if(v&&dealAt(o,i)<=0)s.integ[i]=Math.max(0,s.integ[i]-v*0.3)}o.dealRes=null}}}
 // an heir may revoke what his father granted
@@ -5128,7 +5131,11 @@ function horsemenPass(){const s=S,w=WD,r=s.r,L=s.cavL;if(!L)return;const N_=s.fr
       if(pp<50)continue;sk/=pp;ig/=C.length;sol/=C.length;far/=C.length;const D=1-ig;
       if(!(r()<0.15*kf*D))continue;
       // what they can bring against what the state can bring this far from its capital, as they see it
-      const F=Math.pow(0.25*pp+1,P.scaleExp)*(0.3+sol)*(1+1.5*sk),G0=Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*(1+1.5*(o.cav||0))*Math.exp(-far/(o.h||6)),
+      // (2026-11-13) what the state can bring is the garrison standing in their stretch plus a third of its mobile strength, less
+      // with distance from the capital; before, they weighed themselves against the whole realm and almost never rose
+      let gl=0;for(const i of C)gl+=garrAt(i,s.integ[i],o.calm??0.5);
+      const reach=Math.min(0.7,gl/((o.garr||0)+gl+1))+0.3*Math.exp(-far/(o.h||6)),
+        F=Math.pow(0.25*pp+1,P.scaleExp)*(0.3+sol)*(1+1.5*sk),G0=Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*(1+1.5*(o.cav||0))*reach,
         seenWeak=1-0.4*Math.min(1,o.shock||0)-(o.raidY!=null&&s.year-o.raidY<10?0.2:0),rho=F/(G0*seenWeak+1),truth=F/(G0+1);
       let out=-1,hordeNb=0;for(const i of C){for(let d=nS[i];d<nS[i+1];d++){const j=nA[d];if(j<0||!grass(j))continue;const q=s.pol[j];if(!q&&s.pop[j]>=0){if(out<0)out=j}else if(q&&q!==id&&s.pols[q].kind==='horde'){hordeNb=q;if(out<0)out=j}}}
       const top=C.reduce((a,i)=>s.pop[i]>s.pop[a]?i:a,C[0]);

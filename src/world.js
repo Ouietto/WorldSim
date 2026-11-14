@@ -74,6 +74,8 @@ const CDEF=[
 ];
 const CL={};for(const d of CDEF)CL[d[0]]=d[5];
 
+// the same generator with its state on the function (g.s), so a history can be saved and resumed exactly (2026-11-13)
+function mulberry32s(a){const g=function(){let s=g.s=(g.s+0x6D2B79F5)|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};g.s=a|0;return g}
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
