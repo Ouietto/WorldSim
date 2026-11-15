@@ -415,7 +415,7 @@ function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,el
     // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
     // rain that falls in the cool season, when grain grows and little evaporates, goes further than summer rain: barley is dry-farmed
     // on 250-300 mm of winter rain in the Levant and Iran, where summer-rain land needs nearer 500 (Perrin de Brichambaut & Wallén 1963)
-    const pE=SD?p*(1+0.5*SD[i]):p;
+    const pE=SD&&!swOn('nowinrain')?p*(1+0.5*SD[i]):p;
     const pS=Math.max(clamp((pE-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((pE-330)/120,0,1)*clamp((850-p)/150,0,1):0);
     const irr=w.rvF[i]*clamp((tw-14)/6,0,1);
     const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;

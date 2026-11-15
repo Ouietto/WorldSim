@@ -766,7 +766,7 @@ function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,el
     // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
     // rain that falls in the cool season, when grain grows and little evaporates, goes further than summer rain: barley is dry-farmed
     // on 250-300 mm of winter rain in the Levant and Iran, where summer-rain land needs nearer 500 (Perrin de Brichambaut & Wallén 1963)
-    const pE=SD?p*(1+0.5*SD[i]):p;
+    const pE=SD&&!swOn('nowinrain')?p*(1+0.5*SD[i]):p;
     const pS=Math.max(clamp((pE-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((pE-330)/120,0,1)*clamp((850-p)/150,0,1):0);
     const irr=w.rvF[i]*clamp((tw-14)/6,0,1);
     const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
@@ -1938,7 +1938,7 @@ function computeK(){
     s_K[i]=Math.max(1,Kf,(1-ps)*(s_Kfa[i]+0.3*s_Kh[i]+0.2*Kf)+ps*(s_Kh[i]+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*t29[i]));
   }
 }
-function growth(){const LVF=!swOn('nolandvar');
+function growth(){const LVF=!swOn('nolandvar')&&!swOn('noardfal');
   const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade,CO=cohArr();const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
   const DT=s.dt||1,DX=DT>1?1-Math.pow(0.8,DT):0.2;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s_pop[i];if(p<=0)continue;const K=s_K[i];
@@ -2102,7 +2102,7 @@ function firstTech(k,cell,o){
   const verb={plough:'forge a heavy iron plough that turns the wet, clay soils',manure:'begin to gather manure and night soil to feed their fields',kitesig:'fly signal kites to send orders across the realm',windcart:'build sail-driven wagons that cross the flat deserts',fungal:'cultivate fungal gardens on the forest floor',ledger:'build geared engines to keep the treasury accounts',tidemill:'harness the tides to turn mills and forge hammers',feverbark:'brew a bark remedy that tames the marsh fevers',saltflush:'dig flushing canals that rinse the salt from their fields',pigeon:'train birds to carry messages between cities',irrig:'dig the first irrigation canals',wheel:'build the first wheeled carts and chariots',writing:'begin to keep written records',iron:'learn to smelt iron',coin:'strike the first coins',law:'write down the first law code',roads:'lay the first long paved roads',nav:'learn to steer by the stars across open seas',caval:'field the first armoured horsemen',paper:'make the first paper',crops:'rotate their fields and add fodder crops',gun:'make the first gunpowder weapons',ocean:'build ships that can cross oceans'}[t.k];
   if(verb){chron('ideas',`Scholars and craftsmen of ${where} ${verb}${t.synth?', a path our own history never took':''}.`,cell,refs);if(k>=8)spot(`${t.n} first appears in ${where}`,cell,refs)}
 }
-function techStep(a0,b0){const SDC=!swOn('nolandvar')&&WD.sumDry?WD.sumDry:null;if(a0==null){a0=0;b0=1}
+function techStep(a0,b0){const SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&WD.sumDry?WD.sumDry:null;if(a0==null){a0=0;b0=1}
   const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nbE=w.nbE||null,szF=w.szF||null,w_land=w.land,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
   const suit=[w.sF,w.sH,rvAg(),null,w.sH];
   // drums carry where forest and hills hide fires and slow runners; beacons need hills in sight of each other
@@ -3872,7 +3872,7 @@ function cropsInit(){
     // (default since 2026-11-15, switch nolandvar) sod from the land, not from a biome number: a perennial grass mat forms where rain
     // is enough for grass but not for woods, in a temperate climate (tropical grasslands grow bunchgrass, worked by hoe across the
     // Sahel), and where the summer is not dry (summer-dry land grows annual grasses and scrub) nor the winter (monsoon bunchgrass)
-    if(!swOn('nolandvar')&&w.sumDry){for(const i of w.landIdx){const P=w.Pr[i],T=w.T[i];w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*clamp((T-2)/3,0,1)*clamp((22-T)/6,0,1)*(1-w.sumDry[i])*(1-0.75*w.winDry[i])*(1-Math.min(1,2*rvAg()[i]))}}
+    if(!swOn('nolandvar')&&!swOn('nosodvar')&&w.sumDry){for(const i of w.landIdx){const P=w.Pr[i],T=w.T[i];w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*clamp((T-2)/3,0,1)*clamp((22-T)/6,0,1)*(1-w.sumDry[i])*(1-0.75*w.winDry[i])*(1-Math.min(1,2*rvAg()[i]))}}
     else for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if((b===5||b===6)&&!dryS(i))w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*rvAg()[i]))*(dryWinter(i)?0.25:1)}
     for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;w.soilDig[i]=so.dig;if(w.turf[i]>0.3)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
       // heavy wet clays belong to forest and savanna-clay soils, not to volcanic highlands, river silt or mountain soils
@@ -3900,7 +3900,7 @@ function cropPass(quiet){
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
-  const grow=s.pkGrow,SDC=!swOn('nolandvar')&&w.sumDry?w.sumDry:null;
+  const grow=s.pkGrow,SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&w.sumDry?w.sumDry:null;
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0)b|=grow[j]}pkAv[i]=b}
   if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;
     for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;const ad=SDC?1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[j])):1;   // crops remade for another rain season (nolandvar)

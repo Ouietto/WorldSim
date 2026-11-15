@@ -76,7 +76,7 @@ function cropsInit(){
     // (default since 2026-11-15, switch nolandvar) sod from the land, not from a biome number: a perennial grass mat forms where rain
     // is enough for grass but not for woods, in a temperate climate (tropical grasslands grow bunchgrass, worked by hoe across the
     // Sahel), and where the summer is not dry (summer-dry land grows annual grasses and scrub) nor the winter (monsoon bunchgrass)
-    if(!swOn('nolandvar')&&w.sumDry){for(const i of w.landIdx){const P=w.Pr[i],T=w.T[i];w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*clamp((T-2)/3,0,1)*clamp((22-T)/6,0,1)*(1-w.sumDry[i])*(1-0.75*w.winDry[i])*(1-Math.min(1,2*rvAg()[i]))}}
+    if(!swOn('nolandvar')&&!swOn('nosodvar')&&w.sumDry){for(const i of w.landIdx){const P=w.Pr[i],T=w.T[i];w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*clamp((T-2)/3,0,1)*clamp((22-T)/6,0,1)*(1-w.sumDry[i])*(1-0.75*w.winDry[i])*(1-Math.min(1,2*rvAg()[i]))}}
     else for(const i of w.landIdx){const b=w.biome[i],P=w.Pr[i];if((b===5||b===6)&&!dryS(i))w.turf[i]=clamp((P-300)/150,0,1)*clamp((700-P)/100,0,1)*(1-Math.min(1,2*rvAg()[i]))*(dryWinter(i)?0.25:1)}
     for(const i of w.landIdx){const k=soilFor(w,i),so=SOILS[k];w.soil[i]=k;w.soilDig[i]=so.dig;if(w.turf[i]>0.3)w.sod[i]=1;w.soilFert[i]=so.fert;w.soilDrain[i]=so.drain;w.soilSalt[i]=so.salt;w.soilErode[i]=so.erode;
       // heavy wet clays belong to forest and savanna-clay soils, not to volcanic highlands, river silt or mountain soils
@@ -104,7 +104,7 @@ function cropPass(quiet){
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
-  const grow=s.pkGrow,SDC=!swOn('nolandvar')&&w.sumDry?w.sumDry:null;
+  const grow=s.pkGrow,SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&w.sumDry?w.sumDry:null;
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0)b|=grow[j]}pkAv[i]=b}
   if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;
     for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;const ad=SDC?1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[j])):1;   // crops remade for another rain season (nolandvar)

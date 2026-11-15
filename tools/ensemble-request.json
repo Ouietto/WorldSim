@@ -10,7 +10,23 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "off-land-quantities",
+   "name": "off-winter-rain-crops",
+   "env": "WORLD=prov SW=nowinrain"
+  },
+  {
+   "name": "off-sod-by-quantities",
+   "env": "WORLD=prov SW=nosodvar"
+  },
+  {
+   "name": "off-ard-fallow",
+   "env": "WORLD=prov SW=noardfal"
+  },
+  {
+   "name": "off-front-waits-on-crops",
+   "env": "WORLD=prov SW=nofrontclim"
+  },
+  {
+   "name": "off-all-land-quantities",
    "env": "WORLD=prov SW=nolandvar"
   }
  ]
