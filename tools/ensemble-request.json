@@ -10,20 +10,8 @@
    "env": "WORLD=prov"
   },
   {
-   "name": "off-mobility",
-   "env": "WORLD=prov SW=nomob"
-  },
-  {
-   "name": "off-horde-reach-and-edge",
-   "env": "WORLD=prov SW=nohreach"
-  },
-  {
-   "name": "off-supply-lines",
-   "env": "WORLD=prov SW=nosupply"
-  },
-  {
-   "name": "mobility-half",
-   "env": "WORLD=prov KV=mob:0.5"
+   "name": "off-land-quantities",
+   "env": "WORLD=prov SW=nolandvar"
   }
  ]
 }
