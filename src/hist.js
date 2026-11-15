@@ -576,7 +576,7 @@ function computeK(){
     s_K[i]=Math.max(1,Kf,(1-ps)*(s_Kfa[i]+0.3*s_Kh[i]+0.2*Kf)+ps*(s_Kh[i]+0.4*Kf))*(1-0.5*w_mal[i]*s_malF[i]*(1-s_adapt[i])*(1-0.5*t29[i]));
   }
 }
-function growth(){
+function growth(){const LVF=!swOn('nolandvar');
   const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade,CO=cohArr();const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
   const DT=s.dt||1,DX=DT>1?1-Math.pow(0.8,DT):0.2;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s_pop[i];if(p<=0)continue;const K=s_K[i];
@@ -601,8 +601,11 @@ function growth(){
     const pr=p/K,fm=s_farm[i];
     // crowded farmers shorten the fallow toward what their soils and tools allow; when land is plentiful again they let it rest
     // (Boserup 1965; after the Black Death arable went back to grass)
-    if(fm>0.3){let c=s.cf[i];const m=s.cfMax[i];
-      if(c>m)c-=0.02*(c-m);else if(pr>0.7)c+=CFR*(m-c)*Math.min(1,(pr-0.7)/0.2);else if(pr<0.45&&c>CF0)c-=1.5*CFR*(c-CF0);
+    // (nolandvar) oxen and the ard come with a fallow every other year, where the plough team grazes (the two-field round): that
+    // much intensity is how the ard is used, not a response to crowding. Beyond it, manure, rotations and terraces still wait on it
+    if(fm>0.3){let c=s.cf[i];const m=s.cfMax[i],fl=LVF?Math.min(m,CF0+0.25*s.ard[i]*(1-0.6*w.heavy[i])):CF0;
+      if(c<fl)c+=0.01*(fl-c);
+      if(c>m)c-=0.02*(c-m);else if(pr>0.7)c+=CFR*(m-c)*Math.min(1,(pr-0.7)/0.2);else if(pr<0.45&&c>fl)c-=1.5*CFR*(c-fl);
       s.cf[i]=c}else if(s.cf[i]>CF0)s.cf[i]-=0.01*(s.cf[i]-CF0);
     if(fm>0.3&&w_sF[i]>0.1){const silt=clamp(w.rvF[i]*1.5,0,0.8),lc=w_leach[i];
       if(pr>0.7)s_fert[i]=Math.max(0.3,s_fert[i]-dg*0.0012*(pr-0.7)*fm*(1+0.6*lc)*w_soilDrain[i]*s_cDrain[i]*(1-0.45*s_crops[i])*(1-0.5*s_manure[i])*(1-silt));
@@ -737,7 +740,7 @@ function firstTech(k,cell,o){
   const verb={plough:'forge a heavy iron plough that turns the wet, clay soils',manure:'begin to gather manure and night soil to feed their fields',kitesig:'fly signal kites to send orders across the realm',windcart:'build sail-driven wagons that cross the flat deserts',fungal:'cultivate fungal gardens on the forest floor',ledger:'build geared engines to keep the treasury accounts',tidemill:'harness the tides to turn mills and forge hammers',feverbark:'brew a bark remedy that tames the marsh fevers',saltflush:'dig flushing canals that rinse the salt from their fields',pigeon:'train birds to carry messages between cities',irrig:'dig the first irrigation canals',wheel:'build the first wheeled carts and chariots',writing:'begin to keep written records',iron:'learn to smelt iron',coin:'strike the first coins',law:'write down the first law code',roads:'lay the first long paved roads',nav:'learn to steer by the stars across open seas',caval:'field the first armoured horsemen',paper:'make the first paper',crops:'rotate their fields and add fodder crops',gun:'make the first gunpowder weapons',ocean:'build ships that can cross oceans'}[t.k];
   if(verb){chron('ideas',`Scholars and craftsmen of ${where} ${verb}${t.synth?', a path our own history never took':''}.`,cell,refs);if(k>=8)spot(`${t.n} first appears in ${where}`,cell,refs)}
 }
-function techStep(a0,b0){if(a0==null){a0=0;b0=1}
+function techStep(a0,b0){const SDC=!swOn('nolandvar')&&WD.sumDry?WD.sumDry:null;if(a0==null){a0=0;b0=1}
   const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nbE=w.nbE||null,szF=w.szF||null,w_land=w.land,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
   const suit=[w.sF,w.sH,rvAg(),null,w.sH];
   // drums carry where forest and hills hide fires and slow runners; beacons need hills in sight of each other
@@ -772,7 +775,11 @@ function techStep(a0,b0){if(a0==null){a0=0;b0=1}
         let m=0,same=0,mc=1,v,mj=-1;
         for(let q=0;q<nn;q++){const nj=NJ_[q];if((v=A[nj])>m){m=v;same=pi&&pol[nj]===pi;mc=NC_[q];mj=nj}}
         for(let q=ls0;q<lsE;q++){const raft=q>=ls1,j=w_lt[q];if(raft&&(w.ld[q]>2||w.lm[j]===w.lm[i]))continue;if(pop[j]<1)continue;v=A[j]*0.9;if(v>m){m=v;same=0;mc=raft?0.2:0.7;mj=j}}
-        if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(w_nbE?6:1,mc);if(f===0&&w_nbE)k*=FDX;if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
+        if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(w_nbE?6:1,mc);if(f===0&&w_nbE)k*=FDX;
+          // (nolandvar) farming crosses into land whose rain comes in another season only as fast as its crops are remade for it:
+          // winter-sown Near Eastern grain stalled for centuries where the summer-dry Balkans meet the summer-wet Carpathian basin
+          // (the Koros frontier, c. 6000-5500 BCE; Bánffy 2004; Krauß et al. 2018)
+          if(f===0&&SDC&&mj>=0)k*=1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[mj]));if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
           // farm still passes the knowledge along

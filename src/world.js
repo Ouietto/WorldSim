@@ -381,7 +381,23 @@ function unitsToGrid(w,a,out){out=out||new Float32Array(NC);if(!w.gcS){out.set(a
 function blurUnits(w,a,rx,ry,wrap){if(!w.gcS){boxBlur(a,W,H,rx,ry,wrap);return a}const g=unitsToGrid(w,a);boxBlur(g,W,H,rx,ry,wrap);return gridToUnits(w,g,a)}
 // what a unit's climate, ground and river make of it (the same for 100 km cells and provinces): flood farming (rvF), rain
 // failure, biome, growing season, farming and herding suitability, travel cost, tsetse, monsoon edge, desert
+// When the rain falls (2026-11-15, switch nolandvar). The climate data here is annual, so it cannot say whether a province's rain
+// comes in winter or in summer, which decides whether grain grows on it, whether its grass mats into sod, and how far its rain goes.
+// Until monthly rainfall is added, the observed climate class stands in: summer-dry classes (Cs, Ds, As) count 1, summer-wet and
+// evenly wet ones (Cf, Cw, Df, Dw, Af, Am, Aw) 0; dry and polar classes say nothing about the season and take their neighbours'
+// value, so the steppe beside the Mediterranean is partly summer-dry and the Sahel beside the savanna is not. A light smoothing
+// then turns the class borders into a gradient. sumDry: how dry the summer is (0..1); winDry: how dry the winter is (monsoon).
+function seasonFields(w){const n=w.n,sd=new Float32Array(n),wd=new Float32Array(n);w.sumDry=sd;w.winDry=wd;const kg=w.kgGrid;if(!kg||!w.nbS)return;
+  const known=new Uint8Array(n);
+  for(const i of w.landIdx){const c=KG_CODES[kg[i]]||'';if(!c)continue;const g=c[0],s2=c[1];
+    if(g==='C'||g==='D'){known[i]=1;sd[i]=s2==='s'?1:0;wd[i]=s2==='w'?1:0}
+    else if(g==='A'){known[i]=1;sd[i]=s2==='s'?0.8:0;wd[i]=s2==='w'?0.8:s2==='m'?0.3:0}}
+  // fill the dry and polar classes from known neighbours, outward
+  for(let it=0;it<12;it++){let ch=0;const add=[];for(const i of w.landIdx){if(known[i])continue;let a=0,b=0,m=0;for(let q=w.nbS[i];q<w.nbS[i+1];q++){const j=w.nbA[q];if(j>=0&&known[j]){a+=sd[j];b+=wd[j];m++}}if(m)add.push(i,a/m,b/m)}
+    for(let k=0;k<add.length;k+=3){const i=add[k];sd[i]=add[k+1];wd[i]=add[k+2];known[i]=2;ch++}if(!ch)break}
+  for(let it=0;it<2;it++){const a=sd.slice(),b=wd.slice();for(const i of w.landIdx){let x=0,y=0,m=0;for(let q=w.nbS[i];q<w.nbS[i+1];q++){const j=w.nbA[q];if(j>=0&&w.land[j]){x+=a[j];y+=b[j];m++}}if(m){sd[i]=0.5*a[i]+0.5*x/m;wd[i]=0.5*b[i]+0.5*y/m}}}}
 function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,elev=w.elev,rough=w.rough,rv=w.rv,lat=w.lat;
+  const LV=!swOn('nolandvar');if(LV)seasonFields(w);const SD=LV&&w.sumDry?w.sumDry:null;
   // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
   // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
   // (provinces: land watered by hill streams on fans and piedmont counts with the floodplain, fineFans)
@@ -397,7 +413,10 @@ function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,el
     w.gs[i]=gs;
     const tS=clamp((gs-4.3)/2.2,0,1)*clamp((tw-14)/7,0,1)*clamp((31-t)/5,0,1)*(t<2?clamp((t+4)/6,0,1):1)*(biomeOf(t,p)===3?0.45:1);
     // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
-    const pS=Math.max(clamp((p-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((p-330)/120,0,1)*clamp((850-p)/150,0,1):0);
+    // rain that falls in the cool season, when grain grows and little evaporates, goes further than summer rain: barley is dry-farmed
+    // on 250-300 mm of winter rain in the Levant and Iran, where summer-rain land needs nearer 500 (Perrin de Brichambaut & Wallén 1963)
+    const pE=SD?p*(1+0.5*SD[i]):p;
+    const pS=Math.max(clamp((pE-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((pE-330)/120,0,1)*clamp((850-p)/150,0,1):0);
     const irr=w.rvF[i]*clamp((tw-14)/6,0,1);
     const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
     w.leach[i]=leach;
