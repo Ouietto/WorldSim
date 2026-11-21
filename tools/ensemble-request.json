@@ -5,11 +5,10 @@
  "ref": "",
  "baseEnv": "",
  "variants": [
-  {"name": "now", "env": "WORLD=prov"},
-  {"name": "winrain-off+ard-off", "env": "WORLD=prov SW=nowinrain,noardfal"},
-  {"name": "winrain-third+ard-off", "env": "WORLD=prov SW=noardfal KV=winrain:0.33"},
-  {"name": "winrain-off+ard-off+fd55", "env": "WORLD=prov SW=nowinrain,noardfal,fd55"},
-  {"name": "winrain-third+ard-off+fd55", "env": "WORLD=prov SW=noardfal,fd55 KV=winrain:0.33"},
-  {"name": "off-all-land-quantities", "env": "WORLD=prov SW=nolandvar"}
+  {"name": "best112+strains", "env": "WORLD=prov SW=nowinrain,noardfal,fd55"},
+  {"name": "best112-no-strains", "env": "WORLD=prov SW=nowinrain,noardfal,fd55,noseas"},
+  {"name": "strains-breed-half", "env": "WORLD=prov SW=nowinrain,noardfal,fd55 KV=sadapt:0.5"},
+  {"name": "strains-breed-double", "env": "WORLD=prov SW=nowinrain,noardfal,fd55 KV=sadapt:2"},
+  {"name": "strains+winrain-third", "env": "WORLD=prov SW=noardfal,fd55 KV=winrain:0.33"}
  ]
 }
