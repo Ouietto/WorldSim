@@ -262,8 +262,11 @@ function rallyNb(){const w=WD;if(w._rlS)return;const S0=new Int32Array(N+1),A=[]
   for(let i=0;i<N;i++){S0[i]=A.length;ring(i,2,(j,dx,dy)=>{if(j===i)return;A.push(j);Wt.push(Math.abs(dx)+Math.abs(dy)<=2?0.6:0.3)})}S0[N]=A.length;
   w._rlS=S0;w._rlA=Int32Array.from(A);w._rlW=Float64Array.from(Wt);w._rlE=S0.subarray(1)}
 function rallyPass(){const s=S,w=WD,L=w.landIdx;if(!s.rally)s.rally=new Float32Array(N);const R=s.rally;rallyNb();const nS=w._rlS,nE=w._rlE,nA=w._rlA,nW=w._rlW,land=w.land,pol=s.pol,eth=s.eth,pop=s.pop;
+  // (2026-11-21) one key per unit (its people if stateless land, else -2), so the inner loop reads two arrays, not four: same
+  // sums in the same order, about a tenth of a run's time before
+  let K=w._rlK;if(!K||K.length!==N)K=w._rlK=new Int32Array(N);for(let j=0;j<N;j++)K[j]=land[j]&&!pol[j]?eth[j]:-2;
   for(const i of L){R[i]=0;if(pol[i]||pop[i]<1)continue;const e=eth[i];if(e<0)continue;let t=0;
-    for(let q=nS[i],qe=nE[i];q<qe;q++){const j=nA[q];if(!land[j]||pol[j]||eth[j]!==e)continue;t+=pop[j]*nW[q]}
+    for(let q=nS[i],qe=nE[i];q<qe;q++){const j=nA[q];if(K[j]!==e)continue;t+=pop[j]*nW[q]}
     const E=s.eths[e],ride=E&&E.ride?E.ride:0;R[i]=s.pop[i]+t*(0.7+0.6*ride)*(0.6+0.8*s.s[i])}}
 function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass();const R=s.rally;
   for(const id of s.alive){const o=s.pols[id];o.tFront=0}

@@ -2103,7 +2103,7 @@ function firstTech(k,cell,o){
   const verb={plough:'forge a heavy iron plough that turns the wet, clay soils',manure:'begin to gather manure and night soil to feed their fields',kitesig:'fly signal kites to send orders across the realm',windcart:'build sail-driven wagons that cross the flat deserts',fungal:'cultivate fungal gardens on the forest floor',ledger:'build geared engines to keep the treasury accounts',tidemill:'harness the tides to turn mills and forge hammers',feverbark:'brew a bark remedy that tames the marsh fevers',saltflush:'dig flushing canals that rinse the salt from their fields',pigeon:'train birds to carry messages between cities',irrig:'dig the first irrigation canals',wheel:'build the first wheeled carts and chariots',writing:'begin to keep written records',iron:'learn to smelt iron',coin:'strike the first coins',law:'write down the first law code',roads:'lay the first long paved roads',nav:'learn to steer by the stars across open seas',caval:'field the first armoured horsemen',paper:'make the first paper',crops:'rotate their fields and add fodder crops',gun:'make the first gunpowder weapons',ocean:'build ships that can cross oceans'}[t.k];
   if(verb){chron('ideas',`Scholars and craftsmen of ${where} ${verb}${t.synth?', a path our own history never took':''}.`,cell,refs);if(k>=8)spot(`${t.n} first appears in ${where}`,cell,refs)}
 }
-function techStep(a0,b0){const SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&WD.sumDry?WD.sumDry:null;if(a0==null){a0=0;b0=1}
+function techStep(a0,b0){const SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&WD.sumDry?WD.sumDry:null;const SEAS_=typeof seasOn==='function'&&seasOn(),NCR_=CROPS.length,SMS_=0.25*knob('smis');if(a0==null){a0=0;b0=1}
   const s=S,w=WD,L=w.landIdx,T=s.tk,kd=0.12*P.techDiff,loss=0.006*P.techLoss,r=s.r,rels=s.rels,pols=s.pols;const s_car=s.car,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_firstTech=s.firstTech,s_herd=s.herd,s_irrig=s.irrig,s_paper=s.paper,s_pol=s.pol,s_pop=s.pop,s_rel=s.rel,s_roads=s.roads,s_sail=s.sail,w_Pr=w.Pr,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_desert=w.desert,w_heavy=w.heavy,w_leach=w.leach,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nbE=w.nbE||null,szF=w.szF||null,w_land=w.land,w_rv=w.rv,w_sH=w.sH,w_trop=w.trop,w_tsetse=w.tsetse;
   const suit=[w.sF,w.sH,rvAg(),null,w.sH];
   // drums carry where forest and hills hide fires and slow runners; beacons need hills in sight of each other
@@ -2141,8 +2141,9 @@ function techStep(a0,b0){const SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&WD.
         if(m>t){let k=kd*rvb*(same?1:0.6)*Math.min(w_nbE?6:1,mc);if(f===0&&w_nbE)k*=FDX;
           // (nolandvar) farming crosses into land whose rain comes in another season only as fast as its crops are remade for it:
           // winter-sown Near Eastern grain stalled for centuries where the summer-dry Balkans meet the summer-wet Carpathian basin
-          // (the Koros frontier, c. 6000-5500 BCE; Bánffy 2004; Krauß et al. 2018)
-          if(f===0&&SDC&&mj>=0)k*=1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[mj]));if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
+          // (the Koros frontier, c. 6000-5500 BCE; Bánffy 2004; Krauß et al. 2018). With crop strains (2026-11-21) the know-how
+          // crosses only as fast as the neighbour's grown strain suits this land's season; switch noseas keeps the old per-step rule
+          if(f===0&&SDC&&mj>=0){if(SEAS_){const ck=S.crop[mj];if(ck>=0){const ms=Math.abs(S.sAd[mj*NCR_+ck]-SDC[i])/SMS_;k*=0.1+0.9*Math.exp(-ms*ms)}}else k*=1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[mj]))}if(f>=3&&f!==5&&f!==18&&noFarm)k*=0.02;const sf=suit[f];if(sf)k*=0.2+sf[i];if(f===5&&!w_coast[i])k*=0.3;if(f===18)k*=0.2+(w_desert[i]||w_sH[i]>0.3?1:0);if(f===19)k*=0.05+0.95*(1-w_trop[i])*(1-w_leach[i]);else if(f===20)k*=w_tsetse[i]?0.03:0.3+0.7*(1-w_heavy[i]);else if(f===21)k*=0.1+w_heavy[i];else if(f===23)k*=0.3*(s_farm[i]>0.5?1:0.2);else if(f>=SYNTH0)k*=0.5;
           // foragers take up farming only as far as it beats what the wild gives them: rich coasts, rivers and lakes hold out
           // for centuries beside farmers (Ertebolle, Jomon, the Northwest Coast; Zvelebil 1986; Rowley-Conwy 2011). Land no one can
           // farm still passes the knowledge along
@@ -3881,7 +3882,7 @@ function cropsInit(){
   if(!w.sF0){w.sF0=Float32Array.from(w.sF);w.sH0=Float32Array.from(w.sH);w.leach0=Float32Array.from(w.leach);w.trop0=Float32Array.from(w.trop)}
   else{w.sF.set(w.sF0);w.sH.set(w.sH0);w.leach.set(w.leach0);w.trop.set(w.trop0);w.exQ=null}
   if(w.malAm)for(const i of w.landIdx)if(w.malAm[i]>0)w.mal[i]=0;s.malAm=false;
-  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99),open:new Float32Array(N).fill(1),pkGrow:new Uint16Array(N),malF:new Float32Array(N).fill(1),fclr:new Float32Array(N)});
+  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99),sAd:new Float32Array(N*CROPS.length).fill(-1),sAd0:new Float32Array(CROPS.length).fill(-1),open:new Float32Array(N).fill(1),pkGrow:new Uint16Array(N),malF:new Float32Array(N).fill(1),fclr:new Float32Array(N)});
   for(const i of w.landIdx)s.open[i]=1-w.turf[i];
   if(!w.alat){w.alat=new Float32Array(N);for(const i of w.landIdx)w.alat[i]=Math.abs(w.lat[i]*180/Math.PI)}
 }
@@ -3894,14 +3895,26 @@ function hearthPackage(h,c){const w=WD;if(h.pk!=null)return CI[h.pk];
 // about a quarter of a degree a century: maize took some 5,000 years to go from the Balsas valley to the American Southwest
 // and the Eastern Woodlands (Smith 2006; Diamond 1997, on axes of spread).
 function bandIn(k,c){const b=S.cBand,a=WD.alat[c];b[2*k]=Math.min(b[2*k],Math.max(0,a-7));b[2*k+1]=Math.max(b[2*k+1],a+7)}
-function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
+// strains bred to the rain season (default on, switch noseas; needs the land quantities and the front rule)
+function seasOn(){return !swOn('nolandvar')&&!swOn('nofrontclim')&&!swOn('noseas')&&!!WD.sumDry&&!!S.sAd}
+function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);
+  if(WD.sumDry){const sd=WD.sumDry[c];for(const q of k===CI.potato?[k,CI.cassava]:[k])if(s.sAd0[q]<0)s.sAd0[q]=sd}s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
 // every ten years: packages spread with farmers and by sea, each farm grows its best package, and some learn to process it
 function cropPass(quiet){
   const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nbS=w.nbS,nbA=w.nbA,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT;
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
-  const grow=s.pkGrow,SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&w.sumDry?w.sumDry:null;
+  const SEAS=seasOn(),SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&!SEAS&&w.sumDry?w.sumDry:null;const grow=s.pkGrow;
+  // (switch noseas; 2026-11-21) crops carry strains bred for the season their rain comes in. A crop newly reached through a
+  // neighbour takes the neighbour's strain (by ship or with migrants, its homeland's); each decade it grows there its strain is
+  // bred a little toward the local season, slower where it is only tried. Winter-sown Near Eastern grain needed centuries of
+  // selection before it would yield where rain comes in summer: the Koros frontier held for some 500 years on the edge of the
+  // Carpathian basin (Banffy 2004; Krauss et al. 2018). The wait comes where the season changes sharply, not on a gentle gradient.
+  const NCR=CROPS.length,sAd=s.sAd,SD=w.sumDry,SRT=0.05*knob('sadapt'),SMS=0.25*knob('smis');
+  if(SEAS){for(const i of L){const av=pkAv[i];if(!av)continue;for(let k=0;k<NCR;k++){if(!(av&(1<<k))||sAd[i*NCR+k]>=0)continue;
+      let v=-1;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&sAd[j*NCR+k]>=0&&(pkAv[j]&(1<<k))){v=sAd[j*NCR+k];if(grow[j]&(1<<k))break}}
+      sAd[i*NCR+k]=v>=0?v:s.sAd0[k]>=0?s.sAd0[k]:SD[i]}}}
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0)b|=grow[j]}pkAv[i]=b}
   if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;
     for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;const ad=SDC?1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[j])):1;   // crops remade for another rain season (nolandvar)
@@ -3915,7 +3928,8 @@ function cropPass(quiet){
   for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
     // river switch: a crop's water from the flood is judged on the land actually farmed: in a desert valley all of it is floodplain
     const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)),el=w.elev[i];
-    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
+    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),ms=SEAS?Math.abs(sAd[i*NCR+k]-SD[i])/SMS:0,f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1)*(ms>0?Math.exp(-ms*ms):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
+    if(SEAS&&!quiet&&farm[i]>0.3&&pop[i]>=1)for(let k=0;k<NCR;k++){if(!(av&(1<<k)))continue;const q=i*NCR+k;sAd[q]+=(gm&(1<<k)?SRT:0.3*SRT)*(SD[i]-sAd[q])}
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
       if(best===CI.potato){const pS=clamp((P-280)/450,0,1)*clamp((3400-P)/1600,0.25,1);b=Math.max(b,pS*rf*(1-0.7*w.leach[i]))}
@@ -4928,8 +4942,11 @@ function rallyNb(){const w=WD;if(w._rlS)return;const S0=new Int32Array(N+1),A=[]
   for(let i=0;i<N;i++){S0[i]=A.length;ring(i,2,(j,dx,dy)=>{if(j===i)return;A.push(j);Wt.push(Math.abs(dx)+Math.abs(dy)<=2?0.6:0.3)})}S0[N]=A.length;
   w._rlS=S0;w._rlA=Int32Array.from(A);w._rlW=Float64Array.from(Wt);w._rlE=S0.subarray(1)}
 function rallyPass(){const s=S,w=WD,L=w.landIdx;if(!s.rally)s.rally=new Float32Array(N);const R=s.rally;rallyNb();const nS=w._rlS,nE=w._rlE,nA=w._rlA,nW=w._rlW,land=w.land,pol=s.pol,eth=s.eth,pop=s.pop;
+  // (2026-11-21) one key per unit (its people if stateless land, else -2), so the inner loop reads two arrays, not four: same
+  // sums in the same order, about a tenth of a run's time before
+  let K=w._rlK;if(!K||K.length!==N)K=w._rlK=new Int32Array(N);for(let j=0;j<N;j++)K[j]=land[j]&&!pol[j]?eth[j]:-2;
   for(const i of L){R[i]=0;if(pol[i]||pop[i]<1)continue;const e=eth[i];if(e<0)continue;let t=0;
-    for(let q=nS[i],qe=nE[i];q<qe;q++){const j=nA[q];if(!land[j]||pol[j]||eth[j]!==e)continue;t+=pop[j]*nW[q]}
+    for(let q=nS[i],qe=nE[i];q<qe;q++){const j=nA[q];if(K[j]!==e)continue;t+=pop[j]*nW[q]}
     const E=s.eths[e],ride=E&&E.ride?E.ride:0;R[i]=s.pop[i]+t*(0.7+0.6*ride)*(0.6+0.8*s.s[i])}}
 function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass();const R=s.rally;
   for(const id of s.alive){const o=s.pols[id];o.tFront=0}

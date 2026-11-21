@@ -84,7 +84,7 @@ function cropsInit(){
   if(!w.sF0){w.sF0=Float32Array.from(w.sF);w.sH0=Float32Array.from(w.sH);w.leach0=Float32Array.from(w.leach);w.trop0=Float32Array.from(w.trop)}
   else{w.sF.set(w.sF0);w.sH.set(w.sH0);w.leach.set(w.leach0);w.trop.set(w.trop0);w.exQ=null}
   if(w.malAm)for(const i of w.landIdx)if(w.malAm[i]>0)w.mal[i]=0;s.malAm=false;
-  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99),open:new Float32Array(N).fill(1),pkGrow:new Uint16Array(N),malF:new Float32Array(N).fill(1),fclr:new Float32Array(N)});
+  Object.assign(s,{lint:new Float32Array(N),sFc:Float32Array.from(w.sF),pkAv:new Uint16Array(N),crop:new Int8Array(N).fill(-1),cY:new Float32Array(N),cTax:new Float32Array(N),cStore:new Float32Array(N),cDrain:new Float32Array(N).fill(1),cBand:new Float32Array(CROPS.length*2).map((_,k)=>k%2?-1:99),sAd:new Float32Array(N*CROPS.length).fill(-1),sAd0:new Float32Array(CROPS.length).fill(-1),open:new Float32Array(N).fill(1),pkGrow:new Uint16Array(N),malF:new Float32Array(N).fill(1),fclr:new Float32Array(N)});
   for(const i of w.landIdx)s.open[i]=1-w.turf[i];
   if(!w.alat){w.alat=new Float32Array(N);for(const i of w.landIdx)w.alat[i]=Math.abs(w.lat[i]*180/Math.PI)}
 }
@@ -97,14 +97,26 @@ function hearthPackage(h,c){const w=WD;if(h.pk!=null)return CI[h.pk];
 // about a quarter of a degree a century: maize took some 5,000 years to go from the Balsas valley to the American Southwest
 // and the Eastern Woodlands (Smith 2006; Diamond 1997, on axes of spread).
 function bandIn(k,c){const b=S.cBand,a=WD.alat[c];b[2*k]=Math.min(b[2*k],Math.max(0,a-7));b[2*k+1]=Math.max(b[2*k+1],a+7)}
-function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
+// strains bred to the rain season (default on, switch noseas; needs the land quantities and the front rule)
+function seasOn(){return !swOn('nolandvar')&&!swOn('nofrontclim')&&!swOn('noseas')&&!!WD.sumDry&&!!S.sAd}
+function plantHearth(k,c){const s=S,bit=(1<<k)|(k===CI.potato?1<<CI.cassava:0);bandIn(k,c);if(k===CI.potato)bandIn(CI.cassava,c);
+  if(WD.sumDry){const sd=WD.sumDry[c];for(const q of k===CI.potato?[k,CI.cassava]:[k])if(s.sAd0[q]<0)s.sAd0[q]=sd}s.pkAv[c]|=bit;ring(c,2,j=>{if(WD.land[j])s.pkAv[j]|=bit});cropPass(true)}
 // every ten years: packages spread with farmers and by sea, each farm grows its best package, and some learn to process it
 function cropPass(quiet){
   const s=S,w=WD,r=s.r,L=w.landIdx,pkAv=s.pkAv,farm=s.farm,pop=s.pop,nbS=w.nbS,nbA=w.nbA,cdT=s.cdT,cdP=s.cdP,dT=s.dT+s.gT;
   const chu=s.tk[TI.chuno],nix=s.tk[TI.nixtamal],ter=s.tk[TI.terrace],sFc=s.sFc,cB=s.cBand,alat=w.alat,edge=new Uint8Array(CROPS.length);
   // farmers pass on the crops they grow; seed they only carry (traded, or brought by herders) travels about ten times slower,
   // so a short desert gap is crossed in centuries but rice does not walk from Asia into the Congo. Seafarers carry seed too.
-  const grow=s.pkGrow,SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&w.sumDry?w.sumDry:null;
+  const SEAS=seasOn(),SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&!SEAS&&w.sumDry?w.sumDry:null;const grow=s.pkGrow;
+  // (switch noseas; 2026-11-21) crops carry strains bred for the season their rain comes in. A crop newly reached through a
+  // neighbour takes the neighbour's strain (by ship or with migrants, its homeland's); each decade it grows there its strain is
+  // bred a little toward the local season, slower where it is only tried. Winter-sown Near Eastern grain needed centuries of
+  // selection before it would yield where rain comes in summer: the Koros frontier held for some 500 years on the edge of the
+  // Carpathian basin (Banffy 2004; Krauss et al. 2018). The wait comes where the season changes sharply, not on a gentle gradient.
+  const NCR=CROPS.length,sAd=s.sAd,SD=w.sumDry,SRT=0.05*knob('sadapt'),SMS=0.25*knob('smis');
+  if(SEAS){for(const i of L){const av=pkAv[i];if(!av)continue;for(let k=0;k<NCR;k++){if(!(av&(1<<k))||sAd[i*NCR+k]>=0)continue;
+      let v=-1;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&sAd[j*NCR+k]>=0&&(pkAv[j]&(1<<k))){v=sAd[j*NCR+k];if(grow[j]&(1<<k))break}}
+      sAd[i*NCR+k]=v>=0?v:s.sAd0[k]>=0?s.sAd0[k]:SD[i]}}}
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0)b|=grow[j]}pkAv[i]=b}
   if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;
     for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;const ad=SDC?1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[j])):1;   // crops remade for another rain season (nolandvar)
@@ -118,7 +130,8 @@ function cropPass(quiet){
   for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
     // river switch: a crop's water from the flood is judged on the land actually farmed: in a desert valley all of it is floodplain
     const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)),el=w.elev[i];
-    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
+    const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),ms=SEAS?Math.abs(sAd[i*NCR+k]-SD[i])/SMS:0,f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1)*(ms>0?Math.exp(-ms*ms):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;
+    if(SEAS&&!quiet&&farm[i]>0.3&&pop[i]>=1)for(let k=0;k<NCR;k++){if(!(av&(1<<k)))continue;const q=i*NCR+k;sAd[q]+=(gm&(1<<k)?SRT:0.3*SRT)*(SD[i]-sAd[q])}
     // farm suitability for what is actually grown: cool-summer crops do not need the warm summers cereals do, and terraces tame slopes
     {let b=w.sF[i];const ro=w.rough[i],rf=1-0.65*ro;
       if(best===CI.potato){const pS=clamp((P-280)/450,0,1)*clamp((3400-P)/1600,0.25,1);b=Math.max(b,pS*rf*(1-0.7*w.leach[i]))}
