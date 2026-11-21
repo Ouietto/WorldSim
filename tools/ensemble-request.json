@@ -5,29 +5,11 @@
  "ref": "",
  "baseEnv": "",
  "variants": [
-  {
-   "name": "now",
-   "env": "WORLD=prov"
-  },
-  {
-   "name": "off-winter-rain-crops",
-   "env": "WORLD=prov SW=nowinrain"
-  },
-  {
-   "name": "off-sod-by-quantities",
-   "env": "WORLD=prov SW=nosodvar"
-  },
-  {
-   "name": "off-ard-fallow",
-   "env": "WORLD=prov SW=noardfal"
-  },
-  {
-   "name": "off-front-waits-on-crops",
-   "env": "WORLD=prov SW=nofrontclim"
-  },
-  {
-   "name": "off-all-land-quantities",
-   "env": "WORLD=prov SW=nolandvar"
-  }
+  {"name": "now", "env": "WORLD=prov"},
+  {"name": "winrain-off+ard-off", "env": "WORLD=prov SW=nowinrain,noardfal"},
+  {"name": "winrain-third+ard-off", "env": "WORLD=prov SW=noardfal KV=winrain:0.33"},
+  {"name": "winrain-off+ard-off+fd55", "env": "WORLD=prov SW=nowinrain,noardfal,fd55"},
+  {"name": "winrain-third+ard-off+fd55", "env": "WORLD=prov SW=noardfal,fd55 KV=winrain:0.33"},
+  {"name": "off-all-land-quantities", "env": "WORLD=prov SW=nolandvar"}
  ]
 }

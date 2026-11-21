@@ -398,6 +398,7 @@ function seasonFields(w){const n=w.n,sd=new Float32Array(n),wd=new Float32Array(
   for(let it=0;it<2;it++){const a=sd.slice(),b=wd.slice();for(const i of w.landIdx){let x=0,y=0,m=0;for(let q=w.nbS[i];q<w.nbS[i+1];q++){const j=w.nbA[q];if(j>=0&&w.land[j]){x+=a[j];y+=b[j];m++}}if(m){sd[i]=0.5*a[i]+0.5*x/m;wd[i]=0.5*b[i]+0.5*y/m}}}}
 function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,elev=w.elev,rough=w.rough,rv=w.rv,lat=w.lat;
   const LV=!swOn('nolandvar');if(LV)seasonFields(w);const SD=LV&&w.sumDry?w.sumDry:null;
+  const WRB=0.5*knob('winrain');   // winter rain's extra reach for grain (knob winrain, 2026-11-21: run 111 found the full boost pushed Europe early)
   // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
   // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
   // (provinces: land watered by hill streams on fans and piedmont counts with the floodplain, fineFans)
@@ -415,7 +416,7 @@ function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,el
     // loess and black-earth soils: semi-arid temperate grassland soils are deep and fertile once worked
     // rain that falls in the cool season, when grain grows and little evaporates, goes further than summer rain: barley is dry-farmed
     // on 250-300 mm of winter rain in the Levant and Iran, where summer-rain land needs nearer 500 (Perrin de Brichambaut & Wallén 1963)
-    const pE=SD&&!swOn('nowinrain')?p*(1+0.5*SD[i]):p;
+    const pE=SD&&!swOn('nowinrain')?p*(1+WRB*SD[i]):p;
     const pS=Math.max(clamp((pE-280)/450,0,1)*clamp((3400-p)/1600,0.25,1),t>9.5&&t<18?0.62*clamp((pE-330)/120,0,1)*clamp((850-p)/150,0,1):0);
     const irr=w.rvF[i]*clamp((tw-14)/6,0,1);
     const leach=elev[i]<1500?clamp((p-1100)/600,0,1)*clamp((t-20)/3,0,1)*(1-clamp((rv[i]-0.55)*2.5,0,0.8)):0;
