@@ -4096,12 +4096,26 @@ function landUseInit(){const s=S,w=WD;
 }
 // a people's herding tradition, inherited and blended like its culture
 function inheritPast(e,p,p2){e.past=p?clamp((p2?(p.past+p2.past)/2:p.past)+gauss(S.r)*0.04,0,1):0.5;e.pastSet=p?p.pastSet||0:0}
+// (switch nothrland; 2026-11-21) farmers weigh what horsemen within reach could take, not only what they took lately. The
+// riding power of hordes and free herders (people x share living by herds x riding skill x horses) reaches about six provinces
+// (some 400 km, a few days' ride), fading 30% a province; the strongest such band within reach is the threat. A province's own
+// people, and a state that holds it, are its defence, and only open country is exposed. The Pontic and Hungarian grasslands
+// stayed pasture beside the sown for millennia (Anthony 2007; Khazanov 1994; Di Cosmo 2002 on the Chinese northern frontier).
+function steppeThreat(){const s=S,w=WD,L=w.landIdx,nbS=w.nbS,nbA=w.nbA,pol=s.pol,pols=s.pols;
+  if(!s.thL||s.thL.length!==N)s.thL=new Float32Array(N);const R=new Float32Array(N),T=new Float32Array(N),T2=new Float32Array(N);
+  for(const i of L){const p=s.pop[i];if(p<1)continue;const o=pol[i]?pols[pol[i]]:null;if(o&&o.kind==='state')continue;
+    const h=Math.min(1,s.horse[i]),rd=rideAtCell(i,false)-0.1;if(h<=0||rd<=0)continue;R[i]=p*s.past[i]*rd*h}
+  T.set(R);for(let k=0;k<6;k++){for(const i of L){let m=R[i];for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&0.7*T[j]>m)m=0.7*T[j]}T2[i]=m}T.set(T2)}
+  const thL=s.thL;for(const i of L){let m=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&0.7*T[j]>m)m=0.7*T[j]}
+    const o=pol[i]?pols[pol[i]]:null,held=o&&o.kind==='state'?s.integ[i]:0,D=Math.max(1,s.pop[i])*(1+3*held);thL[i]=m>0?m/(m+D)*openAt(i):0}
+  return thL}
 // every ten years
 function landUsePass(){
   const s=S,w=WD,L=w.landIdx,past=s.past,pol=s.pol,pols=s.pols,eths=s.eths,y=s.year;
   // (herds switch: people weigh herding by what a normal year gives, not by this year's herd after a die-off)
   const KH=herdsOn()&&s.KhN?s.KhN:s.Kh;
   const sum=new Float64Array(eths.length),wt=new Float64Array(eths.length);
+  const TH=swOn('nothrland')?null:steppeThreat(),THW=2*knob('thrland');
   for(const i of L){const p=s.pop[i];if(p<1||(s.farm[i]<0.1&&s.herd[i]<0.1))continue;
     // fields on dry, drought-prone land are a gamble that herds, which can move, are not
     const risk=1-0.4*clamp((550-w.Pr[i])/300,0,1)*(1-0.7*s.irrig[i]*rvAg()[i]);
@@ -4110,7 +4124,8 @@ function landUsePass(){
     // raided, open country is safer grazed than sown
     const raided=y-s.raidC[i]<30&&w.rough[i]<0.35?1:0;
     const o=pol[i]?pols[pol[i]]:null,policy=o&&o.kind==='state'&&o.steppe!=null?o.steppe-0.5:o&&o.kind==='horde'?0.4*(kindOn()?1-(o.kin||0):1):0;   // a horde that thinks in kind leaves farmers on the land
-    const share=Fx=>1/(1+Math.exp(-(6*(Hh/(Fx+Hh)-0.5)+3*(trad-0.5)+0.8*raided+1.6*policy)));
+    const share=Fx=>1/(1+Math.exp(-(6*(Hh/(Fx+Hh)-0.5)+3*(trad-0.5)+0.8*raided+(TH?THW*TH[i]:0)+1.6*policy)));
+    if(TH&&TH[i]>0.1)s.thrN=(s.thrN||0)+1;   // provinces whose fields horsemen within reach hold back (counted for the smoke test)
     // on grassland, the broken fields and the unbroken turf are weighed apart: turf that hoes and ards cannot work is pasture
     let target;const tu=w.turf?w.turf[i]:0;
     if(tu>0){const op=s.open[i],f1=0.04+0.08*s.iron[i]+0.6*s.plough[i],Fb=s.Kfa[i]/Math.max(0.01,op+(1-op)*f1),rest=0.3*KH[i]+0.2*s.Kf[i];

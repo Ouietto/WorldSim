@@ -20,6 +20,7 @@ const CHECKS=[
   ['noport', 'portions granted to lesser khans', o=>o.ev.pGrant],
   ['nomob',  'faster side choosing its moment or slipping away', o=>(o.ev.mChoose||0)+(o.ev.mEvade||0)],
   ['nomob',  'strike and flee wearing down ground', o=>o.ev.mHarass],
+  ['nothrland','fields held back by horsemen within reach', o=>o.ev.thr],
 ];
 const run=seed=>new Promise(res=>{let out='',err='';const p=spawn(process.execPath,[path.join(__dirname,'run1.js'),seed,END],{env});
   p.stdout.on('data',d=>out+=d);p.stderr.on('data',d=>err+=d);
