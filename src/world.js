@@ -399,6 +399,7 @@ function seasonFields(w){const n=w.n,sd=new Float32Array(n),wd=new Float32Array(
 function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,elev=w.elev,rough=w.rough,rv=w.rv,lat=w.lat;
   const LV=!swOn('nolandvar');if(LV)seasonFields(w);const SD=LV&&w.sumDry?w.sumDry:null;
   const WRB=0.5*knob('winrain');   // winter rain's extra reach for grain (knob winrain, 2026-11-21: run 111 found the full boost pushed Europe early)
+  const FSH0=0.05*knob('fshmin');   // least farmed share of a river-fed unit (knob fshmin)
   // and the flood must come at the right time: rivers of frozen-winter lands rise with the snowmelt in late spring, drowning the
   // crop and leaving salt flats (the lower Volga, Amu Darya); the Nile rises after the harvest
   // (provinces: land watered by hill streams on fans and piedmont counts with the floodplain, fineFans)
@@ -425,7 +426,7 @@ function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,el
     sF[i]=Math.max(tS*pS,tS*irr*0.95)*(1-0.65*rough[i])*(elev[i]>3500?0.3:1)*(1-0.7*leach);
     // (2026-11-21) the share of the unit its fields actually occupy: all of it where rain feeds the crop, only the floodplain and
     // fans where the river does (the Mesopotamian and Indus alluvium, the Nile valley in its desert)
-    {const Rn=tS*pS,Ir=tS*irr*0.95,q=Ir>0.001?clamp(Rn/Ir,0,1):1;fSh[i]=q+(1-q)*clamp((w.ffp?w.ffp[i]:0)+(w.fan?w.fan[i]:0),0.05,1)}
+    {const Rn=tS*pS,Ir=tS*irr*0.95,q=Ir>0.001?clamp(Rn/Ir,0,1):1;fSh[i]=q+(1-q)*clamp((w.ffp?w.ffp[i]:0)+(w.fan?w.fan[i]:0),FSH0,1)}
     sH[i]=clamp((tw-4)/10,0,1)*clamp((27-t)/7,0,1)*clamp((p-120)/180,0,1)*clamp((1100-p)/500,0.15,1)*(1-0.4*rough[i]);
     nomad[i]=(sH[i]>0.45&&sF[i]<0.3)?1:0;
   }

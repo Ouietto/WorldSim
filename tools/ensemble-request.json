@@ -5,10 +5,9 @@
  "ref": "",
  "baseEnv": "",
  "variants": [
-  {"name": "strains+threat+farmland", "env": "WORLD=prov SW=nowinrain,noardfal"},
-  {"name": "strains+threat", "env": "WORLD=prov SW=nowinrain,noardfal,nofarmland"},
-  {"name": "strains+farmland", "env": "WORLD=prov SW=nowinrain,noardfal,nothrland"},
-  {"name": "fd55+threat+farmland", "env": "WORLD=prov SW=nowinrain,noardfal,fd55,noseas"},
-  {"name": "best112", "env": "WORLD=prov SW=nowinrain,noardfal,fd55,noseas,nothrland,nofarmland"}
+  {"name": "best115+ports", "env": "WORLD=prov SW=nowinrain,noardfal"},
+  {"name": "best115", "env": "WORLD=prov SW=nowinrain,noardfal,noports"},
+  {"name": "ports+farmed-floor-0.15", "env": "WORLD=prov SW=nowinrain,noardfal KV=fshmin:3"},
+  {"name": "ports+farmed-floor-0.30", "env": "WORLD=prov SW=nowinrain,noardfal KV=fshmin:6"}
  ]
 }
