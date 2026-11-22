@@ -326,11 +326,11 @@ function goodsPass(){const s=S,w=WD,pols=s.pols;if(!s.ore)goodsInit();const G=s.
   // to four hands away; each hand between takes a toll (a tenth, up to three-tenths under a grasping ruler) and less arrives for
   // it. A seller who is the only source in reach doubles the price, and the buyer remembers the squeeze. Merchants' wealth (mw)
   // gathers where goods are sold and pass through
-  // (switch noports; 2026-11-21) a realm sails from its busiest coastal province where its people sail, not only from a capital on
+  // (switch ports, opt-in: run 116 found it 2.3 points worse; 2026-11-21) a realm sails from its busiest coastal province where its people sail, not only from a capital on
   // the shore: most realms' capitals lay inland, and their sea trade went through Piraeus, Ostia, Gaza, Ur's quays or Lothal.
   // Before, only 2 of the 25 largest states at 500 BCE (seed 1) had any sea link.
   const port=new Map();for(const id of A){const o=pols[id];o.sea=null;o.port=-1}
-  if(!swOn('noports')){for(const i of w.landIdx){const p=s.pol[i];if(!p||!w.coast[i]||s.sail[i]<=0.5||s.pop[i]<1)continue;const o=pols[p];if(!o||!o.gs)continue;const b=port.get(p);if(b==null||s.pop[i]>s.pop[b])port.set(p,i)}
+  if(swOn('ports')){for(const i of w.landIdx){const p=s.pol[i];if(!p||!w.coast[i]||s.sail[i]<=0.5||s.pop[i]<1)continue;const o=pols[p];if(!o||!o.gs)continue;const b=port.get(p);if(b==null||s.pop[i]>s.pop[b])port.set(p,i)}
     for(const [p,i] of port)pols[p].port=i}
   else for(const id of A){const o=pols[id],c=o.capital;if(w.coast[c]&&s.sail[c]>0.5)port.set(id,c)}
   const PL=[...port.keys()];for(let a=0;a<PL.length;a++)for(let b=a+1;b<PL.length;b++){const ca=port.get(PL[a]),cb=port.get(PL[b]),R=600*(1+2*Math.min(s.nav[ca],s.nav[cb]));

@@ -5,9 +5,9 @@
  "ref": "",
  "baseEnv": "",
  "variants": [
-  {"name": "best115+ports", "env": "WORLD=prov SW=nowinrain,noardfal"},
-  {"name": "best115", "env": "WORLD=prov SW=nowinrain,noardfal,noports"},
-  {"name": "ports+farmed-floor-0.15", "env": "WORLD=prov SW=nowinrain,noardfal KV=fshmin:3"},
-  {"name": "ports+farmed-floor-0.30", "env": "WORLD=prov SW=nowinrain,noardfal KV=fshmin:6"}
+  {"name": "best115", "env": "WORLD=prov SW=nowinrain,noardfal"},
+  {"name": "farmland-test-only", "env": "WORLD=prov SW=nowinrain,noardfal,nofarmrate"},
+  {"name": "farmland-test-only+floor-0.15", "env": "WORLD=prov SW=nowinrain,noardfal,nofarmrate KV=fshmin:3"},
+  {"name": "no-farmland", "env": "WORLD=prov SW=nowinrain,noardfal,nofarmland"}
  ]
 }
