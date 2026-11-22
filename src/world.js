@@ -406,7 +406,7 @@ function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,el
   {const rr=new Float32Array(n);for(const i of landList)rr[i]=clamp((560-Pr[i])/200,0,1)*clamp((amp[i]-22)/8,0,1);for(const i of landList)rr[i]*=1-Math.min(1,2*w.rvF[i]);w.rainRisk=rr}
   w.gs=new Float32Array(n);w.leach=new Float32Array(n);w.trop=new Float32Array(n);
   // suitability
-  const sF=new Float32Array(n),sH=new Float32Array(n),nomad=new Uint8Array(n),biome=new Uint8Array(n);
+  const sF=new Float32Array(n),sH=new Float32Array(n),nomad=new Uint8Array(n),biome=new Uint8Array(n),fSh=new Float32Array(n).fill(1);
   for(const i of landList){
     const t=T[i],p=Pr[i],tw=t+amp[i]/2;biome[i]=biomeOf(t,p);
     if(t<-9)continue;
@@ -423,10 +423,13 @@ function deriveLand(w){const n=w.n,landList=w.landIdx,T=w.T,Pr=w.Pr,amp=w.amp,el
     w.leach[i]=leach;
     w.trop[i]=elev[i]<1200?clamp((t-21)/3,0,1)*clamp((p-900)/600,0,1):0;
     sF[i]=Math.max(tS*pS,tS*irr*0.95)*(1-0.65*rough[i])*(elev[i]>3500?0.3:1)*(1-0.7*leach);
+    // (2026-11-21) the share of the unit its fields actually occupy: all of it where rain feeds the crop, only the floodplain and
+    // fans where the river does (the Mesopotamian and Indus alluvium, the Nile valley in its desert)
+    {const Rn=tS*pS,Ir=tS*irr*0.95,q=Ir>0.001?clamp(Rn/Ir,0,1):1;fSh[i]=q+(1-q)*clamp((w.ffp?w.ffp[i]:0)+(w.fan?w.fan[i]:0),0.05,1)}
     sH[i]=clamp((tw-4)/10,0,1)*clamp((27-t)/7,0,1)*clamp((p-120)/180,0,1)*clamp((1100-p)/500,0.15,1)*(1-0.4*rough[i]);
     nomad[i]=(sH[i]>0.45&&sF[i]<0.3)?1:0;
   }
-  Object.assign(w,{sF,sH,nomad,biome});
+  Object.assign(w,{sF,sH,nomad,biome,fSh});
   // travel cost (units of a half flat cell), tsetse belt, orbital monsoon zone
   const tcost=new Uint8Array(n),tsetse=new Uint8Array(n),monZone=new Float32Array(n),desert=new Uint8Array(n);
   for(const i of landList){const b=biome[i],t=T[i],p=Pr[i],la=lat[i]*180/Math.PI;

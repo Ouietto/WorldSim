@@ -1613,6 +1613,7 @@ function culture(o){
 /* ---------- states, each year ---------- */
 function politics(){for(const _ of politicsG());}
 function* politicsG(){
+  const FLD=!swOn('nofarmland')&&!!WD.fSh;
   if(!S.recK)recPass();
   const s=S,w=WD,r=s.r,y=s.year,pols=s.pols,L=w.landIdx,pol=s.pol,pop=s.pop,szF=w.szF||null;const s_K=s.K,s_admin=s.admin,s_recK=s.recK,s_anom=s.anom,s_ard=s.ard,s_camel=s.camel,s_car=s.car,s_circE=s.circE,s_coin=s.coin,s_dist=s.dist,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_figs=s.figs,s_fort=s.fort,s_gun=s.gun,s_herd=s.herd,s_horse=s.horse,s_integ=s.integ,s_isleBy=s.isleBy,s_isleName=s.isleName,s_law=s.law,s_leagues=s.leagues,s_lmPop=s.lmPop,s_metal=s.metal,s_migs=s.migs,s_nav=s.nav,s_paper=s.paper,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rels=s.rels,s_roads=s.roads,s_s=s.s,s_sail=s.sail,s_taken=s.taken,s_tk=s.tk,s_uni=s.uni,s_uniFam=s.uniFam,s_wars=s.wars,w_area=w.area,w_coast=w.coast,w_cosLat=w.cosLat,w_cosLon=w.cosLon,w_cyA=w.cyA,w_desert=w.desert,w_heavy=w.heavy,w_land=w.land,w_ld=w.ld,w_lm=w.lm,w_lmSize=w.lmSize,w_ls=w.ls,w_lt=w.lt,w_nD=w.nD,w_nM=w.nM,w_nN=w.nN,w_nT=w.nT,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_nomad=w.nomad,w_sF=w.sF,w_sH=w.sH,w_sinLon=w.sinLon,w_tsetse=w.tsetse,s_cStore=s.cStore,s_irrig=s.irrig,s_sFc=s.sFc;
   const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),CO=cohArr();
@@ -1904,7 +1905,8 @@ function* politicsG(){
         if(o.cells>=25)chron('fall',`On grass the ${o.full} claims but does not hold, a new khan raises his standard.`,i,[R_(o),R_(pols[nid])],(o.steppe??0.5)<0.5?'The court had turned from the herds, and its far pastures had no garrison.':'Its far pastures had no garrison.')}
     }else{
       sv+=fr?asR*0.6*sv*(1-sv):(0.3+0.25*s.ritW[i]-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
-      if(pi>=1){const dens=pi/w_area[i],agr=s_farm[i]*s_sFc[i],past=s_herd[i]*Math.max(w_sH[i],w_desert[i]*s_camel[i]*0.6);
+      // (switch nofarmland; 2026-11-21) farmland and crowding judged on the land the fields occupy (fSh), not the whole province
+      if(pi>=1){const fsh=FLD?w.fSh[i]:1,pf=FLD?1-s.past[i]:1,dens=pi*(pf/fsh+1-pf)/w_area[i],agr=s_farm[i]*Math.min(1,s_sFc[i]/fsh),past=s_herd[i]*Math.max(w_sH[i],w_desert[i]*s_camel[i]*0.6);
         // density threshold rescaled with population, which ran about 40% above historical estimates when it was set
         if(agr>0.35&&dens>3.2&&!w_nomad[i]&&(LP?LP[i]:localPop(i))>=FLOOR.chief*3*P.floor){
           // pristine states need crowding and nowhere to go (Carneiro 1970); everywhere else a state's example, trade or threat
