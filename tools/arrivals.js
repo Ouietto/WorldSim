@@ -7,11 +7,13 @@
 // arrival as often, as early and at the same edges as the world runs did. --write puts it into src/world.js.
 const fs=require('fs'),path=require('path');
 const args=process.argv.slice(2);const take=k=>{const i=args.indexOf(k);if(i<0)return null;const v=args[i+1];args.splice(i,2);return v};
-const REGION=take('--region')||'neareast',WRITE=args.includes('--write');const files=args.filter(a=>a!=='--write');
+const REGION=take('--region')||'neareast',WRITE=args.includes('--write'),BEASTS=args.includes('--beasts');const files=args.filter(a=>a!=='--write'&&a!=='--beasts');
+// tamed beasts (b:) are left out unless --beasts: their wild ranges and odd far-flung taming (a peccary reaching the Near East in one
+// world history) are not worth bringing in; crops (c:), herds (h:) and techniques (t:) are
 const runs=[];for(const f of files){let o=null;try{o=JSON.parse(fs.readFileSync(f,'utf8').trim().split('\n').pop())}catch(e){}if(o&&o.arr)runs.push(o)}
 if(!runs.length){console.error('no run1 outputs with arrivals (run the world with REGION_REPORT='+REGION+')');process.exit(1)}
 const items={},seen={},inside={};
-for(const o of runs)for(const [k,r] of Object.entries(o.arr)){seen[k]=(seen[k]||0)+1;if(r[1])inside[k]=(inside[k]||0)+1;else if(r[2]!=null)(items[k]=items[k]||[]).push([r[2],r[3]])}
+for(const o of runs)for(const [k,r] of Object.entries(o.arr)){if(k.startsWith('b:')&&!BEASTS)continue;seen[k]=(seen[k]||0)+1;if(r[1])inside[k]=(inside[k]||0)+1;else if(r[2]!=null)(items[k]=items[k]||[]).push([r[2],r[3]])}
 const end=Math.min(...runs.map(o=>o.end));
 const B=y=>y<=0?(1-y)+' BCE':y+' CE',med=a=>{const s=a.slice().sort((x,y)=>x-y);return s[s.length>>1]};
 console.log(`${runs.length} world histories to ${B(end)}. Items first held outside the region and reaching it:\n`);
