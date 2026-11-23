@@ -597,6 +597,16 @@ const NOSALT=swOn('nosalt');
 // is empty. Works silt up unless kept, faster on canals than in flood basins (Sumer's canals needed dredging every year); what the
 // hands or the reach that built them can no longer keep goes back, so a fallen realm's canals decline over a few generations.
 const CENTRE=!swOn('nocentre');
+// (2026-11-23, Nein: too good for too long, rulers forget to mind the court and patch the holes; switches novig, noesplit, noselect)
+// Vigilance (o.vig): how closely a realm is being minded. Pressure felt (war, raids, a crisis or defeat, hunger) sharpens it within a
+// few years; in calm it drifts toward what the ruler brings himself (more for an able one) over generations. Low vigilance lets the
+// realm's corvee on the big works slacken, lets patronage swell the elite, and leaves a court that defends itself poorly when the
+// crisis comes. Founders and those who seize power came out on top of a contest, so they are the better of two draws; heirs are
+// whoever is born (Ibn Khaldun's generations, without a clock). In a civil war the surplus elite (beyond what offices and income
+// carry) goes over to the rival in the heartland (noesplit).
+const VIG=!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=!swOn('noselect'),SECEDE=!swOn('nosecede');
+const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
+function selectRuler(R){if(!SELR||!R)return;const r=S.r,t=(r()+r()+r())/3;if(t>R.comp)R.comp=t}
 const WKS=swOn('works'),WKF=WKS&&!swOn('nowkflow'),WKR=WKS&&!swOn('nowreck'),WLOC=knob('wlocal');
 // water passes through works (2026-11-23, Nein's idea; switch nowkflow): on a broad, flat plain a canal must leave the river well
 // upstream to command the fields, so part of a province's works water is taken in the province above it on the river (its feeder:
@@ -621,7 +631,7 @@ function wreck(j,x){const s=S,w=WD;if(!s.wk)return;s.wk[j]*=1-x;if(WKF){wkFlow()
 function worksPass(){const s=S,w=WD,FF=FLUSH?floodFit():null,B=0.01*knob('wbuild'),D=0.01*knob('wsilt');const wk=s.wk||(s.wk=new Float32Array(N));
   for(const i of w.landIdx){const rv=w.rvF[i];if(!(rv>0.02)){wk[i]=0;continue}const know=s.irrig[i],W=wk[i];if(know<0.05&&W<=0)continue;
     const fit=FF?FF[i]:0.3,p=s.pol[i],o=p?s.pols[p]:null;
-    const org=o&&o.kind==='state'?clamp((o.coord??1)*(s.integ?s.integ[i]:1)*(o.treas!=null&&o.treas<-0.3?0.6:1),0,1):0;
+    const org=o&&o.kind==='state'?clamp((o.coord??1)*(s.integ?s.integ[i]:1)*(o.treas!=null&&o.treas<-0.3?0.6:1)*(VIG?0.4+0.6*vigOf(o):1),0,1):0;
     const cap=Math.min(1,0.3+0.4*WLOC*fit),Wc=cap+(1-cap)*org,lab=clamp(s.pop[i]*s.farm[i]/(w.area[i]*rv*20),0,1);
     let d=B*know*lab*Math.max(0,Wc-W);
     if(W>0)d-=D*(1-0.6*fit)*W*(1-Math.min(1,lab*Wc/W));
@@ -1064,7 +1074,7 @@ function newPolity(c,from,opt){
     h:P.reach,gate:1,aggrM:1,psi:0,why:null,hist:[],tier:'Chiefdom',full:'',peak:'',from:from?from.id:0,lastBy:0,fK:0,fE:0,lx:0,ly:0,crises:0,
     rel:s.rel[c],allies:[],enemies:new Map(),truce:new Map(),nb:new Map(),over:0,tribs:0,spc:0,era:0,rulers:[],warsF:[],kids:[],
     origin:opt.origin||(from?{type:'rebellion',from:from.id}:{type:'emerged',people:e}),loot:0,cult:0.2,works:[],golds:[],goldStart:0,sample:[],succ:null,fortN:0,cityPop:0,island:false,assimT:0,conqDyn:!!opt.conqDyn,settledY:0,restores:opt.restores||0};
-  o.ruler=newRuler(L,o);o.founderR=o.ruler;o.tier=tierOf(o);o.full=fullName(o);o.peak=o.full;
+  o.ruler=newRuler(L,o);selectRuler(o.ruler);o.founderR=o.ruler;o.tier=tierOf(o);o.full=fullName(o);o.peak=o.full;
   if(from)from.kids.push(id);
   if(from&&from.cplx!=null){o.cplx=from.cplx*0.55;o.ineq=from.ineq*0.85;o.treas=0.2}
   if(from&&from.cav)o.cav=from.cav*0.8;
@@ -1086,7 +1096,7 @@ function succession(o){
   o.rulers.push({name:R0.name,base:R0.base,epithet:R0.epithet,from:R0.since,to:s.year,conq:R0.conq,fig:R0.fig,dyn:o.dyn});
   if(o.rulers.length>60)o.rulers.shift();
   o.ruler=newRuler(L,o);
-  const usurp=r()<pU;
+  const usurp=r()<pU;if(usurp)selectRuler(o.ruler);
   if(R0.fig!=null){const f=s.figs[R0.fig];f.died=s.year;deed(f,usurp?`Overthrown at ${s.year-R0.birth} by ${o.ruler.name}`:`Died at ${s.year-R0.birth}`);
     const fam=s.eths[o.core]?s.eths[o.core].fam:-1;
     if((f.conq>=80||f.realm>=200)&&fam>=0&&!s.famTitle[fam]&&r()<0.25){
@@ -1144,11 +1154,14 @@ function civilWar(o,breakup){
   // reuniting Egypt twice; Sargon taking the realm of Kish). Others that broke away stay apart until someone takes them in.
   let fellTo=null;
   if(CENTRE&&o.kind==='state'){const mine=cells.filter(i=>s.pol[i]===id);
-    let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i]);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0));
+    let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i]);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0))*(VIG?0.6+0.4*vigOf(o):1);
+    // the surplus elite goes over to the rebel nearest the court (a rival city of the heartland, a governor near the capital)
+    let heart=null,hd=1e9,gone=0;if(ESPLIT){for(const k of ids){const d=kmB(o.capital,s.pols[k].capital);if(d<hd){hd=d;heart=k}}
+      const x=clamp(o.E/Math.max(1e-6,etOf(o))-1,0,1);gone=C*0.6*x*(1-0.5*vigOf(o));C-=gone}
     let best=null,bv=C;for(const k of ids){const p=s.pols[k];let R=0,starve=0;
       for(const i of cells){if(s.pol[i]!==k)continue;R+=s.pop[i]*(0.5+s.s[i]);
         if(WKF&&s.wk){for(let q2=w.wkDnS[i];q2<w.wkDnS[i+1];q2++){const d=w.wkDn[q2];if(s.pol[d]===id)starve+=w.wkDep[d]*s.wk[d]*s.pop[d]}}}
-      R+=0.5*starve;if(R>bv){bv=R;best=p}}
+      R+=0.5*starve;if(k===heart)R+=gone;if(R>bv){bv=R;best=p}}
     if(best){for(const i of mine){s.pol[i]=best.id;s.integ[i]=Math.min(s.integ[i],0.5)}fellTo=best;s.cFallN=(s.cFallN||0)+1;
       if(A>=20)chron('fall',`The rebels of ${best.base} take the capital of the ${oldName}; its lands pass to them, and the ${oldName} is no more.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}}
   if(fellTo)return;
@@ -1857,7 +1870,10 @@ function* politicsG(){
       o.thr=(o.thr||0)*0.97+0.03*Math.min(1,inp)}
     o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s_recK[c]+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4*(1+0.8*rideAdm(o,c)):1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c])*(o.kind==='state'?0.55+0.45*Math.min(1.2,0.2+o.info.spd):1);
     const Et=etOf(o);
-    o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq)),0.004,0.12);
+    if(VIG&&o.kind==='state'){const cp=o.ruler&&o.ruler.comp!=null?o.ruler.comp:0.5,
+        pr=clamp((o.enemies.size?0.3:0)+(y-(o.raidY||-1e9)<10?0.3:0)+0.4*Math.min(1,o.shock||0)+2*Math.max(0,o.press-0.95),0,1),
+        tg=clamp(0.2+0.5*cp+0.6*pr,0,1),v=o.vig??0.8;o.vig=v+(tg>v?0.08:0.006*(1.5-cp))*(tg-v)}
+    o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
     statecraft(o,c,y);militaryPass(o);elitePass(o);

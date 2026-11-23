@@ -38,9 +38,31 @@ function colonyPass(){
           if(o.colN===1&&real>=20)chron('state',`The ${o.full} settles veterans on conquered land at its frontier, granting them farms in return for service.`,j,[R_(o)],'Soldiers who farm the land they hold make a frontier that stays held.')}}}
     // land held for service becomes land held by birth; large, loosely governed realms breed lords of their own
     const col=Math.min(1,(o.colN||0)/Math.max(4,real/15)),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
-    o.nob=clamp(o.nob+10*(0.0012*col*(1-0.7*adm)+0.0005*(1-adm)*Math.min(1,real/80))*(1-o.nob)-10*0.001*adm*o.nob,0,0.95);
+    // (2026-11-23) and a slack court lets them take more (vigilance, novig)
+    o.nob=clamp(o.nob+10*(0.0012*col*(1-0.7*adm)+0.0005*(1-adm)*Math.min(1,real/80)+(VIG?0.0006*(1-vigOf(o)):0))*(1-o.nob)-10*0.001*adm*o.nob,0,0.95);
+    // lords who refuse (2026-11-23, Nein: elites take autonomy while they can, and when a ruler with the will to bend the realm to his
+    // aims comes, they may say no and leave; switch nosecede). An able, forceful ruler tries to take the lands back; a weak one lets it
+    // slide, unless an empty treasury forces his hand. Each lord weighs his own hold (how much the lords hold, how loosely his
+    // province is bound, its own solidarity, its distance, the water others need from it) against the court's hand there (cohesion,
+    // officials and records, mandate, vigilance, the ruler's force). Where the lord's hold is stronger he refuses. A few refusing are
+    // crushed and the lands come back; many refusing break away with what they hold, and the next ruler faces a smaller court
+    // (the Old Kingdom's nomarchs; Senusret III, who is credited with curbing them; the counts becoming hereditary under the Carolingians).
+    if(SECEDE&&o.kind==='state'){const R0=o.ruler||{},will=0.5*(R0.comp??0.5)+0.5*(R0.aggr??0.5);
+      if(o.nob>0.35&&real>=15&&r()<0.12*Math.max(0,will-0.45)*(o.nob-0.3)*(o.burden>0.9||(o.treas||0)<0?2:1)){
+        const cells=polCells(id),hand=clamp(0.35+0.35*(o.S||0)+0.3*adm+0.2*(o.mandate??1),0.1,1.3)*(VIG?0.6+0.4*vigOf(o):1)*(0.7+0.6*will);
+        let md=0,nd=0;for(const i of cells)if(s.dist[i]!==65535){md+=s.dist[i];nd++}md=nd?md/nd:1;
+        const away=[];let rp=0,tp=0;
+        for(const i of cells){tp+=s.pop[i];if(i===c)continue;const far=s.dist[i]===65535?3:Math.min(3,s.dist[i]/Math.max(1e-6,md)),
+            lord=o.nob*(1.2-s.integ[i])*(0.5+s.s[i])*(0.6+0.4*far)*(1+(WKF&&s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0));
+          if(lord>hand){away.push(i);rp+=s.pop[i]}}
+        s.reforms.push({y:s.year,pol:id,ok:rp<0.12*tp});
+        if(rp<0.12*tp){o.nob*=0.55;o.treas=Math.min(1,o.treas+0.3);for(const i of away)s.integ[i]=Math.min(1,s.integ[i]+0.2);
+          chron('state',`${cap(rulerName(o))} of the ${o.full} takes back the estates of the great families; the few lords who refuse are put down.`,c,[R_(o)],'The lords who could have resisted were too few and too scattered.')}
+        else{const res=partitionLands(o,away,'Its lords refused a ruler who tried to take back their lands, and left with what they held.');
+          o.shock+=0.35;o.mandate=Math.max(0,(o.mandate??1)-0.25);o.nob*=0.8;s.secedeN=(s.secedeN||0)+1;
+          if(real>=20)chron('fall',`When ${rulerName(o)} of the ${o.full} tries to take back their lands, the lords of ${away.length} provinces refuse and break away.`,c,[R_(o)],'They held the provinces, the soldiers and the revenue; the court could not make them yield.')}}}
     // a strong ruler with a well-run court may try to take the lands back
-    if(o.nob>0.5&&real>=15&&r()<0.06*(o.nob-0.4)*(o.burden>0.9?2:1)){
+    else if(o.nob>0.5&&real>=15&&r()<0.06*(o.nob-0.4)*(o.burden>0.9?2:1)){
       const p=clamp(0.2+0.35*o.S+0.3*adm+0.2*(o.mandate||0)-0.3*o.nob,0.05,0.85),ok=r()<p;
       s.reforms.push({y:s.year,pol:id,ok});
       if(ok){o.nob*=0.55;o.treas=Math.min(1,o.treas+0.3);chron('state',`${cap(rulerName(o))} of the ${o.full} reclaims the estates of the great families and puts the provinces back under royal officials.`,c,[R_(o)],'Lands granted for service had become private domains; the crown took them back while it was strong enough.')}
