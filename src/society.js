@@ -52,9 +52,11 @@ function colonyPass(){
         const cells=polCells(id),hand=clamp(0.35+0.35*(o.S||0)+0.3*adm+0.2*(o.mandate??1),0.1,1.3)*(VIG?0.6+0.4*vigOf(o):1)*(0.7+0.6*will);
         let md=0,nd=0;for(const i of cells)if(s.dist[i]!==65535){md+=s.dist[i];nd++}md=nd?md/nd:1;
         const away=[];let rp=0,tp=0;
+        // the court's hand fades with distance (relative to the realm's mean); a lord's hold is his province's looseness and
+        // solidarity, firmer the more of the realm the lords hold between them
         for(const i of cells){tp+=s.pop[i];if(i===c)continue;const far=s.dist[i]===65535?3:Math.min(3,s.dist[i]/Math.max(1e-6,md)),
-            lord=o.nob*(1.2-s.integ[i])*(0.5+s.s[i])*(0.6+0.4*far)*(1+(WKF&&s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0));
-          if(lord>hand){away.push(i);rp+=s.pop[i]}}
+            lord=(1.2-s.integ[i])*(0.5+s.s[i])*(0.5+o.nob)*(1+(WKF&&s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0));
+          if(lord>hand*Math.exp(-far/2)){away.push(i);rp+=s.pop[i]}}
         s.reforms.push({y:s.year,pol:id,ok:rp<0.12*tp});
         if(rp<0.12*tp){o.nob*=0.55;o.treas=Math.min(1,o.treas+0.3);for(const i of away)s.integ[i]=Math.min(1,s.integ[i]+0.2);
           chron('state',`${cap(rulerName(o))} of the ${o.full} takes back the estates of the great families; the few lords who refuse are put down.`,c,[R_(o)],'The lords who could have resisted were too few and too scattered.')}
