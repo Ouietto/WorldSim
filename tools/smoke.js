@@ -33,4 +33,8 @@ const run=seed=>new Promise(res=>{let out='',err='';const p=spawn(process.execPa
     const v=ok.map(r=>+f(r.o)||0),tot=v.reduce((a,b)=>a+b,0);console.log(`${tot>0?'ok  ':'FAIL'} ${label}: ${v.map(x=>+x.toFixed(2)).join(', ')}`);if(!(tot>0))fail++}
   {const tp={};for(const r of ok)for(const [k,v] of Object.entries(r.o.time&&r.o.time.pass||{}))tp[k]=(tp[k]||0)+v/ok.length;
     console.log('time per pass (mean s): '+Object.entries(tp).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>k+' '+v.toFixed(0)).join(', '))}
+  // (2026-11-23) a saved world resumed must end where the unbroken history does: state kept outside S, WD or TECH breaks saved starts
+  if(!process.argv.includes('--noresume')){const r=await new Promise(res=>{let out='';const p=spawn(process.execPath,[path.join(__dirname,'snaptest.js'),'1','-7000','-6500'],{env:{...env,REGION:env.REGION||'neareast'}});
+      p.stdout.on('data',d=>out+=d);p.on('close',code=>{let o=null;try{o=JSON.parse(out.trim().split('\n').pop())}catch(e){}res({code,o})})});
+    const ok2=r.o&&r.o.match;console.log(`${ok2?'ok  ':'FAIL'} a saved world resumed ends where the unbroken history does${r.o?` (${r.o.unbroken} / ${r.o.resumed})`:''}`);if(!ok2)fail++}
   console.log(`${fail?'SMOKE TEST FAILED':'Smoke test passed'} (${res.length} histories to ${END}, ${((Date.now()-t0)/60000).toFixed(1)} min)`);process.exit(fail?1:0)})();
