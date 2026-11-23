@@ -53,6 +53,22 @@ module.exports=[
   {k:'t_horse',  g:'Techniques',n:'Horse domesticated',kind:'year',real:B(3500),lo:B(4000),hi:B(2000),cls:'guard'},
   {k:'t_gun',    g:'Techniques',n:'Gunpowder',kind:'year',real:1200, lo:950,  hi:1400},
   // world population, millions (McEvedy & Jones 1978; HYDE 3.2; Biraben 1979)
+  // Fertile Crescent scorecard (2026-11-23, proposed bands, to review with Nein). Patterns, not scripted events: any realm,
+  // native or foreign, counts. Middle chronology. Sources: Van De Mieroop, A History of the Ancient Near East (3rd ed. 2016);
+  // Kuhrt, The Ancient Near East (1995); Bryce, The Kingdom of the Hittites (2005); Butzer, Early Hydraulic Civilization in
+  // Egypt (1976) for Egypt's people; Algaze, Ancient Mesopotamia at the Dawn of Civilization (2008) for Uruk.
+  {k:'ru_meso',   g:'Fertile Crescent',n:'Mesopotamia (one realm holding two thirds of the people: Akkad)',kind:'year',real:B(2300),lo:B(2700),hi:B(1750)},
+  {k:'rs_levant', g:'Fertile Crescent',n:'Levant (one realm holding a third of the people, lasting: Egypt\'s New Kingdom)',kind:'year',real:B(1450),lo:B(2400),hi:B(1200)},
+  {k:'rs_anatolia',g:'Fertile Crescent',n:'Central Anatolia (a third of the people, lasting: the Hittite Old Kingdom)',kind:'year',real:B(1650),lo:B(1900),hi:B(1400)},
+  {k:'r_aegean',  g:'Fertile Crescent',n:'Aegean (first lasting states: the Cretan palaces)',kind:'year',real:B(1950),lo:B(2300),hi:B(1600)},
+  {k:'rs_aegean', g:'Fertile Crescent',n:'Aegean (one realm holding a third of the people: stays divided until Macedon)',kind:'year',real:B(338),lo:B(500),hi:B(300)},
+  {k:'e_mesolev', g:'Fertile Crescent',n:'Mesopotamia and the Levant under one realm (the Assyrian pattern)',kind:'year',real:B(740),lo:B(1200),hi:B(600)},
+  {k:'e_persia',  g:'Fertile Crescent',n:'Egypt, Mesopotamia and Iran under one realm (the Persian pattern)',kind:'year',real:B(525),lo:B(700),hi:B(330)},
+  {k:'pe_egypt2500',g:'Fertile Crescent',n:'Egypt\'s people, 2500 BCE (M)',kind:'num',real:1.6,lo:1.0,hi:2.5,at:B(2500)},
+  {k:'pe_egypt1250',g:'Fertile Crescent',n:'Egypt\'s people, 1250 BCE (M)',kind:'num',real:2.9,lo:1.9,hi:4.4,at:B(1250)},
+  {k:'cty_meso3000',g:'Fertile Crescent',n:'Largest town in Mesopotamia, 3000 BCE (thousands; Uruk)',kind:'num',real:40,lo:15,hi:100,at:B(3000)},
+  {k:'r_levant',  g:'First states',n:'First seen: the Levant (context)',kind:'year',real:B(2900),lo:B(3300),hi:B(2400),cls:'context'},
+  {k:'r_anatolia',g:'First states',n:'First seen: central Anatolia (context)',kind:'year',real:B(2000),lo:B(2500),hi:B(1700),cls:'context'},
   {k:'p_m3000',g:'Population',n:'3000 BCE (M)',kind:'num',real:30, lo:14, hi:60, at:B(3000),cls:'context'},
   {k:'p_1',    g:'Population',n:'1 CE (M)',    kind:'num',real:230,lo:170,hi:300,at:1},
   {k:'p_1000', g:'Population',n:'1000 CE (M)', kind:'num',real:290,lo:240,hi:350,at:1000,cls:'context'},
@@ -83,5 +99,6 @@ module.exports=[
 ];
 // targets that a regional run (REGION=name) can be scored on: those inside its core and buffer (2026-11-23). A Fertile Crescent
 // scorecard with more rows (Akkad, Assyria, Persia, colonies, population, cities) is next, agreed with Nein.
-const REGIONAL={neareast:['o_fc','rs_meso','rc_meso','rk_egypt','ru_egypt','rs_egypt','rs_indus','r_meso','r_egypt','r_indus','s_pontic']};
+const REGIONAL={neareast:['o_fc','rs_meso','rc_meso','rk_egypt','ru_egypt','rs_egypt','rs_indus','r_meso','r_egypt','r_indus','s_pontic',
+  'ru_meso','rs_levant','rs_anatolia','r_aegean','rs_aegean','e_mesolev','e_persia','pe_egypt2500','pe_egypt1250','cty_meso3000','r_levant','r_anatolia','rs_iran','r_iran']};
 for(const t of module.exports)for(const r in REGIONAL)if(REGIONAL[r].includes(t.k))(t.reg||(t.reg=[])).push(r);

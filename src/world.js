@@ -327,6 +327,11 @@ const REGIONS=[
  {k:'wafrica',n:'West Africa',box:[8,18,-12,8],ref:700},
  // the plateau east of the Zagros, Khuzestan and Elam's lowland left to Mesopotamia (Medes c. 700, the Achaemenids 550 BCE)
  {k:'iran',n:'Iranian plateau',box:[26,38,50,62],ref:-549},
+ // (2026-11-23, Fertile Crescent scorecard with Nein; measured only, the history never reads these boxes) the Levant and western
+ // Syria (Ebla, Byblos, Ugarit), central Anatolia (Kanesh, Hattusa), the Aegean (mainland Greece, Crete, the islands)
+ {k:'levant',n:'the Levant and western Syria',box:[31,37.5,34,39],ref:-2899},
+ {k:'anatolia',n:'central Anatolia',box:[37,41,30,38],ref:-1899},
+ {k:'aegean',n:'the Aegean',box:[34.5,41,20,28],ref:-1949},
 ];
 const NOSTATE=[{n:'New Guinea',box:[-10,-1,131,151]},{n:'Congo interior',box:[-5,4,15,28]},{n:'Amazon interior',box:[-10,0,-72,-52]}];
 const NOFARM=[{n:'Siberia',box:[55,75,60,180]},{n:'Australia',box:[-40,-11,113,154]},{n:'Northern North America',box:[52,72,-170,-55]},{n:'Southern Africa',box:[-35,-25,15,32]}];

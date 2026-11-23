@@ -76,6 +76,17 @@ const heldShare=(cells,sh)=>{const cnt=new Map();let tot=0;for(const i of cells)
 const headOf=o=>{if(o.over&&S.pols[o.over]&&S.pols[o.over].alive)return'p'+o.over;if(o.league!=null&&S.leagues&&S.leagues[o.league]&&!S.leagues[o.league].end)return'L'+o.league;return'p'+o.id};
 const held=R=>{const cnt=new Map();let tot=0;for(const i of R.cells){const pp=S.pop[i];tot+=pp;const p=S.pol[i];if(!p)continue;const o=S.pols[p],key=headOf(o);
   if(key==='p'+o.id&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;cnt.set(key,(cnt.get(key)||0)+pp*(o.coord??1))}let best=0;for(const c of cnt.values())if(c>best)best=c;return tot>0&&best>=0.3*tot&&best>=1e5};
+// Fertile Crescent scorecard (2026-11-23, with Nein): patterns, not scripted events. ru_meso: one realm holds two thirds of
+// Mesopotamia's people (Akkad); e_mesolev: one realm holds a third of the people of both Mesopotamia and the Levant (the Assyrian
+// pattern); e_persia: one realm holds a third of the people of Egypt, Mesopotamia and the Iranian plateau at once (the Persian
+// pattern). Each sustained as the other region targets are (75% of the next 200 years). Egypt's people at 2500 and 1250 BCE;
+// the largest town population in one Mesopotamian province at 3000 BCE (people x urban share).
+const RG={};for(const R of WD.regions)RG[R.k]=R;const UM=[],EML=[],EPR=[],FC={};
+const heldEach=(Rs,sh)=>{let keys=null;for(const R of Rs){const cnt=new Map();let tot=0;for(const i of R.cells){const pp=S.pop[i];tot+=pp;const p=S.pol[i];if(!p)continue;const o=S.pols[p],key=headOf(o);
+    if(key==='p'+o.id&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;cnt.set(key,(cnt.get(key)||0)+pp*(o.coord??1))}
+  const ok=new Set();if(tot>0)for(const [k,c] of cnt)if(c>=sh*tot)ok.add(k);keys=keys?new Set([...keys].filter(k=>ok.has(k))):ok;if(!keys.size)return false}return keys.size>0};
+const fcSnap=()=>{const y=S.year;if(y===-2500||y===-1250){let t=0;for(const i of RG.egypt.cells)t+=S.pop[i];FC['pe_egypt'+(-y)]=+(t/1e6).toFixed(2)}
+  if(y===-3000){let m=0;for(const i of RG.meso.cells){const u=S.pop[i]*urbanShare(i);if(u>m)m=u}FC.cty_meso3000=+(m/1e3).toFixed(1)}};
 const sus=a=>{for(let t=0;t<a.length;t++){if(!a[t][1])continue;const n=Math.min(20,a.length-t);if(n<5)return null;let k=0;for(let u=t;u<t+n;u++)if(a[u][1])k++;if(k>=0.75*n)return a[t][0]}return null};
 // time spent in each pass of the main loop (inclusive of what each calls), reported as out.time in seconds
 const TIME={};{const PASSES='armyYear bandWars caravanPass carbonPass cityPass climUpdateG climateStep coalitionPass colonizePass colonyPass computeK cropPass deepPass disease ethPass eventPass frontierPass genCache goodsPass grazePass growth herdPass herdYear humidStep landUsePass leaguePass matrixPass migrate mixPass originsPass politicsG poolPass rallyPass recPass recordStats regionPass relPass ritualPass roadPass seaHop seaStep slavePass techStep volcano waterPass weather'.split(' ');
@@ -101,7 +112,7 @@ if(process.env.SNAP_IN){const v8=require('v8'),z=v8.deserialize(zlib.gunzipSync(
 const SNAP_AT=process.env.SNAP_AT!=null?+process.env.SNAP_AT:null;
 const T0=process.hrtime();
 while(S.year<END){if(SNAP_AT!=null&&S.year>=SNAP_AT){const n=snapSave(process.env.SNAP_OUT);console.log(JSON.stringify({seed,saved:S.year,bytes:n}));process.exit(0)}step();
-  if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)])}
+  if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)]);UM.push([S.year,heldShare(RG.meso.cells,2/3)]);EML.push([S.year,heldEach([RG.meso,RG.levant],1/3)]);EPR.push([S.year,heldEach([RG.egypt,RG.meso,RG.iran],1/3)]);fcSnap()}
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'&&c.y>=-1000)CK.inv1k++;if(k==='wall'&&CK.wallNC==null&&ncSet.has(c.cell))CK.wallNC=c.y;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=/take its farmland/.test(c.txt)?'conquest':!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
   if(S.year===-999)CK.arch1000bce=frontierRide()['Frontier states: share with mounted archers'];
@@ -116,7 +127,7 @@ while(S.year<END){if(SNAP_AT!=null&&S.year>=SNAP_AT){const n=snapSave(process.en
   if(marks.includes(S.year)){const st=S.stats[S.stats.length-1];pop[S.year]=Math.round(st.pop/1e6);big[S.year]=Math.round(st.bcS??st.bc);bigH[S.year]=st.bcH==null?null:Math.round(st.bcH);
     const d=o=>o?o.full+' '+o.cells+' at '+Math.round(WD.lat[o.capital]*180/Math.PI)+','+Math.round((WD.cxA[o.capital]+0.5)/W*360-180):null;who[S.year]={state:d(S.pols[st.bigS]),horde:d(S.pols[st.bigH])}}}
 const yr=v=>v?v.y:null,rf=k=>S.regionFirst[k]?S.regionFirst[k].y:null,ft=k=>yr(S.firstTech[TI[k]]);
-for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafrica','iran'])out['r_'+k]=rf(k);for(const k in RS)out['rs_'+k]=sus(RS[k]);out.rc_meso=sus(UR);out.rk_egypt=sus(UK);out.ru_egypt=sus(UE);
+for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafrica','iran','levant','anatolia','aegean'])out['r_'+k]=rf(k);for(const k in RS)out['rs_'+k]=sus(RS[k]);out.rc_meso=sus(UR);out.rk_egypt=sus(UK);out.ru_egypt=sus(UE);out.ru_meso=sus(UM);out.e_mesolev=sus(EML);out.e_persia=sus(EPR);Object.assign(out,FC);
 for(const k of ['writing','iron','coin','paper','gun'])out['t_'+k]=ft(k);
 out.t_horse=S.domFirst&&S.domFirst[0]?S.domFirst[0].y:null;out.s_pontic=pontic;
 for(const k of ['cEur','brit','scand','japan'])out['f_'+k]=fArr[k]??null;out.fs_pnw=END>=1500?+fShare('pnw').toFixed(3):null;out.fs_cape=END>=1500?+fShare('cape').toFixed(3):null;

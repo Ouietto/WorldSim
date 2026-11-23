@@ -53,16 +53,22 @@ const NEVER=1e9,applies=t=>!(REGV&&!(t.reg||[]).includes(REGV))&&!(t.at!=null&&t
   cval=(r,t)=>{const v=val(r,t);if(v==null)return null;if(v===NEVER)return 2.5;return Math.max(-2.5,Math.min(2.5,(v-t.real)/(t.hi-t.lo)))};
 const ORIG=t=>!t.get; // the 41 targets the score history was kept on
 
+// continuous error (2026-11-23, with Nein): how far a history lands from the real value, in half-bands on the side it falls
+// (0 exact, 1 at the band's edge), capped at 5; 'never' counts 5. Less noisy than in-band or not, and it sees a change that
+// moves a target from far off to nearly right.
+const ECAP=5,errOf=(v,t)=>{if(v==null)return null;if(v===NEVER)return ECAP;const lw=t.real-t.lo,hw=t.hi-t.real,w=v<t.real?(lw>0?lw:hw):(hw>0?hw:lw);return w>0?Math.min(ECAP,Math.abs(v-t.real)/w):(v===t.real?0:ECAP)};
 function score(rs){const rows=[];for(const t of TARGETS){if(!applies(t))continue;const vs=rs.map(r=>val(r,t));const ok=vs.filter(v=>inBand(v,t)).length;
-    rows.push({t,vs,med:median(vs),p25:q(vs,0.25),p75:q(vs,0.75),inBand:ok/vs.length,never:vs.filter(v=>v===NEVER).length})}
+    const es=vs.map(v=>errOf(v,t)).filter(e=>e!=null);
+    rows.push({t,vs,med:median(vs),p25:q(vs,0.25),p75:q(vs,0.75),inBand:ok/vs.length,never:vs.filter(v=>v===NEVER).length,err:es.length?es.reduce((a,b)=>a+b,0)/es.length:null})}
   const avg=f=>{const a=rows.filter(f);return a.length?a.reduce((s,r)=>s+r.inBand,0)/a.length:0};
-  return{rows,score:avg(r=>!r.t.cls),old:avg(r=>ORIG(r.t))}}
+  const ea=rows.filter(r=>!r.t.cls&&r.err!=null);
+  return{rows,score:avg(r=>!r.t.cls),old:avg(r=>ORIG(r.t)),err:ea.length?ea.reduce((a,r)=>a+r.err,0)/ea.length:null}}
 // standard error of the score, from resampling histories
 function scoreSE(rs){let x=12345;const R=()=>{x=(x*16807)%2147483647;return x/2147483647};const v=[];
   for(let b=0;b<200;b++){const s=Array.from({length:rs.length},()=>rs[Math.floor(R()*rs.length)]);v.push(score(s).score)}
   const m=v.reduce((a,b)=>a+b,0)/v.length;return Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(v.length-1))}
-function diffSE(A,B){let x=12345;const R=()=>{x=(x*16807)%2147483647;return x/2147483647};const v=[],n=Math.min(A.length,B.length);
-  for(let b=0;b<200;b++){const ix=Array.from({length:n},()=>Math.floor(R()*n));v.push(score(ix.map(i=>B[i])).score-score(ix.map(i=>A[i])).score)}
+function diffSE(A,B,f){f=f||'score';let x=12345;const R=()=>{x=(x*16807)%2147483647;return x/2147483647};const v=[],n=Math.min(A.length,B.length);
+  for(let b=0;b<200;b++){const ix=Array.from({length:n},()=>Math.floor(R()*n));v.push(score(ix.map(i=>B[i]))[f]-score(ix.map(i=>A[i]))[f])}
   const m=v.reduce((a,b)=>a+b,0)/v.length;return Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(v.length-1))}
 const cor=(a,b)=>{const n=a.length;let ma=0,mb=0;for(let i=0;i<n;i++){ma+=a[i];mb+=b[i]}ma/=n;mb/=n;let sab=0,saa=0,sbb=0;for(let i=0;i<n;i++){const x=a[i]-ma,y=b[i]-mb;sab+=x*y;saa+=x*x;sbb+=y*y}return saa&&sbb?sab/Math.sqrt(saa*sbb):null};
 // how alike the same seed's history is in two versions (0 = unrelated), averaged over scored targets
@@ -92,13 +98,13 @@ function report(A,B,nameA,nameB){
 function variantReport(names,sets){
   const L=[],S=sets.map(score),n=SEEDS.length,base=S[0],se=sets.map(scoreSE);
   L.push(`# Variant check: ${n} Earth histories to ${END<=0?(1-END)+' BCE':END+' CE'}`,'');
-  L.push('| Variant | Score | ± | Change | ± change | All 41 | Same-seed likeness |','|---|---|---|---|---|---|---|');
+  L.push('| Variant | Score | ± | Change | ± change | Error | Error change | All 41 | Same-seed likeness |','|---|---|---|---|---|---|---|---|---|');
   S.forEach((s,k)=>{const d=k?s.score-base.score:null,sd=k?diffSE(sets[0],sets[k]):null;
-    L.push(`| ${names[k]} | ${(s.score*100).toFixed(1)}% | ${(se[k]*100).toFixed(1)} | ${k?`${d>=0?'+':''}${(d*100).toFixed(1)}${Math.abs(d)>2*sd?(d>0?' ▲':' ▼'):''}`:''} | ${k?(sd*100).toFixed(1):''} | ${pct(s.old)} | ${k?(pairing(sets[0],sets[k])??0).toFixed(2):''} |`)});
-  L.push('',`Score is the share of scored targets in band (guards and context left out). A change is marked when it exceeds twice its noise (paired bootstrap over the same seeds).`,'');
+    L.push(`| ${names[k]} | ${(s.score*100).toFixed(1)}% | ${(se[k]*100).toFixed(1)} | ${k?`${d>=0?'+':''}${(d*100).toFixed(1)}${Math.abs(d)>2*sd?(d>0?' ▲':' ▼'):''}`:''} | ${k?(sd*100).toFixed(1):''} | ${s.err!=null?s.err.toFixed(2):''} | ${k&&s.err!=null&&base.err!=null?(()=>{const de=s.err-base.err,se2=diffSE(sets[0],sets[k],'err');return `${de>=0?'+':''}${de.toFixed(2)} ± ${se2.toFixed(2)}${Math.abs(de)>2*se2?(de<0?' ▲':' ▼'):''}`})():''} | ${pct(s.old)} | ${k?(pairing(sets[0],sets[k])??0).toFixed(2):''} |`)});
+  L.push('',`Score is the share of scored targets in band (guards and context left out). Error is the mean distance from the real value in half-bands on the side a history falls (0 exact, 1 at the band's edge, capped at 5; never = 5), lower is better. A change is marked when it exceeds twice its noise (paired bootstrap over the same seeds); for error, ▲ means closer.`,'');
   L.push(`| Group | Target | Real | Band | Median ${names[0]} | ${names.map(x=>x).join(' | ')} |`,`|---|---|---|---|---|${names.map(()=>'---').join('|')}|`);
   for(let r=0;r<base.rows.length;r++){const t=base.rows[r].t,p0=base.rows[r].inBand;
-    const cells=S.map((s,k)=>{const p=s.rows[r].inBand;if(!k)return pct(p);const sd=Math.sqrt((p0*(1-p0)+p*(1-p))/n)||0.01;const d=p-p0;return pct(p)+(Math.abs(d)>2*sd?(d>0?' ▲':' ▼'):'')+(` (${fmt(s.rows[r].med,t)})`)});
+    const cells=S.map((s,k)=>{const p=s.rows[r].inBand;if(!k)return pct(p)+(s.rows[r].err!=null?` e${s.rows[r].err.toFixed(1)}`:'');const sd=Math.sqrt((p0*(1-p0)+p*(1-p))/n)||0.01;const d=p-p0;return pct(p)+(Math.abs(d)>2*sd?(d>0?' ▲':' ▼'):'')+(` (${fmt(s.rows[r].med,t)})`)+(s.rows[r].err!=null?` e${s.rows[r].err.toFixed(1)}`:'')});
     L.push(`| ${t.g} | ${t.n}${t.cls?' ('+t.cls+')':''} | ${fmt(t.real,t)} | ${fmt(t.lo,t)} to ${fmt(t.hi,t)} | ${fmt(base.rows[r].med,t)} | ${cells.join(' | ')} |`)}
   const bad=base.rows.filter(r=>r.t.cls==='guard'&&r.inBand<0.9);S.slice(1).forEach((s,k)=>s.rows.forEach(r=>{if(r.t.cls==='guard'&&r.inBand<0.9)bad.push({t:r.t,inBand:r.inBand,v:names[k+1]})}));
   if(bad.length)L.push('','**Guards broken:** '+bad.map(b=>`${b.t.n} ${pct(b.inBand)}${b.v?' ('+b.v+')':''}`).join('; '));

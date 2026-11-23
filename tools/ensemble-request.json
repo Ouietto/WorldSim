@@ -1,11 +1,11 @@
 {
  "seeds": "1-24",
- "end": -1000,
+ "end": -300,
  "per": 4,
  "ref": "",
  "baseEnv": "",
  "variants": [
-  {"name": "neareast-climate", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
-  {"name": "neareast-climate-nofarmrate", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal,nofarmrate"}
+  {"name": "neareast", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
+  {"name": "neareast-nofarmrate", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal,nofarmrate"}
  ]
 }
