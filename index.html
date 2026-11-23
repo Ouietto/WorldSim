@@ -3802,7 +3802,9 @@ function landAlbedo(){
   const s=S,w=WD,a=new Float32Array(CN),n=new Float32Array(CN);
   // (the grid: each cell in its climate cell; provinces spread over the climate cells they cover, by area: a desert province
   // of a dozen cells is not all put in the climate cell of its middle)
-  for(const i of w.landIdx){const b=VEG[s.veg[i]];let al=b?b[3]:CLM.albL;
+  // (regional mode: the whole map, w.landPhys. Read over the region alone, the climate model saw the rest of the world's land as
+  // bare of vegetation, and the Near East's rain change at 3000 BCE was +8 mm against +48 in the full world, seed 1)
+  for(const i of (w.landPhys||w.landIdx)){const b=VEG[s.veg[i]];let al=b?b[3]:CLM.albL;
     const f0=w.forest0[i];if(f0>0.2&&s.forest[i]<f0)al+=(0.31-al)*(1-s.forest[i]/f0)*(al<0.31?1:0);climAdd(w,i,al,a,n)}
   for(let j=0;j<CN;j++)a[j]=n[j]?a[j]/n[j]:CLM.albL;return a;
 }
@@ -3836,12 +3838,12 @@ function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.en
 }
 function vegPass(){
   const s=S,w=WD,R=s.climR;const s_cdP=s.cdP,s_cdT=s.cdT,s_veg=s.veg,w_Pr=w.Pr,w_T=w.T,w_amp=w.amp,w_cxA=w.cxA,w_cyA=w.cyA,w_dryMonths=w.dryMonths,w_elev=w.elev;
-  for(const i of w.landIdx){const T=w_T[i]+s_cdT[i],Pp=Math.max(0.3*w_Pr[i],w_Pr[i]+s_cdP[i]),a=w_amp[i];
+  for(const i of (w.landPhys||w.landIdx)){const T=w_T[i]+s_cdT[i],Pp=Math.max(0.3*w_Pr[i],w_Pr[i]+s_cdP[i]),a=w_amp[i];
     const dry=w.dryMonths?w_dryMonths[i]:R?climSample(R.Dm,0,w_cxA[i]*SC+SC/2,w_cyA[i]*SC+SC/2):3;
     s_veg[i]=vegFor(T,Pp,T+a/2,T-a/2,dry,w_elev[i])}
 }
 // land carbon in forests (GtC): about 12 kg C per m² of closed forest
-function landCarbon(){const s=S,w=WD;let c=0;for(const i of w.landIdx)c+=s.forest[i]*w.area[i]*1.2e-5;return c}
+function landCarbon(){const s=S,w=WD;let c=0;for(const i of (w.landPhys||w.landIdx))c+=s.forest[i]*w.area[i]*1.2e-5;return c}
 // greenhouse gases follow land use: forest clearing releases CO2 (the oceans take most of it back over centuries);
 // rice paddies and herds add methane
 function carbonPass(){
