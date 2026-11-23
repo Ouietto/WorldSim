@@ -134,6 +134,14 @@ const EARTH_HEARTHS=[
 const SEED_ARRIVE={nam:-14000,sam:-13000};
 const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,110,'sino'],[5,105,'aus'],[-25,134,'pama'],[60,100,'alt'],[40,-100,'nam'],[-10,-60,'sam']];
 
+// random streams (Nein 2026-11-23, run 122): the stream history draws from restarts for each pass each year, and for each
+// province, realm, war or migration within the big loops, keyed by seed, pass, year and place; so a change in one place or one
+// pass no longer shifts every later draw everywhere, and two versions run with the same seed share their luck wherever their
+// histories still agree. Switch nostreams keeps the old single running stream.
+const RSTR=!swOn('nostreams');
+function fmix32(h){h^=h>>>16;h=Math.imul(h,0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);h^=h>>>16;return h|0}
+function rsd(tag){if(!RSTR)return;const s=S;s.rT=fmix32(s.rB^fmix32((hashStr(tag)|0)+Math.imul(s.year|0,0x27d4eb2d)));s.r.s=s.rT}
+function rk(k){if(RSTR)S.r.s=fmix32(S.rT^Math.imul((k|0)+1,0x9E3779B1))}
 function newHistory(hseed){
   applyRegion(WD);
   const w=WD,r=mulberry32s(hashStr('hist:'+hseed+':'+w.seed));
@@ -143,7 +151,7 @@ function newHistory(hseed){
   const tk=TECH.map(()=>new Float32Array(N));
   // nature (climate noise, dry epochs, eruptions) draws from its own stream, a fixed number of draws a year, so two versions of
   // the model run with the same seed meet the same droughts and eruptions and can be compared history by history
-  S={r,rN:mulberry32s(hashStr('nature:'+hseed+':'+w.seed)),seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
+  S={r,rB:hashStr('hist:'+hseed+':'+w.seed)|0,rT:0,rN:mulberry32s(hashStr('nature:'+hseed+':'+w.seed)),seed:hseed,year:P.startYear,start:P.startYear,famN:0,tk,
     pop:new Float32Array(N),K:new Float32Array(N),evT:new Float32Array(N),evP:new Float32Array(N).fill(1),seaLvl:WD.seaLvl??0,seaVer:0,eth:new Int32Array(N).fill(-1),eth2:new Int32Array(N).fill(-1),mix:new Float32Array(N),mixT:new Uint8Array(N),
     pol:new Int32Array(N),s:new Float32Array(N).fill(0.3),rel:new Int32Array(N).fill(-1),fort:new Float32Array(N),
     fert:new Float32Array(N).fill(1),immune:new Float32Array(N),infect:new Uint8Array(N),ob:new Int32Array(N).fill(-1),
@@ -448,7 +456,7 @@ function herdYear(){
   // (yearly; was every second year at twice the chance)
   if(KH){const J=[];for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1||!(s.past[i]>0.5)||!(w.nomad[i]||w.desert[i]))continue;let bq=0,bv=0,bj=-1;
       for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(!q)continue;const o=s.pols[q];if(o.kind!=='horde'||o.cells<5)continue;const v=prestOn()?0.12*knob('join')*Math.min(1,2*(o.prest||0))*(0.5+(o.sat??0.5)):0.01*knob('join')*(1+3*Math.min(1,o.prest||0))*(0.5+(o.sat??0.5));if(v>bv){bv=v;bq=q;bj=j}}
-      if(bq&&s.r()<1-Math.sqrt(1-Math.min(1,2*bv)))J.push(i,bq,bj)}
+      if(bq&&(rk(i),s.r())<1-Math.sqrt(1-Math.min(1,2*bv)))J.push(i,bq,bj)}
     for(let k=0;k<J.length;k+=3){const i=J[k];if(s.pol[i])continue;s.pol[i]=J[k+1];s.taken[i]=s.year;s.dist[i]=Math.min(65534,s.dist[J[k+2]]+2);s.khanW=(s.khanW||0)+1}}
   // (switch hunger, with herds; Nein 2026-11-05: hungry herders trade, raid, follow a khan, move or settle) a herding people's hardship
   // is how far its herds stand below a normal year's (none above 0.8 of it, full at 0.2); a clan below its ruin line for five years
@@ -458,7 +466,7 @@ function herdYear(){
     for(const i of L){if(!(s.past[i]>0.5)||s.pop[i]<1||!(w.sH[i]>0.03||w.desert[i])){hg[i]=0;ry[i]=0;continue}
       const v=hs[i],th=0.15+0.2*(((i*2654435761)>>>0)/4294967296);hg[i]=clamp((0.8-v)/0.6,0,1);ry[i]=v<th?Math.min(60000,ry[i]+1):0;
       // (switch khan) hungry clans outside any horde follow the strongest khan next door
-      if(KH&&hg[i]>0.4&&!s.pol[i]&&s.r()<0.15){let bq=0,bp=0,bj=-1;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(q&&s.pols[q].kind==='horde'){const pw=s.pols[q].pop;if(pw>bp){bp=pw;bq=q;bj=j}}}
+      if(KH&&hg[i]>0.4&&!s.pol[i]&&(rk(N+i),s.r())<0.15){let bq=0,bp=0,bj=-1;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(q&&s.pols[q].kind==='horde'){const pw=s.pols[q].pop;if(pw>bp){bp=pw;bq=q;bj=j}}}
         if(bq){s.pol[i]=bq;s.taken[i]=s.year;s.dist[i]=Math.min(65534,s.dist[bj]+2);s.khanJ=(s.khanJ||0)+1}}
       // a clan inside a horde holds on longer before it gives up the herds: the khan's loot and tribute carry it
       if(ry[i]>=(KH&&s.pol[i]&&s.pols[s.pol[i]].kind==='horde'?8:5))settleRuined(i)}}
@@ -481,7 +489,7 @@ function settleRuined(i){const s=S,w=WD;let kn=false,bit=0,best=-1,room=0;
 // Fighting binds both sides together. Peoples living beside states harden (hardOf). Every five years.
 function bandWars(dt){dt=dt||5;const s=S,w=WD,r=s.r,E=s.eths,seen=new Uint8Array(E.length),f5=dt/5;   // rates below were set for five years; f5 scales them to the years covered
   if(craftOn())for(const e of E)if(e&&e.war)e.war*=Math.pow(0.975,f5);   // every five years: half gone in about 140 years of peace
-  for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1)continue;const e=s.eth[i];if(e<0)continue;let st=0,cand=-1,n=0;
+  for(const i of w.landIdx){if(s.pol[i]||s.pop[i]<1)continue;rk(i);const e=s.eth[i];if(e<0)continue;let st=0,cand=-1,n=0;
     for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j<0||!w.land[j])continue;const q=s.pol[j];if(q){if(s.pols[q].kind==='state')st=1;continue}
       if(s.pop[j]>=1&&s.eth[j]>=0&&s.eth[j]!==e&&r()<1/++n)cand=j}
     if(st)seen[e]=1;
@@ -675,7 +683,7 @@ function migrate(){
     for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>far)continue;const qq=s_pop[i];if(qq<1)break;
       if(one(i,j,qq,qq/s_K[i],fl/dl)>0&&s.pkAv)s.pkAv[j]|=s.pkAv[i]}};
   for(let kk=0;kk<L.length;kk++){
-    const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;
+    const i=L[rev?L.length-1-kk:kk],p=s_pop[i];if(p<1)continue;rk(i);
     const pr=p/s_K[i];if(pr<0.55)continue;
     if(SEAC&&s_farm[i]>=0.5&&w.coast[i])seaMove(i);
     // (on provinces people move toward every neighbour each year, each by its share of the flow: nbE/4 of a 100 km step's)
@@ -719,7 +727,7 @@ function virginSoil(tgt,src){
 function seaHop(){
   const s=S,w=WD,r=s.r,C=w.coastIdx;const s_K=s.K,s_admin=s.admin,s_eth=s.eth,s_eths=s.eths,s_lmFound=s.lmFound,s_nav=s.nav,s_ocean=s.ocean,s_pop=s.pop,s_rel=s.rel,s_s=s.s,s_sail=s.sail,w_T=w.T,w_cxA=w.cxA,w_cyA=w.cyA,w_land=w.land,w_lm=w.lm,w_lmSize=w.lmSize;if(!C.length)return;
   const ex=coastLen()*0.004*P.seafaring*(s.dt||1);let tries=Math.floor(ex)+(r()<ex%1?1:0);
-  while(tries-->0){
+  while(tries-->0){rk(tries);
     const i=rCoast(r);if(pEq(i)<30)continue;
     const sl=s_sail[i];if(r()>0.04+0.5*sl)continue;
     const ang=r()*6.2832,dx=Math.cos(ang),dy=Math.sin(ang)*0.8;
@@ -762,7 +770,7 @@ function techStep(a0,b0){const SDC=!swOn('nolandvar')&&!swOn('nofrontclim')&&WD.
   const known=TECH.map((t,k)=>s_firstTech[k]||k===5?1:0);
   const NT=T.length,pop=s.pop,pol=s.pol,INST=TECH.map((t,k)=>k===6||k===9||k===10||k===11||k===14||t.k==='relays'||t.k==='khipu');
   for(let kk=Math.floor(a0*L.length),ke=Math.floor(b0*L.length);kk<ke;kk++){
-    const i=L[kk];if(s_pop[i]<1)continue;const ei=s_eth[i];
+    const i=L[kk];if(s_pop[i]<1)continue;rk(i);const ei=s_eth[i];
     let conn=s_pop[i];const pi=s_pol[i],po=pi?pols[pi]:null;
     // (on provinces: the people of the province and its neighbours as if spread over five 100 km cells)
     if(szF){let a=w_area[i];for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]){conn+=s_pop[j];a+=w_area[j]}}conn*=5*w_area[i]*szF[i]/a}
@@ -877,7 +885,7 @@ function cropFor(T,Pp,rv){
 const PLAGUE=['fever','pox','sweat','plague','flux','ague'];
 function disease(){
   const s=S,w=WD,r=s.r,L=w.landIdx,dz=P.disease;const s_dp=s.dp,s_eth=s.eth,s_eths=s.eths,s_farm=s.farm,s_herd=s.herd,s_immune=s.immune,s_infect=s.infect,s_ob=s.ob,s_outbreaks=s.outbreaks,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_sail=s.sail,s_tk=s.tk,w_area=w.area,w_coast=w.coast,w_ls=w.ls,w_lt=w.lt,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW;
-  for(let t=0;t<40;t++){
+  for(let t=0;t<40;t++){rk(t);
     const i=rLand(r);if(s_pop[i]<1||s_infect[i])continue;
     const dens=s_pop[i]/w_area[i];
     if(r()<dz*0.0002*dens*(s_farm[i]+s_herd[i])){
@@ -887,7 +895,7 @@ function disease(){
     }
   }
   // spillover: people cutting into warm forests meet the diseases of its animals (Wolfe, Dunavan & Diamond 2007)
-  for(let t=0;t<20;t++){const i=rLand(r),cl=s.fclr[i];if(!(cl>0)||s_pop[i]<1||s_infect[i])continue;const f0=w.forest0[i];if(f0<0.4||w.T[i]<18)continue;
+  for(let t=0;t<20;t++){rk(100+t);const i=rLand(r),cl=s.fclr[i];if(!(cl>0)||s_pop[i]<1||s_infect[i])continue;const f0=w.forest0[i];if(f0<0.4||w.T[i]<18)continue;
     const dens=s_pop[i]/w_area[i];
     if(r()<dz*0.0025*Math.min(2,cl/0.002)*Math.min(1,dens/5)*clamp(2*s.forest[i]/f0,0,1)){
       const e=s_eth[i]>=0?s_eths[s_eth[i]]:null;
@@ -896,7 +904,7 @@ function disease(){
       chron('plague',`A new ${o.name} crosses from the animals of the forest to the ${e?e.name:'people'} clearing it.`,i,[RPl(o)],'Cutting into the forest brought farmers and their animals close to wild hosts of diseases no one had met before.')}}
   const nl=[];
   for(const o of s.outbreaks)if(!o.done)o.active=0;
-  for(const i of s.inf){if(!s_infect[i])continue;
+  for(const i of s.inf){if(!s_infect[i])continue;rk(1000+i);
     const o=s_outbreaks[s_ob[i]],dens=s_pop[i]/w_area[i];
     const m=Math.min(0.7,o.vir*(1-(o.novel?0.3:1)*s_immune[i])*(0.5+0.5*Math.min(1,dens/15))*(o.virgin?1+2.5*Math.max(0,(o.dp||0)-s_dp[i]):1)*(1-0.2*s_tk[29][i])),dd=s_pop[i]*m;
     s_pop[i]-=dd;o.deaths+=dd;o.active++;
@@ -1626,6 +1634,7 @@ function culture(o){
 /* ---------- states, each year ---------- */
 function politics(){for(const _ of politicsG());}
 function* politicsG(){
+  rsd('pol');
   const FLD=!swOn('nofarmland')&&!!WD.fSh;
   // (switch nofarmrate; 2026-11-22) crowding on the farmed land opens the door to a state but, with the switch, does not speed it:
   // the rate then reads the whole province (run 115: Mesopotamia's first city-states came some 1300 years early)
@@ -1635,7 +1644,7 @@ function* politicsG(){
   const sampleNow=y%10===0,SCK=sclK(),SWt=swOn('threat'),CO=cohArr();
   const ARMY=armyOn(),MONEY=moneyOn();
   for(const id of s.alive){const o=pols[id];o.calm=calmOf(o);o.pop=0;o.K=0;o.cells=0;o.sS=0;o.dS=0;o.ad=0;o.nom=0;o.cx=0;o.cy=0;o.yy=0;o.mp=-1;o.mc=-1;o.coastN=0;o.farmN=0;o.fortN=0;o.lmN=0;o.tax=0;o.garr=0;o.ig=0;o.wasteN=0;o.cA=0;o.plN=0;o.hvN=0;o.trade=0;o.n0=0;o.n1=0;o.n2=0;o.n3=0;o.nw=0;o.forP=0;o.hgS=0;o.hsS=0;o.nomP=0;o.hmA=0;o.hmS=0;o.ctA=0;o.ctS=0;o.farmP=0;if(sampleNow){o.sample=[];o.front=[]}if(CO){o.lossF=o.lossYM&&o.ym>0?Math.min(0.5,o.lossYM/o.ym):0;o.lossYM=0;o.ym=0}}
-  for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
+  rsd('pol.a');for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(!p)continue;const o=pols[p];if(CO){const b=i*6+3;if(o.lossF>0){const dl=CO[b]*o.lossF;CO[b]-=dl;pop[i]=Math.max(0,pop[i]-dl)}o.ym+=CO[b]}const pp=pop[i];
     // on provinces every mean and tally over a realm's land is weighted by the land each holds (ci cells; the grid: 1 each),
     // coasts, walled frontiers and caravan routes by their length
     const ci=szF?1/szF[i]:1,li=szF?Math.sqrt(ci):1;
@@ -1645,13 +1654,13 @@ function* politicsG(){
     if(w_nomad[i])o.nom+=ci;if(w_coast[i])o.coastN+=li;if(s_farm[i]>0.5&&w_sF[i]>0.25&&pp/w_area[i]>2)o.farmN+=ci;if(s_fort[i]>0.5)o.fortN+=li;
     o.cx+=w_cosLon[i]*ci;o.cy+=w_sinLon[i]*ci;o.yy+=w_cyA[i]*ci;{const pe=szF?pp*szF[i]:pp;if(pe>o.mp){o.mp=pe;o.mc=i}}
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
-    if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if(r()<24*ci/(szF?o.cA:o.cells))o.sample[(r()*24)|0]=i}}
+    if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if((rk(i),r())<24*ci/(szF?o.cA:o.cells))o.sample[(r()*24)|0]=i}}
   // income from goods bought and sold (counted every ten years) joins the taxes
   for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax!=null){const gi=Math.min(o.gInc,0.5*o.tax);o.tax+=gi;o.trade=(o.trade||0)+gi}}
   // (the choice of war aims, below) a vassal pays a fifth of its taxes to its overlord
   if(!swOn('nochoice'))for(const id of s.alive){const o=pols[id];if(o.over&&o.tax>0){const ov=pols[o.over];if(ov&&ov.alive&&ov.tax!=null){const t=0.2*o.tax;o.tax-=t;ov.tax+=t;ov.tribIn=t+(ov.tribIn||0)*0.9}}}
   const next=[];
-  for(const id of s.alive){const o=pols[id];
+  rsd('pol.b');for(const id of s.alive){const o=pols[id];rk(id);
     if(o.cells===0){o.alive=false;o.died=y;
       for(const [q] of o.enemies){const p=pols[q];if(p)p.enemies.delete(id)}o.enemies.clear();
       for(const q of o.allies){const p=pols[q];if(p)p.allies=p.allies.filter(x=>x!==id)}
@@ -1691,7 +1700,7 @@ function* politicsG(){
   for(let k=0;k<L.length;k++){const i=L[k],p=pol[i];if(p){const o=pols[p];if(w_lm[i]===w_lm[o.capital])o.lmN+=szF?1/szF[i]:1}}
   yield;
   const infl=P.leaderInfl;
-  for(const id of next){const o=pols[id];if(!o.alive)continue;
+  rsd('pol.c');for(const id of next){const o=pols[id];if(!o.alive)continue;rk(id);
     const R=o.ruler,c=o.capital;
     {const lm=w_lm[c],ls=w_lmSize[lm];
     o.island=ls>=4&&ls<=700&&s_lmPop[lm]>0&&o.lmN>=0.8*s_lmPop[lm];
@@ -1838,7 +1847,7 @@ function* politicsG(){
   }
   // active wars
   const still=[],PEACE=!swOn('nopeace');
-  for(const wid of s.activeWars){const war=s_wars[wid];
+  rsd('pol.w');for(const wid of s.activeWars){const war=s_wars[wid];rk(wid);
     const aAlive=war.a.some(k=>pols[k].alive),dAlive=war.d.some(k=>pols[k].alive),yrs=y-war.start;
     const fresh=y-(war.lastGain||war.start);
     // exhausted sides make peace (cohort switch); punitive campaigns are short. A stalemate can still drag on for generations
@@ -1869,10 +1878,10 @@ function* politicsG(){
   diplomacy();
   yield;
   // border pass
-  for(const id of s.alive)pols[id].nb=new Map();
+  rsd('pol.p');for(const id of s.alive)pols[id].nb=new Map();
   const asR=P.asabR,asD=P.asabD,wr=P.warRate*0.03,rev=y&1,rels=s.rels,fz=P.fortify,LP=szF?localPopF():null,FB=szF?frontBand():null;
   for(let kk=0;kk<L.length;kk++){
-    const i=L[rev?L.length-1-kk:kk],p=pol[i],pi=pop[i],ei=s_eth[i],ri=s_rel[i];
+    const i=L[rev?L.length-1-kk:kk],p=pol[i],pi=pop[i],ei=s_eth[i],ri=s_rel[i];rk(i);
     const o=p?pols[p]:null,horde=o&&o.kind==='horde';
     let fr=0,cand=-1,nc=0,candSea=false,threat=0,rcand=-1,rn=0;
     const cl=w_cosLat[i];
@@ -1947,17 +1956,17 @@ function* politicsG(){
   }
   // first great walls
   for(const id of s.alive){const o=pols[id];if(o.fortN>=8&&!o.wallLogged&&o.cells>=20){o.wallLogged=1;chron('culture',`The ${o.full} begins to fortify its frontier with a great line of walls and forts.`,o.capital,[R_(o)]);spot(`The ${o.full} builds a great wall`,o.capital,[R_(o)])}}
-  for(const id of s.activeMigs.slice())migStep(s_migs[id]);
+  rsd('pol.m');for(const id of s.activeMigs.slice()){rk(id);migStep(s_migs[id])}
   // (2026-11-13) the distance map is a cache, refreshed every five years; everything below runs yearly, its chances converted
   // from five years to one (p5: the yearly chance that gives p over five years)
   // the distance map is refreshed yearly once supply lines can be cut; otherwise it is a five-year cache
   if(y%5===0||(supOn()&&s.cutY)){yield;distBFS();yield}if(y%10===0)stxPass();{const p5=x=>x>=1?1:1-Math.pow(1-Math.max(0,x),0.2);
-    for(const i of w.landIdx){const p=s_pol[i];const ob=p?s_pols[p]:null;
+    rsd('pol.u');for(const i of w.landIdx){rk(i);const p=s_pol[i];const ob=p?s_pols[p]:null;
       if(ob&&ob.kind==='state'&&ob.cells>=60&&s_integ[i]>0.55&&s_pop[i]>=1&&s_eths[ob.core]&&ecoD(i,ob)<0.6){const f=s_eths[ob.core].fam;if(s_uniFam[i]!==f){if(s_uni[i]<0.15){s_uniFam[i]=f;s_uni[i]=0}else{s_uni[i]*=0.99698;continue}}s_uni[i]+=0.0007*(1-s_uni[i])}
       else s_uni[i]*=0.9995}
     if(y%10===0){yield;exitPass(0,0.25);yield;exitPass(0.25,0.5);yield;exitPass(0.5,0.75);yield;exitPass(0.75,1);yield}
     const CTRL=swOn('ctrl');
-    for(const i of w.landIdx){const p=s_pol[i];if(!p)continue;const o=s_pols[p];if(o.kind!=='state'||i===o.capital)continue;const ce=herdLed(o)&&s.past[i]>0.5?0.5:cerealEff(i);
+    rsd('pol.s');for(const i of w.landIdx){const p=s_pol[i];if(!p)continue;rk(i);const o=s_pols[p];if(o.kind!=='state'||i===o.capital)continue;const ce=herdLed(o)&&s.past[i]>0.5?0.5:cerealEff(i);
       if(isWaste(i)){let rim=0;for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&s_pol[j]===p&&!isWaste(j))rim++}
         const keep=rim>0||s_fort[i]>0.3||s_car[i]>0.3||(dd(i)<0.35*o.h&&o.S>0.4&&(o.burden||0)<1.1);if(!keep&&r()<p5(0.3)){s_pol[i]=0;continue}}
       if(ce<0.35&&r()<p5(0.15*(1-ce/0.35)*(1.2-0.5*s_integ[i]))){s_pol[i]=0;continue}
@@ -2136,21 +2145,21 @@ function fastD(){const s=S;if(swOn('nofast')||s.fastOff)return 1;
    Rulers' choices are not on a clock: see review() (accession, raid, lost war, empty treasury). */
 function* stepG(){
   const s=S;s.year++;const FD=fastD(),hv=FD===1||ymod(s.year,FD)===0;s.dt=FD;
-  climateStep();if(WD.isEarth){eventPass();originsPass(1);if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}weather();if(hv&&herdsOn())herdYear();if(s.year%50===0||!s.lake)waterPass();hearthCheck();
+  rsd('clim');climateStep();if(WD.isEarth){rsd('event');eventPass();rsd('origin');originsPass(1);if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}rsd('weather');weather();if(hv&&herdsOn()){rsd('herdY');herdYear()}if(s.year%50===0||!s.lake)waterPass();rsd('hearth');hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
-  else if((s.rN||s.r)()<0.0012*P.volcano)volcano();
+  else if((s.rN||s.r)()<0.0012*P.volcano){rsd('volc');volcano()}
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
-  if(hv){computeK();followWater();growth();yield;if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();seaHop();regionBorder();if(S.gzD)grazePass()}
-  if(FD>1){if(hv)for(let k=0;k<3;k++){techStep(0,1);yield}}
-  else{const k=ymod(s.year,3);techStep(k===0?0:k===1?0.34:0.67,k===0?0.34:k===1?0.67:1);yield}   // yearly clock; a third of the land each year, so each province is still visited once in three years at the same cost
-  if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,10)===7)caravanPass();yield;
-  if(hv)yield* politicsG();if(fieldOn()&&s.alive.length)armyYear();
-  rallyPass();if(armyOn())bandWars(1);if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length)goodsPass();if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length)slavePass();if(ymod(s.year,10)===8&&worksOn()&&s.alive.length)roadPass();if(hv)frontierPass();
-  if(s.year%20===0){yield;ethPass(true);yield;relPass()}
-  if(ymod(s.year,10)===3){cropPass();yield}
-  if(ymod(s.year,10)===6){landUsePass();yield}
-  if(ymod(s.year,10)===8){herdPass();coalitionPass();yield}
-  if(s.year%10===0){genCache();ritualPass();deepPass();recPass();carbonPass();yield;matrixPass();yield;colonyPass();if(!NOLEAGUE){leaguePass();colonizePass()}yield;recordStats();cityPass();yield;regionPass();yield;mixPass()}
+  if(hv){rsd('K');computeK();rsd('water');followWater();rsd('growth');growth();yield;rsd('mig');if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();rsd('sea');seaHop();rsd('border');regionBorder();if(S.gzD){rsd('graze');grazePass()}}
+  if(FD>1){if(hv)for(let k=0;k<3;k++){rsd('tech'+k);techStep(0,1);yield}}
+  else{const k=ymod(s.year,3);rsd('tech');techStep(k===0?0:k===1?0.34:0.67,k===0?0.34:k===1?0.67:1);yield}   // yearly clock; a third of the land each year, so each province is still visited once in three years at the same cost
+  if(hv){rsd('disease');disease()}if(ymod(s.year,10)===5){rsd('pool');poolPass()}if(ymod(s.year,10)===7){rsd('caravan');caravanPass()}yield;
+  if(hv)yield* politicsG();if(fieldOn()&&s.alive.length){rsd('army');armyYear()}
+  rsd('rally');rallyPass();if(armyOn()){rsd('band');bandWars(1)}if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length){rsd('goods');goodsPass()}if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length){rsd('slave');slavePass()}if(ymod(s.year,10)===8&&worksOn()&&s.alive.length){rsd('road');roadPass()}if(hv){rsd('front');frontierPass()}
+  if(s.year%20===0){yield;rsd('eth');ethPass(true);yield;rsd('rel');relPass()}
+  if(ymod(s.year,10)===3){rsd('crop');cropPass();yield}
+  if(ymod(s.year,10)===6){rsd('landuse');landUsePass();yield}
+  if(ymod(s.year,10)===8){rsd('herd');herdPass();rsd('coal');coalitionPass();yield}
+  if(s.year%10===0){rsd('dec');genCache();ritualPass();deepPass();recPass();carbonPass();yield;rsd('matrix');matrixPass();yield;rsd('colony');colonyPass();if(!NOLEAGUE){rsd('league');leaguePass();colonizePass()}yield;recordStats();rsd('city');cityPass();yield;rsd('region');regionPass();yield;rsd('mix');mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */

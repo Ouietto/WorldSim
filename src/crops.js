@@ -118,7 +118,7 @@ function cropPass(quiet){
       let v=-1;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&sAd[j*NCR+k]>=0&&(pkAv[j]&(1<<k))){v=sAd[j*NCR+k];if(grow[j]&(1<<k))break}}
       sAd[i*NCR+k]=v>=0?v:s.sAd0[k]>=0?s.sAd0[k]:SD[i]}}}
   for(const i of L){if(pkAv[i]||farm[i]<0.3)continue;let b=0;for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0)b|=grow[j]}pkAv[i]=b}
-  if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;
+  if(!quiet)for(const i of L){const g=grow[i],c=pkAv[i];if(farm[i]<0.3||!c||pop[i]<1)continue;rk(i);
     for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j<0||pop[j]<1)continue;const ad=SDC?1-0.85*Math.min(1,Math.abs(SDC[i]-SDC[j])):1;   // crops remade for another rain season (nolandvar)
       if((pkAv[j]|g)!==pkAv[j]&&r()<hopP(0.12*ad,d))pkAv[j]|=g;else if((pkAv[j]|c)!==pkAv[j]&&r()<hopP(0.012*ad,d))pkAv[j]|=c}
     if(s.sail[i]>0.3&&r()<pLn(0.05,i)){const a=w.ls[i],b=w.ls[i+1];if(b>a){const j=w.lt[a+((r()*(b-a))|0)];if(pop[j]>=1)pkAv[j]|=g}}
@@ -127,7 +127,7 @@ function cropPass(quiet){
     // as the know-how in the technique pass: a strait up to two links wide to another landmass, a fifth of the land contact
     // (run 77: Britain's farming 1676 BCE -> 3951 BCE, in band 0% -> 94%; score +2.9)
     else if(g){for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q];if(w.ld[q]>2||w.lm[j]===w.lm[i]||pop[j]<1)continue;if((pkAv[j]|g)!==pkAv[j]&&r()<0.024)pkAv[j]|=g}}}
-  for(const i of L){const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
+  for(const i of L){rk(N+i);const av=pkAv[i];if(!av){grow[i]=0;sFc[i]=w.sF[i];s.crop[i]=-1;s.cY[i]=0;s.cTax[i]=0;s.cStore[i]=0;s.cDrain[i]=1;continue}
     // river switch: a crop's water from the flood is judged on the land actually farmed: in a desert valley all of it is floodplain
     const T=w.T[i]+(cdT?cdT[i]:0)+dT,P=Math.max(0.3*w.Pr[i],w.Pr[i]+(cdP?cdP[i]:0)),rv=Math.min(1,w.rvF[i]/Math.max(w.sF[i],0.02)),el=w.elev[i];
     const a=alat[i];let best=-1,bv=0,bf=0,gm=0;for(let k=0;k<CROPS.length;k++){if(!(av&(1<<k)))continue;const C=CROPS[k],dl=Math.max(0,cB[2*k]-a,a-cB[2*k+1]),ms=SEAS?Math.abs(sAd[i*NCR+k]-SD[i])/SMS:0,f=C.fit(T,P,rv,el)*(dl>0?Math.exp(-dl*dl/9):1)*(ms>0?Math.exp(-ms*ms):1);if(f>0.15)gm|=1<<k;const v=f*C.y*(k===CI.maize&&nix[i]>0.5?1.1:1);if(v>bv){bv=v;best=k;bf=f}}grow[i]=gm;

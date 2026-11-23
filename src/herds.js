@@ -190,7 +190,7 @@ function herdPass(){
       // the cold steppe it is the meat that lasts the winter (Anthony 2007, ch. 10); the coldest month here, from the year's mean and
       // range, scales it: full at -12 C and colder, a tenth where winters are mild
       const wn=HDN&&sp===0?clamp(-(w.T[i]+s.cdT[i]-0.5*(w.amp?w.amp[i]:20))/12,0.1,1):1;
-      Pg[i]+=rate*(HDN?wv*wv:wv)*wn*keepers*(0.5+r());if(Pg[i]>=1){Pg[i]=0;domesticate(sp,i)}}
+      Pg[i]+=rate*(HDN?wv*wv:wv)*wn*keepers*(0.5+(rk(sp*N+i),r()));if(Pg[i]>=1){Pg[i]=0;domesticate(sp,i)}}
     for(const i of L){let v=d[i];if(v<=0)continue;const c=capFor(sp,i);
       if(c<=0.01){d[i]=v<0.01?0:v*0.5;continue}
       v+=0.3*v*(1-v/c);if(s.pop[i]<1)v*=0.8;d[i]=clamp(v,0,1)}

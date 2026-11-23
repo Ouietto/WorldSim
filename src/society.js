@@ -211,7 +211,7 @@ function ritName(r){return r.name}
 // every ten years
 function ritualPass(){const s=S,w=WD,r=s.r,y=s.year,L=w.landIdx;
   // new gathering places where settled bands live close together and no site already draws them
-  for(let t=0;t<120;t++){const i=rLand(r);if(s.pop[i]<1||s.ritW[i]>0.15)continue;const sd=s.sed?s.sed[i]:0,dens=s.pop[i]/w.area[i];
+  for(let t=0;t<120;t++){rk(t);const i=rLand(r);if(s.pop[i]<1||s.ritW[i]>0.15)continue;const sd=s.sed?s.sed[i]:0,dens=s.pop[i]/w.area[i];
     if(sd<0.45||dens<0.15)continue;if(r()<0.03*sd*Math.min(1,dens/0.6)){const L2=langAt(i),k=ritKind(i);
       const R={id:s.rits.length,cell:i,eth:s.eth[i],name:cityWord(L2,r),kind:k,born:y,imp:0.08,peak:0.08,last:y,alive:true,fossil:false,told:false,keepers:s.eth[i]};
       s.rits.push(R);s.ritAt[i]=R.id}}
@@ -279,7 +279,7 @@ function frontierPass(){const s=S,w=WD,r=s.r,L=w.landIdx;if(!s.rally)rallyPass()
     // a raid strikes before the army can come: what counts is the province's own people, walls and garrison, not the realm's strength
     const Ud=Math.pow(pEq(i)*2+1,0.75)*milAt(i)*(1+2.5*s.fort[i])*(1+1.6*w.rough[i])*(0.5+s.integ[i])*(0.6+0.8*o.S)*(0.7+0.6*(o.prep??0.6)),pw=clamp(bu/(bu+Ud),0,0.8);
     // (per year; was 0.06 every second year)
-    if(r()<pF(0.03*pw,i,i)){const a=cw(i);s.fRaidN=(s.fRaidN||0)+1;s.pop[i]*=0.96;s.integ[i]=Math.max(0,s.integ[i]-0.12);o.shock+=0.002*a;s.raidC[i]=s.year;o.raided=(o.raided||0)+a;o.raidY=s.year;
+    if((rk(i),r())<pF(0.03*pw,i,i)){const a=cw(i);s.fRaidN=(s.fRaidN||0)+1;s.pop[i]*=0.96;s.integ[i]=Math.max(0,s.integ[i]-0.12);o.shock+=0.002*a;s.raidC[i]=s.year;o.raided=(o.raided||0)+a;o.raidY=s.year;
       // the frontier falls back: a recently taken, unwalled, unreconciled province is abandoned to the raiders
       if(s.integ[i]<0.12&&s.fort[i]<0.3&&i!==o.capital&&s.city[i]<0&&s.year-(s.taken[i]||-1e9)<300&&r()<0.5){s.pol[i]=0;
         if(o.cells>=20&&r()<0.05)chron('war',`Raiders from the ${s.eths[s.eth[best]]?s.eths[s.eth[best]].name:'hill tribes'} drive the settlers of the ${o.full} from a frontier province.`,i,[R_(o)])}}}}
