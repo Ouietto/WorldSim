@@ -596,7 +596,9 @@ const NOSALT=swOn('nosalt');
 // locally), and a realm's corvee carries them further, as far as the ruler's reach in that province goes and less when the treasury
 // is empty. Works silt up unless kept, faster on canals than in flood basins (Sumer's canals needed dredging every year); what the
 // hands or the reach that built them can no longer keep goes back, so a fallen realm's canals decline over a few generations.
-const CENTRE=!swOn('nocentre');
+// (2026-11-23) the rise-and-fall package is opt-in (switch rise) until a version beats the baseline: run 133 showed it worse without
+// works (error +0.21) and level with them; each piece keeps its own off switch inside it
+const RISE=swOn('rise'),CENTRE=RISE&&!swOn('nocentre');
 // (2026-11-23, Nein: too good for too long, rulers forget to mind the court and patch the holes; switches novig, noesplit, noselect)
 // Vigilance (o.vig): how closely a realm is being minded. Pressure felt (war, raids, a crisis or defeat, hunger) sharpens it within a
 // few years; in calm it drifts toward what the ruler brings himself (more for an able one) over generations. Low vigilance lets the
@@ -604,7 +606,7 @@ const CENTRE=!swOn('nocentre');
 // crisis comes. Founders and those who seize power came out on top of a contest, so they are the better of two draws; heirs are
 // whoever is born (Ibn Khaldun's generations, without a clock). In a civil war the surplus elite (beyond what offices and income
 // carry) goes over to the rival in the heartland (noesplit).
-const VIG=!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=!swOn('noselect'),SECEDE=!swOn('nosecede'),LORDCRISIS=swOn('lordcrisis');
+const VIG=RISE&&!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=RISE&&!swOn('noselect'),SECEDE=RISE&&!swOn('nosecede'),LORDCRISIS=RISE&&swOn('lordcrisis');
 const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
 // a war presses as hard as the strongest enemy in it is strong against the realm: wars on weak neighbours keep no one awake
 function vigWar(o){if(!o.enemies.size)return 0;let mx=0;const me=power(o)+1;for(const [q] of o.enemies){const e=S.pols[q];if(e&&e.alive)mx=Math.max(mx,power(e)/me)}return Math.min(0.6,0.5*mx)}
