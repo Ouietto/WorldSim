@@ -5,7 +5,7 @@
  "ref": "",
  "baseEnv": "",
  "variants": [
-  {"name": "neareast", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
-  {"name": "neareast-nofarmrate", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal,nofarmrate"}
+  {"name": "neareast-rivers", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
+  {"name": "neareast-rivers-nofarmrate", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal,nofarmrate"}
  ]
 }
