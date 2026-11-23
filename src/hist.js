@@ -604,7 +604,7 @@ const CENTRE=!swOn('nocentre');
 // crisis comes. Founders and those who seize power came out on top of a contest, so they are the better of two draws; heirs are
 // whoever is born (Ibn Khaldun's generations, without a clock). In a civil war the surplus elite (beyond what offices and income
 // carry) goes over to the rival in the heartland (noesplit).
-const VIG=!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=!swOn('noselect'),SECEDE=!swOn('nosecede');
+const VIG=!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=!swOn('noselect'),SECEDE=!swOn('nosecede'),LORDCRISIS=swOn('lordcrisis');
 const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
 // a war presses as hard as the strongest enemy in it is strong against the realm: wars on weak neighbours keep no one awake
 function vigWar(o){if(!o.enemies.size)return 0;let mx=0;const me=power(o)+1;for(const [q] of o.enemies){const e=S.pols[q];if(e&&e.alive)mx=Math.max(mx,power(e)/me)}return Math.min(0.6,0.5*mx)}
@@ -1171,7 +1171,8 @@ function civilWar(o,breakup){
   let fellTo=null;
   // in the crisis every governor and lord of what the court still holds weighs his hold against its weakened hand; those who no
   // longer obey keep what they hold (2026-11-23; with nosecede off): the heartland can fall apart too
-  if(CENTRE&&SECEDE&&o.kind==='state'){const away=lordsRefusing(o,cells.filter(i=>s.pol[i]===id),true);
+  // (run 134: on by default it fragmented the region but no new power gathered the pieces: -6.1 points, error +0.33; opt-in lordcrisis)
+  if(CENTRE&&LORDCRISIS&&o.kind==='state'){const away=lordsRefusing(o,cells.filter(i=>s.pol[i]===id),true);
     if(away.length){partitionLands(o,away,'In the crisis its governors and lords stopped obeying the court and kept what they held.');s.lordsN=(s.lordsN||0)+1}}
   if(CENTRE&&o.kind==='state'){const mine=cells.filter(i=>s.pol[i]===id);
     let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i]);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0))*(VIG?0.6+0.4*vigOf(o):1);
