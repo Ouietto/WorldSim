@@ -48,7 +48,7 @@ function colonyPass(){
     // crushed and the lands come back; many refusing break away with what they hold, and the next ruler faces a smaller court
     // (the Old Kingdom's nomarchs; Senusret III, who is credited with curbing them; the counts becoming hereditary under the Carolingians).
     if(SECEDE&&o.kind==='state'){const R0=o.ruler||{},will=0.5*(R0.comp??0.5)+0.5*(R0.aggr??0.5);
-      if(o.nob>0.35&&real>=15&&r()<0.12*Math.max(0,will-0.45)*(o.nob-0.3)*(o.burden>0.9||(o.treas||0)<0?2:1)){
+      if(o.nob>0.2&&real>=15&&r()<0.5*Math.max(0,will-0.5)*(o.nob-0.2)*(o.burden>0.9||(o.treas||0)<0?2:1)){
         const cells=polCells(id),hand=clamp(0.35+0.35*(o.S||0)+0.3*adm+0.2*(o.mandate??1),0.1,1.3)*(VIG?0.6+0.4*vigOf(o):1)*(0.7+0.6*will);
         let md=0,nd=0;for(const i of cells)if(s.dist[i]!==65535){md+=s.dist[i];nd++}md=nd?md/nd:1;
         const away=[];let rp=0,tp=0;

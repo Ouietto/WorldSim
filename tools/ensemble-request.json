@@ -1,6 +1,5 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"works+all","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works KV=wbuild:0.5"},
- {"name":"works+centre","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,novig,noesplit,noselect,nosecede KV=wbuild:0.5"},
  {"name":"works+all-secede","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,nosecede KV=wbuild:0.5"},
  {"name":"all","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
  {"name":"none","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,nocentre,novig,noesplit,noselect,nosecede"}]}

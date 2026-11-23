@@ -606,6 +606,10 @@ const CENTRE=!swOn('nocentre');
 // carry) goes over to the rival in the heartland (noesplit).
 const VIG=!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=!swOn('noselect'),SECEDE=!swOn('nosecede');
 const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
+// a war presses as hard as the strongest enemy in it is strong against the realm: wars on weak neighbours keep no one awake
+function vigWar(o){if(!o.enemies.size)return 0;let mx=0;const me=power(o)+1;for(const [q] of o.enemies){const e=S.pols[q];if(e&&e.alive)mx=Math.max(mx,power(e)/me)}return Math.min(0.6,0.5*mx)}
+// a raid presses as hard as the raiders are strong against the realm: a far-off frontier skirmish keeps no court awake
+function vigRaid(o){const h=S.pols[o.raidBy];if(!h||!h.alive)return 0.05;return Math.min(0.4,0.5*power(h)/(power(o)+1))}
 function selectRuler(R){if(!SELR||!R)return;const r=S.r,t=(r()+r()+r())/3;if(t>R.comp)R.comp=t}
 const WKS=swOn('works'),WKF=WKS&&!swOn('nowkflow'),WKR=WKS&&!swOn('nowreck'),WLOC=knob('wlocal');
 // water passes through works (2026-11-23, Nein's idea; switch nowkflow): on a broad, flat plain a canal must leave the river well
@@ -1871,7 +1875,7 @@ function* politicsG(){
     o.h=P.reach*(1+0.04*genAt(1,c)+0.05*genAt(2,c))*(1+0.8*s_recK[c]+0.5*s_law[c]+0.7*s_roads[c]+0.4*s_coin[c]+0.6*s_gun[c])*(0.7+0.6*comp)*(o.kind==='horde'?1.4*(1+0.8*rideAdm(o,c)):1)*(o.kind==='state'?0.75+0.5*Math.min(1.4,o.cplx||0.2):1)*(1+0.15*s_tk[24][c]+0.1*s_tk[31][c])*(o.kind==='state'?0.55+0.45*Math.min(1.2,0.2+o.info.spd):1);
     const Et=etOf(o);
     if(VIG&&o.kind==='state'){const cp=o.ruler&&o.ruler.comp!=null?o.ruler.comp:0.5,
-        pr=clamp((o.enemies.size?0.3:0)+(y-(o.raidY||-1e9)<10?0.3:0)+0.4*Math.min(1,o.shock||0)+2*Math.max(0,o.press-0.95),0,1),
+        pr=clamp(vigWar(o)+(y-(o.raidY||-1e9)<10?vigRaid(o):0)+0.4*Math.min(1,o.shock||0)+Math.max(0,o.press-0.95),0,1),
         tg=clamp(0.2+0.5*cp+0.6*pr,0,1),v=o.vig??0.8;o.vig=v+(tg>v?0.08:0.006*(1.5-cp))*(tg-v)}
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
     o.shock*=0.92;
