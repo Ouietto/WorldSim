@@ -265,7 +265,7 @@ function humidRain(i,y){const w=WD,la=w.lat[i]*57.2958,lo=(w.cxA[i]+0.5)/W*360-1
     const m=clamp(Math.min(la-a,b-la)/3,0,1)*clamp(Math.min(lo-c,e-lo)/4,0,1);if(m>0)d=Math.max(d,amp*f*m)}return d}
 // every fifty years on Earth: the humid period's rain is laid on the climate model's own change, and land and vegetation follow
 function humidStep(){const s=S,w=WD,y=s.year;if(!w.isEarth||!s.cdP0)return;if(y<-10000||y>-1700)return;
-  for(const i of w.landIdx)s.cdP[i]=s.cdP0[i]+humidRain(i,y);if(typeof climateSuit==='function'&&s.pkAv)climateSuit();vegPass();w.exQ=null;
+  for(const i of (w.landPhys||w.landIdx))s.cdP[i]=s.cdP0[i]+humidRain(i,y);if(typeof climateSuit==='function'&&s.pkAv)climateSuit();vegPass();w.exQ=null;
   for(const H of HUMID){const k='hum_'+H[0];if(y>=H[6]&&!s[k]){s[k]=1;chron('nature',`The summer rains begin to fail in ${H[0]}. Lakes shrink, grass gives way to sand, and herders drift toward the rivers.`,-1)}
     if(y>=H[7]&&s[k]===1){s[k]=2;chron('nature',`The desert has returned to ${H[0]}. Those who stayed now live by the rivers, the oases and the wells.`,-1)}}
   if(y>=-9600&&!s.hum_on){s.hum_on=1;chron('nature','Summer rains reach deep into the deserts: lakes fill across the Sahara and Arabia, and grass and herds follow.',-1)}}
@@ -330,7 +330,7 @@ function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=ne
 // it can no longer feed downstream along its water and on to the nearest land that can take them (the Nile, the Niger bend,
 // Lake Chad, the Sahel: Kuper & Kropelin 2006; Brooks 2006)
 function waterPass(){
-  const s=S,w=WD,L=w.landIdx,ord=w.order,down=w.down,fd=w.fillD,area=w.area,hsh=w.hsh||null;if(!ord||!fd)return;
+  const s=S,w=WD,L=w.landPhys||w.landIdx,ord=w.order,down=w.down,fd=w.fillD,area=w.area,hsh=w.hsh||null;if(!ord||!fd)return;
   if(!w.rv0){w.rv0=w.rv.slice();w.rvF0=w.rvF.slice()}
   // hollows: provinces lying below the level at which their hollow spills, joined to neighbours that fill to the same level (a
   // neighbouring hollow with its own spill level is a separate basin: the Niger's inland delta is not the Saharan depression beyond it)
@@ -2427,7 +2427,7 @@ function* climUpdateG(){if(typeof process!=="undefined"&&process.env&&process.en
     gP[i]=dp>0?dp:dp*0.4}
   // keep the large-scale signal: the coarse model's local detail is not trusted on top of measured climate
   boxBlur(gT,W,H,3,2,true);boxBlur(gP,W,H,4,2,true);if(w.uid){gridToUnits(w,gT,s.cdT);gridToUnits(w,gP,s.cdP)}
-  s.cdP0=Float32Array.from(s.cdP);if(WD.isEarth)for(const i of WD.landIdx)s.cdP[i]+=humidRain(i,s.year);
+  s.cdP0=Float32Array.from(s.cdP);if(WD.isEarth)for(const i of (WD.landPhys||WD.landIdx))s.cdP[i]+=humidRain(i,s.year);   // whole map: the rivers read it
   if(typeof climateSuit==='function'&&s.pkAv)climateSuit();
   for(let j=0;j<CN;j++){const c=R0.g.cosl[Math.floor(j/CW)];gs+=c*(R.Ta[j]-R0.Ta[j]);gw+=c}
   s.climAnom=gs/gw;

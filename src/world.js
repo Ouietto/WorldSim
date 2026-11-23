@@ -34,8 +34,11 @@ function applyRegion(w){const R=regionDef();if(!R||w.inR)return;
   const inR=new Uint8Array(N),inCore=new Uint8Array(N);
   for(let i=0;i<N;i++){const [la,lo]=latLonOf(w,i);if(R.core.some(b=>inB(la,lo,b)))inR[i]=inCore[i]=1;else if(R.buf.some(b=>inB(la,lo,b)))inR[i]=1}
   w.inR=inR;w.inCore=inCore;w.region=R;regionCut(w)}
-function regionCut(w){const inR=w.inR,keep=[],out=[];for(let i=0;i<N;i++)if(w.land[i])(inR[i]?keep:out).push(i);
-  w.landIdx=Int32Array.from(keep);w.outIdx=Int32Array.from(out);if(w.coastIdx)w.coastIdx=Int32Array.from(Array.from(w.coastIdx).filter(i=>inR[i]));
+// w.landPhys keeps every land unit for the physical passes that must see the whole map: the rivers are routed over it, so the Nile
+// still carries the Ethiopian and equatorial rain into the region (run 118: with rivers routed over the cut list, Egypt held 0.2M
+// people at 3000 BCE against 1.0M in the full world)
+function regionCut(w){const inR=w.inR,keep=[],out=[],all=[];for(let i=0;i<N;i++)if(w.land[i]){all.push(i);(inR[i]?keep:out).push(i)}
+  w.landPhys=Int32Array.from(all);w.landIdx=Int32Array.from(keep);w.outIdx=Int32Array.from(out);if(w.coastIdx)w.coastIdx=Int32Array.from(Array.from(w.coastIdx).filter(i=>inR[i]));
   for(const i of out){w.sF[i]=0;w.sH[i]=0}}
 // strength knobs (2026-11-11): KV=name:value,name:value in the environment, or &kv= in the address. knob(name) is a multiplier,
 // 1 unless set, so a batch can try a strength at half or double the way SW tries a feature off
