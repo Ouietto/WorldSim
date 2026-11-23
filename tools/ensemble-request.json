@@ -1,3 +1,2 @@
 {"seeds":"1-24","end":-300,"per":4,"ref":"","baseEnv":"","variants":[
- {"name":"neareast","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"neareast-nofarmrate","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,nofarmrate"}]}
+ {"name":"world","env":"WORLD=prov REGION_REPORT=neareast SW=nowinrain,noardfal"}]}

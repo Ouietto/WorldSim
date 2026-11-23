@@ -22,6 +22,10 @@ const SIMREGIONS={
          [12,30,35,60],                         // Arabia
          [12,33,10,40],                         // Nubia and Libya
          [30,46,8,20]]}};                       // the central Mediterranean: Italy, Sicily, Sardinia, Tunisia
+// what reaches the region from outside, drawn from full-world histories (see arrivePass in hist.js); tools/arrivals.js writes the
+// line below from a world batch run with REGION_REPORT=neareast: n histories, and per item the [year, province] of each history in
+// which it first reached the region's boxes from outside
+SIMREGIONS.neareast.arr=null;
 const REGK=((typeof process!=="undefined"&&process.env&&process.env.REGION)||(()=>{try{return new URLSearchParams(location.search).get('region')||''}catch(e){return ''}})()||"").trim();
 function regionDef(){return SIMREGIONS[REGK]||null}
 function latLonOf(w,i){return [w.lat[i]*57.29578,Math.atan2(w.sinLon[i],w.cosLon[i])*57.29578]}

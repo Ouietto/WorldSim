@@ -97,7 +97,29 @@ const TIME={};{const PASSES='armyYear bandWars caravanPass carbonPass cityPass c
 // Saved starts (2026-11-13). SNAP_AT=<year> SNAP_OUT=<file>: run to that year, save the whole history (with this tool's own
 // records) and stop. SNAP_IN=<file>: resume a saved history instead of starting one, to END, under this run's switches and knobs.
 // The history, the world and the run's records are saved whole; the generators by their state; invented techniques by value.
-const TRK={out,pop,big,bigH,who,sec,diag,WAR,dCnt,invSrc,CK,RS,UR,UK,UE};
+// arrivals into a region (2026-11-23, with Nein): in a full-world run with REGION_REPORT, for each crop, herd animal, tamed beast and
+// technique, the first decade it is held anywhere (o) and whether that was inside the region's boxes (oin), and the first decade and
+// province it is held inside them (a, ai). tools/arrivals.js turns a world batch of these into the table regional histories draw
+// their arrivals from. Held: a technique at 0.5 or more, a crop known, a herd or beast at its working level, in a peopled province.
+const ARR=(!WD.inR&&process.env.REGION_REPORT&&SIMREGIONS[process.env.REGION_REPORT])?(()=>{const R=SIMREGIONS[process.env.REGION_REPORT],
+    inB=(la,lo,b)=>la>=b[0]&&la<=b[1]&&lo>=b[2]&&lo<=b[3],inR=new Uint8Array(N);
+  for(let i=0;i<N;i++){const [la,lo]=latLonOf(WD,i);if(R.core.some(b=>inB(la,lo,b))||R.buf.some(b=>inB(la,lo,b)))inR[i]=1}
+  // an item: [key, array getter, threshold, crop bit or -1]
+  const items=[];const nb=typeof TECH_BASE!=='undefined'&&TECH_BASE?TECH_BASE:TECH.length;
+  for(let k=0;k<nb;k++)items.push(['t:'+TECH[k].k,()=>S.tk[k],0.5,-1]);
+  CROPS.forEach((c,k)=>items.push(['c:'+c.k,()=>S.pkAv,0,k]));
+  if(typeof HERDS!=='undefined')HERDS.forEach((h,k)=>items.push(['h:'+(h.k||h.n),()=>S.dom&&S.dom[k],0.3,-1]));
+  if(typeof BEASTS!=='undefined')BEASTS.forEach((b,k)=>items.push(['b:'+b.k,()=>S.bst&&S.bst[k],0.2,-1]));
+  const rec={};
+  // the strongest holding among the given provinces (crops: any), or -1
+  const best=(L,A,th,bit,onlyR)=>{const pop=S.pop;let bv=0,bi=-1;if(bit>=0){for(const i of L){if(onlyR&&!inR[i])continue;if(pop[i]>=1&&(A[i]>>bit)&1){bi=i;if(!onlyR||inR[i])return i}}return bi}
+    for(const i of L){if(onlyR&&!inR[i])continue;const v=A[i];if(v>=th&&v>bv&&pop[i]>=1){bv=v;bi=i}}return bi};
+  return {rec,step(){const y=S.year,L=WD.landIdx;
+    for(const [key,get,th,bit] of items){let r=rec[key];if(r&&r[2]!=null)continue;const A=get();if(!A)continue;
+      // origins are looked for every 50 years; once known, the region is watched every decade
+      if(!r){if(y%50!==0)continue;const i=best(L,A,th,bit,false);if(i<0)continue;const j=best(L,A,th,bit,true);r=rec[key]=[y,j>=0?1:0,null,-1];if(j>=0){r[2]=y;r[3]=j}continue}
+      const j=best(L,A,th,bit,true);if(j>=0){r[2]=y;r[3]=j}}}}})():null;
+const TRK={out,pop,big,bigH,who,sec,diag,WAR,dCnt,invSrc,CK,RS,UR,UK,UE,arr:ARR?ARR.rec:{}};
 const snapSave=file=>{const v8=require('v8'),rs={r:S.r.s,rN:S.rN.s,rW:S.rW?S.rW.s:null},G={r:S.r,rN:S.rN,rW:S.rW};delete S.r;delete S.rN;delete S.rW;
   const W={};for(const k of Object.keys(WD))if(typeof WD[k]!=='function')W[k]=WD[k];
   const buf=zlib.gzipSync(v8.serialize({seed:String(seed),year:S.year,S,W,trk:TRK,lets:{lap,hMax,pontic,chI},rs,tech:TECH.slice(TECH_BASE),N}),{level:1});
@@ -112,6 +134,7 @@ if(process.env.SNAP_IN){const v8=require('v8'),z=v8.deserialize(zlib.gunzipSync(
 const SNAP_AT=process.env.SNAP_AT!=null?+process.env.SNAP_AT:null;
 const T0=process.hrtime();
 while(S.year<END){if(SNAP_AT!=null&&S.year>=SNAP_AT){const n=snapSave(process.env.SNAP_OUT);console.log(JSON.stringify({seed,saved:S.year,bytes:n}));process.exit(0)}step();
+  if(ARR&&S.year%10===0)ARR.step();
   if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)]);UM.push([S.year,heldShare(RG.meso.cells,2/3)]);EML.push([S.year,heldEach([RG.meso,RG.levant],1/3)]);EPR.push([S.year,heldEach([RG.egypt,RG.meso,RG.iran],1/3)]);fcSnap()}
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'&&c.y>=-1000)CK.inv1k++;if(k==='wall'&&CK.wallNC==null&&ncSet.has(c.cell))CK.wallNC=c.y;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=/take its farmland/.test(c.txt)?'conquest':!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
@@ -166,6 +189,7 @@ if(!WD.inR&&process.env.REGION_REPORT&&SIMREGIONS[process.env.REGION_REPORT]){co
   out.region={name:R.name+' (read from the full world)',provinces:n,core:nc,popM:+(rp/1e6).toFixed(2),corePopM:+(cp/1e6).toFixed(2)}}
 if(WD.inR){let cp=0,rp=0;for(const i of WD.landIdx){rp+=S.pop[i];if(WD.inCore[i])cp+=S.pop[i]}out.region={name:WD.region.name,provinces:WD.landIdx.length,core:Array.from(WD.landIdx).filter(i=>WD.inCore[i]).length,popM:+(rp/1e6).toFixed(2),corePopM:+(cp/1e6).toFixed(2),leakK:+((S.regLeak||0)/1e3).toFixed(1),leakYears:S.regLeakY||0}}
 {const h=require('crypto').createHash('md5');for(const A of [S.pop,S.pol,S.eth,S.integ,S.farm])h.update(Buffer.from(A.buffer,A.byteOffset,A.byteLength));out.chk=h.digest('hex').slice(0,12)}
+if(ARR)out.arr=ARR.rec;
 out.time={init:tInit/1000,total:(Date.now()-t0)/1000,byMillennium:sec,pass:{}};for(const k of Object.keys(TIME).sort((a,b)=>TIME[b]-TIME[a]))if(TIME[k]>0.05)out.time.pass[k]=+TIME[k].toFixed(1);
 process.stdout.write(JSON.stringify(out)+'\\n');
 })();

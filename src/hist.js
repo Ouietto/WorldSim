@@ -649,6 +649,26 @@ function regionBorder(){const w=WD,s=S;if(!w.outIdx)return;let n=0;
     const pid=s.pol[i];s.pop[i]=0;s.eth[i]=-1;s.eth2[i]=-1;s.rel[i]=-1;s.pol[i]=0;s.K[i]=0;
     if(pid&&s.pols[pid]&&s.pols[pid].capital===i){const o=s.pols[pid];for(const j of w.landIdx)if(s.pol[j]===pid){o.capital=j;break}}}
   if(n>0){s.regLeak=(s.regLeak||0)+n;s.regLeakY=(s.regLeakY||0)+1}}
+// arrivals from outside the region (Nein 2026-11-23): a regional history has no rest of the world to bring it crops, animals and
+// techniques first held elsewhere, so they come in at the region's edge, at a year and a province drawn from full-world histories
+// of the same model: tools/arrivals.js counts, over a world batch, when and where each item first reached the region's boxes from
+// outside, and this draws one of those histories' outcomes per item and seed (or none, as often as the world runs had none).
+// Nothing comes in that the region already holds by then. Switch noarrive turns it off.
+function arrivePass(){const w=WD,s=S,T=w.region&&w.region.arr;if(!T||!w.inR||swOn('noarrive'))return;
+  if(!s.arrQ){s.arrQ=[];s.arrLog=[];for(const key of Object.keys(T.items)){const L=T.items[key],u=fmix32(s.rB^(hashStr('arrive:'+key)|0))>>>0,k=u%T.n;
+      if(k<L.length&&L[k][0]>s.year)s.arrQ.push([L[k][0],key,L[k][1]])}s.arrQ.sort((a,b)=>a[0]-b[0])}
+  while(s.arrQ.length&&s.arrQ[0][0]<=s.year){const [,key,ai]=s.arrQ.shift();arrive(key,ai)}}
+function arrive(key,ai){const w=WD,s=S,kind=key[0],name=key.slice(2);let A=null,th=0,bit=-1;
+  if(kind==='t'){const k=TI[name];if(k==null)return;A=s.tk[k];th=0.5}
+  else if(kind==='c'){const k=CI[name];if(k==null||!s.pkAv)return;A=s.pkAv;bit=k}
+  else if(kind==='h'){const k=HI[name];if(k==null||!s.dom)return;A=s.dom[k];th=0.3}
+  else if(kind==='b'){const k=BI[name];if(k==null||!s.bst)return;A=s.bst[k];th=0.2}
+  if(!A)return;const has=i=>bit>=0?(A[i]>>bit)&1:A[i]>=th;
+  for(const i of w.landIdx)if(s.pop[i]>=1&&has(i)){s.arrLog.push([s.year,key,-1]);return}   // already here, by the buffer or at home
+  const c=ai>=0&&w.inR[ai]&&s.pop[ai]>=1?ai:nearestPeopled(ai>=0?ai:w.landIdx[0],12,j=>w.inR[j]);if(c<0)return;
+  if(bit>=0)ring(c,1,j=>{if(w.land[j]&&w.inR[j])A[j]|=1<<bit});
+  else seedTech(A,c,kind==='t'?1:Math.max(0.5,th+0.2),1);
+  s.arrN=(s.arrN||0)+1;s.arrLog.push([s.year,key,c])}
 function migrate(){
   const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn(),SEAC=swOn('seacol');const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
   const MDT=s.dtM||1;
@@ -2149,7 +2169,7 @@ function* stepG(){
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano){rsd('volc');volcano()}
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
-  if(hv){rsd('K');computeK();rsd('water');followWater();rsd('growth');growth();yield;rsd('mig');if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();rsd('sea');seaHop();rsd('border');regionBorder();if(S.gzD){rsd('graze');grazePass()}}
+  if(hv){rsd('K');computeK();rsd('water');followWater();rsd('growth');growth();yield;rsd('mig');if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();rsd('sea');seaHop();rsd('border');regionBorder();rsd('arrive');arrivePass();if(S.gzD){rsd('graze');grazePass()}}
   if(FD>1){if(hv)for(let k=0;k<3;k++){rsd('tech'+k);techStep(0,1);yield}}
   else{const k=ymod(s.year,3);rsd('tech');techStep(k===0?0:k===1?0.34:0.67,k===0?0.34:k===1?0.67:1);yield}   // yearly clock; a third of the land each year, so each province is still visited once in three years at the same cost
   if(hv){rsd('disease');disease()}if(ymod(s.year,10)===5){rsd('pool');poolPass()}if(ymod(s.year,10)===7){rsd('caravan');caravanPass()}yield;
