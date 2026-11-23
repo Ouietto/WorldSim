@@ -85,6 +85,15 @@ const RG={};for(const R of WD.regions)RG[R.k]=R;const UM=[],EML=[],EPR=[],FC={};
 // (2026-11-23) the Aegean's first lasting states: a state above chiefdom with its capital in the Aegean box, held the same way as
 // Mesopotamia's city-states (r_aegean and rs_aegean read one realm holding a third of the box's people, a different thing)
 const UA=[],aeSet=new Set(RG.aegean?RG.aegean.cells:[]);
+// (2026-11-23) rise and fall: each decade from 3000 BCE, the realm (head of a bloc) holding a third of Mesopotamia's and of Egypt's
+// people, if any. Turnover counts the distinct realms that held it for five decades running; gaps are the share of decades with no
+// such realm once one had held it. Real, 3000-300 BCE: Mesopotamia about 9 (Akkad, Ur III, Isin-Larsa, Babylon, the Kassites,
+// Assyria, Babylon again, Persia, the Seleucids); Egypt about 8 (the Old, Middle and New Kingdoms, Libyan and Kushite pharaohs,
+// the Saites, Persia, the Ptolemies), with intermediate periods a fifth to a quarter of the time
+const DOMR={meso:[],egypt:[]},domKey=(cells)=>{const cnt=new Map();let tot=0;for(const i of cells){const pp=S.pop[i];tot+=pp;const p=S.pol[i];if(!p)continue;const o=S.pols[p],key=headOf(o);
+    if(key==='p'+o.id&&(o.tier==='Chiefdom'||o.tier==='Clans'))continue;cnt.set(key,(cnt.get(key)||0)+pp*(o.coord??1))}let bk=null,bv=0;for(const [k,v] of cnt)if(v>bv){bv=v;bk=k}return tot>0&&bv>=tot/3&&bv>=1e5?bk:null},
+  turnover=a=>{const seen=new Set();let run=0,prev=null,first=-1,gaps=0;for(let t=0;t<a.length;t++){const k=a[t];if(k!=null&&first<0)first=t;if(first>=0&&k==null)gaps++;
+      if(k!=null&&k===prev)run++;else run=k!=null?1:0;prev=k;if(run>=5)seen.add(k)}return [seen.size,first>=0?+(gaps/(a.length-first)).toFixed(2):null]};
 // (2026-11-23) overseas colonies (colonizePass: a crowded or merchant-rich coastal city sends settlers to an unclaimed shore) founded
 // from the eastern Mediterranean, the Aegean and the Levant coast: the first year, how many, and where they went (the central
 // Mediterranean, the Black Sea and Pontic shore, elsewhere). Phoenician and Greek colonies came from pressure and trade there.
@@ -129,7 +138,7 @@ const ARR=(!WD.inR&&process.env.REGION_REPORT&&SIMREGIONS[process.env.REGION_REP
       // origins are looked for every 50 years; once known, the region is watched every decade
       if(!r){if(y%50!==0)continue;const i=best(L,A,th,bit,false);if(i<0)continue;const j=best(L,A,th,bit,true);r=rec[key]=[y,j>=0?1:0,null,-1];if(j>=0){r[2]=y;r[3]=j}continue}
       const j=best(L,A,th,bit,true);if(j>=0){r[2]=y;r[3]=j}}}}})():null;
-const TRK={out,pop,big,bigH,who,sec,diag,WAR,dCnt,invSrc,CK,RS,UR,UK,UE,COL,UM,EML,EPR,FC,UA,arr:ARR?ARR.rec:{}};
+const TRK={out,pop,big,bigH,who,sec,diag,WAR,dCnt,invSrc,CK,RS,UR,UK,UE,COL,UM,EML,EPR,FC,UA,DOMR,arr:ARR?ARR.rec:{}};
 const snapSave=file=>{const v8=require('v8'),rs={r:S.r.s,rN:S.rN.s,rW:S.rW?S.rW.s:null},G={r:S.r,rN:S.rN,rW:S.rW};delete S.r;delete S.rN;delete S.rW;
   const W={};for(const k of Object.keys(WD))if(typeof WD[k]!=='function')W[k]=WD[k];
   const buf=zlib.gzipSync(v8.serialize({seed:String(seed),year:S.year,S,W,trk:TRK,lets:{lap,hMax,pontic,chI},rs,tech:TECH.slice(TECH_BASE),N}),{level:1});
@@ -145,7 +154,7 @@ const SNAP_AT=process.env.SNAP_AT!=null?+process.env.SNAP_AT:null;
 const T0=process.hrtime();
 while(S.year<END){if(SNAP_AT!=null&&S.year>=SNAP_AT){const n=snapSave(process.env.SNAP_OUT);console.log(JSON.stringify({seed,saved:S.year,bytes:n}));process.exit(0)}step();
   if(ARR&&S.year%10===0)ARR.step();
-  if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);{let ca=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&aeSet.has(o.capital)){ca=true;break}}UA.push([S.year,ca])}let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)]);UM.push([S.year,heldShare(RG.meso.cells,2/3)]);EML.push([S.year,heldEach([RG.meso,RG.levant],1/3)]);EPR.push([S.year,heldEach([RG.egypt,RG.meso,RG.iran],1/3)]);fcSnap();colStep()}
+  if(S.year%10===0&&S.year>=-9000){for(const R of WD.regions)RS[R.k].push([S.year,held(R)]);let c=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&alSet.has(o.capital)){c=true;break}}UR.push([S.year,c]);{let ca=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&aeSet.has(o.capital)){ca=true;break}}UA.push([S.year,ca])}let k2=false;for(const id of S.alive){const o=S.pols[id];if(o.kind==='state'&&o.tier!=='Chiefdom'&&o.tier!=='Clans'&&nlSet.has(o.capital)){k2=true;break}}UK.push([S.year,k2]);UE.push([S.year,heldShare(NILE,2/3)]);UM.push([S.year,heldShare(RG.meso.cells,2/3)]);EML.push([S.year,heldEach([RG.meso,RG.levant],1/3)]);EPR.push([S.year,heldEach([RG.egypt,RG.meso,RG.iran],1/3)]);fcSnap();colStep();if(S.year>=-3000){DOMR.meso.push(domKey(RG.meso.cells));DOMR.egypt.push(domKey(RG.egypt.cells))}}
   {const ch=S.chron;if(ch.length<chI)chI=Math.max(0,chI-4000);for(;chI<ch.length;chI++){const c=ch[chI];if(c.y<-3000)continue;for(const k in DOM)if(DOM[k].test(c.txt)){dCnt[k]++;if(k==='inv'&&c.y>=-1000)CK.inv1k++;if(k==='wall'&&CK.wallNC==null&&ncSet.has(c.cell))CK.wallNC=c.y;if(k==='inv'){const M=c.refs&&c.refs[0]&&c.refs[0][0]==='mig'?S.migs[c.refs[0][1]]:null;const src=/take its farmland/.test(c.txt)?'conquest':!M?'people':M.kind==='horde'?(M.cause==='pushed'?'beaten':M.cause==='drought'?'drought':'riches'):'people';invSrc[src]++}}}}
   if(S.year===-2999||S.year===1||S.year===1000)snap(S.year);
   if(S.year===-999)CK.arch1000bce=frontierRide()['Frontier states: share with mounted archers'];
@@ -160,7 +169,7 @@ while(S.year<END){if(SNAP_AT!=null&&S.year>=SNAP_AT){const n=snapSave(process.en
   if(marks.includes(S.year)){const st=S.stats[S.stats.length-1];pop[S.year]=Math.round(st.pop/1e6);big[S.year]=Math.round(st.bcS??st.bc);bigH[S.year]=st.bcH==null?null:Math.round(st.bcH);
     const d=o=>o?o.full+' '+o.cells+' at '+Math.round(WD.lat[o.capital]*180/Math.PI)+','+Math.round((WD.cxA[o.capital]+0.5)/W*360-180):null;who[S.year]={state:d(S.pols[st.bigS]),horde:d(S.pols[st.bigH])}}}
 const yr=v=>v?v.y:null,rf=k=>S.regionFirst[k]?S.regionFirst[k].y:null,ft=k=>yr(S.firstTech[TI[k]]);
-for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafrica','iran','levant','anatolia','aegean'])out['r_'+k]=rf(k);for(const k in RS)out['rs_'+k]=sus(RS[k]);out.rc_meso=sus(UR);out.rc_aegean=sus(UA);out.rk_egypt=sus(UK);out.ru_egypt=sus(UE);out.ru_meso=sus(UM);out.e_mesolev=sus(EML);out.e_persia=sus(EPR);Object.assign(out,FC);out.col_em=COL.first;out.coln_em=COL.n;out.col={from_em:COL.n,cmed:COL.cmed,pontic:COL.pontic,other:COL.other,all:COL.all};
+for(const k of ['meso','egypt','indus','nchina','mesoam','andes','europe','wafrica','iran','levant','anatolia','aegean'])out['r_'+k]=rf(k);for(const k in RS)out['rs_'+k]=sus(RS[k]);out.rc_meso=sus(UR);out.rc_aegean=sus(UA);out.rk_egypt=sus(UK);out.ru_egypt=sus(UE);out.ru_meso=sus(UM);out.e_mesolev=sus(EML);out.e_persia=sus(EPR);Object.assign(out,FC);{const m=turnover(DOMR.meso),e=turnover(DOMR.egypt);out.tn_meso=m[0];out.gap_meso=m[1];out.tn_egypt=e[0];out.gap_egypt=e[1]}out.col_em=COL.first;out.coln_em=COL.n;out.col={from_em:COL.n,cmed:COL.cmed,pontic:COL.pontic,other:COL.other,all:COL.all};
 for(const k of ['writing','iron','coin','paper','gun'])out['t_'+k]=ft(k);
 out.t_horse=S.domFirst&&S.domFirst[0]?S.domFirst[0].y:null;out.s_pontic=pontic;
 for(const k of ['cEur','brit','scand','japan'])out['f_'+k]=fArr[k]??null;out.fs_pnw=END>=1500?+fShare('pnw').toFixed(3):null;out.fs_cape=END>=1500?+fShare('cape').toFixed(3):null;

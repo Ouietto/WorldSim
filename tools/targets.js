@@ -66,6 +66,11 @@ module.exports=[
   {k:'rc_aegean', g:'Fertile Crescent',n:'Aegean (first lasting states: the Cretan palaces)',kind:'year',real:B(1950),lo:B(2300),hi:B(1600)},
   {k:'r_aegean',  g:'Fertile Crescent',n:'Aegean (one realm or league holding a third of the people, first seen: Persian Ionia, the Delian League) (context)',kind:'year',real:B(500),lo:B(800),hi:B(300),cls:'context'},
   {k:'rs_aegean', g:'Fertile Crescent',n:'Aegean (one realm holding a third of the people, lasting: divided until Macedon)',kind:'year',real:B(338),lo:B(500),hi:B(250)},
+  // rise and fall (2026-11-23, proposed to Nein): distinct realms holding a third of the people for 50+ years, 3000-300 BCE, and the
+  // share of decades with none once one had (Van De Mieroop 2016; Kuhrt 1995)
+  {k:'tn_meso',   g:'Fertile Crescent',n:'Mesopotamia: realms in turn holding a third of the people, 3000-300 BCE (context)',kind:'num',real:9,lo:5,hi:14,at:B(300),cls:'context'},
+  {k:'tn_egypt',  g:'Fertile Crescent',n:'Egypt: realms in turn holding a third of the people, 3000-300 BCE (context)',kind:'num',real:8,lo:4,hi:12,at:B(300),cls:'context'},
+  {k:'gap_egypt', g:'Fertile Crescent',n:'Egypt: share of decades with no realm holding a third (intermediate periods) (context)',kind:'num',dec:2,real:0.22,lo:0.08,hi:0.4,at:B(300),cls:'context'},
   {k:'col_em',    g:'Fertile Crescent',n:'First overseas colony from the Aegean or the Levant coast (Phoenician and Greek colonies) (context)',kind:'year',real:B(800),lo:B(1200),hi:B(650),cls:'context'},
   {k:'e_mesolev', g:'Fertile Crescent',n:'Mesopotamia and the Levant under one realm (the Assyrian pattern)',kind:'year',real:B(740),lo:B(1200),hi:B(600)},
   {k:'e_persia',  g:'Fertile Crescent',n:'Egypt, Mesopotamia and Iran under one realm (the Persian pattern)',kind:'year',real:B(525),lo:B(700),hi:B(330)},
@@ -105,5 +110,5 @@ module.exports=[
 // targets that a regional run (REGION=name) can be scored on: those inside its core and buffer (2026-11-23). A Fertile Crescent
 // scorecard with more rows (Akkad, Assyria, Persia, colonies, population, cities) is next, agreed with Nein.
 const REGIONAL={neareast:['o_fc','rs_meso','rc_meso','rk_egypt','ru_egypt','rs_egypt','rs_indus','r_meso','r_egypt','r_indus','s_pontic',
-  'ru_meso','rs_levant','rs_anatolia','rc_aegean','r_aegean','rs_aegean','col_em','e_mesolev','e_persia','pe_egypt2500','pe_egypt1250','cty_meso3000','r_levant','r_anatolia','rs_iran','r_iran']};
+  'ru_meso','rs_levant','rs_anatolia','rc_aegean','r_aegean','rs_aegean','col_em','tn_meso','tn_egypt','gap_egypt','e_mesolev','e_persia','pe_egypt2500','pe_egypt1250','cty_meso3000','r_levant','r_anatolia','rs_iran','r_iran']};
 for(const t of module.exports)for(const r in REGIONAL)if(REGIONAL[r].includes(t.k))(t.reg||(t.reg=[])).push(r);
