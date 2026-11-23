@@ -596,6 +596,7 @@ const NOSALT=swOn('nosalt');
 // locally), and a realm's corvee carries them further, as far as the ruler's reach in that province goes and less when the treasury
 // is empty. Works silt up unless kept, faster on canals than in flood basins (Sumer's canals needed dredging every year); what the
 // hands or the reach that built them can no longer keep goes back, so a fallen realm's canals decline over a few generations.
+const CENTRE=!swOn('nocentre');
 const WKS=swOn('works'),WKF=WKS&&!swOn('nowkflow'),WKR=WKS&&!swOn('nowreck'),WLOC=knob('wlocal');
 // water passes through works (2026-11-23, Nein's idea; switch nowkflow): on a broad, flat plain a canal must leave the river well
 // upstream to command the fields, so part of a province's works water is taken in the province above it on the river (its feeder:
@@ -1113,7 +1114,10 @@ function civilWar(o,breakup){
   const A=w.szF?cells.reduce((a,i)=>a+cw(i),0):cells.length;
   const dd=i=>(s.dist[i]===65535?9999:s.dist[i])*(1.2-s.integ[i]);
   const ecS=new Map();for(const c of cells)ecS.set(c,1+P.eco*ecoD(c,o));
-  cells.sort((a,b)=>dd(b)*ecS.get(b)-dd(a)*ecS.get(a));
+  // (nocentre off, 2026-11-23) a rebellion rises where there is power to rise with: far from the court and loosely bound, as before,
+  // and also where many people are, so a populous province of the heartland can break away too (Larsa and Isin after Ur III)
+  const pwB=CENTRE&&o.kind==='state'?(i=>Math.sqrt(s.pop[i]+100)):(()=>1);
+  cells.sort((a,b)=>dd(b)*ecS.get(b)*pwB(b)-dd(a)*ecS.get(a)*pwB(a));
   const n=clamp(1+(r()<0.5?1:0)+(A>=80&&r()<0.5?1:0)+Math.floor(A/250)+(breakup?2:0),1,6),top=cells.slice(0,Math.max(1,Math.round(cells.length*0.6))),seeds=[];
   for(let t=0;t<60&&seeds.length<n;t++){const c=pick(r,top);if(c===o.capital)continue;if(seeds.every(q=>angDist(q,c)>0.07))seeds.push(c)}
   if(!seeds.length)return;
@@ -1132,6 +1136,22 @@ function civilWar(o,breakup){
   const rebels=ids.map(k=>s.pols[k]);
   for(const k of ids){const p=s.pols[k];p.rel=s.rel[p.capital]>=0?s.rel[p.capital]:o.rel}
   for(const i of cells){const p=s.pol[i];if(p&&i!==s.pols[p].capital&&!(herdLed(s.pols[p])&&s.past[i]>0.5)&&cerealEff(i)<0.3&&r()<0.6)s.pol[i]=0}
+  // who holds the centre is decided by strength, not by rule (2026-11-23, Nein: civil wars from real power; switch nocentre). The
+  // court's side counts the people it still holds, the more as they are bound to it (integration) and as the realm hangs together
+  // (cohesion), less when its soldiers go unpaid (an empty treasury, pay owed); each rebel counts its own people by their local
+  // solidarity, and half the people in the court's lands it can starve by holding the water they depend on (works flow). A rebel
+  // stronger than the court takes the capital and the court's lands: the old realm ends and the rebel's is the realm now (Thebes
+  // reuniting Egypt twice; Sargon taking the realm of Kish). Others that broke away stay apart until someone takes them in.
+  let fellTo=null;
+  if(CENTRE&&o.kind==='state'){const mine=cells.filter(i=>s.pol[i]===id);
+    let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i]);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0));
+    let best=null,bv=C;for(const k of ids){const p=s.pols[k];let R=0,starve=0;
+      for(const i of cells){if(s.pol[i]!==k)continue;R+=s.pop[i]*(0.5+s.s[i]);
+        if(WKF&&s.wk){for(let q2=w.wkDnS[i];q2<w.wkDnS[i+1];q2++){const d=w.wkDn[q2];if(s.pol[d]===id)starve+=w.wkDep[d]*s.wk[d]*s.pop[d]}}}
+      R+=0.5*starve;if(R>bv){bv=R;best=p}}
+    if(best){for(const i of mine){s.pol[i]=best.id;s.integ[i]=Math.min(s.integ[i],0.5)}fellTo=best;s.cFallN=(s.cFallN||0)+1;
+      if(A>=20)chron('fall',`The rebels of ${best.base} take the capital of the ${oldName}; its lands pass to them, and the ${oldName} is no more.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}}
+  if(fellTo)return;
   const big=A>=40;
   const war=declareWar(rebels,[o],`the ${o.base} Civil War`,big,true);
   war.why=why;
