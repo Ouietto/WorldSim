@@ -60,8 +60,13 @@ module.exports=[
   {k:'ru_meso',   g:'Fertile Crescent',n:'Mesopotamia (one realm holding two thirds of the people: Akkad)',kind:'year',real:B(2300),lo:B(2700),hi:B(1750)},
   {k:'rs_levant', g:'Fertile Crescent',n:'Levant (one realm holding a third of the people, lasting: Egypt\'s New Kingdom)',kind:'year',real:B(1450),lo:B(2400),hi:B(1200)},
   {k:'rs_anatolia',g:'Fertile Crescent',n:'Central Anatolia (a third of the people, lasting: the Hittite Old Kingdom)',kind:'year',real:B(1650),lo:B(1900),hi:B(1400)},
-  {k:'r_aegean',  g:'Fertile Crescent',n:'Aegean (first lasting states: the Cretan palaces)',kind:'year',real:B(1950),lo:B(2300),hi:B(1600)},
-  {k:'rs_aegean', g:'Fertile Crescent',n:'Aegean (one realm holding a third of the people: stays divided until Macedon)',kind:'year',real:B(338),lo:B(500),hi:B(300)},
+  // (2026-11-23) the Aegean rows: r_aegean and rs_aegean read one realm (or league) holding a third of the box's people, so the first
+  // lasting states are measured separately (rc_aegean). Real: Cretan palaces about 1950 BCE; a third under one power first with
+  // Persian Ionia and the Delian League (about 500 BCE), lastingly with Macedon (338 BCE)
+  {k:'rc_aegean', g:'Fertile Crescent',n:'Aegean (first lasting states: the Cretan palaces)',kind:'year',real:B(1950),lo:B(2300),hi:B(1600)},
+  {k:'r_aegean',  g:'Fertile Crescent',n:'Aegean (one realm or league holding a third of the people, first seen: Persian Ionia, the Delian League) (context)',kind:'year',real:B(500),lo:B(800),hi:B(300),cls:'context'},
+  {k:'rs_aegean', g:'Fertile Crescent',n:'Aegean (one realm holding a third of the people, lasting: divided until Macedon)',kind:'year',real:B(338),lo:B(500),hi:B(250)},
+  {k:'col_em',    g:'Fertile Crescent',n:'First overseas colony from the Aegean or the Levant coast (Phoenician and Greek colonies) (context)',kind:'year',real:B(800),lo:B(1200),hi:B(650),cls:'context'},
   {k:'e_mesolev', g:'Fertile Crescent',n:'Mesopotamia and the Levant under one realm (the Assyrian pattern)',kind:'year',real:B(740),lo:B(1200),hi:B(600)},
   {k:'e_persia',  g:'Fertile Crescent',n:'Egypt, Mesopotamia and Iran under one realm (the Persian pattern)',kind:'year',real:B(525),lo:B(700),hi:B(330)},
   {k:'pe_egypt2500',g:'Fertile Crescent',n:'Egypt\'s people, 2500 BCE (M)',kind:'num',dec:1,real:1.6,lo:1.0,hi:2.5,at:B(2500)},
@@ -100,5 +105,5 @@ module.exports=[
 // targets that a regional run (REGION=name) can be scored on: those inside its core and buffer (2026-11-23). A Fertile Crescent
 // scorecard with more rows (Akkad, Assyria, Persia, colonies, population, cities) is next, agreed with Nein.
 const REGIONAL={neareast:['o_fc','rs_meso','rc_meso','rk_egypt','ru_egypt','rs_egypt','rs_indus','r_meso','r_egypt','r_indus','s_pontic',
-  'ru_meso','rs_levant','rs_anatolia','r_aegean','rs_aegean','e_mesolev','e_persia','pe_egypt2500','pe_egypt1250','cty_meso3000','r_levant','r_anatolia','rs_iran','r_iran']};
+  'ru_meso','rs_levant','rs_anatolia','rc_aegean','r_aegean','rs_aegean','col_em','e_mesolev','e_persia','pe_egypt2500','pe_egypt1250','cty_meso3000','r_levant','r_anatolia','rs_iran','r_iran']};
 for(const t of module.exports)for(const r in REGIONAL)if(REGIONAL[r].includes(t.k))(t.reg||(t.reg=[])).push(r);
