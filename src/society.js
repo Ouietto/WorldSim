@@ -119,7 +119,7 @@ function sackCity(o,j,q){
   if(r()>p)return;
   const loss=s.pop[j]*(0.2+0.25*r()),fled=loss*0.5;s.pop[j]-=loss;
   if(o.kind==='horde')o.loot+=loss*0.3;else o.treas=Math.min(1,(o.treas||0)+0.15);
-  s.fort[j]*=0.3;if(o.kind==='horde')s.irrig[j]*=0.7;
+  s.fort[j]*=0.3;if(o.kind==='horde'){if(WKR&&s.wk)wreck(j,0.3);else s.irrig[j]*=0.7}
   // refugees go to the nearest province still held by their own state and people, or else take to the roads
   let dest=-1;if(d&&d.alive){let bd=1e9;ring(j,4,(c,dx,dy)=>{if(c!==j&&s.pol[c]===q&&s.eth[c]===s.eth[j]&&s.pop[c]>=1){const dd2=dx*dx+dy*dy;if(dd2<bd){bd=dd2;dest=c}}})}
   if(dest>=0)s.pop[dest]+=fled;else pushPressure(s.eth[j],fled,j,o.id,null);
@@ -515,7 +515,8 @@ function dealPass(only){const s=S,w=WD,r=s.r,kd=knob('deal'),D=s.deal||(s.deal=n
         for(const [e2,g2] of M)if(e2!==e&&e2!==o.core&&!(o.dealE.get(e2)>0))o.dealRes=(o.dealRes||new Map()).set(e2,0.15*bite);
         if(o.cells>=15)chron('diplomacy',`${R.name} of the ${o.full} comes to terms with the ${s.eths[e].name}: their own leaders and law, and a place at court.`,g[3],[R_(o),RE(s.eths[e])],sk>0.3?'They were hard to hold and their horsemen were worth having.':'They were hard to hold, and terms were cheaper than garrisons.')}
       // a single province is worth terms only if it matters: many people, skilled horsemen, or a threatened frontier
-      else if(D[g[3]]<1&&(s.pop[g[3]]>0.01*o.pop||(s.cavL&&s.cavL[g[3]]>0.3)||(s.thr&&s.thr[g[3]]>0.3))&&r()<0.5){const i=g[3];D[i]=Math.min(1,D[i]+0.5);N_.prov++;o.dealRes=(o.dealRes||new Map()).set(e,0.1*bite)}}
+      else if(D[g[3]]<1&&(s.pop[g[3]]>0.01*o.pop||(s.cavL&&s.cavL[g[3]]>0.3)||(s.thr&&s.thr[g[3]]>0.3)||(WKF&&s.lev&&s.lev[g[3]]>0.5*s.pop[g[3]]))&&r()<0.5){   // (2026-11-23) or holds water others depend on
+        const i=g[3];D[i]=Math.min(1,D[i]+0.5);N_.prov++;o.dealRes=(o.dealRes||new Map()).set(e,0.1*bite)}}
     // resentment: those passed over settle in more slowly, or slip, for a decade
     if(o.dealRes){for(const i of polCells(p)){const v=o.dealRes.get(s.eth[i]);if(v&&dealAt(o,i)<=0)s.integ[i]=Math.max(0,s.integ[i]-v*0.3)}o.dealRes=null}}}
 // an heir may revoke what his father granted

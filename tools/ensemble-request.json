@@ -1,4 +1,6 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
- {"name":"neareast","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"neareast-works","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works"},
- {"name":"neareast-works-slow","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works KV=wbuild:0.5"}]}
+ {"name":"works-slow","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,nowkflow,nowreck KV=wbuild:0.5"},
+ {"name":"+flow","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,nowreck KV=wbuild:0.5"},
+ {"name":"+flow+wreck","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works KV=wbuild:0.5"},
+ {"name":"+flow+wreck+local","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works KV=wbuild:0.5,wlocal:1.75"},
+ {"name":"no-works","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"}]}

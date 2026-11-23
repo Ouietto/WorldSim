@@ -512,7 +512,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const WKA=WKS?(s.wk||(s.wk=new Float32Array(N))):null;const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null,LK=s.lake||null,ARI=swOn('aridirr'),WETK=swOn('wetk'),LOREK=loreOn();
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const WKA=WKS?(s.wk||(s.wk=new Float32Array(N))):null;if(WKF)wkFlow();const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null,LK=s.lake||null,ARI=swOn('aridirr'),WETK=swOn('wetk'),LOREK=loreOn();
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -542,7 +542,7 @@ function computeK(){
     if(GZ){Kh*=1-0.45*GZ[i];s.grass[i]=ar*1.6*sh*Math.min(1.3,dry)*(1+0.25*w_transh[i])*(1-s_rp[i])*(1-0.45*GZ[i])}
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
-    const iw=WKA?Math.min(s_irrig[i],WKA[i]):s_irrig[i],irr=iw*w.rvF[i];
+    const iw=WKA?Math.min(s_irrig[i],WKA[i]*(WKF&&WD.wkDep[i]>0&&wkCut(i)?(s.wkCutN=(s.wkCutN||0)+1,1-WD.wkDep[i]):1)):s_irrig[i],irr=iw*w.rvF[i];
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const hv=w_heavy[i],lc=w_leach[i];
     const fp=Math.min(1,w.rvF[i]/Math.max(w_sF[i],0.02));
@@ -596,15 +596,36 @@ const NOSALT=swOn('nosalt');
 // locally), and a realm's corvee carries them further, as far as the ruler's reach in that province goes and less when the treasury
 // is empty. Works silt up unless kept, faster on canals than in flood basins (Sumer's canals needed dredging every year); what the
 // hands or the reach that built them can no longer keep goes back, so a fallen realm's canals decline over a few generations.
-const WKS=swOn('works');
+const WKS=swOn('works'),WKF=WKS&&!swOn('nowkflow'),WKR=WKS&&!swOn('nowreck'),WLOC=knob('wlocal');
+// water passes through works (2026-11-23, Nein's idea; switch nowkflow): on a broad, flat plain a canal must leave the river well
+// upstream to command the fields, so part of a province's works water is taken in the province above it on the river (its feeder:
+// the largest stream coming in, or for a floodplain off the main stream the big river beside it); flood basins filled where the
+// river overtops take theirs on the spot. dep = the share taken upstream: more on wide plains and where canals, not basins, water
+// the crop. A feeder held by an enemy closes the gates. Leverage (s.lev): the people downstream who eat by works whose water passes
+// through a province: a holder of such a province is worth terms (dealPass), and an enemy bent on punishment aims at it.
+function wkFlow(){const w=WD;if(w.wkUp)return w;const L=w.landPhys||w.landIdx,FF=FLUSH?floodFit():null,up=new Int32Array(N).fill(-1),dep=new Float32Array(N),acc=w.acc;
+  for(const i of L){const d=w.down[i];if(d>=0&&w.land[d]&&(up[d]<0||acc[i]>acc[up[d]]))up[d]=i}
+  for(const i of L){if(!(w.rvF[i]>0.02))continue;let b=up[i],ba=b>=0?acc[b]:acc[i];
+    for(let q=w.nbS[i];q<w.nbS[i+1];q++){const j=w.nbA[q];if(j>=0&&w.land[j]&&w.down[i]!==j&&acc[j]>Math.max(ba,acc[i]*1.5)){b=j;ba=acc[j]}}
+    up[i]=b;if(b>=0)dep[i]=0.7*(1-(FF?FF[i]:0.3))*clamp(w.rvF[i]/0.6,0,1)}
+  const cnt=new Int32Array(N+1);for(const i of L)if(up[i]>=0&&dep[i]>0)cnt[up[i]+1]++;for(let k=0;k<N;k++)cnt[k+1]+=cnt[k];
+  const dn=new Int32Array(cnt[N]),fill=cnt.slice(0,N);for(const i of L)if(up[i]>=0&&dep[i]>0)dn[fill[up[i]]++]=i;
+  w.wkUp=up;w.wkDep=dep;w.wkDnS=cnt;w.wkDn=dn;return w}
+// a feeder in enemy hands: the gates are shut
+const wkCut=(i)=>{const u=WD.wkUp[i];if(u<0)return false;const p=S.pol[i],q=S.pol[u];if(!p||!q||p===q)return false;const o=S.pols[p];return !!(o&&o.enemies&&o.enemies.has(q))};
+// wrecking works (2026-11-23, Nein's idea; switch nowreck): a raider or an army on a punitive campaign breaks the canals and dykes of
+// a province it does not mean to keep, and with them the water of every province fed through it; the hunger that follows works on
+// the stress of the realm it was aimed at, not on any revolt written in
+function wreck(j,x){const s=S,w=WD;if(!s.wk)return;s.wk[j]*=1-x;if(WKF){wkFlow();for(let k=w.wkDnS[j];k<w.wkDnS[j+1];k++){const i=w.wkDn[k];s.wk[i]*=1-x*w.wkDep[i]}}s.wreckN=(s.wreckN||0)+1}
 function worksPass(){const s=S,w=WD,FF=FLUSH?floodFit():null,B=0.01*knob('wbuild'),D=0.01*knob('wsilt');const wk=s.wk||(s.wk=new Float32Array(N));
   for(const i of w.landIdx){const rv=w.rvF[i];if(!(rv>0.02)){wk[i]=0;continue}const know=s.irrig[i],W=wk[i];if(know<0.05&&W<=0)continue;
     const fit=FF?FF[i]:0.3,p=s.pol[i],o=p?s.pols[p]:null;
     const org=o&&o.kind==='state'?clamp((o.coord??1)*(s.integ?s.integ[i]:1)*(o.treas!=null&&o.treas<-0.3?0.6:1),0,1):0;
-    const cap=0.3+0.4*fit,Wc=cap+(1-cap)*org,lab=clamp(s.pop[i]*s.farm[i]/(w.area[i]*rv*20),0,1);
+    const cap=Math.min(1,0.3+0.4*WLOC*fit),Wc=cap+(1-cap)*org,lab=clamp(s.pop[i]*s.farm[i]/(w.area[i]*rv*20),0,1);
     let d=B*know*lab*Math.max(0,Wc-W);
     if(W>0)d-=D*(1-0.6*fit)*W*(1-Math.min(1,lab*Wc/W));
-    wk[i]=clamp(W+10*d,0,1)}}
+    wk[i]=clamp(W+10*d,0,1)}
+  if(WKF){wkFlow();const lev=s.lev||(s.lev=new Float32Array(N));lev.fill(0);for(const i of w.landIdx){const u=w.wkUp[i];if(u>=0&&w.wkDep[i]>0)lev[u]+=w.wkDep[i]*wk[i]*s.pop[i]}}}
 // when a river floods (2026-11-23, with Nein; switch noflush, knob flush): the share of a river's water that comes as a late-summer
 // flood, from summer rain (the monsoon on the Ethiopian highlands) and from snow on high, cool mountains that melts in midsummer
 // (the Karakoram), against winter flow from winter rain and a spring flood from snow under warm summers (eastern Anatolia, the
@@ -1355,6 +1376,9 @@ function attack(o,i,j,sea){
     else{evaded=true;M.evade++;
       // strike and flee: they could not take the ground, but they cost it people, grain and order
       if(q||s.pop[j]>=1){cutAt(j);s.pop[j]*=1-0.03*dm;s.integ[j]=Math.max(0,s.integ[j]-0.05*dm);if(s.thr)s.thr[j]=Math.min(1,s.thr[j]+0.2*dm);if(q){const d=s.pols[q];d.treas=(d.treas||0)-0.002*dm*cw(j)}M.harass++}}}
+  // an attack that fails turns to ravaging (2026-11-23, Nein; switch nowreck): the harder the place is to take, the likelier an army
+  // that came for it breaks its canals instead, to starve it out or simply to weaken it for next time
+  if(!win&&WKR&&o.kind==='state'&&q&&war0&&war0.aSet.has(o.id)&&s.wk&&s.wk[j]>0.05&&s.r()<0.5*(1-pw4))wreck(j,0.2);
   if(MB&&win&&dm>0&&pw4>pw3+0.02)(s.mobN||(s.mobN={choose:0,evade:0,caught:0,harass:0})).choose++;
   if(prestOn()){const kp=knob('prest');if(o.kind==='horde'&&!win&&!evaded)o.prest=Math.max(0,(o.prest||0)-0.01*kp*(1+3*(o.expect||0)));
     if(q&&win){const d=s.pols[q];if(d.kind==='horde'){d.prest=Math.max(0,(d.prest||0)-0.015*kp*(1+3*(d.expect||0))*(dm<-0.1?0.3:1));   // a faster defender gives up the ground, not its name
@@ -1363,6 +1387,7 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
+    if(WKR&&war0&&(war0.goal==='punitive'||war0.goal==='raid')&&war0.aSet.has(o.id)&&s.wk&&s.wk[j]>0.05)wreck(j,0.35);
     s.pol[j]=o.id;s.taken[j]=s.year;if(s.thr)s.thr[j]=Math.max(s.thr[j],0.6);if(s.deal)s.deal[j]=0;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2*(kindOn()?1-(o.kin||0):1),o.id);
     const a=cw(j);o.conq+=a;o.ruler.conq+=a;if(o.kind==='horde'){o.prest=(o.prest||0)+0.02*a*(prestOn()?1-0.8*Math.min(1,o.expect||0):1);if(bountyOn()&&!w.nomad[j]&&!w.desert[j])o.loot+=0.03*s.pop[j]}
@@ -1393,6 +1418,7 @@ function raid(o,i,j,deep){
   if(s.r()<clamp((Ua-Ud*0.6)/(Ua+Ud),0.05,0.9)){
     if(s.thr)s.thr[j]=Math.min(1,s.thr[j]+0.3);cutAt(j);if(o.kind==='horde'&&t.kind==='state')learnRide(o,j);takeCaptives(o,j,deep?0.15:0.06);if(deep)S.popWar=(S.popWar||0)+1;const taken=s.pop[j]*0.03,a=cw(j);s.pop[j]-=taken;o.loot+=taken*0.5;o.prest=(o.prest||0)+0.01*a;t.shock+=0.012*a;t.raided=(t.raided||0)+a;t.raidY=s.year;t.raidBy=o.id;review(t,'raid');s.raidC[j]=s.year;
     displace(j,0.04,o.id);
+    if(WKR&&s.wk&&s.wk[j]>0.05){const wg=o.enemies&&o.enemies.has(q)?s.wars[o.enemies.get(q)]:null;if(wg&&(wg.goal==='punitive'||o.kind==='horde'))wreck(j,0.3)}
     // a city can be sacked without being held (agreed 2026-11-05)
     if(worksOn()&&s.city[j]>=0&&Ua>2*Ud&&s.r()<(deep?0.3:0.1)){sackCity(o,j,q);S.sackRaid=(S.sackRaid||0)+1}
   }
@@ -1959,7 +1985,7 @@ function* politicsG(){
         else if(ri>=0&&s_rel[j]>=0&&s_rel[j]!==ri)fr=1;
         if(o){if(q){const t=pols[q];o.nb.set(q,(o.nb.get(q)||0)+(szF?wt:1));
             if(t.kind==='horde'||o.enemies.has(q))threat=1;
-            if(o.enemies.has(q)||(horde&&t.kind==='horde')){nc+=3*wt;if(r()*nc<3*wt)cand=j}
+            if(o.enemies.has(q)||(horde&&t.kind==='horde')){const lw=WKR&&s.lev&&o.enemies.has(q)&&s_wars[o.enemies.get(q)].goal==='punitive'?1+Math.min(3,s.lev[j]/(pop[j]+1e3)):1;nc+=3*wt*lw;if(r()*nc<3*wt*lw)cand=j}
             else if(horde&&t.kind==='state'){rn+=wt;if(r()*rn<wt)rcand=j}}
           else if(!horde||w_nomad[j]||w_desert[j]||pop[j]>=1){nc+=wt;if(r()*nc<wt)cand=j}}}}
     if(FB)fr=FB[i];
