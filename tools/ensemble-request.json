@@ -1,13 +1,11 @@
 {
  "seeds": "1-24",
- "end": 1500,
+ "end": -1000,
  "per": 4,
  "ref": "",
  "baseEnv": "",
  "variants": [
-  {"name": "best115", "env": "WORLD=prov SW=nowinrain,noardfal"},
-  {"name": "farmland-test-only", "env": "WORLD=prov SW=nowinrain,noardfal,nofarmrate"},
-  {"name": "farmland-test-only+floor-0.15", "env": "WORLD=prov SW=nowinrain,noardfal,nofarmrate KV=fshmin:3"},
-  {"name": "no-farmland", "env": "WORLD=prov SW=nowinrain,noardfal,nofarmland"}
+  {"name": "neareast", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
+  {"name": "neareast-nofarmrate", "env": "WORLD=prov REGION=neareast SW=nowinrain,noardfal,nofarmrate"}
  ]
 }

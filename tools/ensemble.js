@@ -23,6 +23,10 @@ function loadVariants(spec){if(!spec)return null;let list;
   else list=spec.split(';').filter(Boolean).map(p=>{const i=p.indexOf('=');return{name:p.slice(0,i),env:p.slice(i+1)}});
   return list.map(v=>({name:v.name,env:parseEnv(v.env)}))}
 const VARIANTS=loadVariants(arg('variants',null));
+// regional runs (REGION=name in every variant): only the targets tagged for that region (t.reg) are scored. A batch mixing
+// regional and full-world variants, or two regions, would compare different worlds, so it is refused.
+const REGV=(()=>{if(!VARIANTS)return process.env.REGION||null;const rs=VARIANTS.map(v=>(v.env&&v.env.REGION)||'');if(rs.every(r=>!r))return null;
+  if(rs.some(r=>r!==rs[0])){console.error('ensemble: regional and full-world variants (or two regions) mixed in one batch');process.exit(1)}return rs[0]})();
 const REQ=VARIANTS&&fs.existsSync(arg('variants'))?JSON.parse(fs.readFileSync(arg('variants'),'utf8')):{};
 const SEEDS=range(arg('seeds',REQ.seeds||'1-16')),END=+arg('end',REQ.end??1500),JOBS=+arg('jobs',Math.max(1,os.cpus().length)),REF=arg('ref',null),LABEL=arg('label',null);
 const ENV=parseEnv(arg('env','')),BENV=parseEnv(arg('base-env',''));
@@ -40,7 +44,7 @@ async function runAll(jobs){let next=0,done=0;const t0=Date.now();
     done++;process.stderr.write(`\r  ${done}/${jobs.length} runs done (${((Date.now()-t0)/60000).toFixed(1)} min)   `)}}));
   process.stderr.write('\n');return jobs.map(j=>JSON.parse(fs.readFileSync(j.cache,'utf8')))}
 
-const NEVER=1e9,applies=t=>!(t.at!=null&&t.at>END)&&!(t.kind==='year'&&t.hi>END)&&!((t.k.startsWith('s_')||t.k.startsWith('fs_'))&&END<1500)&&!(['cUnity','medMax','ewShare'].includes(t.k)&&END<1),
+const NEVER=1e9,applies=t=>!(REGV&&!(t.reg||[]).includes(REGV))&&!(t.at!=null&&t.at>END)&&!(t.kind==='year'&&t.hi>END)&&!((t.k.startsWith('s_')||t.k.startsWith('fs_'))&&END<1500)&&!(['cUnity','medMax','ewShare'].includes(t.k)&&END<1),
   val=(r,t)=>{const v=t.get?t.get(r):r[t.k];return v==null?(t.kind==='year'?NEVER:null):v},inBand=(v,t)=>v!=null&&v!==NEVER&&v>=t.lo&&v<=t.hi,
   median=a=>{const s=a.filter(v=>v!=null).sort((x,y)=>x-y);if(!s.length)return null;const m=s.length>>1;return s.length%2?s[m]:(s[m-1]===NEVER||s[m]===NEVER?Math.max(s[m-1],s[m]):(s[m-1]+s[m])/2)},
   q=(a,p)=>{const s=a.filter(v=>v!=null).sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p*(s.length-1)+0.5))]:null},

@@ -81,3 +81,7 @@ module.exports=[
   {k:'s_congo',g:'Stateless',n:'Congo interior',kind:'share',real:0.15,lo:0,hi:0.35,cls:'guard'},
   {k:'s_amaz', g:'Stateless',n:'Amazon interior',kind:'share',real:0,lo:0,hi:0.1},
 ];
+// targets that a regional run (REGION=name) can be scored on: those inside its core and buffer (2026-11-23). A Fertile Crescent
+// scorecard with more rows (Akkad, Assyria, Persia, colonies, population, cities) is next, agreed with Nein.
+const REGIONAL={neareast:['o_fc','rs_meso','rc_meso','rk_egypt','ru_egypt','rs_egypt','rs_indus','r_meso','r_egypt','r_indus','s_pontic']};
+for(const t of module.exports)for(const r in REGIONAL)if(REGIONAL[r].includes(t.k))(t.reg||(t.reg=[])).push(r);

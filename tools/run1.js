@@ -149,6 +149,11 @@ out.x={regPop,who,regionKinds:Object.fromEntries(Object.entries(S.regionFirst).m
   hordeMax:hMax,spills:S.spills||0,pushed:S.migs?S.migs.filter(m=>m&&m.cause==='pushed').length:null,domestic:S.domLog?S.domLog.slice(0,8).map(d=>HERDS[d.sp].k+' '+d.y+'@'+Math.round(LA(d.cell))+','+Math.round(LO(d.cell))):null,
   horsesAmericas:S.horse?WD.landIdx.filter(i=>LO(i)<-52&&LA(i)<62&&S.horse[i]>0.05).length:null,contact:!!S.malAm,sacks:S.cities.reduce((a,c)=>a+(c.sacks?c.sacks.length:0),0),nan:al.filter(o=>!(o.cult>=0&&o.psi>=0)).length};
 {let hh=0;for(const i of WD.landIdx)hh=(hh*31+Math.round(S.pop[i])+S.pol[i]*7)%2147483647;out.x.hash=hh}
+// a full-world run can report the same regional numbers for comparison: REGION_REPORT=neareast
+if(!WD.inR&&process.env.REGION_REPORT&&SIMREGIONS[process.env.REGION_REPORT]){const R=SIMREGIONS[process.env.REGION_REPORT],inB=(la,lo,b)=>la>=b[0]&&la<=b[1]&&lo>=b[2]&&lo<=b[3];let cp=0,rp=0,n=0,nc=0;
+  for(const i of WD.landIdx){const [la,lo]=latLonOf(WD,i),c=R.core.some(b=>inB(la,lo,b)),r=c||R.buf.some(b=>inB(la,lo,b));if(r){n++;rp+=S.pop[i]}if(c){nc++;cp+=S.pop[i]}}
+  out.region={name:R.name+' (read from the full world)',provinces:n,core:nc,popM:+(rp/1e6).toFixed(2),corePopM:+(cp/1e6).toFixed(2)}}
+if(WD.inR){let cp=0,rp=0;for(const i of WD.landIdx){rp+=S.pop[i];if(WD.inCore[i])cp+=S.pop[i]}out.region={name:WD.region.name,provinces:WD.landIdx.length,core:Array.from(WD.landIdx).filter(i=>WD.inCore[i]).length,popM:+(rp/1e6).toFixed(2),corePopM:+(cp/1e6).toFixed(2),leakK:+((S.regLeak||0)/1e3).toFixed(1),leakYears:S.regLeakY||0}}
 {const h=require('crypto').createHash('md5');for(const A of [S.pop,S.pol,S.eth,S.integ,S.farm])h.update(Buffer.from(A.buffer,A.byteOffset,A.byteLength));out.chk=h.digest('hex').slice(0,12)}
 out.time={init:tInit/1000,total:(Date.now()-t0)/1000,byMillennium:sec,pass:{}};for(const k of Object.keys(TIME).sort((a,b)=>TIME[b]-TIME[a]))if(TIME[k]>0.05)out.time.pass[k]=+TIME[k].toFixed(1);
 process.stdout.write(JSON.stringify(out)+'\\n');

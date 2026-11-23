@@ -135,6 +135,7 @@ const SEED_ARRIVE={nam:-14000,sam:-13000};
 const EARTH_SEEDS=[[5,25,'afr'],[33,40,'afro'],[48,10,'ie'],[22,78,'indo'],[35,110,'sino'],[5,105,'aus'],[-25,134,'pama'],[60,100,'alt'],[40,-100,'nam'],[-10,-60,'sam']];
 
 function newHistory(hseed){
+  applyRegion(WD);
   const w=WD,r=mulberry32s(hashStr('hist:'+hseed+':'+w.seed));
   if(w.rv0){w.rv.set(w.rv0);w.rvF.set(w.rvF0)}
   seaReset(P.startYear);
@@ -163,7 +164,10 @@ function newHistory(hseed){
   const seeds=[],macs=[],keys=[];
   if(w.isEarth){
     const pool=MACRO_KEYS.slice();for(let i=pool.length-1;i>0;i--){const j=(r()*(i+1))|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
-    EARTH_SEEDS.forEach(([la,lo,mac],k)=>{let c=cellAt(la,lo);if(!w.land[c]){for(let kk=1;kk<15&&!w.land[c];kk++)c=cellAt(la,lo+kk*0.9)}if(w.land[c]){seeds.push(c);macs.push(P.shuffleNames?pool[k%pool.length]:mac);keys.push(mac)}})}
+    EARTH_SEEDS.forEach(([la,lo,mac],k)=>{let c=cellAt(la,lo);if(!w.land[c]){for(let kk=1;kk<15&&!w.land[c];kk++)c=cellAt(la,lo+kk*0.9)}
+      // regional mode: a people whose seed lies within about 1,600 km of the region starts at the nearest province inside it
+      if(w.land[c]&&w.inR&&!w.inR[c]){let b=-1,bd=0.25;for(const j of w.landIdx){const d=angDist(c,j);if(d<bd){bd=d;b=j}}c=b}
+      if(c>=0&&w.land[c]){seeds.push(c);macs.push(P.shuffleNames?pool[k%pool.length]:mac);keys.push(mac)}})}
   else{let sep=0.38;
     for(let t=0;t<20000&&seeds.length<P.bands;t++){if(t%4000===3999)sep*=0.7;
       const i=rLand(r);if(w.T[i]<4||w.Pr[i]<350||w.lmSize[w.lm[i]]<20)continue;
@@ -171,8 +175,8 @@ function newHistory(hseed){
   const q=s.q;let h=0,t=0;
   seeds.forEach((i,k)=>{const mac=macs[k];s.eth[i]=newEth(-1,-1,makeLang(r,pick(r,MACROS[mac]),mac));if(keys[k]&&SEED_ARRIVE[keys[k]]!=null)s.eths[s.eth[i]].arrive=SEED_ARRIVE[keys[k]];q[t++]=i});
   while(h<t){const i=q[h++];
-    const iced=j=>w.iceY&&w.iceY[j]>s.start;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}}
-    if(w.coast[i]){ring(i,3,j=>{if(w.land[j]&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}})}
+    const iced=j=>w.iceY&&w.iceY[j]>s.start;for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&w.land[j]&&(!w.inR||w.inR[j])&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}}
+    if(w.coast[i]){ring(i,3,j=>{if(w.land[j]&&(!w.inR||w.inR[j])&&s.eth[j]<0&&w.T[j]>-9&&!iced(j)){s.eth[j]=s.eth[i];q[t++]=j}})}
   }
   for(const i of w.landIdx)if(s.eth[i]>=0){s.pop[i]=s.K[i]*0.55;s.lmFound[w.lm[i]]=1}
   for(let k=0;k<10;k++)ethPass(false);
@@ -628,6 +632,15 @@ function growth(){const LVF=!swOn('nolandvar')&&!swOn('noardfal');
   }
 }
 function mixIn(j,e,share){const s=S;if(e<0||e===s.eth[j])return;if(s.eth2[j]===e)s.mix[j]=Math.min(1,s.mix[j]+share);else if(s.eth2[j]<0||share>s.mix[j]){s.eth2[j]=e;s.mix[j]=share;s.mixT[j]=0}}
+// regional mode: the absorbing border (see applyRegion in world.js). Anyone outside the region after the year's moves is taken off
+// and counted in S.regLeak (people) and S.regLeakY (years with any loss), cleared as a flooded province is. Small counts mean a
+// clean border; large ones mean something keeps pushing people out, which is worth knowing. Arrivals from outside will come in
+// here later, drawn from rates measured in full-world runs (planned with Nein, 2026-11-23).
+function regionBorder(){const w=WD,s=S;if(!w.outIdx)return;let n=0;
+  for(const i of w.outIdx){const p=s.pop[i];if(!(p>0)&&!s.pol[i])continue;n+=p>0?p:0;
+    const pid=s.pol[i];s.pop[i]=0;s.eth[i]=-1;s.eth2[i]=-1;s.rel[i]=-1;s.pol[i]=0;s.K[i]=0;
+    if(pid&&s.pols[pid]&&s.pols[pid].capital===i){const o=s.pols[pid];for(const j of w.landIdx)if(s.pol[j]===pid){o.capital=j;break}}}
+  if(n>0){s.regLeak=(s.regLeak||0)+n;s.regLeakY=(s.regLeakY||0)+1}}
 function migrate(){
   const s=S,w=WD,L=w.landIdx,r=s.r,mg=P.migration,rev=s.year&1,T=s.tk,nbE=w.nbE||null,SEEDS=originsOn()&&seedOn(),SEAC=swOn('seacol');const s_K=s.K,s_adapt=s.adapt,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_herd=s.herd,s_horse=s.horse,s_iron=s.iron,s_metal=s.metal,s_mix=s.mix,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_s=s.s,w_area=w.area,w_land=w.land,w_nbS=w.nbS,w_nbA=w.nbA,w_nbW=w.nbW,w_sF=w.sF,w_sH=w.sH;
   const MDT=s.dtM||1;
@@ -2127,7 +2140,7 @@ function* stepG(){
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano)volcano();
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
-  if(hv){computeK();followWater();growth();yield;if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();seaHop();if(S.gzD)grazePass()}
+  if(hv){computeK();followWater();growth();yield;if(FD>1){s.dtM=FD/2;migrate();migrate();s.dtM=1}else migrate();seaHop();regionBorder();if(S.gzD)grazePass()}
   if(FD>1){if(hv)for(let k=0;k<3;k++){techStep(0,1);yield}}
   else{const k=ymod(s.year,3);techStep(k===0?0:k===1?0.34:0.67,k===0?0.34:k===1?0.67:1);yield}   // yearly clock; a third of the land each year, so each province is still visited once in three years at the same cost
   if(hv)disease();if(ymod(s.year,10)===5)poolPass();if(ymod(s.year,10)===7)caravanPass();yield;

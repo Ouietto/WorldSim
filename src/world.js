@@ -7,6 +7,36 @@ let N=NC;
 // the same code; in the browser none are on. A switch that wins is made the default and removed.
 // test switches: experimental mechanics under trial, off by default. From SW=... in the test runner, or ?sw=a,b in the page address
 const SWX=((typeof process!=="undefined"&&process.env&&process.env.SW)||(()=>{try{return new URLSearchParams(location.search).get('sw')||''}catch(e){return ''}})()||"").split(',').map(x=>x.trim()).filter(Boolean),swOn=k=>SWX.includes(k);
+// regional mode (2026-11-23, with Nein): REGION=name in the test runner, or ?region=name in the page address, simulates only a
+// region's core and a buffer around it. The land list is cut to those provinces; the rest of the world keeps its land and climate
+// but no one can live there (no farm or pasture worth reaching), and anyone who still ends up outside is taken off each year and
+// counted (S.regLeak), an absorbing border. For quick, low-noise work on one region; confirm in the full world before adopting.
+// Boxes are [lat lo, lat hi, lon lo, lon hi] in degrees.
+const SIMREGIONS={
+  neareast:{name:'the Near East',
+    core:[[22,42,18,62]],                       // Greece to Persia, Egypt, Anatolia, the Levant, Mesopotamia
+    buf:[[42,55,25,62],                         // the Pontic-Caspian steppe and the Caucasus
+         [40,48,18,30],                         // the Balkans and the lower Danube
+         [35,45,55,75],                         // western Central Asia
+         [22,37,60,78],                         // the Indus
+         [12,30,35,60],                         // Arabia
+         [12,33,10,40],                         // Nubia and Libya
+         [30,46,8,20]]}};                       // the central Mediterranean: Italy, Sicily, Sardinia, Tunisia
+const REGK=((typeof process!=="undefined"&&process.env&&process.env.REGION)||(()=>{try{return new URLSearchParams(location.search).get('region')||''}catch(e){return ''}})()||"").trim();
+function regionDef(){return SIMREGIONS[REGK]||null}
+function latLonOf(w,i){return [w.lat[i]*57.29578,Math.atan2(w.sinLon[i],w.cosLon[i])*57.29578]}
+// cut a world down to a region. The mask covers every unit, land or sea, so the cut can be made again each time the coastline
+// moves: shoreline() rebuilds the land list from scratch whenever the sea rises, and calls regionCut() at its end (the first
+// version cut once, and the first sea-level change undid it). The page reads the region from its address, so it is fixed for a
+// session.
+function applyRegion(w){const R=regionDef();if(!R||w.inR)return;
+  const inB=(la,lo,b)=>la>=b[0]&&la<=b[1]&&lo>=b[2]&&lo<=b[3];
+  const inR=new Uint8Array(N),inCore=new Uint8Array(N);
+  for(let i=0;i<N;i++){const [la,lo]=latLonOf(w,i);if(R.core.some(b=>inB(la,lo,b)))inR[i]=inCore[i]=1;else if(R.buf.some(b=>inB(la,lo,b)))inR[i]=1}
+  w.inR=inR;w.inCore=inCore;w.region=R;regionCut(w)}
+function regionCut(w){const inR=w.inR,keep=[],out=[];for(let i=0;i<N;i++)if(w.land[i])(inR[i]?keep:out).push(i);
+  w.landIdx=Int32Array.from(keep);w.outIdx=Int32Array.from(out);if(w.coastIdx)w.coastIdx=Int32Array.from(Array.from(w.coastIdx).filter(i=>inR[i]));
+  for(const i of out){w.sF[i]=0;w.sH[i]=0}}
 // strength knobs (2026-11-11): KV=name:value,name:value in the environment, or &kv= in the address. knob(name) is a multiplier,
 // 1 unless set, so a batch can try a strength at half or double the way SW tries a feature off
 const KVM=(()=>{const m={},src=(typeof process!=="undefined"&&process.env&&process.env.KV)||(()=>{try{return new URLSearchParams(location.search).get('kv')||''}catch(e){return ''}})()||"";for(const x of src.split(',')){const [k,v]=x.split(':');if(k&&v!=null&&isFinite(+v))m[k.trim()]=+v}return m})(),knob=k=>KVM[k]??1;
@@ -310,7 +340,7 @@ function shoreline(w){const n=w.n,land=w.land,S=w.nbS,A=w.nbA,landList=[],coastL
   const z=w.szF;
   for(const s0 of landList){if(lm[s0]>=0)continue;const id=lmSize.length;let h=0,t=0,a=0;q[t++]=s0;lm[s0]=id;
     while(h<t){const i=q[h++];if(z)a+=1/z[i];for(let e=S[i];e<S[i+1];e++){const j=A[e];if(j>=0&&land[j]&&lm[j]<0){lm[j]=id;q[t++]=j}}}lmSize.push(z?a:t)}
-  w.lm=lm;w.lmSize=lmSize;w.lmCount=lmSize.length}
+  w.lm=lm;w.lmSize=lmSize;w.lmCount=lmSize.length;if(w.inR)regionCut(w)}
 // sea links: coastal unit -> coastal units across water within 6 sea steps (the water spreads through snS/snA: the 8 cells around
 // on the grid, every touching unit among provinces and open sea)
 function seaLanes(w){const n=w.n,land=w.land,coast=w.coast,S=w.nbS,A=w.nbA,S8=w.snS,A8=w.snA,lm=w.lm,q=new Int32Array(n);
