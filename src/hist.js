@@ -610,6 +610,18 @@ const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
 function vigWar(o){if(!o.enemies.size)return 0;let mx=0;const me=power(o)+1;for(const [q] of o.enemies){const e=S.pols[q];if(e&&e.alive)mx=Math.max(mx,power(e)/me)}return Math.min(0.6,0.5*mx)}
 // a raid presses as hard as the raiders are strong against the realm: a far-off frontier skirmish keeps no court awake
 function vigRaid(o){const h=S.pols[o.raidBy];if(!h||!h.alive)return 0.05;return Math.min(0.4,0.5*power(h)/(power(o)+1))}
+// the court's hand and a lord's hold (2026-11-23, Nein), shared by the ruler taking back lands (colonyPass) and a realm in crisis
+// (civilWar). The hand: cohesion, officials and records, mandate, vigilance and the ruler's force, fading with distance from the
+// court (relative to the realm's mean); in a crisis also an empty treasury, pay owed and the surplus elite gone over. The hold: how
+// loosely the province is bound, its own solidarity, how much of the realm the lords hold between them, and the water others need
+// from it. Where the hold is stronger the lord does not obey.
+function courtHand(o,crisis){const s=S,c=o.capital,R0=o.ruler||{},will=0.5*(R0.comp??0.5)+0.5*(R0.aggr??0.5),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
+  let h=clamp(0.35+0.35*(o.S||0)+0.3*adm+0.2*(o.mandate??1),0.1,1.3)*(VIG?0.6+0.4*vigOf(o):1)*(0.7+0.6*will);
+  if(crisis)h*=((o.treas||0)<-0.3?0.7:1)*(1-0.5*Math.min(1,o.owed||0))*(1-0.6*clamp(o.E/Math.max(1e-6,etOf(o))-1,0,1)*(1-0.5*vigOf(o)));return h}
+function lordsRefusing(o,cells,crisis){const s=S,hand=courtHand(o,crisis);let md=0,nd=0;for(const i of cells)if(s.dist[i]!==65535){md+=s.dist[i];nd++}md=nd?md/nd:1;
+  const out=[];for(const i of cells){if(i===o.capital)continue;const far=s.dist[i]===65535?3:Math.min(3,s.dist[i]/Math.max(1e-6,md)),
+      hold=(1.2-s.integ[i])*(0.5+s.s[i])*(0.5+(o.nob||0))*(1+(WKF&&s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0));
+    if(hold>hand*Math.exp(-far/2))out.push(i)}return out}
 function selectRuler(R){if(!SELR||!R)return;const r=S.r,t=(r()+r()+r())/3;if(t>R.comp)R.comp=t}
 const WKS=swOn('works'),WKF=WKS&&!swOn('nowkflow'),WKR=WKS&&!swOn('nowreck'),WLOC=knob('wlocal');
 // water passes through works (2026-11-23, Nein's idea; switch nowkflow): on a broad, flat plain a canal must leave the river well
@@ -1157,6 +1169,10 @@ function civilWar(o,breakup){
   // stronger than the court takes the capital and the court's lands: the old realm ends and the rebel's is the realm now (Thebes
   // reuniting Egypt twice; Sargon taking the realm of Kish). Others that broke away stay apart until someone takes them in.
   let fellTo=null;
+  // in the crisis every governor and lord of what the court still holds weighs his hold against its weakened hand; those who no
+  // longer obey keep what they hold (2026-11-23; with nosecede off): the heartland can fall apart too
+  if(CENTRE&&SECEDE&&o.kind==='state'){const away=lordsRefusing(o,cells.filter(i=>s.pol[i]===id),true);
+    if(away.length){partitionLands(o,away,'In the crisis its governors and lords stopped obeying the court and kept what they held.');s.lordsN=(s.lordsN||0)+1}}
   if(CENTRE&&o.kind==='state'){const mine=cells.filter(i=>s.pol[i]===id);
     let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i]);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0))*(VIG?0.6+0.4*vigOf(o):1);
     // the surplus elite goes over to the rebel nearest the court (a rival city of the heartland, a governor near the capital)
@@ -1166,8 +1182,13 @@ function civilWar(o,breakup){
       for(const i of cells){if(s.pol[i]!==k)continue;R+=s.pop[i]*(0.5+s.s[i]);
         if(WKF&&s.wk){for(let q2=w.wkDnS[i];q2<w.wkDnS[i+1];q2++){const d=w.wkDn[q2];if(s.pol[d]===id)starve+=w.wkDep[d]*s.wk[d]*s.pop[d]}}}
       R+=0.5*starve;if(k===heart)R+=gone;if(R>bv){bv=R;best=p}}
-    if(best){for(const i of mine){s.pol[i]=best.id;s.integ[i]=Math.min(s.integ[i],0.5)}fellTo=best;s.cFallN=(s.cFallN||0)+1;
-      if(A>=20)chron('fall',`The rebels of ${best.base} take the capital of the ${oldName}; its lands pass to them, and the ${oldName} is no more.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}}
+    // a decisive winner takes the court's lands whole; a narrow one cannot hold them, and the heartland falls apart among its own
+    // lords and cities until someone is strong enough to gather them (the Isin-Larsa years after Ur III; Egypt's intermediate periods)
+    if(best&&bv>=1.5*C){for(const i of mine){s.pol[i]=best.id;s.integ[i]=Math.min(s.integ[i],0.5)}fellTo=best;s.cFallN=(s.cFallN||0)+1;
+      if(A>=20)chron('fall',`The rebels of ${best.base} take the capital of the ${oldName}; its lands pass to them, and the ${oldName} is no more.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}
+    else if(best){const res=partitionLands(o,mine,'Its court fell and no rival was strong enough to take its place; its lords and cities kept what they held.');
+      fellTo=best;s.cFallN=(s.cFallN||0)+1;s.cSplitN=(s.cSplitN||0)+1;
+      if(A>=20)chron('fall',`The ${oldName} falls apart: its court is overthrown, but ${best.base} cannot hold the heartland, and its cities and lords go their own ways.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}}
   if(fellTo)return;
   const big=A>=40;
   const war=declareWar(rebels,[o],`the ${o.base} Civil War`,big,true);
