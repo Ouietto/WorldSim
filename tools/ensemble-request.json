@@ -1,3 +1,4 @@
-{"seeds":"1-24","end":-300,"per":4,"ref":"","baseEnv":"","variants":[
- {"name":"world","env":"WORLD=prov REGION_REPORT=neareast SW=nowinrain,noardfal"},
- {"name":"world-noflush","env":"WORLD=prov REGION_REPORT=neareast SW=nowinrain,noardfal,noflush"}]}
+{"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
+ {"name":"neareast","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
+ {"name":"neareast-works","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works"},
+ {"name":"neareast-works-slow","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works KV=wbuild:0.5"}]}
