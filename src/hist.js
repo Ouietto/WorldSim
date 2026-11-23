@@ -512,7 +512,7 @@ function computeK(){
     g0=s.genC0||Z,g3=s.genC3||Z,coolC=w.coolC||(w.coolC=(()=>{const a=new Float32Array(N);for(let i=0;i<N;i++){const la=Math.abs(w.lat[i])*57.3;a[i]=w.coast[i]?clamp((la-33)/8,0,1)*clamp((62-la)/8,0,1):0}return a})());
   // the irrigation bonus applies to the share of the farmed land that is floodplain (all of it in Egypt, a sliver on the Volga),
   // not to how big the river is
-  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null,LK=s.lake||null,ARI=swOn('aridirr'),WETK=swOn('wetk'),LOREK=loreOn();
+  if(!s.cf){s.cf=new Float32Array(N).fill(CF0);s.cfMax=new Float32Array(N).fill(CF0)}const WKA=WKS?(s.wk||(s.wk=new Float32Array(N))):null;const GZ=s.gzD||(s.gzD=new Float32Array(N),s.grass=new Float32Array(N),s.gzT=new Int32Array(N).fill(-1),s.gzA=new Float32Array(N),s.gzN=0,s.gzFar=0,s.gzD);const s_cf=s.cf,s_cfMax=s.cfMax,riceK=CI.rice,maizeK=CI.maize,HS=herdsOn()&&s.hs?s.hs:null,HSK=HS?s.hsK:null,LK=s.lake||null,ARI=swOn('aridirr'),WETK=swOn('wetk'),LOREK=loreOn();
   for(let k=0;k<L.length;k++){
     const i=L[k];
     // foragers and herders: capacity refreshed every third year (staggered), farmers every year
@@ -542,7 +542,7 @@ function computeK(){
     if(GZ){Kh*=1-0.45*GZ[i];s.grass[i]=ar*1.6*sh*Math.min(1.3,dry)*(1+0.25*w_transh[i])*(1-s_rp[i])*(1-0.45*GZ[i])}
     // other domestic animals (beastEffects): eland where cattle die of sleeping sickness, bison, deer, capybara
     const KhX=ar*0.4*s_meatX[i];
-    const irr=s_irrig[i]*w.rvF[i];
+    const iw=WKA?Math.min(s_irrig[i],WKA[i]):s_irrig[i],irr=iw*w.rvF[i];
     const wf=1+(Math.min(dry,1.25)-1)*(1-0.75*irr);
     const hv=w_heavy[i],lc=w_leach[i];
     const fp=Math.min(1,w.rvF[i]/Math.max(w_sF[i],0.02));
@@ -552,7 +552,7 @@ function computeK(){
     // Tigris-Euphrates and the Indus, little in wet temperate Europe, where a floodplain is marsh and flood-prone forest; bunded
     // rice keeps it, since a paddy is about holding water, not lacking it. Flood silt enriches valley soil everywhere
     const AQ=ARI?(s_crop[i]===riceK?1:clamp((clamp(400+70*T,300,2600)-Pn/wm)/(0.6*clamp(400+70*T,300,2600)),0,1)):1;
-    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*s_irrig[i]*AQ));
+    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*iw*AQ));
     {
       // cropping frequency (Boserup 1965): how often a field bears. Hoe farmers crop a plot a few years and leave it to bush for
       // many; oxen and the ard allow a fallow every other year (the Mediterranean two-field round); manure and rotations, or the
@@ -567,7 +567,7 @@ function computeK(){
       // milpa (run 74): maize, beans and squash grown together feed the soil (beans fix nitrogen), so Mesoamerican fields rest
       // less than a lone grain's would (Zizumbo-Villarreal & Colunga-GarcíaMarín 2010)
       cR=Math.max(cR,(0.55+0.6*rot*s_irrig[i]*warm)*rice,s_crop[i]===maizeK?0.42:0)*(1-0.6*lc);
-      const cF=0.6+0.4*s_irrig[i]+0.8*s_irrig[i]*warm*(0.12+0.88*rice);
+      const cF=0.6+0.4*iw+0.8*iw*warm*(0.12+0.88*rice);
       s_cfMax[i]=(1-fp)*cR+fp*cF;Kfa*=s_cf[i]/CFREF}
     Kfa*=(s_crop[i]>=0?s_cY[i]:0.35)*w_soilFert[i]*(1+0.12*s_domL[i]);
     // unbroken grass turf defeats the hoe and mostly the ard; heavy ploughs cut it. Farmers open it field by field (openPass)
@@ -589,6 +589,22 @@ function computeK(){
   }
 }
 const NOSALT=swOn('nosalt');
+// built works (2026-11-23, with Nein; opt-in switch works while tested; knobs wbuild, wsilt): irrigation is know-how, but the land
+// bears only as far as its canals, dykes and basins are built and kept. s.wk is the share of a floodplain's works in place. Farmers
+// build where they know how, as fast as their hands allow (people on the floodplain against about 20 a km2 to dig and keep it);
+// villages can run local works on their own, more where the flood fills basins by itself (Butzer 1976: Egypt's basins were run
+// locally), and a realm's corvee carries them further, as far as the ruler's reach in that province goes and less when the treasury
+// is empty. Works silt up unless kept, faster on canals than in flood basins (Sumer's canals needed dredging every year); what the
+// hands or the reach that built them can no longer keep goes back, so a fallen realm's canals decline over a few generations.
+const WKS=swOn('works');
+function worksPass(){const s=S,w=WD,FF=FLUSH?floodFit():null,B=0.01*knob('wbuild'),D=0.01*knob('wsilt');const wk=s.wk||(s.wk=new Float32Array(N));
+  for(const i of w.landIdx){const rv=w.rvF[i];if(!(rv>0.02)){wk[i]=0;continue}const know=s.irrig[i],W=wk[i];if(know<0.05&&W<=0)continue;
+    const fit=FF?FF[i]:0.3,p=s.pol[i],o=p?s.pols[p]:null;
+    const org=o&&o.kind==='state'?clamp((o.coord??1)*(s.integ?s.integ[i]:1)*(o.treas!=null&&o.treas<-0.3?0.6:1),0,1):0;
+    const cap=0.3+0.4*fit,Wc=cap+(1-cap)*org,lab=clamp(s.pop[i]*s.farm[i]/(w.area[i]*rv*20),0,1);
+    let d=B*know*lab*Math.max(0,Wc-W);
+    if(W>0)d-=D*(1-0.6*fit)*W*(1-Math.min(1,lab*Wc/W));
+    wk[i]=clamp(W+10*d,0,1)}}
 // when a river floods (2026-11-23, with Nein; switch noflush, knob flush): the share of a river's water that comes as a late-summer
 // flood, from summer rain (the monsoon on the Ethiopian highlands) and from snow on high, cool mountains that melts in midsummer
 // (the Karakoram), against winter flow from winter rain and a spring flood from snow under warm summers (eastern Anatolia, the
@@ -649,7 +665,7 @@ function growth(){const LVF=!swOn('nolandvar')&&!swOn('noardfal'),FFX=FLUSH?floo
       if(pr>0.7)s_fert[i]=Math.max(0.3,s_fert[i]-dg*0.0012*(pr-0.7)*fm*(1+0.6*lc)*w_soilDrain[i]*s_cDrain[i]*(1-0.45*s_crops[i])*(1-0.5*s_manure[i])*(1-silt));
       s_fert[i]+=0.0025*(1-s_fert[i])*(1+0.6*s_herd[i]*w_sH[i]+(pr<0.5?1+lc:0));
       if(s_forest[i]<0.15&&w_rough[i]>0.3)s_fert[i]=Math.max(0.3,s_fert[i]-0.0003*w_soilErode[i]*w_rough[i]*fm);
-      const ir=s_irrig[i]*Math.min(1,rvAg()[i]*2);
+      const ir=(WKS&&s.wk?Math.min(s_irrig[i],s.wk[i]):s_irrig[i])*Math.min(1,rvAg()[i]*2);
       // salt builds where crowded irrigated land is cropped every year with poor drainage; thin early canal farming with fallow
       // years and floods to flush the soil kept it down (Jacobsen & Adams 1958; Powell 1985)
       // (switch nosalt, 2026-11-23: an ablation for the talk with Nein, not a design: no salt builds anywhere)
@@ -2209,6 +2225,7 @@ function* stepG(){
   rsd('rally');rallyPass();if(armyOn()){rsd('band');bandWars(1)}if(ymod(s.year,10)===3&&goodsOn()&&s.alive.length){rsd('goods');goodsPass()}if(ymod(s.year,10)===6&&slaveOn()&&s.alive.length){rsd('slave');slavePass()}if(ymod(s.year,10)===8&&worksOn()&&s.alive.length){rsd('road');roadPass()}if(hv){rsd('front');frontierPass()}
   if(s.year%20===0){yield;rsd('eth');ethPass(true);yield;rsd('rel');relPass()}
   if(ymod(s.year,10)===3){rsd('crop');cropPass();yield}
+  if(WKS&&ymod(s.year,10)===4){rsd('works');worksPass()}
   if(ymod(s.year,10)===6){rsd('landuse');landUsePass();yield}
   if(ymod(s.year,10)===8){rsd('herd');herdPass();rsd('coal');coalitionPass();yield}
   if(s.year%10===0){rsd('dec');genCache();ritualPass();deepPass();recPass();carbonPass();yield;rsd('matrix');matrixPass();yield;rsd('colony');colonyPass();if(!NOLEAGUE){rsd('league');leaguePass();colonizePass()}yield;recordStats();rsd('city');cityPass();yield;rsd('region');regionPass();yield;rsd('mix');mixPass()}
