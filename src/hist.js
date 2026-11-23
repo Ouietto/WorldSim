@@ -589,7 +589,32 @@ function computeK(){
   }
 }
 const NOSALT=swOn('nosalt');
-function growth(){const LVF=!swOn('nolandvar')&&!swOn('noardfal');
+// when a river floods (2026-11-23, with Nein; switch noflush, knob flush): the share of a river's water that comes as a late-summer
+// flood, from summer rain (the monsoon on the Ethiopian highlands) and from snow on high, cool mountains that melts in midsummer
+// (the Karakoram), against winter flow from winter rain and a spring flood from snow under warm summers (eastern Anatolia, the
+// Zagros). Each unit's water is weighted as river sizes are (rain above 200 mm) and passed downstream. floodFit is how well the flood
+// comes in the fallow before the crop: a late-summer flood ahead of a winter grain crop (the Nile: sown as the water goes down,
+// reaped before it comes again), a winter flood ahead of a summer crop. A spring flood comes as a winter crop ripens (Sumer) or
+// with a summer crop in the ground, and the fields must be watered by canal through the growing season instead. Where the flood
+// fits, it soaks the fields and carries the salt off every year; where it does not, salt builds (Hillel 1991; Butzer 1976;
+// Jacobsen & Adams 1958). A static field of the base climate, made on first use.
+const FLUSH=!swOn('noflush');
+function floodFit(){const w=WD;if(w.ffit)return w.ffit;const L=w.landPhys||w.landIdx,ord=w.order,down=w.down,sd=w.sumDry,wd=w.winDry;
+  const tot=new Float32Array(N),su=new Float32Array(N),wi=new Float32Array(N),fit=new Float32Array(N);
+  for(const i of L){const T=w.T[i],a=w.amp[i],Tc=T-a/2,Tw=T+a/2,r=Math.max(0,w.Pr[i]-200)*w.area[i]*1e-4*(T<-9?0.2:1);if(r<=0)continue;
+    // c: the share of the year's rain in the cool half; sn: the share of that falling as snow; late: snow melting in midsummer
+    const c=clamp(0.5+0.3*((sd?sd[i]:0)-(wd?wd[i]:0)),0.2,0.8),sn=clamp(-Tc/8,0,1),late=clamp((16-Tw)/8,0,1);
+    tot[i]=r;wi[i]=r*c*(1-sn);su[i]=r*((1-c)+c*sn*late)}
+  if(ord&&down)for(let k=ord.length-1;k>=0;k--){const i=ord[k],d=down[i];if(d<0||!w.land[d])continue;tot[d]+=tot[i];su[d]+=su[i];wi[d]+=wi[i]}
+  // the crop: winter grain where winters are mild (sown in autumn), a summer crop where they freeze
+  // a floodplain off the main stream (a delta's fans, the plain between two rivers) is watered by the largest river beside it: take
+  // its flood, up to three provinces out
+  const bt=Float32Array.from(tot),bs=Float32Array.from(su),bw=Float32Array.from(wi);
+  for(let it=0;it<3;it++){const t0=bt.slice(),s0=bs.slice(),w0=bw.slice();for(const i of L){if(!(w.rvF[i]>0.02))continue;
+    for(let q=w.nbS[i];q<w.nbS[i+1];q++){const j=w.nbA[q];if(j>=0&&w.land[j]&&t0[j]>bt[i]){bt[i]=t0[j];bs[i]=s0[j];bw[i]=w0[j]}}}}
+  for(const i of L){if(bt[i]<=0)continue;const wc=clamp((w.T[i]-w.amp[i]/2-2)/6,0,1);fit[i]=wc*bs[i]/bt[i]+(1-wc)*bw[i]/bt[i]}
+  return w.ffit=fit}
+function growth(){const LVF=!swOn('nolandvar')&&!swOn('noardfal'),FFX=FLUSH?floodFit():null,FFK=knob('flush'),SALLUV=typeof SOI!=='undefined'&&SOILS[SOI.alluvium]?SOILS[SOI.alluvium].salt:1.1;
   const s=S,w=WD,L=w.landIdx,g=P.growth,dg=P.degrade,CO=cohArr();const s_K=s.K,s_adapt=s.adapt,s_crops=s.crops,s_eth=s.eth,s_eth2=s.eth2,s_farm=s.farm,s_fert=s.fert,s_forest=s.forest,s_herd=s.herd,s_iron=s.iron,s_irrig=s.irrig,s_manure=s.manure,s_metal=s.metal,s_plough=s.plough,s_pol=s.pol,s_pols=s.pols,s_pop=s.pop,s_rel=s.rel,s_rp=s.rp,s_salt=s.salt,s_tk=s.tk,w_Pr=w.Pr,w_area=w.area,w_forest0=w.forest0,w_leach=w.leach,w_mal=w.mal,w_rough=w.rough,w_rv=w.rv,w_sF=w.sF,w_sH=w.sH,w_soilDrain=w.soilDrain,s_cDrain=s.cDrain,w_soilSalt=w.soilSalt,w_soilErode=w.soilErode;
   const DT=s.dt||1,DX=DT>1?1-Math.pow(0.8,DT):0.2;
   for(let k=0;k<L.length;k++){const i=L[k];let p=s_pop[i];if(p<=0)continue;const K=s_K[i];
@@ -628,7 +653,12 @@ function growth(){const LVF=!swOn('nolandvar')&&!swOn('noardfal');
       // salt builds where crowded irrigated land is cropped every year with poor drainage; thin early canal farming with fallow
       // years and floods to flush the soil kept it down (Jacobsen & Adams 1958; Powell 1985)
       // (switch nosalt, 2026-11-23: an ablation for the talk with Nein, not a design: no salt builds anywhere)
-      if(ir>0.1&&w_Pr[i]<550&&pr>0.5&&!NOSALT){const dens=p/w_area[i];s_salt[i]=Math.min(0.85,s_salt[i]+0.0004*w_soilSalt[i]*ir*Math.min(1.2,pr)*clamp((dens-4)/8,0,1)*(1-0.9*s_tk[30][i]))}
+      // (2026-11-23, switch noflush) salt builds only as far as the flood does not come in the fallow to flush it (floodFit), and on
+      // the floodplain's own river silt (the irrigated land) rather than the desert soil of the province around it; where the flood
+      // fits, it carries salt off each year
+      if(ir>0.1&&w_Pr[i]<550&&pr>0.5&&!NOSALT){const dens=p/w_area[i],ff=FFX?Math.min(1,FFK*FFX[i]):0,ss=FFX?Math.min(w_soilSalt[i],SALLUV):w_soilSalt[i];
+        s_salt[i]=Math.min(0.85,s_salt[i]+0.0004*ss*ir*(1-ff)*Math.min(1.2,pr)*clamp((dens-4)/8,0,1)*(1-0.9*s_tk[30][i]))}
+      if(FFX&&ir>0.1&&s_salt[i]>0)s_salt[i]=Math.max(0,s_salt[i]-0.0004*ir*Math.min(1,FFK*FFX[i]));
       if(s_salt[i]>0&&(pr<0.3||s_tk[30][i]>0.5))s_salt[i]=Math.max(0,s_salt[i]-0.0004-0.002*s_tk[30][i])}
     const f0=w_forest0[i];
     if(f0>0){let fo=s_forest[i];

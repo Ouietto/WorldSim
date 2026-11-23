@@ -1,3 +1,4 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"neareast","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
+ {"name":"neareast-noflush","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,noflush"},
  {"name":"neareast-nosalt","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,nosalt"}]}
