@@ -1,8 +1,11 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"works+rise+six","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
- {"name":"+ threat cohesion (fixed band)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh KV=wbuild:0.5"},
- {"name":"+ threat cohesion, no treachery","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh,notreach KV=wbuild:0.5"},
- {"name":"+ threat cohesion, threat x0.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh KV=wbuild:0.5,thrk:2"},
- {"name":"+ threat cohesion, threat x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh KV=wbuild:0.5,thrk:0.5"},
- {"name":"baseline + threat cohesion","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,thrcoh"}]}
+ {"name":"works+rise+six (run 138)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,norebmom,nopay,noegone,noovh,novulture,nofrontload,nohungry KV=wbuild:0.5"},
+ {"name":"+ old regime vs upstarts","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
+ {"name":"  without rebels' momentum","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,norebmom KV=wbuild:0.5"},
+ {"name":"  without unpaid troops","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nopay KV=wbuild:0.5"},
+ {"name":"  without elites gone","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noegone KV=wbuild:0.5"},
+ {"name":"  without court overhead","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noovh KV=wbuild:0.5"},
+ {"name":"  without vultures","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,novulture KV=wbuild:0.5"},
+ {"name":"  without frontier load","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nofrontload KV=wbuild:0.5"},
+ {"name":"  without the hungry","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nohungry KV=wbuild:0.5"}]}

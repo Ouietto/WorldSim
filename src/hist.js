@@ -646,6 +646,32 @@ function momWar(o,d,j,win){if(!MOM||o.kind!=='state'||!d||d.kind!=='state')retur
 function strife(o){const s=S,r=s.r;s.strifeN=(s.strifeN||0)+1;for(const i of polCells(o.id))s.pop[i]*=0.97;
   o.E=0.6*etOf(o);o.treas=Math.max(o.treas||0,0);o.owed=0;o.shock=(o.shock||0)+0.3;o.crises++;if(o.cplx!=null)o.ineq=Math.max(0.2,o.ineq*0.9);
   if(r()<0.5){o._fu=1;succession(o);o._fu=0}}
+// the old regime against the upstarts (2026-11-24, Nein: successors rise because they think they can win; the court's troops go
+// unpaid, its elites have gone over, its offices eat its revenue; inside rise, each with its own off switch):
+// - norebmom: a civil war opens with the momentum on the rebels' side, as far as the realm was under stress
+// - nopay: soldiers owed pay fight worse and, facing rebels, go over (any state, any war: force × (1 − 0.4 × pay owed), × 0.8 broke)
+// - noegone: the surplus elite that went over to the rebel nearest the court stays gone for the war, fading over about 20 years
+// - noovh: a court's surplus elite and offices take their share of revenue before the army does (any state at any time: the tax
+//   that pays soldiers × (1 − overhead), overhead = half the elite's excess over what offices carry, at most 0.6)
+// - novulture: neighbours see a realm in civil war at half its strength when weighing war on it, and its rivals may back the rebels
+// - nofrontload: the court cannot strip its other borders: its force is cut by half the share of its border facing hordes,
+//   foreign enemies or recent raiders
+// - nohungry: in a civil war the hungry and overtaxed join the rebels and desert the court's levy (province crowding over its
+//   capacity, and taxes that took the peasants' bread)
+const REBM=MOM&&!swOn('norebmom'),PAYW=RISE&&!swOn('nopay'),EGONE=ESPLIT&&!swOn('noegone'),OVH=RISE&&!swOn('noovh'),VULT=RISE&&!swOn('novulture'),FLOAD=RISE&&!swOn('nofrontload'),HUNG=RISE&&!swOn('nohungry');
+const ovhOf=o=>OVH&&o.kind==='state'?clamp(0.5*(o.E/etOf(o)-1),0,0.6):0;
+const hungAt=(i,o)=>HUNG?Math.min(1,clamp(2*(S.pop[i]/(S.K[i]+1)-0.9),0,1)+(o&&o.pW||0)):0;
+function cwForce(o,i){let f=1;if(PAYW&&o.kind==='state')f*=(1-0.4*Math.min(1,o.owed||0))*((o.treas||0)<-0.3?0.8:1);
+  if(o.cwC){if(EGONE)f*=1-(o.eGone||0);if(FLOAD)f*=1-0.5*(o.extL||0);if(HUNG)f*=1-0.3*hungAt(i,o)}
+  else if(o.cwR){if(EGONE)f*=1+(o.eGain||0);if(HUNG){const C=S.pols[o.cwR];f*=1+0.5*hungAt(i,C&&C.alive?C:null)}}
+  return f}
+// each year: who is the court and who the rebels in a civil war, how much of the court's border faces other threats
+function cwPass(){const s=S;for(const id of s.alive){const o=s.pols[id];o.cwC=0;o.cwR=0}
+  for(const wid of s.activeWars){const war=s.wars[wid];if(!war.civil)continue;const C=s.pols[war.d[0]];if(!C||!C.alive)continue;C.cwC=1;
+    for(const a of war.a){const p=s.pols[a];if(p&&p.alive&&p.origin&&p.origin.from===C.id)p.cwR=C.id}}
+  if(FLOAD)for(const id of s.alive){const o=s.pols[id];if(!o.cwC)continue;let t=0,x=0;for(const [q,b] of o.nb){t+=b;const p=s.pols[q];if(!p||!p.alive)continue;
+      if(p.kind==='horde'||(o.enemies.has(q)&&!s.wars[o.enemies.get(q)].civil)||(o.raidBy===q&&s.year-(o.raidY||-1e9)<10))x+=b}o.extL=t>0?x/t:0}
+  if(EGONE)for(const id of s.alive){const o=s.pols[id];if(o.eGone)o.eGone=o.eGone<0.01?0:o.eGone*0.95;if(o.eGain)o.eGain=o.eGain<0.01?0:o.eGain*0.95}}
 // small neighbours of a victor weigh submitting (after a capital falls or a war is won outright)
 function bandwagon(o){if(!BANDW||!o||!o.alive||o.kind!=='state')return;const s=S,r=s.r,po=power(o)*(1+Math.max(0,o.mom||0));
   for(const [q] of o.nb){const p=s.pols[q];if(!p||!p.alive||p.kind!=='state'||p.over||p.league!=null||o.enemies.has(q)||o.allies.includes(q)||p.enemies.size||o.over===q)continue;
@@ -1236,14 +1262,15 @@ function civilWar(o,breakup){
   if(CENTRE&&LORDCRISIS&&o.kind==='state'){const away=lordsRefusing(o,cells.filter(i=>s.pol[i]===id),true);
     if(away.length){partitionLands(o,away,'In the crisis its governors and lords stopped obeying the court and kept what they held.');s.lordsN=(s.lordsN||0)+1}}
   if(CENTRE&&o.kind==='state'){const mine=cells.filter(i=>s.pol[i]===id);
-    let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i]);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0))*(VIG?0.6+0.4*vigOf(o):1);
+    let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i])*(HUNG?1-0.5*hungAt(i,o):1);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0))*(VIG?0.6+0.4*vigOf(o):1);
     // the surplus elite goes over to the rebel nearest the court (a rival city of the heartland, a governor near the capital)
     let heart=null,hd=1e9,gone=0;if(ESPLIT){for(const k of ids){const d=kmB(o.capital,s.pols[k].capital);if(d<hd){hd=d;heart=k}}
       const x=clamp(o.E/Math.max(1e-6,etOf(o))-1,0,1);gone=C*0.6*x*(1-0.5*vigOf(o));C-=gone}
-    let best=null,bv=C;for(const k of ids){const p=s.pols[k];let R=0,starve=0;
-      for(const i of cells){if(s.pol[i]!==k)continue;R+=s.pop[i]*(0.5+s.s[i]);
+    let best=null,bv=C,Rh=0;for(const k of ids){const p=s.pols[k];let R=0,starve=0;
+      for(const i of cells){if(s.pol[i]!==k)continue;R+=s.pop[i]*(0.5+s.s[i])*(HUNG?1+hungAt(i,o):1);
         if(WKF&&s.wk){for(let q2=w.wkDnS[i];q2<w.wkDnS[i+1];q2++){const d=w.wkDn[q2];if(s.pol[d]===id)starve+=w.wkDep[d]*s.wk[d]*s.pop[d]}}}
-      R+=0.5*starve;if(k===heart)R+=gone;if(R>bv){bv=R;best=p}}
+      R+=0.5*starve;if(k===heart){Rh=R;R+=gone}if(R>bv){bv=R;best=p}}
+    if(EGONE&&gone>0&&heart){o.eGone=clamp(gone/(C+gone),0,0.6);s.pols[heart].eGain=Math.min(1,gone/Math.max(1,Rh))}
     // a decisive winner takes the court's lands whole; a narrow one cannot hold them, and the heartland falls apart among its own
     // lords and cities until someone is strong enough to gather them (the Isin-Larsa years after Ur III; Egypt's intermediate periods)
     if(best&&bv>=1.5*C){for(const i of mine){s.pol[i]=best.id;s.integ[i]=Math.min(s.integ[i],0.5)}fellTo=best;s.cFallN=(s.cFallN||0)+1;
@@ -1260,6 +1287,13 @@ function civilWar(o,breakup){
   const big=A>=40;
   const war=declareWar(rebels,[o],`the ${o.base} Civil War`,big,true);
   war.why=why;
+  if(RISE&&o.kind==='state'){o.cwC=1;for(const p of rebels)p.cwR=id;
+    // (norebmom) they rose because the court looked beatable
+    if(REBM){const m=clamp(0.15*psi0,0,0.8);for(const p of rebels)p.mom=Math.max(p.mom||0,m);o.mom=Math.min(o.mom||0,-clamp(0.1*psi0,0,0.8))}
+    // (novulture) a rival of the court backs the rebels: one that has fought or raided it within living memory, or is warlike
+    if(VULT)for(const [q] of o.nb){const n=s.pols[q];if(!n||!n.alive||n.kind!=='state'||ids.includes(q)||o.enemies.has(q)||o.allies.includes(q)||n.over===id||o.over===q)continue;
+      if(r()<0.3*dispOf(o,n)){war.a.push(q);war.aSet.add(q);n.enemies.set(id,war.id);o.enemies.set(q,war.id);n.warsF.push(war.id);s.sponsorN=(s.sponsorN||0)+1;
+        if(big&&n.cells>=15)chron('war',`The ${n.full} takes the side of the rebels against the ${oldName}.`,o.capital,[R_(n),['pol',o.id,oldName],RW(war)],'An old rival saw its chance.')}}}
   if(big&&!breakup){const names=ids.map(k=>s.pols[k].base);
     const nm=names.length>1?names.slice(0,-1).join(', ')+' and '+names[names.length-1]:names[0];
     chron('war',`Civil war breaks the ${oldName}; ${nm} ${names.length>1?'break':'breaks'} away.`,o.capital,[['pol',o.id,oldName],...ids.map(k=>RB(s.pols[k])),RW(war)],why)}
@@ -1421,7 +1455,7 @@ function cmdPick(o,first){const cwt=o.cmdW,r=S.r;if(first){let b=0;for(let k=1;k
 function armiesOf(o){if(!o.cmdW){const E=S.eths[o.core],rl=o.rel>=0&&S.rels[o.rel]?S.rels[o.rel].cent||0:0;o.cmdW=E&&E.cmdW?E.cmdW.slice():[1,1,0.4+rl,0.3,1.5];o.arm=[]}
   const n=1+Math.min(3,Math.floor((o.cA||o.cells)/40));while(o.arm.length<n)o.arm.push({at:o.capital,cmd:cmdPick(o,o.arm.length===0),eta:0,w:0,l:0});
   if(o.arm.length>n)o.arm.length=n;return o.arm}
-function localForce(o,i){const A=o.arm;if(!A||!A.length)return 1;const y=S.year;let f=0.3;for(const a of A){const m=a.cmd===0?(GENL?Math.max(0.3,1.05+0.9*knob('gen')*(milOf(o.ruler)-0.5)):0.9+0.4*o.ruler.comp):CMD_M[a.cmd]*(LEARN?1+0.9*knob('gen')*((a.sk??0.5)-0.5):1);f+=0.7/A.length*(a.eta>y?0.3:1)*m*Math.exp(-kmB(i,a.at)/600)}return f*(LEARN?1+0.25*(o.vet||0):1)*(MOM?1+0.3*(o.mom||0):1)}
+function localForce(o,i){const A=o.arm;if(!A||!A.length)return 1;const y=S.year;let f=0.3;for(const a of A){const m=a.cmd===0?(GENL?Math.max(0.3,1.05+0.9*knob('gen')*(milOf(o.ruler)-0.5)):0.9+0.4*o.ruler.comp):CMD_M[a.cmd]*(LEARN?1+0.9*knob('gen')*((a.sk??0.5)-0.5):1);f+=0.7/A.length*(a.eta>y?0.3:1)*m*Math.exp(-kmB(i,a.at)/600)}return f*(LEARN?1+0.25*(o.vet||0):1)*(MOM?1+0.3*(o.mom||0):1)*(RISE?cwForce(o,i):1)}
 function armyCredit(o,i,win){const A=o.arm;if(!A)return;let b=null,bd=800;for(const a of A){const d=kmB(i,a.at);if(d<bd){bd=d;b=a}}if(!b)return;
   if(win)b.w++;else b.l++;o.cmdW[b.cmd]=clamp(o.cmdW[b.cmd]*(win?1.01:0.985),0.05,5);const E=S.eths[o.core];if(E){if(!E.cmdW)E.cmdW=o.cmdW.slice();else E.cmdW[b.cmd]+=(o.cmdW[b.cmd]-E.cmdW[b.cmd])*0.02}}
 // each year: armies go where the fighting is (the first to where land was last lost, the rest to the fronts), marching 500 km a year
@@ -1435,7 +1469,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);if(GENL)o.ruler.mil=Math.max(milOf(o.ruler),0.75,a.sk??0);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?((prestOn()&&o.nomP!=null?o.nomP+0.25*Math.max(0,o.pop-o.nomP):o.pop)*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)*(OVH?1-ovhOf(o):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?((prestOn()&&o.nomP!=null?o.nomP+0.25*Math.max(0,o.pop-o.nomP):o.pop)*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -1498,6 +1532,9 @@ function attack(o,i,j,sea){
   // stronger rather than fight for a court that never needed them (Nein 2026-11-24)
   if(!win&&TREACH&&q&&!sea&&s.pols[q].kind==='state'&&j!==s.pols[q].capital&&s.s[j]<0.35){const pT=0.15*knob('treach')*(1-s.s[j]/0.35)*clamp(1.2-s.integ[j],0,1)*(Ua>Ud?1:0.3);
     if(s.r()<pT){win=true;s.treachN=(s.treachN||0)+1}}
+  // (nopay) soldiers owed their pay, facing the rebels, go over to them
+  if(!win&&PAYW&&war0&&war0.civil&&q===war0.d[0]&&o.cwR===q&&j!==s.pols[q].capital){const d=s.pols[q];
+    if(s.r()<0.25*Math.min(1,d.owed||0)*clamp(1.2-s.integ[j],0,1)){win=true;s.payDefN=(s.payDefN||0)+1}}
   let evaded=false;
   if(MB&&!win&&dm>0.1){const M=s.mobN||(s.mobN={choose:0,evade:0,caught:0,harass:0});
     // caught: a good general, a river at their back, an enclosed valley, horsemen of their own
@@ -2040,12 +2077,12 @@ function* politicsG(){
     if((o.cells>=2||o.tier==='City-state'||(o.kind==='state'&&o.pop>=2*FLOOR.chief*P.floor))&&o.enemies.size<3&&r()<P.warRate*0.02*o.aggrM*o.gate){
       let best=0,bw=0,holy=false;const CHO=!swOn('nochoice'),po=power(o),Rl=o.rel>=0?s_rels[o.rel]:null,hp=Rl?pol[Rl.holy]:0;
       for(const [q,b] of o.nb){const t=pols[q];if(!t||!t.alive||o.enemies.has(q)||o.allies.includes(q)||o.over===q||t.over===id||(o.truce.get(q)||-1e9)>y)continue;
-        let wt=b*Math.pow(po/(power(t)+1),1.5);
+        const ptv=power(t)*(VULT&&t.cwC?0.5:1);let wt=b*Math.pow(po/(ptv+1),1.5);
         // (armies, part 3: wars are for something; Nein 2026-11-10, switch nochoice turns it off) the court weighs what each neighbour
         // is worth and the cheapest way to get it: take its land (half its taxes and trade if won, less the men to hold unwilling
         // land), make it pay tribute (a fifth, no garrisons; only against the clearly weaker), raid it (a little, at little risk;
         // for the poorer side), or punish a raider. A neighbour worth nothing by any road is left alone.
-        if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
+        if(CHO&&o.kind==='state'){const pr=po/(ptv+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
             rest=MEM&&t.kind==='state'?restOf(o,t):0,vC=pw*0.5*(V-gc)*(1+knob('claim')*rest)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)*(slaveOn()&&!kinBan(o,t.rel)?1.5:1)-0.01*own-tl3:-1e18,
             vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,
@@ -2056,14 +2093,14 @@ function* politicsG(){
         // (switch bounty) a khan picks his wars for what they bring his followers: a state's wealth can be raided at little risk,
         // milked for tribute if he is clearly the stronger, or taken; a rival horde brings only its people. Followers who are owed
         // press him to choose. Without this a horde weighed neighbours only by how weak they were, and fought other hordes
-        else if(o.kind==='horde'&&bountyOn()){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),need=0.0003*o.pop+1,kn=kindOn()?o.kin||0:0;let bv,g;
+        else if(o.kind==='horde'&&bountyOn()){const pr=po/(ptv+1),x=Math.pow(pr,1.5),pw=x/(1+x),need=0.0003*o.pop+1,kn=kindOn()?o.kin||0:0;let bv,g;
           if(t.kind==='state'){const V=(t.tax||0)+(1+2*kn)*(t.trade||0),vR=0.04*V*Math.min(1,pr)*(1-0.6*kn)-(1-pw)*0.2*need,vT=pr>1.5&&!t.over?pw*0.2*V*(1+kn):-1e18,vC=pw*0.5*V*(0.3+0.7*kn)-(1-pw)*0.5*need;bv=Math.max(vR,vT,vC);g=bv===vC?'conquest':bv===vT?'tribute':'raid'}
           else{bv=pw*0.3*0.0003*t.pop-(1-pw)*0.5*need;g='conquest'}
           if(bv<=0)continue;wt=b*Math.sqrt(bv/need)*(t.kind==='state'?knob('haim'):1)*(1+Math.min(1,o.owed||0));t._g=g}
         if(Rl&&t.rel!==o.rel&&t.rel>=0)wt*=1+0.4*P.zeal*Rn.piety;
         const isHoly=Rl&&q===hp&&t.rel!==o.rel&&Rn.piety>0.6;if(isHoly)wt*=1+4*P.zeal;
         bw+=wt;if(wt>0&&r()*bw<wt){best=q;holy=isHoly}}
-      if(best){const t=pols[best];const war=declareWar([o],[t],holy?`the Holy War for ${holyName(Rl)}`:null,holy,false,holy);
+      if(best){const t=pols[best];if(VULT&&t.cwC&&!o.cwR)s.vultN=(s.vultN||0)+1;const war=declareWar([o],[t],holy?`the Holy War for ${holyName(Rl)}`:null,holy,false,holy);
         // war goals (default since run 79): what the war is for. A strong state crushes a raiding or loosely organised neighbour to secure the
         // frontier (Rome against the Dacians, Han against the Xiongnu); against a rival kingdom it may march on the capital to
         // break it rather than take it (Assyria and Urartu, 714 BCE); otherwise it fights for provinces
@@ -2086,6 +2123,7 @@ function* politicsG(){
   }
   // active wars
   const still=[],PEACE=!swOn('nopeace');
+  if(RISE)cwPass();
   rsd('pol.w');for(const wid of s.activeWars){const war=s_wars[wid];rk(wid);
     const aAlive=war.a.some(k=>pols[k].alive),dAlive=war.d.some(k=>pols[k].alive),yrs=y-war.start;
     const fresh=y-(war.lastGain||war.start);
