@@ -689,7 +689,7 @@ function vigRaid(o){const h=S.pols[o.raidBy];if(!h||!h.alive)return 0.05;return 
 // from it. Where the hold is stronger the lord does not obey.
 function courtHand(o,crisis){const s=S,c=o.capital,R0=o.ruler||{},will=0.5*(R0.comp??0.5)+0.5*(R0.aggr??0.5),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
   let h=clamp(0.35+0.35*(o.S||0)+0.3*adm+0.2*(o.mandate??1),0.1,1.3)*(VIG?0.6+0.4*vigOf(o):1)*(0.7+0.6*will)*(MOM?1+0.25*(o.mom||0):1);
-  if(crisis)h*=((o.treas||0)<-0.3?0.7:1)*(1-0.5*Math.min(1,o.owed||0))*(1-0.6*clamp(o.E/Math.max(1e-6,etOf(o))-1,0,1)*(1-0.5*vigOf(o)));return h}
+  if(crisis)h*=((o.treas||0)<-0.3?0.7:1)*(1-0.5*Math.min(1,o.owed||0))*(1-0.6*clamp((o._eR??o.E/Math.max(1e-6,etOf(o)))-1,0,1)*(1-0.5*vigOf(o)));return h}
 function lordsRefusing(o,cells,crisis){const s=S,hand=courtHand(o,crisis);let md=0,nd=0;for(const i of cells)if(s.dist[i]!==65535){md+=s.dist[i];nd++}md=nd?md/nd:1;
   const out=[];for(const i of cells){if(i===o.capital)continue;const far=s.dist[i]===65535?3:Math.min(3,s.dist[i]/Math.max(1e-6,md)),
       hold=(1.2-s.integ[i])*(0.5+s.s[i])*(0.5+(o.nob||0))*(1+(WKF&&s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0));
@@ -1222,6 +1222,9 @@ function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===i
 function civilWar(o,breakup){
   const s=S,w=WD,r=s.r,id=o.id,cells=polCells(id);
   if(cells.length<3)return;
+  // the surplus elite as it stood when the crisis broke (o.E is reset below, before the court's strength is reckoned; until
+  // 2026-11-24 the elite split and the crisis loyalty test read the reset value, so no elite ever went over)
+  o._eR=o.E/Math.max(1e-6,etOf(o));
   const A=w.szF?cells.reduce((a,i)=>a+cw(i),0):cells.length;
   const dd=i=>(s.dist[i]===65535?9999:s.dist[i])*(1.2-s.integ[i]);
   const ecS=new Map();for(const c of cells)ecS.set(c,1+P.eco*ecoD(c,o));
@@ -1237,11 +1240,17 @@ function civilWar(o,breakup){
   const oldName=o.full,causes=topCauses(o.why||{}),why=breakup?'A confederation held together by one leader rarely outlives him.':causes.length?'Driven by '+causes.join(' and ')+'.':null;
   const lab=s.lab,q=s.q;let h=0,t=0;
   for(const i of cells)lab[i]=-2;
-  lab[o.capital]=id;q[t++]=o.capital;
-  if(!breakup){const keep=cells.length-top.length;for(let k=cells.length-1;k>=0;k--){const c=cells[k];if(c===o.capital)continue;if(k>=top.length||s.integ[c]>0.8&&r()<kp){lab[c]=id;q[t++]=c}}}
+  // (norebhold, under nodepth) the provinces that rise go with the rebels: they spread through the rising share of the realm first,
+  // and the court keeps only what stayed loyal and what the rebels cannot reach. Before, the court's loyal provinces spread into the
+  // rising share at the same pace as the rebels from their single seed provinces, and from far more places: in a realm of 11
+  // provinces the median civil war left the court 9 (probe cwout.js), whatever the stress
+  const RH=DEPTH&&!breakup&&!swOn('norebhold'),cq=[],pushC=c=>{if(RH)cq.push(c);else q[t++]=c};
+  lab[o.capital]=id;pushC(o.capital);
+  if(!breakup){const keep=cells.length-top.length;for(let k=cells.length-1;k>=0;k--){const c=cells[k];if(c===o.capital)continue;if(k>=top.length||s.integ[c]>0.8&&r()<kp){lab[c]=id;pushC(c)}}}
   const sOK=seeds.filter(c=>lab[c]===-2);if(!sOK.length){for(const i of cells)lab[i]=0;return}
   const ids=sOK.map(c=>{const nid=newPolity(c,o,{kind:o.kind,origin:{type:'rebellion',from:id,why}});lab[c]=nid;q[t++]=c;return nid});
   while(h<t){const i=q[h++],l=lab[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&lab[j]===-2){lab[j]=l;q[t++]=j}}}
+  if(RH){for(const c of cq)q[t++]=c;while(h<t){const i=q[h++],l=lab[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&lab[j]===-2){lab[j]=l;q[t++]=j}}}}
   const cut=[];for(const i of cells){const l=lab[i];if(l>0&&l!==id){s.pol[i]=l;s.s[i]=Math.min(1,s.s[i]+0.12)}else if(l===-2)cut.push(i);s.pop[i]*=0.94;lab[i]=0}
   // lords carve up fallen realms (default since run 79): provinces cut off from both the capital and the rebels do not stay with the old ruler; their lords keep them
   if(cut.length&&o.kind==='state')partitionLands(o,cut,why);
@@ -1265,7 +1274,7 @@ function civilWar(o,breakup){
     let C=0;for(const i of mine)C+=s.pop[i]*(0.5+0.5*s.integ[i])*(HUNG?1-0.5*hungAt(i,o):1);C*=(0.5+(o.S||0))*((o.treas||0)<-0.3?0.6:1)*(1-0.5*Math.min(1,o.owed||0))*(VIG?0.6+0.4*vigOf(o):1);
     // the surplus elite goes over to the rebel nearest the court (a rival city of the heartland, a governor near the capital)
     let heart=null,hd=1e9,gone=0;if(ESPLIT){for(const k of ids){const d=kmB(o.capital,s.pols[k].capital);if(d<hd){hd=d;heart=k}}
-      const x=clamp(o.E/Math.max(1e-6,etOf(o))-1,0,1);gone=C*0.6*x*(1-0.5*vigOf(o));C-=gone}
+      const x=clamp(o._eR-1,0,1);gone=C*0.6*x*(1-0.5*vigOf(o));C-=gone}
     let best=null,bv=C,Rh=0;for(const k of ids){const p=s.pols[k];let R=0,starve=0;
       for(const i of cells){if(s.pol[i]!==k)continue;R+=s.pop[i]*(0.5+s.s[i])*(HUNG?1+hungAt(i,o):1);
         if(WKF&&s.wk){for(let q2=w.wkDnS[i];q2<w.wkDnS[i+1];q2++){const d=w.wkDn[q2];if(s.pol[d]===id)starve+=w.wkDep[d]*s.wk[d]*s.pop[d]}}}
@@ -2484,8 +2493,11 @@ function statecraft(o,c,y){
   const s=S,r=s.r;
   if(o.cplx==null){o.cplx=0.2;o.treas=0.3;o.ineq=0.25}
   if(o.kind!=='state'){o.pT=o.pF=o.pQ=0;o.burden=0;return}
-  // a state born this year has not yet collected its first taxes
-  if(o.tax==null){o.pT=o.pF=0;o.pQ=o.pQ||0;o.burden=o.burden||0.6;if(!o.fac)o.fac=[0,0];return}
+  // a state born this year has not yet collected its first taxes (its tax can also be NaN: a state born during the year's pass
+  // over polities is reached later in the same pass, where its missing tax is scaled; until 2026-11-24 that NaN slipped past this
+  // test, the burden was reckoned on no revenue at all, and every such state started with the treasury at its floor, -2: probe
+  // newreb.js, burden 40-430 in a rebel's first year, the treasury still near -1.9 four years on)
+  if(!(o.tax>=0)){o.pT=o.pF=0;o.pQ=o.pQ||0;o.burden=o.burden||0.6;if(!o.fac)o.fac=[0,0];return}
   const real=Math.max(1,o.cells-(o.wasteN||0));
   // strained polities build new layers of office (scalar stress); threatened ones build tax offices, arsenals and standing
   // troops (Tilly 1990). Both are paid for in upkeep below
