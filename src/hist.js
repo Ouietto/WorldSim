@@ -1492,7 +1492,12 @@ function attack(o,i,j,sea){
   let dm=0,pw4=pw3;const MB=mobOn()&&!sea;
   if(MB){const dq=q?s.pols[q]:null,mA=mobOf(o,i,j,1),mD=dq?mobOf(dq,j,j):Math.max(rideAtCell(j)*Math.min(1,3*s.horse[j]),0.8*s.camel[j]*w.desert[j])*openAt(j);
     dm=clamp((mA-mD)*knob('mob'),-1,1);if(dm>0)pw4=1-Math.pow(1-pw3,1+1.5*dm)}
-  const win=s.r()<pw4,wid0=q?o.enemies.get(q):null,war0=wid0!=null?s.wars[wid0]:null;
+  let win=s.r()<pw4;const wid0=q?o.enemies.get(q):null,war0=wid0!=null?s.wars[wid0]:null;
+  // (thrcoh; switch notreach, knob treach) treachery on a slack border: where the people have had no reason to hold together
+  // (solidarity below 0.35) and are loosely bound to the realm, the local lord or town may go over to an invader who looks the
+  // stronger rather than fight for a court that never needed them (Nein 2026-11-24)
+  if(!win&&TREACH&&q&&!sea&&s.pols[q].kind==='state'&&j!==s.pols[q].capital&&s.s[j]<0.35){const pT=0.15*knob('treach')*(1-s.s[j]/0.35)*clamp(1.2-s.integ[j],0,1)*(Ua>Ud?1:0.3);
+    if(s.r()<pT){win=true;s.treachN=(s.treachN||0)+1}}
   let evaded=false;
   if(MB&&!win&&dm>0.1){const M=s.mobN||(s.mobN={choose:0,evade:0,caught:0,harass:0});
     // caught: a good general, a river at their back, an enclosed valley, horsemen of their own
@@ -2113,7 +2118,7 @@ function* politicsG(){
   yield;
   // border pass
   rsd('pol.p');for(const id of s.alive)pols[id].nb=new Map();
-  const asR=P.asabR,asD=P.asabD,wr=P.warRate*0.03,rev=y&1,rels=s.rels,fz=P.fortify,LP=szF?localPopF():null,FB=szF?frontBand():null;
+  const asR=P.asabR,asD=P.asabD,wr=P.warRate*0.03,rev=y&1,rels=s.rels,fz=P.fortify,LP=szF?localPopF():null,FB=szF?frontBand():null,FT=szF&&THRC?frontThreat():null;
   for(let kk=0;kk<L.length;kk++){
     const i=L[rev?L.length-1-kk:kk],p=pol[i],pi=pop[i],ei=s_eth[i],ri=s_rel[i];rk(i);
     const o=p?pols[p]:null,horde=o&&o.kind==='horde';
@@ -2132,8 +2137,10 @@ function* politicsG(){
     if(o&&w_coast[i]&&s_sail[i]>0.5){for(let q2=w_ls[i];q2<w_ls[i+1];q2++){const j=w_lt[q2];if(w_ld[q2]>3&&s_nav[i]<0.5)continue;const q=pol[j];if(q===p)continue;
       if(q){o.nb.set(q,(o.nb.get(q)||0)+1);if(o.enemies.has(q)){nc+=1;if(r()*nc<1){cand=j;candSea=true}}}}}
     let sv=s_s[i];
+    // (thrcoh) how far the frontier presses: the threat across it, or raids and war felt here
+    const fT=FT?Math.max(FT[i],s.thr?s.thr[i]:0):0;
     if(o){const decay=asD*(o.island?0.5:1)*(o.conqDyn?1.6:1);
-      sv+=fr?asR*sv*(1-sv):-decay*sv;sv+=0.004*infl*(o.ruler.char-0.5);if(ri>=0&&ri===o.rel)sv+=0.0015*(0.5+rels[ri].cent);
+      sv+=FT?asR*fT*sv*(1-sv)-decay*(1-fT)*sv:fr?asR*sv*(1-sv):-decay*sv;sv+=0.004*infl*(o.ruler.char-0.5);if(ri>=0&&ri===o.rel)sv+=0.0015*(0.5+rels[ri].cent);
       s_s[i]=clamp(sv,0.02,1);
       // provinces settle into a realm only as fast as the centre can hold them (monopolies, records, speed)
       if(s_integ[i]<1){const hp=o.kind==='state'?0.35+0.65*(o.hold??0.5):1,fam=ei>=0&&s_eths[ei]&&s_eths[o.core]&&s_eths[ei].fam===s_eths[o.core].fam;s_integ[i]=Math.min(1,s_integ[i]+(dealOn()&&s.deal?1+2*dealAt(o,i):1)*hp*0.0011/(1+0.8*P.eco*ecoD(i,o))*(0.5+s_recK[i]+s_roads[i]+0.5*s_law[i])*(fam?1.5:0.6)*(ri>=0&&ri===o.rel?1.2:0.8)*(s_uni[i]>0.3&&s_eths[o.core]&&s_uniFam[i]===s_eths[o.core].fam?1.6:1))}
@@ -2163,7 +2170,7 @@ function* politicsG(){
         for(let d=w_nbS[i];d<w_nbS[i+1];d++){const j=w_nbA[d];if(j>=0&&w_land[j]&&pol[j]===p&&j!==o.capital&&(w_nomad[j]||w_desert[j])&&s_integ[j]<0.4&&s_eth[j]===ei){pol[j]=nid;s_dist[j]=2}}
         if(o.cells>=25)chron('fall',`On grass the ${o.full} claims but does not hold, a new khan raises his standard.`,i,[R_(o),R_(pols[nid])],(o.steppe??0.5)<0.5?'The court had turned from the herds, and its far pastures had no garrison.':'Its far pastures had no garrison.')}
     }else{
-      sv+=fr?asR*0.6*sv*(1-sv):(0.3+0.25*s.ritW[i]-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
+      sv+=FT?fT*asR*0.6*sv*(1-sv)+(1-fT)*(0.3+0.25*s.ritW[i]-sv)*0.02:fr?asR*0.6*sv*(1-sv):(0.3+0.25*s.ritW[i]-sv)*0.02;s_s[i]=clamp(sv,0.02,1);
       // (switch nofarmland; 2026-11-21) farmland and crowding judged on the land the fields occupy (fSh), not the whole province
       if(pi>=1){const fsh=FLD?w.fSh[i]:1,pf=FLD?1-s.past[i]:1,dens=pi*(pf/fsh+1-pf)/w_area[i],agr=s_farm[i]*Math.min(1,s_sFc[i]/fsh),past=s_herd[i]*Math.max(w_sH[i],w_desert[i]*s_camel[i]*0.6);
         // density threshold rescaled with population, which ran about 40% above historical estimates when it was set
@@ -2500,6 +2507,31 @@ function cellPeople(){const w=WD,s=S,G=w._cg||(w._cg=new Float64Array(NC)),S_=w.
 // a metaethnic frontier on provinces is as wide as on the grid: a 100 km cell touching another people or faith is all frontier,
 // so a province counts as frontier if one touching them lies within three quarters of a cell of it (the grid: the touching
 // cells themselves)
+// cohesion in proportion to threat (2026-11-24, Nein; opt-in switch thrcoh, knob thrk): solidarity grows where people feel
+// pressed, by a power that could strike or by raids and war that do. Along a line with another people or faith, the threat is
+// the realm across against one's own, weighed by how it has behaved (Nein: the threat of a threat): at war now, or fought or
+// raided within living memory, or under a warlike ruler, it presses with all its weight; a passive one with four tenths of it.
+// A passive neighbour two and a half times as strong still presses fully; a passive weaker one barely at all, and that border's
+// people lose their reason to hold together. For stateless people across, their numbers against the province's own, riders
+// counting three times (half as many press fully); a realm next door presses fully on people without one. It reaches the same band inward as the old frontier. The memory of raids and war in a province (s.thr)
+// counts too, whoever the raiders are. Where neither presses, solidarity wears down as in any safe interior: an empty desert edge
+// no longer keeps a valley's cohesion at its peak for ever (probe front2.js: Egypt held at cohesion 1.00 for 1,500 years with
+// fewer than one in twenty as many people across half its line)
+const THRC=swOn('thrcoh'),TREACH=THRC&&!swOn('notreach');
+// how a realm t has behaved toward o: 1 at war or a horde; fought or raided within living memory, fading over about 60 years;
+// otherwise as warlike as its ruler (at most 0.6)
+function dispOf(o,t){if(t.kind==='horde'||o.enemies.has(t.id))return 1;const y=S.year;let h=0;const tr=o.truce.get(t.id);if(tr!=null)h=Math.exp(-Math.max(0,y-(tr-25))/60);
+  if(o.raidBy===t.id)h=Math.max(h,Math.exp(-Math.max(0,y-(o.raidY||-1e9))/60));const R=t.ruler;return Math.max(h,R?0.6*(R.aggr??0.5):0.3)}
+function frontThreat(){const w=WD,s=S,L=w.landIdx,n=w.n,T=w._ft||(w._ft=new Float32Array(n)),D=w._ftD||(w._ftD=new Float32Array(n)),St=w._ftS||(w._ftS=new Int32Array(n)),k=knob('thrk'),q=[];
+  T.fill(0);const pw=new Float64Array(s.pols.length);for(const id of s.alive)pw[id]=power(s.pols[id])+1;let stamp=w._ftN||0;
+  for(const i of L){const ei=s.eth[i],ri=s.rel[i],p=s.pol[i];let f=0;
+    for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||s.pol[j]===p)continue;const ej=s.eth[j];
+      if(!((ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)||(ri>=0&&s.rel[j]>=0&&s.rel[j]!==ri)))continue;
+      const qj=s.pol[j],t=qj&&p?pw[qj]/pw[p]*(0.4+0.6*dispOf(s.pols[p],s.pols[qj]))/k:qj?1:s.pop[j]*(1+2*rideAtCell(j))/(0.5*k*(s.pop[i]+1));if(t>f)f=t}
+    if(f<=0.005)continue;f=Math.min(1,f);stamp++;St[i]=stamp;D[i]=0;q.length=0;q.push(i);
+    for(let h=0;h<q.length;h++){const c=q[h];if(f>T[c])T[c]=f;for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j<0||!w.land[j])continue;const x=D[c]+w.nbD[e];
+      if(x<=0.75&&(St[j]!==stamp||x<D[j])){St[j]=stamp;D[j]=x;q.push(j)}}}}
+  w._ftN=stamp;return T}
 function frontBand(){const w=WD,s=S,L=w.landIdx,n=w.n,d=w._fb||(w._fb=new Float32Array(n)),F=w._fbF||(w._fbF=new Uint8Array(n)),q=[];d.fill(9);F.fill(0);
   for(const i of L){const ei=s.eth[i],ri=s.rel[i],p=s.pol[i];let f=0;for(let e=w.nbS[i];e<w.nbS[i+1]&&!f;e++){const j=w.nbA[e];if(j<0||!w.land[j]||s.pol[j]===p)continue;const ej=s.eth[j];
       if(ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)f=1;else if(ri>=0&&s.rel[j]>=0&&s.rel[j]!==ri)f=1}

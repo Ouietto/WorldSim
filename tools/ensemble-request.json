@@ -1,10 +1,8 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"works+rise as run 135","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nodepth,norelease,nomomentum,nobandwagon,nogeneral KV=wbuild:0.5"},
- {"name":"works+rise+all six","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
- {"name":"all six, no depth","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nodepth KV=wbuild:0.5"},
- {"name":"all six, no release","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,norelease KV=wbuild:0.5"},
- {"name":"all six, no momentum","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nomomentum KV=wbuild:0.5"},
- {"name":"all six, no bandwagon","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nobandwagon KV=wbuild:0.5"},
- {"name":"all six, no generalship","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nogeneral KV=wbuild:0.5"},
- {"name":"all six, no learning","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nolearn KV=wbuild:0.5"}]}
+ {"name":"works+rise+six","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
+ {"name":"+ threat cohesion","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh KV=wbuild:0.5"},
+ {"name":"+ threat cohesion, no treachery","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh,notreach KV=wbuild:0.5"},
+ {"name":"+ threat cohesion, threat x0.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh KV=wbuild:0.5,thrk:2"},
+ {"name":"+ threat cohesion, threat x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,thrcoh KV=wbuild:0.5,thrk:0.5"},
+ {"name":"baseline + threat cohesion","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,thrcoh"}]}
