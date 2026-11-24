@@ -1,5 +1,6 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
- {"name":"works+all","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works KV=wbuild:0.5"},
- {"name":"works+all-lords","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,nosecede KV=wbuild:0.5"},
- {"name":"all","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"none","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,nocentre,novig,noesplit,noselect,nosecede"}]}
+ {"name":"rise","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,rise"},
+ {"name":"rise-memory","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,rise,nomemory"},
+ {"name":"rise-conf","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,rise,noconf"},
+ {"name":"works+rise","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
+ {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"}]}

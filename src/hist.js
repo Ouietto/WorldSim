@@ -606,7 +606,7 @@ const RISE=swOn('rise'),CENTRE=RISE&&!swOn('nocentre');
 // crisis comes. Founders and those who seize power came out on top of a contest, so they are the better of two draws; heirs are
 // whoever is born (Ibn Khaldun's generations, without a clock). In a civil war the surplus elite (beyond what offices and income
 // carry) goes over to the rival in the heartland (noesplit).
-const VIG=RISE&&!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=RISE&&!swOn('noselect'),SECEDE=RISE&&!swOn('nosecede'),LORDCRISIS=RISE&&swOn('lordcrisis');
+const MEM=RISE&&!swOn('nomemory'),CONF=RISE&&!swOn('noconf'),VIG=RISE&&!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=RISE&&!swOn('noselect'),SECEDE=RISE&&!swOn('nosecede'),LORDCRISIS=RISE&&swOn('lordcrisis');
 const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
 // a war presses as hard as the strongest enemy in it is strong against the realm: wars on weak neighbours keep no one awake
 function vigWar(o){if(!o.enemies.size)return 0;let mx=0;const me=power(o)+1;for(const [q] of o.enemies){const e=S.pols[q];if(e&&e.alive)mx=Math.max(mx,power(e)/me)}return Math.min(0.6,0.5*mx)}
@@ -624,6 +624,19 @@ function lordsRefusing(o,cells,crisis){const s=S,hand=courtHand(o,crisis);let md
   const out=[];for(const i of cells){if(i===o.capital)continue;const far=s.dist[i]===65535?3:Math.min(3,s.dist[i]/Math.max(1e-6,md)),
       hold=(1.2-s.integ[i])*(0.5+s.s[i])*(0.5+(o.nob||0))*(1+(WKF&&s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0));
     if(hold>hand*Math.exp(-far/2))out.push(i)}return out}
+// imperial memory (2026-11-24, Nein; inside rise, switch nomemory, knob claim): when a kingdom or empire falls, the lands it held
+// remember it. A state whose capital lies in those lands and shares the old realm's tongue or faith claims the whole: within living
+// memory the successors weigh a war on another successor as worth more for each province of the old realm it would win back (twice
+// for the old capital), and the conquered settle under a restorer more readily. The memory fades over generations, more slowly
+// where kingship is written down (records at the claimant's capital: Egypt's Two Lands, the Sumerian King List's one kingship), so
+// claims die away, borders harden, and an upstart may later gather the pieces on his own account.
+function remember(o,cells){if(!MEM||o.kind!=='state'||!(o.tier==='Kingdom'||o.tier==='Empire')||cells.length<8)return;const s=S;
+  if(!s.mems)s.mems=[];if(!s.memAt)s.memAt=new Int32Array(N).fill(-1);const k=s.mems.length,e=s.eths[o.core];
+  s.mems.push({y0:s.year,name:o.peak||o.full,cap:o.capital,fam:e?e.fam:-1,rel:o.rel,n:cells.length});for(const i of cells)s.memAt[i]=k;s.memN=(s.memN||0)+1}
+function claimOf(o){const s=S;if(!MEM||!s.memAt||!o||o.kind!=='state')return null;const k=s.memAt[o.capital];if(k<0)return null;const M=s.mems[k],e=s.eths[o.core];
+  if(!((e&&M.fam>=0&&e.fam===M.fam)||(o.rel>=0&&o.rel===M.rel)))return null;const tau=60+240*(s.recK?s.recK[o.capital]:0),m=Math.exp(-(s.year-M.y0)/tau);return m>0.05?{k,m,M}:null}
+// how much a war on t would restore of o's claim: the claim's strength, twice where t holds the old capital
+function restOf(o,t){const s=S;if(!s.memAt||!t||!t.alive)return 0;const cl=claimOf(o);if(!cl||s.memAt[t.capital]!==cl.k)return 0;return cl.m*(t.capital===cl.M.cap?2:1)}
 function selectRuler(R){if(!SELR||!R)return;const r=S.r,t=(r()+r()+r())/3;if(t>R.comp)R.comp=t}
 const WKS=swOn('works'),WKF=WKS&&!swOn('nowkflow'),WKR=WKS&&!swOn('nowreck'),WLOC=knob('wlocal');
 // water passes through works (2026-11-23, Nein's idea; switch nowkflow): on a broad, flat plain a canal must leave the river well
@@ -1170,7 +1183,7 @@ function civilWar(o,breakup){
   // solidarity, and half the people in the court's lands it can starve by holding the water they depend on (works flow). A rebel
   // stronger than the court takes the capital and the court's lands: the old realm ends and the rebel's is the realm now (Thebes
   // reuniting Egypt twice; Sargon taking the realm of Kish). Others that broke away stay apart until someone takes them in.
-  let fellTo=null;
+  let fellTo=null;const cells0=cells.slice();
   // in the crisis every governor and lord of what the court still holds weighs his hold against its weakened hand; those who no
   // longer obey keep what they hold (2026-11-23; with nosecede off): the heartland can fall apart too
   // (run 134: on by default it fragmented the region but no new power gathered the pieces: -6.1 points, error +0.33; opt-in lordcrisis)
@@ -1192,7 +1205,7 @@ function civilWar(o,breakup){
     else if(best){const res=partitionLands(o,mine,'Its court fell and no rival was strong enough to take its place; its lords and cities kept what they held.');
       fellTo=best;s.cFallN=(s.cFallN||0)+1;s.cSplitN=(s.cSplitN||0)+1;
       if(A>=20)chron('fall',`The ${oldName} falls apart: its court is overthrown, but ${best.base} cannot hold the heartland, and its cities and lords go their own ways.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}}
-  if(fellTo)return;
+  if(fellTo){remember(o,cells0);return}
   const big=A>=40;
   const war=declareWar(rebels,[o],`the ${o.base} Civil War`,big,true);
   war.why=why;
@@ -1247,7 +1260,7 @@ function hordeBreakup(o){
 function collapse(o){
   const s=S,w=WD;let lost=0;
   if(o.kind==='horde'){hordeBreakup(o);return}
-  if(o.kind==='state'){const away=[];for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital)away.push(i);const awA=w.szF?away.reduce((a,i)=>a+cw(i),0):away.length;
+  if(o.kind==='state'){const away=[];for(const i of w.landIdx)if(s.pol[i]===o.id&&s.dist[i]>2&&i!==o.capital)away.push(i);if(MEM)remember(o,[o.capital,...away]);const awA=w.szF?away.reduce((a,i)=>a+cw(i),0):away.length;
     const res=partitionLands(o,away,'Its asabiya had decayed below the point where it could hold together; its lords kept what they held.');
     if(o.maxCells>=20&&awA>=5)chron('fall',`The ${o.full} loses its grip.${res.ids.length?` Its lords carve ${Math.round(res.claimed)} provinces into ${res.ids.length} realm${res.ids.length>1?'s':''}: ${res.ids.slice(0,4).map(k=>s.pols[k].full).join(', ')}${res.ids.length>4?' and others':''}.`:''}${res.freed>=0.5?` ${Math.round(res.freed)} provinces of poor land fall away into stateless hands.`:''}`,o.capital,[R_(o),...res.ids.slice(0,4).map(k=>RB(s.pols[k]))],'Its asabiya had decayed below the point where it could hold together.');
     return}
@@ -1448,6 +1461,7 @@ function attack(o,i,j,sea){
   if(win){
     const ej=s.eth[j];
     s.integ[j]=(ej>=0&&s.eths[ej]&&s.eths[o.core]&&s.eths[ej].fam===s.eths[o.core].fam?0.35:0.08)+(s.rel[j]===o.rel&&o.rel>=0?0.15:0);
+    if(MEM&&s.memAt&&s.memAt[j]>=0){const cl=claimOf(o);if(cl&&s.memAt[j]===cl.k)s.integ[j]=Math.min(1,s.integ[j]+0.3*cl.m)}
     if(WKR&&war0&&(war0.goal==='punitive'||war0.goal==='raid')&&war0.aSet.has(o.id)&&s.wk&&s.wk[j]>0.05)wreck(j,0.35);
     s.pol[j]=o.id;s.taken[j]=s.year;if(s.thr)s.thr[j]=Math.max(s.thr[j],0.6);if(s.deal)s.deal[j]=0;s.pop[j]*=0.93;takeCaptives(o,j,q?0.08:0.15);s.s[j]=Math.max(s.s[j]*0.8,0.05);s.dist[j]=Math.min(65534,s.dist[i]+(sea?6:stepCost(i,j)));
     if(o.kind==='horde'&&ej>=0&&ej!==o.core)displace(j,0.2*(kindOn()?1-(o.kin||0):1),o.id);
@@ -1968,12 +1982,12 @@ function* politicsG(){
         // for the poorer side), or punish a raider. A neighbour worth nothing by any road is left alone.
         if(CHO&&o.kind==='state'){const pr=po/(power(t)+1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
-            vC=pw*0.5*(V-gc)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)*(slaveOn()&&!kinBan(o,t.rel)?1.5:1)-0.01*own-tl3:-1e18,
+            rest=MEM&&t.kind==='state'?restOf(o,t):0,vC=pw*0.5*(V-gc)*(1+knob('claim')*rest)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)*(slaveOn()&&!kinBan(o,t.rel)?1.5:1)-0.01*own-tl3:-1e18,
             vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,
             // a war for people, not land: where land is plentiful and hands are few, the prize is the neighbour's population, carried
             // home (mainland South-East Asia: Scott 2009; Lieberman 2003)
             scar=clamp(1-o.pop/(0.7*o.K+1),0,1),vS=slaveOn()&&scar>0.2&&!kinBan(o,t.rel)?pw*0.08*scar*own*Math.min(3,t.pop/(o.pop+1))-(1-pw)*0.05*own-tl3:-1e18,bv=Math.max(vC,vT,vR,vP,vS);
-          if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':bv===vS?'captives':'raid'}
+          if(bv<=0)continue;wt=b*bv/(own+1)*4;t._g=bv===vP?'punitive':bv===vC?'conquest':bv===vT?'tribute':bv===vS?'captives':'raid';t._cl=rest>0&&bv===vC}
         // (switch bounty) a khan picks his wars for what they bring his followers: a state's wealth can be raided at little risk,
         // milked for tribute if he is clearly the stronger, or taken; a rival horde brings only its people. Followers who are owed
         // press him to choose. Without this a horde weighed neighbours only by how weak they were, and fought other hordes
@@ -1994,6 +2008,8 @@ function* politicsG(){
             if(war.goal==='tribute'&&pr>3&&t.kind==='state'&&!t.over&&r()<0.5){t.over=id;t.overY=y;o.tribs++;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);
               if(t.cells>=25)chron('diplomacy',`Faced with the riders of the ${o.full}, the ${t.full} agrees to pay tribute rather than fight.`,t.capital,[R_(t),R_(o)])}}
           if(CHO&&o.kind==='state'&&t._g){if(t._g==='conquest'){if(war.goal==='punitive')war.goal='conquest'}else war.goal=t._g;
+            if(t._cl&&war.goal==='conquest'){war.claim=true;s.claimWarN=(s.claimWarN||0)+1;const cl=claimOf(o);
+              if(cl&&o.cells>=20&&r()<0.3)chron('war',`The ${o.full} goes to war with the ${t.full} to restore the ${cl.M.name}.`,t.capital,[R_(o),R_(t)],'Both had been part of it within living memory, and each meant to rebuild it under its own rule.')}
             if(!s.goalN)s.goalN={};s.goalN[war.goal]=(s.goalN[war.goal]||0)+1;
             // the clearly weaker may submit without a fight
             if(war.goal==='tribute'&&pr>3&&t.kind==='state'&&!t.over&&r()<0.5){t.over=id;t.overY=y;o.tribs++;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);s.goalN.submit=(s.goalN.submit||0)+1;
@@ -2318,7 +2334,7 @@ function* stepG(){
   if(WKS&&ymod(s.year,10)===4){rsd('works');worksPass()}
   if(ymod(s.year,10)===6){rsd('landuse');landUsePass();yield}
   if(ymod(s.year,10)===8){rsd('herd');herdPass();rsd('coal');coalitionPass();yield}
-  if(s.year%10===0){rsd('dec');genCache();ritualPass();deepPass();recPass();carbonPass();yield;rsd('matrix');matrixPass();yield;rsd('colony');colonyPass();if(!NOLEAGUE){rsd('league');leaguePass();colonizePass()}yield;recordStats();rsd('city');cityPass();yield;rsd('region');regionPass();yield;rsd('mix');mixPass()}
+  if(s.year%10===0){rsd('dec');genCache();ritualPass();deepPass();recPass();carbonPass();yield;rsd('matrix');matrixPass();yield;rsd('colony');colonyPass();if(!NOLEAGUE){rsd('league');leaguePass();colonizePass()}if(CONF){rsd('conf');confPass()}yield;recordStats();rsd('city');cityPass();yield;rsd('region');regionPass();yield;rsd('mix');mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */

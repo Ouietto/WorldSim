@@ -71,7 +71,7 @@ function colonyPass(){
 function isCityState(o){return o.kind==='state'&&o.tier==='City-state'}
 function leaguePass(){
   const s=S,r=s.r;if(!s.leagues)s.leagues=[];
-  for(const L of s.leagues){if(L.end)continue;L.members=L.members.filter(q=>{const p=s.pols[q];return p&&p.alive&&p.league===L.id&&isCityState(p)});
+  for(const L of s.leagues){if(L.end)continue;L.members=L.members.filter(q=>{const p=s.pols[q];return p&&p.alive&&p.league===L.id&&(isCityState(p)||(L.conf&&p.kind==='state'))});
     for(const q of s.alive){const p=s.pols[q];if(p.league===L.id&&!L.members.includes(q))p.league=null}
     L.pop=0;L.cells=0;for(const q of L.members){L.pop+=s.pols[q].pop;L.cells+=s.pols[q].cells}
     if(L.members.length<2){L.end=s.year;for(const q of L.members)s.pols[q].league=null;chron('diplomacy',`The ${L.name} breaks apart.`,L.cell,[['league',L.id,L.name]]);continue}
@@ -96,6 +96,32 @@ function leaguePass(){
       s.leagues.push(L);for(const q of L.members)s.pols[q].league=L.id;
       chron('diplomacy',`${L.members.length} cities of the ${e.name} swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],...L.members.map(q=>R_(s.pols[q]))],'Small cities of one people were safer together than alone against the kingdoms around them.');
       spot(`The ${L.name} is founded`,o.capital,[['league',L.id,L.name]])}}
+}
+// confederations (2026-11-24, Nein; inside rise, switch noconf): neighbouring kingdoms long at peace (no war between them within
+// about two generations of their last truce), trading (trade a good share of both their incomes), and of one tongue or faith swear a
+// confederation, a league of states whose members stand together. Under able rulers at its head, members fold into the head's
+// realm one at a time, by marriage, inheritance or simple weight (the head well stronger than the member); under weak heads members
+// drift away. A confederation counts as one bloc wherever blocs are counted.
+function confPass(){const s=S,r=s.r,y=s.year;if(!CONF)return;if(!s.leagues)s.leagues=[];
+  const peace=(a,b)=>!a.enemies.has(b.id)&&(a.truce.get(b.id)??-1e9)<y-40,kin=(a,b)=>{const ea=s.eths[a.core],eb=s.eths[b.core];return (ea&&eb&&ea.fam===eb.fam)||(a.rel>=0&&a.rel===b.rel)},
+    trades=a=>(a.trade||0)>0.15*((a.tax||0)+(a.trade||0)+1e-9);
+  for(const id of s.alive){const o=s.pols[id];if(o.kind!=='state'||isCityState(o)||!trades(o))continue;
+    for(const [q] of o.nb){const t=s.pols[q];if(!t||!t.alive||t.kind!=='state'||isCityState(t)||!trades(t)||!peace(o,t)||!kin(o,t)||o.over===q||t.over===id)continue;
+      const Lo=o.league!=null&&!s.leagues[o.league].end?s.leagues[o.league]:null,Lt=t.league!=null&&!s.leagues[t.league].end?s.leagues[t.league]:null;
+      if(Lo&&Lt)continue;if((Lo&&!Lo.conf)||(Lt&&!Lt.conf))continue;
+      if(r()>0.05)continue;
+      if(Lo||Lt){const L=Lo||Lt,n=Lo?t:o;n.league=L.id;L.members.push(n.id);if(L.members.length<=6)chron('diplomacy',`The ${n.full} joins the ${L.name}.`,n.capital,[R_(n),['league',L.id,L.name]])}
+      else{const e=s.eths[o.core],L={id:s.leagues.length,name:`${cap(placeWord(e.lang,r))} Confederation`,members:[id,q],born:y,cell:o.capital,conf:true};s.leagues.push(L);o.league=t.league=L.id;s.confN=(s.confN||0)+1;
+        chron('diplomacy',`The ${o.full} and the ${t.full}, long at peace and trading, swear to stand together as the ${L.name}.`,o.capital,[['league',L.id,L.name],R_(o),R_(t)],'They had not fought within living memory, their merchants crossed each other\'s lands, and they shared a tongue or a faith.')}
+      break}}
+  // able heads gather the members in; weak ones let them drift
+  for(const L of s.leagues){if(L.end||!L.conf||L.members.length<2)continue;let head=null,hp=-1;for(const q of L.members){const p=s.pols[q];const pw=power(p);if(pw>hp){hp=pw;head=p}}
+    const cp=head.ruler&&head.ruler.comp!=null?head.ruler.comp:0.5;
+    for(const q of L.members.slice()){const m=s.pols[q];if(m===head)continue;
+      if(y-L.born>=40&&cp>0.55&&power(m)<0.6*hp&&r()<0.3*(cp-0.55)){for(const i of polCells(q)){s.pol[i]=head.id;s.integ[i]=Math.max(s.integ[i],0.5)}
+        m.league=null;L.members=L.members.filter(k=>k!==q);s.unionN=(s.unionN||0)+1;
+        chron('diplomacy',`The ${m.full} passes to the ${head.full}${r()<0.5?' by marriage':' by inheritance'}; the ${L.name} draws closer to one realm.`,m.capital,[R_(m),R_(head),['league',L.id,L.name]],'A run of able rulers at the head of the confederation had made it the natural centre.')}
+      else if(cp<0.4&&r()<0.05){m.league=null;L.members=L.members.filter(k=>k!==q)}}}
 }
 function colonizePass(){
   const s=S,w=WD,r=s.r;
