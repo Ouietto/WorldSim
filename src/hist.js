@@ -2514,7 +2514,8 @@ function cellPeople(){const w=WD,s=S,G=w._cg||(w._cg=new Float64Array(NC)),S_=w.
 // A passive neighbour two and a half times as strong still presses fully; a passive weaker one barely at all, and that border's
 // people lose their reason to hold together. For stateless people across, their numbers against the province's own, riders
 // counting three times (half as many press fully); a realm next door presses fully on people without one. It reaches the same band inward as the old frontier. The memory of raids and war in a province (s.thr)
-// counts too, whoever the raiders are. Where neither presses, solidarity wears down as in any safe interior: an empty desert edge
+// counts too, whoever the raiders are. The pressure spreads inward only among the people who feel it (the same realm, or the
+// same stateless country), not across the line to the other side. Where neither presses, solidarity wears down as in any safe interior: an empty desert edge
 // no longer keeps a valley's cohesion at its peak for ever (probe front2.js: Egypt held at cohesion 1.00 for 1,500 years with
 // fewer than one in twenty as many people across half its line)
 const THRC=swOn('thrcoh'),TREACH=THRC&&!swOn('notreach');
@@ -2529,7 +2530,7 @@ function frontThreat(){const w=WD,s=S,L=w.landIdx,n=w.n,T=w._ft||(w._ft=new Floa
       if(!((ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)||(ri>=0&&s.rel[j]>=0&&s.rel[j]!==ri)))continue;
       const qj=s.pol[j],t=qj&&p?pw[qj]/pw[p]*(0.4+0.6*dispOf(s.pols[p],s.pols[qj]))/k:qj?1:s.pop[j]*(1+2*rideAtCell(j))/(0.5*k*(s.pop[i]+1));if(t>f)f=t}
     if(f<=0.005)continue;f=Math.min(1,f);stamp++;St[i]=stamp;D[i]=0;q.length=0;q.push(i);
-    for(let h=0;h<q.length;h++){const c=q[h];if(f>T[c])T[c]=f;for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j<0||!w.land[j])continue;const x=D[c]+w.nbD[e];
+    for(let h=0;h<q.length;h++){const c=q[h];if(f>T[c])T[c]=f;for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||s.pol[j]!==p)continue;const x=D[c]+w.nbD[e];
       if(x<=0.75&&(St[j]!==stamp||x<D[j])){St[j]=stamp;D[j]=x;q.push(j)}}}}
   w._ftN=stamp;return T}
 function frontBand(){const w=WD,s=S,L=w.landIdx,n=w.n,d=w._fb||(w._fb=new Float32Array(n)),F=w._fbF||(w._fbF=new Uint8Array(n)),q=[];d.fill(9);F.fill(0);
