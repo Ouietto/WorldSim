@@ -608,6 +608,42 @@ const RISE=swOn('rise'),CENTRE=RISE&&!swOn('nocentre');
 // carry) goes over to the rival in the heartland (noesplit).
 const MEM=RISE&&!swOn('nomemory'),CONF=RISE&&!swOn('noconf'),VIG=RISE&&!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=RISE&&!swOn('noselect'),SECEDE=RISE&&!swOn('nosecede'),LORDCRISIS=RISE&&swOn('lordcrisis');
 const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
+// corruption (2026-11-24, Nein; opt-in switch corrupt, knob corr; plan in the project doc claude/corruption-plan.md): one
+// realm-wide level (o.cor, 0 to 1) read each year from conditions the model already keeps: a surplus elite competing for too few
+// offices, officials the court cannot pay, a slack court, a greedy ruler, a weak mandate, the lords' share and a realm stretched
+// beyond its reach; against the checks of records, ledgers, law, roads and the practice of checks held at the court. It moves a
+// tenth of the way each year, so its memory is the elite, vigilance and checks that drive it. What it takes feeds the elite.
+// Felt locally (corAt): more far from the court, in loosely bound provinces, less where the practice of checks is held.
+// Channels, each with an off switch: nocortax (collectors skim: the court gets less, the peasants pay the same), nocorlevy
+// (padded rolls: fewer men), nocorpay (pay that never reaches the soldiers), nocoroff (offices sold and multiplied: the court costs
+// more and keeps more of the revenue from the army; replaces the elite rule of noovh), nocorgov (governors who sell justice:
+// provinces bound less tightly, a failing court in their eyes), nocorgate (bribed gates). Reform: noreflocal (a practice of
+// checks, s.chk, arises in towns with trade and records when corruption bites, and spreads like know-how; held at the court it
+// checks the whole realm), noreftop (an able, watchful ruler moves against it: fast, but the elite's income is hit and they may
+// strike back)
+const CORR=swOn('corrupt'),CORT=CORR&&!swOn('nocortax'),CORL=CORR&&!swOn('nocorlevy'),CORP=CORR&&!swOn('nocorpay'),CORO=CORR&&!swOn('nocoroff'),CORG=CORR&&!swOn('nocorgov'),CORB=CORR&&!swOn('nocorgate'),REFL=CORR&&!swOn('noreflocal'),REFT=CORR&&!swOn('noreftop');
+const corOf=o=>CORR&&o&&o.kind==='state'?(o.cor||0):0;
+function corAt(o,i){if(!CORR||!o||o.kind!=='state')return 0;const s=S,far=s.dist[i]>=65534?1:Math.min(1,s.dist[i]/Math.max(1,o.h||6));
+  return clamp((o.cor||0)*(0.6+0.4*far)*(1.2-s.integ[i])*(1-0.6*(s.chk?s.chk[i]:0)),0,1)}
+function corYear(o,c){const s=S,R=o.ruler||{},eS=clamp(o.E/Math.max(1e-6,etOf(o))-1,0,2)/2,uP=clamp(0.5*Math.max(0,(o.burden||0)-1)+0.5*Math.max(0,-(o.treas||0)),0,1),
+    vg=o.vig??0.6,rec=o.info?Math.min(1,o.info.rec||0):s.recK[c],D=0.3*eS+0.25*uP+0.15*(1-vg)+0.15*(R.greed??0.5)+0.1*(1-(o.mandate??1))+0.15*(o.nob||0)+0.15*Math.min(1,(o.md||0)/Math.max(1,o.h||6)),
+    O=clamp(0.35*rec+0.2*(s.tk[27][c]>0.5?1:0)+0.2*s.law[c]+0.15*s.roads[c]+0.4*(s.chk?s.chk[c]:0),0,0.9),T=clamp(knob('corr')*D*(1-0.7*O),0,1);
+  o.cor=(o.cor||0)+0.1*(T-(o.cor||0));
+  // (noreftop) an able, watchful ruler moves against it
+  if(REFT&&o.cor>0.35&&(R.comp??0.5)>0.6&&vg>0.5&&s.year-(o.refY||-1e9)>30&&s.r()<0.05*((R.comp??0.5)-0.6)*o.cor*10){o.refY=s.year;s.refTopN=(s.refTopN||0)+1;
+    if(!s.chk)s.chk=new Float32Array(N);s.chk[c]=Math.max(s.chk[c],0.8);o.cor*=0.6;o.E*=0.85;
+    const back=clamp(0.6*eS+0.5*(o.nob||0),0,0.9);
+    if((o.cA||o.cells)>=15)chron('state',`${cap(rulerName(o))} of the ${o.full} moves against corrupt officials: collectors are audited and offices taken back.`,c,[R_(o)],'Revenue was vanishing between the villages and the treasury.');
+    if(s.r()<0.5*back){s.refBackN=(s.refBackN||0)+1;o.shock=(o.shock||0)+0.3;const old=rulerName(o);o._fu=1;succession(o);o._fu=0;
+      if((o.cA||o.cells)>=15)chron('fall',`The great families of the ${o.full}, stripped of their offices, strike back: ${old} is overthrown.`,c,[R_(o)],'The reform cut into the income of the men who held the realm together.')}}}
+// (noreflocal, decade) the practice of checks: it arises where towns, trade and records give people a stake and corruption bites,
+// spreads to neighbouring provinces along roads and caravans and within a realm, and is slowly captured where corruption runs high
+function checkPass(){const s=S,w=WD,r=s.r;if(!s.chk)s.chk=new Float32Array(N);const C=s.chk,nx=new Float32Array(N);
+  for(const i of w.landIdx){const p=s.pol[i],o=p?s.pols[p]:null,ci=corAt(o,i);let v=C[i];
+    if(v<0.3&&s.city[i]>=0&&s.recK[i]>0.3&&(s.car[i]>0.2||w.coast[i])&&ci>0.1&&r()<0.2*ci){v=Math.max(v,0.5);s.refLocN=(s.refLocN||0)+1}
+    let m=v;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j])continue;const link=(s.pol[j]===p&&p?0.5:0.2)+0.5*Math.min(1,s.roads[i]+s.car[i]);m=Math.max(m,v+0.05*link*(C[j]-v))}
+    nx[i]=Math.max(0,m*(1-0.03*ci))}
+  C.set(nx)}
 // how realms rise and fall in turn (2026-11-24, Nein; inside rise, each with its own off switch):
 // - crisis depth (nodepth): the worse the stress, the deeper a civil war reaches; at its worst the heartland's own lords and cities
 //   rise, not just the far provinces
@@ -681,7 +717,7 @@ function cwForce(o,i){let f=1;if(PAYW&&o.kind==='state')f*=(1-0.4*Math.min(1,o.o
 const WRATE=RISE&&!swOn('nowarrate'),JUDGE=RISE&&!swOn('nojudge'),PROTECT=RISE&&!swOn('noprotect'),UPKEEP=RISE&&!swOn('noupkeep'),HOLDB=RISE&&!swOn('noholdback'),FLIGHT=RISE&&!swOn('noflight');
 const unpaidOf=d=>UPKEEP&&d&&d.kind==='state'?clamp(Math.max((-(d.treas||0)-0.3)/0.7,(d.owed||0)-0.3),0,1):0;
 // how badly a realm is failing its people: losing, broke, in crisis
-const failOf=o=>clamp(0.5*Math.max(0,-(o.mom||0))+0.3*((o.treas||0)<0?1:0)+0.15*Math.max(0,(o.psi||0)-1.5)+0.3*unpaidOf(o),0,1);
+const failOf=o=>clamp(0.5*Math.max(0,-(o.mom||0))+0.3*((o.treas||0)<0?1:0)+0.15*Math.max(0,(o.psi||0)-1.5)+0.3*unpaidOf(o)+(CORG?0.3*(o.cor||0):0),0,1);
 // a fog over the odds of war: thinner under a capable ruler and with written records and court memory
 function fogOf(o){const R=o.ruler||{},mem=o.info?Math.min(1,o.info.memo||0):0,sd=0.6*(1-0.5*(R.comp??0.5))*(1-0.6*mem);return Math.exp(sd*gauss(S.r))}
 // (noprotect, decade) provinces of a failing realm go over to a stronger neighbour that can protect them
@@ -1513,7 +1549,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
         const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);if(GENL)o.ruler.mil=Math.max(milOf(o.ruler),0.75,a.sk??0);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
-function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)*(OVH?1-ovhOf(o):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?((prestOn()&&o.nomP!=null?o.nomP+0.25*Math.max(0,o.pop-o.nomP):o.pop)*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
+function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=(CORL&&o.cor?1-0.3*o.cor*(0.5+(o.nob||0)):1)*0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)*(CORO&&o.kind==='state'?1-Math.min(0.6,0.6*(o.cor||0)):OVH?1-ovhOf(o):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?((prestOn()&&o.nomP!=null?o.nomP+0.25*Math.max(0,o.pop-o.nomP):o.pop)*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
 function power(o){return Math.pow(strength(o)+1,P.scaleExp)*(0.3+o.S)*milAt(o.capital)}
 const dd=i=>S.dist[i]>=65534?40:Math.min(60,S.dist[i]*0.5);
 function defense(j){const s=S,w=WD,q=s.pol[j];let Ud;
@@ -1576,6 +1612,8 @@ function attack(o,i,j,sea){
   // stronger rather than fight for a court that never needed them (Nein 2026-11-24)
   if(!win&&TREACH&&q&&!sea&&s.pols[q].kind==='state'&&j!==s.pols[q].capital&&s.s[j]<0.35){const pT=0.15*knob('treach')*(1-s.s[j]/0.35)*clamp(1.2-s.integ[j],0,1)*(Ua>Ud?1:0.3);
     if(s.r()<pT){win=true;s.treachN=(s.treachN||0)+1}}
+  // (nocorgate) a bribed gate: the commander or the town's officials let the attacker in
+  if(!win&&CORB&&q&&!sea&&j!==s.pols[q].capital){const d=s.pols[q];if(d.kind==='state'&&d.cor){const pB=0.06*corAt(d,j)*(Ua>Ud?1:0.3);if(pB>0&&s.r()<pB){win=true;s.bribeN=(s.bribeN||0)+1}}}
   // (nopay) soldiers owed their pay, facing the rebels, go over to them
   if(!win&&PAYW&&war0&&war0.civil&&q===war0.d[0]&&o.cwR===q&&j!==s.pols[q].capital){const d=s.pols[q];
     if(s.r()<0.25*Math.min(1,d.owed||0)*clamp(1.2-s.integ[j],0,1)){win=true;s.payDefN=(s.payDefN||0)+1}}
@@ -2051,6 +2089,7 @@ function* politicsG(){
     // builds new layers of office and records or splits; growth stalls at this threshold until records arrive (Shin et al. 2020)
     if(SCK&&o.kind==='state'){const mo=o.mono||{},inf=o.info||{rec:0};o.cap=15000*Math.exp(2.5*(o.cplx||0.2)+3.6*Math.min(1.5,inf.rec||0)+0.6*(mo.sacred||0)+(mo.force||0));
       o.scl=Math.max(0,Math.log(Math.max(1,o.pop)/o.cap));o.coord=Math.exp(-0.5*SCK*o.scl);o.tax*=o.coord}else{o.scl=0;o.coord=1}
+    if(CORT&&o.kind==='state'&&o.cor&&o.tax>0)o.tax*=1-Math.min(0.6,0.4*o.cor*(0.7+0.6*(o.mon||0)));
     // manpower (cohort switch): the men of fighting age against a settled population's usual share (1 = normal, below = bled
     // white, above = a youth bulge). Armies draw a share of them: most herders ride; farmers send what the levy reaches.
     // Every year at war costs a part of the army to battle, siege and camp fever (Scheidel 2007 on Roman losses); boys take
@@ -2067,10 +2106,10 @@ function* politicsG(){
         pr=clamp(vigWar(o)+(y-(o.raidY||-1e9)<10?vigRaid(o):0)+0.4*Math.min(1,o.shock||0)+Math.max(0,o.press-0.95),0,1),
         tg=clamp(0.2+0.5*cp+0.6*pr,0,1),v=o.vig??0.8;o.vig=v+(tg>v?0.08:0.006*(1.5-cp))*(tg-v)}
     if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*0.85;if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;if(LEARN&&o.arm)for(const a of o.arm)if(a.sk!=null&&a.cmd!==0)a.sk+=0.04*(0.5-a.sk);
-    o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
+    o.E=clamp(o.E+(CORR?0.004*corOf(o)*o.E:0)+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
-    statecraft(o,c,y);militaryPass(o);elitePass(o);
+    statecraft(o,c,y);if(CORR&&o.kind==='state'&&o.alive)corYear(o,c);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pO=(bountyOn()&&o.kind==='horde'?0.8*Math.max(0,(o.owed||0)-0.6):0)+(portOn()&&o.kind==='horde'?1.5*Math.max(0,(o.griev||0)-0.3):0)+(prestOn()&&o.kind==='horde'?2.5*Math.max(0,Math.min(1,o.expect||0)-(o.prest||0)):0),pP=Math.max(0,o.press-0.85)*3*(khanOn()&&o.kind==='horde'?1-0.7*Math.min(1,(o.hunger||0)/0.3):1),pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,pO,sh:o.shock};o.psi=pO+pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
@@ -2254,6 +2293,8 @@ function* politicsG(){
       // (the Qin and Ming walls, Hadrian's; Waldron 1990), not with scribes
       // (noupkeep) walls nobody pays for crumble: a fiftieth a year while the treasury is empty
       if(UPKEEP&&!horde&&s_fort[i]>0&&(o.treas||0)<-0.3)s_fort[i]*=0.98;
+      // (nocorgov) governors who sell justice: the province is bound less tightly
+      if(CORG&&!horde&&o.cor)s_integ[i]=Math.max(0,s_integ[i]-0.003*corAt(o,i));
       if(!horde&&gthrOn()){const TH=s.thr||(s.thr=new Float32Array(N));TH[i]=threat?Math.min(1,TH[i]+0.04):TH[i]*0.985}
       if(threat&&!horde&&o.S>0.45&&o.gate>0.7&&o.treas>0&&s_fort[i]<1){const pay=Math.min(1.5,o.treas+0.6*(o.levy||0));if(pay>0.3)s_fort[i]=Math.min(1,s_fort[i]+0.006*fz*pay*(1+s_roads[i]))}
       // (switch prest) a new khan rises where a state claims grass it does not hold: herding country of little loyalty, far from
@@ -2496,7 +2537,7 @@ function* stepG(){
   if(WKS&&ymod(s.year,10)===4){rsd('works');worksPass()}
   if(ymod(s.year,10)===6){rsd('landuse');landUsePass();yield}
   if(ymod(s.year,10)===8){rsd('herd');herdPass();rsd('coal');coalitionPass();yield}
-  if(s.year%10===0){rsd('dec');genCache();ritualPass();deepPass();recPass();carbonPass();yield;rsd('matrix');matrixPass();yield;rsd('colony');colonyPass();if(!NOLEAGUE){rsd('league');leaguePass();colonizePass()}if(CONF){rsd('conf');confPass()}if(PROTECT){rsd('protect');protectPass()}yield;recordStats();rsd('city');cityPass();yield;rsd('region');regionPass();yield;rsd('mix');mixPass()}
+  if(s.year%10===0){rsd('dec');genCache();ritualPass();deepPass();recPass();carbonPass();yield;rsd('matrix');matrixPass();yield;rsd('colony');colonyPass();if(!NOLEAGUE){rsd('league');leaguePass();colonizePass()}if(CONF){rsd('conf');confPass()}if(PROTECT){rsd('protect');protectPass()}if(REFL){rsd('chk');checkPass()}yield;recordStats();rsd('city');cityPass();yield;rsd('region');regionPass();yield;rsd('mix');mixPass()}
 }
 
 /* ================= v0.5: land, ecology, disease, contact, inequality ================= */
@@ -2553,7 +2594,7 @@ function statecraft(o,c,y){
   o.cplx+=tgt>o.cplx?0.01*(tgt-o.cplx):0.0015*(tgt-o.cplx);
   const ledger=s.tk[27][c]>0.5;
   // ruling costs grow with people AND with land: every province needs officials, garrisons and messengers, so thinly peopled realms cost more than they pay
-  const upkeep=0.28*Math.pow(o.cplx,ledger?1.6:1.8)*(o.pop+12000*real*(1-0.4*s.roads[c])),rev=(o.tax||0)*(1-0.45*(o.nob||0))*(ledger?1.1:1)+1;
+  const upkeep=(CORO?1+0.5*(o.cor||0):1)*0.28*Math.pow(o.cplx,ledger?1.6:1.8)*(o.pop+12000*real*(1-0.4*s.roads[c])),rev=(o.tax||0)*(1-0.45*(o.nob||0))*(ledger?1.1:1)+1;
   o.burden=upkeep/rev;
   o.pT=Math.max(0,o.burden-1)*1.2;
   const atWar=o.enemies.size>0;

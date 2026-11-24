@@ -18,7 +18,7 @@ function colonyPass(){
     // settlement of veterans on conquered land pays some of it off. A state deep in this debt looks for land to conquer, its
     // soldiers listen to generals who promise it, and at last they demand it (the Gracchi; Marius; Brunt 1971)
     const GRANT=!swOn('nogrants');
-    if(GRANT){const pay=clamp((o.mon||0)*(o.treas>-0.3?1:0.4),0,1);o.owed=clamp((o.owed||0)*0.9+(o.enemies.size?0.1*(1-pay):0),0,1.5);
+    if(GRANT){const pay=clamp((o.mon||0)*(o.treas>-0.3?1:0.4)*(CORP&&o.cor?1-0.5*o.cor:1),0,1);o.owed=clamp((o.owed||0)*0.9+(o.enemies.size?0.1*(1-pay):0),0,1.5);
       if(o.owed>1&&!o.owedC&&real>=20){o.owedC=1;o.shock=(o.shock||0)+0.2;chron('fall',`The soldiers of the ${o.full} demand the land they were promised for their service, and there is none left to give.`,c,[R_(o)],'Wars had been paid for in promises of land; the conquests had stopped.')}
       if(o.owed<0.5)o.owedC=0}
     // plant a colony on a recently taken, thinly settled frontier province

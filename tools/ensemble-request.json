@@ -1,11 +1,13 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"six + rebels hold","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,norebmom,nopay,noegone,noovh,novulture,nofrontload,nohungry,nowarrate,nojudge,noprotect,noupkeep,noholdback,noflight KV=wbuild:0.5"},
- {"name":"six + rebels hold + gathering","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,norebmom,nopay,noegone,noovh,novulture,nofrontload,nohungry KV=wbuild:0.5"},
- {"name":"everything","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
- {"name":"  without war rate","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nowarrate KV=wbuild:0.5"},
- {"name":"  without judgment","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5"},
- {"name":"  without protection","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noprotect KV=wbuild:0.5"},
- {"name":"  without upkeep (walls, garrisons)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noupkeep KV=wbuild:0.5"},
- {"name":"  without holding back","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noholdback KV=wbuild:0.5"},
- {"name":"  without flight","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noflight KV=wbuild:0.5"}]}
+ {"name":"best (everything but judgment)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5"},
+ {"name":"best + corruption","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt KV=wbuild:0.5"},
+ {"name":"  without tax skimming","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocortax KV=wbuild:0.5"},
+ {"name":"  without padded levies","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorlevy KV=wbuild:0.5"},
+ {"name":"  without lost pay","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorpay KV=wbuild:0.5"},
+ {"name":"  without sold offices","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocoroff KV=wbuild:0.5"},
+ {"name":"  without corrupt governors","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorgov KV=wbuild:0.5"},
+ {"name":"  without bribed gates","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorgate KV=wbuild:0.5"},
+ {"name":"  without local reform","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,noreflocal KV=wbuild:0.5"},
+ {"name":"  without reform from the top","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,noreftop KV=wbuild:0.5"},
+ {"name":"baseline + corruption","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,corrupt"}]}
