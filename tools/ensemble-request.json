@@ -1,6 +1,6 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"works+rise (run 135)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nodepth,norelease,nomomentum,nobandwagon,nogeneral KV=wbuild:0.5"},
+ {"name":"works+rise as run 135","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nodepth,norelease,nomomentum,nobandwagon,nogeneral KV=wbuild:0.5"},
  {"name":"works+rise+all six","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
  {"name":"all six, no depth","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nodepth KV=wbuild:0.5"},
  {"name":"all six, no release","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,norelease KV=wbuild:0.5"},

@@ -627,7 +627,7 @@ const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
 const DEPTH=RISE&&!swOn('nodepth'),RELEASE=RISE&&!swOn('norelease'),MOM=RISE&&!swOn('nomomentum'),BANDW=RISE&&!swOn('nobandwagon'),GENL=RISE&&!swOn('nogeneral'),LEARN=GENL&&!swOn('nolearn');
 const milOf=R=>R?(R.mil??(0.5*(R.comp??0.5)+0.5*(R.aggr??0.5))):0.5;
 // a battle fought near the ruler's own army (or a veteran army) teaches: dif is how hard it was (1 - the odds of the side), won or lost
-function learnWar(o,i,win,dif){if(!LEARN||o.kind!=='state'||!o.arm)return;const R=o.ruler;if(!R)return;const k=0.03*knob('learn');
+function learnWar(o,i,win,dif){if(!LEARN||o.kind!=='state'||!o.arm||!(dif>=0))return;const R=o.ruler;if(!R)return;const k=0.03*knob('learn');
   o.vet=Math.min(1,(o.vet||0)+0.1*k*(win?1:0.5));let b=null,bd=800;for(const a of o.arm){const d=kmB(i,a.at);if(d<bd){bd=d;b=a}}
   if(b&&b.cmd===0){const m=milOf(R);R.mil=Math.min(1,m+k*(1-m)*(win?clamp(dif,0,1):0.6));if(R.mil>0.85&&m<=0.85&&!R._hi){R._hi=1;S.milHiN=(S.milHiN||0)+1}}
   // a general (a noble, priest, merchant or chief leading one of the realm's armies) learns the same way; a winning one far from a
@@ -1461,7 +1461,7 @@ function attack(o,i,j,sea){
   const di=dd(i);
   let Ua=Math.pow(strength(o)+1,P.scaleExp)*(0.5*o.S+0.5*s.s[i])*milAt(i,1)*hReach(o,di);
   // (switch nosupply) a horde lives off its herds: striking out of farmland, far from grass, it has little to feed its horses on
-  if(o.kind==='horde'&&!swOn('nosupply')&&!w.nomad[i]&&!w.desert[i])Ua*=0.6+0.4*clamp(s.past[i]/0.5,0,1);const FLD=fieldOn();if(sea&&o.stSl>0)Ua*=1+0.3*Math.min(1,o.stSl/50000);if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*x.coastN/Math.max(1,x.cells)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
+  if(o.kind==='horde'&&!swOn('nosupply')&&!w.nomad[i]&&!w.desert[i])Ua*=0.6+0.4*clamp(s.past[i]/0.5,0,1);const FLD=fieldOn();if(sea&&o.stSl>0)Ua*=1+0.3*Math.min(1,o.stSl/50000);if(FLD&&o.kind==='state'){Ua*=localForce(o,i);if(o.cmdTop===2&&q&&s.pols[q].rel!==o.rel)Ua*=1.2}if(sea){const dq=s.pol[j]?s.pols[s.pol[j]]:null;const nv=x=>x?(0.3+s.nav[x.capital]+0.5*s.ocean[x.capital])*Math.min(1,0.2+2*(x.coastN||0)/Math.max(1,x.cells||0)):0;Ua*=clamp(0.35+0.5*(nv(o)-0.7*nv(dq)),0.15,0.9)}
   if(!q&&s.pop[j]<1){if(!sea&&s.r()<(o.kind==='horde'?0.15*(0.15+0.85*rideOf(o)):dd(i)<0.45*o.h||s.fort[i]>0.3?0.05:0.005)&&(o.kind!=='horde'||w.nomad[j]||w.desert[j])){s.pol[j]=o.id;s.taken[j]=s.year;s.dist[j]=Math.min(65534,s.dist[i]+stepCost(i,j))}return}
   // a state does not take land that cannot pay for its own garrison, unless a caravan road runs through it
   if(!q&&o.kind==='state'&&armyOn()&&s.car[j]<0.3&&!oreWanted(o,j)&&s.pop[j]*s.farm[j]*cerealEff(j)<garrAt(j,0.08,calmOf(o),i)){
