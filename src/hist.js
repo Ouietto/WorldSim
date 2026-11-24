@@ -629,7 +629,10 @@ const milOf=R=>R?(R.mil??(0.5*(R.comp??0.5)+0.5*(R.aggr??0.5))):0.5;
 // a battle fought near the ruler's own army (or a veteran army) teaches: dif is how hard it was (1 - the odds of the side), won or lost
 function learnWar(o,i,win,dif){if(!LEARN||o.kind!=='state'||!o.arm)return;const R=o.ruler;if(!R)return;const k=0.03*knob('learn');
   o.vet=Math.min(1,(o.vet||0)+0.1*k*(win?1:0.5));let b=null,bd=800;for(const a of o.arm){const d=kmB(i,a.at);if(d<bd){bd=d;b=a}}
-  if(b&&b.cmd===0){const m=milOf(R);R.mil=Math.min(1,m+k*(1-m)*(win?clamp(dif,0,1):0.6));if(R.mil>0.85&&m<=0.85&&!R._hi){R._hi=1;S.milHiN=(S.milHiN||0)+1}}}
+  if(b&&b.cmd===0){const m=milOf(R);R.mil=Math.min(1,m+k*(1-m)*(win?clamp(dif,0,1):0.6));if(R.mil>0.85&&m<=0.85&&!R._hi){R._hi=1;S.milHiN=(S.milHiN||0)+1}}
+  // a general (a noble, priest, merchant or chief leading one of the realm's armies) learns the same way; a winning one far from a
+  // weak court may take the throne and bring his skill with him (armyYear)
+  else if(b){const m=b.sk??0.5;b.sk=Math.min(1,m+k*(1-m)*(win?clamp(dif,0,1):0.6))}}
 // a realm's momentum after a battle won or lost against a state (gates opened to a winner by lords hedging on the loser's side)
 function momWar(o,d,j,win){if(!MOM||o.kind!=='state'||!d||d.kind!=='state')return;const s=S,a=win?1:0.4;   // a province taken counts fully, an assault beaten off less
   const W=win?o:d,L=win?d:o;W.mom=Math.min(1,(W.mom||0)+0.06*a*(1-Math.max(0,W.mom||0)));L.mom=Math.max(-1,(L.mom||0)-0.06*a*(1+Math.min(0,L.mom||0)));
@@ -1418,7 +1421,7 @@ function cmdPick(o,first){const cwt=o.cmdW,r=S.r;if(first){let b=0;for(let k=1;k
 function armiesOf(o){if(!o.cmdW){const E=S.eths[o.core],rl=o.rel>=0&&S.rels[o.rel]?S.rels[o.rel].cent||0:0;o.cmdW=E&&E.cmdW?E.cmdW.slice():[1,1,0.4+rl,0.3,1.5];o.arm=[]}
   const n=1+Math.min(3,Math.floor((o.cA||o.cells)/40));while(o.arm.length<n)o.arm.push({at:o.capital,cmd:cmdPick(o,o.arm.length===0),eta:0,w:0,l:0});
   if(o.arm.length>n)o.arm.length=n;return o.arm}
-function localForce(o,i){const A=o.arm;if(!A||!A.length)return 1;const y=S.year;let f=0.3;for(const a of A){const m=a.cmd===0?(GENL?Math.max(0.3,1.05+0.9*knob('gen')*(milOf(o.ruler)-0.5)):0.9+0.4*o.ruler.comp):CMD_M[a.cmd];f+=0.7/A.length*(a.eta>y?0.3:1)*m*Math.exp(-kmB(i,a.at)/600)}return f*(LEARN?1+0.25*(o.vet||0):1)*(MOM?1+0.3*(o.mom||0):1)}
+function localForce(o,i){const A=o.arm;if(!A||!A.length)return 1;const y=S.year;let f=0.3;for(const a of A){const m=a.cmd===0?(GENL?Math.max(0.3,1.05+0.9*knob('gen')*(milOf(o.ruler)-0.5)):0.9+0.4*o.ruler.comp):CMD_M[a.cmd]*(LEARN?1+0.9*knob('gen')*((a.sk??0.5)-0.5):1);f+=0.7/A.length*(a.eta>y?0.3:1)*m*Math.exp(-kmB(i,a.at)/600)}return f*(LEARN?1+0.25*(o.vet||0):1)*(MOM?1+0.3*(o.mom||0):1)}
 function armyCredit(o,i,win){const A=o.arm;if(!A)return;let b=null,bd=800;for(const a of A){const d=kmB(i,a.at);if(d<bd){bd=d;b=a}}if(!b)return;
   if(win)b.w++;else b.l++;o.cmdW[b.cmd]=clamp(o.cmdW[b.cmd]*(win?1.01:0.985),0.05,5);const E=S.eths[o.core];if(E){if(!E.cmdW)E.cmdW=o.cmdW.slice();else E.cmdW[b.cmd]+=(o.cmdW[b.cmd]-E.cmdW[b.cmd])*0.02}}
 // each year: armies go where the fighting is (the first to where land was last lost, the rest to the fronts), marching 500 km a year
@@ -1429,7 +1432,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
       if(t!==a.at){const d=kmB(a.at,t);if(d>150){a.eta=y+Math.ceil(d/500)*(a.cmd===4&&!o.enemies.size?2:1);a.at=t}}
       // a winning general far from a weak court
       if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))*(1+3*(o.owed||0))){
-        const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);if(GENL)o.ruler.mil=Math.max(milOf(o.ruler),0.75);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
+        const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);if(GENL)o.ruler.mil=Math.max(milOf(o.ruler),0.75,a.sk??0);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
 function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?((prestOn()&&o.nomP!=null?o.nomP+0.25*Math.max(0,o.pop-o.nomP):o.pop)*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
@@ -1967,7 +1970,7 @@ function* politicsG(){
     if(VIG&&o.kind==='state'){const cp=o.ruler&&o.ruler.comp!=null?o.ruler.comp:0.5,
         pr=clamp(vigWar(o)+(y-(o.raidY||-1e9)<10?vigRaid(o):0)+0.4*Math.min(1,o.shock||0)+Math.max(0,o.press-0.95),0,1),
         tg=clamp(0.2+0.5*cp+0.6*pr,0,1),v=o.vig??0.8;o.vig=v+(tg>v?0.08:0.006*(1.5-cp))*(tg-v)}
-    if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*0.85;if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;
+    if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*0.85;if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;if(LEARN&&o.arm)for(const a of o.arm)if(a.sk!=null&&a.cmd!==0)a.sk+=0.04*(0.5-a.sk);
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
