@@ -1,6 +1,6 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"rise","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,rise"},
- {"name":"rise-memory","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,rise,nomemory"},
- {"name":"rise-conf","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,rise,noconf"},
+ {"name":"rise+lordcrisis","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,rise,lordcrisis"},
  {"name":"works+rise","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise KV=wbuild:0.5"},
+ {"name":"works+rise+lordcrisis","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,lordcrisis KV=wbuild:0.5"},
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"}]}
