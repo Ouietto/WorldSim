@@ -608,6 +608,47 @@ const RISE=swOn('rise'),CENTRE=RISE&&!swOn('nocentre');
 // carry) goes over to the rival in the heartland (noesplit).
 const MEM=RISE&&!swOn('nomemory'),CONF=RISE&&!swOn('noconf'),VIG=RISE&&!swOn('novig'),ESPLIT=CENTRE&&!swOn('noesplit'),SELR=RISE&&!swOn('noselect'),SECEDE=RISE&&!swOn('nosecede'),LORDCRISIS=RISE&&swOn('lordcrisis');
 const vigOf=o=>VIG&&o&&o.kind==='state'?(o.vig??0.8):1;
+// how realms rise and fall in turn (2026-11-24, Nein; inside rise, each with its own off switch):
+// - crisis depth (nodepth): the worse the stress, the deeper a civil war reaches; at its worst the heartland's own lords and cities
+//   rise, not just the far provinces
+// - release (norelease): a breakdown clears what built the stress. The surplus elite is already thinned in every civil war; when a
+//   crisis takes a large share of the realm, debts and pay owed are written off with the old order, and a dynasty that lost that
+//   much gives way to a new house
+// - momentum (nomomentum): each victory over a state lifts an army's confidence and the court's standing, each defeat lowers
+//   them; it fades within a few years without new victories. A realm on a losing streak sees its lords near the front hedge: they
+//   are bound more loosely, and some open their gates to the winner
+// - bandwagoning (nobandwagon): after a decisive victory, small neighbours of the victor weigh paying tribute against standing up
+//   to a rising power; the weaker they are against it, the more it has been winning and the less warlike their ruler, the likelier
+//   they submit
+// - generalship (nogeneral, knob gen): a ruler's skill at war (o.ruler.mil) counts in the field where he leads in person, from
+//   about two thirds of a common commander's force to about half as much again; it starts from his ability and his appetite for war
+// - learning (nolearn, knob learn): a ruler learns war by fighting it. An easy win teaches little, a hard win more, a defeat he
+//   survives most; the skill dies with him. His army keeps part of it as a veteran core (o.vet) that fades over a generation
+const DEPTH=RISE&&!swOn('nodepth'),RELEASE=RISE&&!swOn('norelease'),MOM=RISE&&!swOn('nomomentum'),BANDW=RISE&&!swOn('nobandwagon'),GENL=RISE&&!swOn('nogeneral'),LEARN=GENL&&!swOn('nolearn');
+const milOf=R=>R?(R.mil??(0.5*(R.comp??0.5)+0.5*(R.aggr??0.5))):0.5;
+// a battle fought near the ruler's own army (or a veteran army) teaches: dif is how hard it was (1 - the odds of the side), won or lost
+function learnWar(o,i,win,dif){if(!LEARN||o.kind!=='state'||!o.arm)return;const R=o.ruler;if(!R)return;const k=0.03*knob('learn');
+  o.vet=Math.min(1,(o.vet||0)+0.1*k*(win?1:0.5));let b=null,bd=800;for(const a of o.arm){const d=kmB(i,a.at);if(d<bd){bd=d;b=a}}
+  if(b&&b.cmd===0){const m=milOf(R);R.mil=Math.min(1,m+k*(1-m)*(win?clamp(dif,0,1):0.6));if(R.mil>0.85&&m<=0.85&&!R._hi){R._hi=1;S.milHiN=(S.milHiN||0)+1}}}
+// a realm's momentum after a battle won or lost against a state (gates opened to a winner by lords hedging on the loser's side)
+function momWar(o,d,j,win){if(!MOM||o.kind!=='state'||!d||d.kind!=='state')return;const s=S,a=win?1:0.4;   // a province taken counts fully, an assault beaten off less
+  const W=win?o:d,L=win?d:o;W.mom=Math.min(1,(W.mom||0)+0.06*a*(1-Math.max(0,W.mom||0)));L.mom=Math.max(-1,(L.mom||0)-0.06*a*(1+Math.min(0,L.mom||0)));
+  if(win&&L.mom<-0.3&&L.alive){const w=WD,hand=courtHand(L,false);let n=0;
+    for(let q=w.nbS[j];q<w.nbS[j+1]&&n<2;q++){const k2=w.nbA[q];if(k2<0||s.pol[k2]!==L.id||k2===L.capital)continue;
+      s.integ[k2]=Math.max(0,s.integ[k2]-0.03*(-L.mom));
+      if(s.r()<0.25*(-L.mom)*(1.2-s.integ[k2])*clamp(1-hand,0.1,1)){s.pol[k2]=W.id;s.taken[k2]=s.year;s.integ[k2]=Math.min(s.integ[k2],0.3);s.dist[k2]=Math.min(65534,s.dist[j]+stepCost(j,k2));
+        const g=W.enemies.get(L.id);if(g!=null){const war=s.wars[g];if(war.aSet.has(W.id))war.gA+=cw(k2);else war.gD+=cw(k2);war.lastGain=s.year}s.gateN=(s.gateN||0)+1;n++}}}}
+// (norelease) a realm of one or two provinces cannot split, but its crisis still breaks out: faction fights in the city (the stasis
+// of the Greek cities), the losers killed or driven into exile, a new house on the throne, the old debts gone
+function strife(o){const s=S,r=s.r;s.strifeN=(s.strifeN||0)+1;for(const i of polCells(o.id))s.pop[i]*=0.97;
+  o.E=0.6*etOf(o);o.treas=Math.max(o.treas||0,0);o.owed=0;o.shock=(o.shock||0)+0.3;o.crises++;if(o.cplx!=null)o.ineq=Math.max(0.2,o.ineq*0.9);
+  if(r()<0.5){o._fu=1;succession(o);o._fu=0}}
+// small neighbours of a victor weigh submitting (after a capital falls or a war is won outright)
+function bandwagon(o){if(!BANDW||!o||!o.alive||o.kind!=='state')return;const s=S,r=s.r,po=power(o)*(1+Math.max(0,o.mom||0));
+  for(const [q] of o.nb){const p=s.pols[q];if(!p||!p.alive||p.kind!=='state'||p.over||p.league!=null||o.enemies.has(q)||o.allies.includes(q)||p.enemies.size||o.over===q)continue;
+    const pr=po/(power(p)+1);if(pr<3)continue;const Rp=p.ruler||{aggr:0.5};
+    if(r()<clamp(0.08*(pr-2),0,0.4)*(1.3-Rp.aggr)){p.over=o.id;p.overY=s.year;o.tribs++;s.bandN=(s.bandN||0)+1;
+      if(p.cells>=15)chron('diplomacy',`Seeing the ${o.full} carry all before it, the ${p.full} sends gifts and accepts its overlordship.`,p.capital,[R_(p),R_(o)],'A small realm next to a rising power chose to pay tribute rather than wait its turn.')}}}
 // a war presses as hard as the strongest enemy in it is strong against the realm: wars on weak neighbours keep no one awake
 function vigWar(o){if(!o.enemies.size)return 0;let mx=0;const me=power(o)+1;for(const [q] of o.enemies){const e=S.pols[q];if(e&&e.alive)mx=Math.max(mx,power(e)/me)}return Math.min(0.6,0.5*mx)}
 // a raid presses as hard as the raiders are strong against the realm: a far-off frontier skirmish keeps no court awake
@@ -618,7 +659,7 @@ function vigRaid(o){const h=S.pols[o.raidBy];if(!h||!h.alive)return 0.05;return 
 // loosely the province is bound, its own solidarity, how much of the realm the lords hold between them, and the water others need
 // from it. Where the hold is stronger the lord does not obey.
 function courtHand(o,crisis){const s=S,c=o.capital,R0=o.ruler||{},will=0.5*(R0.comp??0.5)+0.5*(R0.aggr??0.5),adm=admOf()[c]*0.6+s.paper[c]*0.2+s.law[c]*0.2;
-  let h=clamp(0.35+0.35*(o.S||0)+0.3*adm+0.2*(o.mandate??1),0.1,1.3)*(VIG?0.6+0.4*vigOf(o):1)*(0.7+0.6*will);
+  let h=clamp(0.35+0.35*(o.S||0)+0.3*adm+0.2*(o.mandate??1),0.1,1.3)*(VIG?0.6+0.4*vigOf(o):1)*(0.7+0.6*will)*(MOM?1+0.25*(o.mom||0):1);
   if(crisis)h*=((o.treas||0)<-0.3?0.7:1)*(1-0.5*Math.min(1,o.owed||0))*(1-0.6*clamp(o.E/Math.max(1e-6,etOf(o))-1,0,1)*(1-0.5*vigOf(o)));return h}
 function lordsRefusing(o,cells,crisis){const s=S,hand=courtHand(o,crisis);let md=0,nd=0;for(const i of cells)if(s.dist[i]!==65535){md+=s.dist[i];nd++}md=nd?md/nd:1;
   const out=[];for(const i of cells){if(i===o.capital)continue;const far=s.dist[i]===65535?3:Math.min(3,s.dist[i]/Math.max(1e-6,md)),
@@ -1127,7 +1168,7 @@ function succession(o){
   o.rulers.push({name:R0.name,base:R0.base,epithet:R0.epithet,from:R0.since,to:s.year,conq:R0.conq,fig:R0.fig,dyn:o.dyn});
   if(o.rulers.length>60)o.rulers.shift();
   o.ruler=newRuler(L,o);
-  const usurp=r()<pU;if(usurp)selectRuler(o.ruler);
+  const usurp=r()<pU||!!o._fu;if(usurp)selectRuler(o.ruler);
   if(R0.fig!=null){const f=s.figs[R0.fig];f.died=s.year;deed(f,usurp?`Overthrown at ${s.year-R0.birth} by ${o.ruler.name}`:`Died at ${s.year-R0.birth}`);
     const fam=s.eths[o.core]?s.eths[o.core].fam:-1;
     if((f.conq>=80||f.realm>=200)&&fam>=0&&!s.famTitle[fam]&&r()<0.25){
@@ -1159,14 +1200,16 @@ function civilWar(o,breakup){
   // and also where many people are, so a populous province of the heartland can break away too (Larsa and Isin after Ur III)
   const pwB=CENTRE&&o.kind==='state'?(i=>Math.sqrt(s.pop[i]+100)):(()=>1);
   cells.sort((a,b)=>dd(b)*ecS.get(b)*pwB(b)-dd(a)*ecS.get(a)*pwB(a));
-  const n=clamp(1+(r()<0.5?1:0)+(A>=80&&r()<0.5?1:0)+Math.floor(A/250)+(breakup?2:0),1,6),top=cells.slice(0,Math.max(1,Math.round(cells.length*0.6))),seeds=[];
+  // (nodepth) the deeper the stress, the deeper the rising reaches: at a stress index of 2 the far six tenths of the realm, at 4 nearly all of it
+  const psi0=o.psi||0,fr=DEPTH&&!breakup?clamp(0.35+0.125*psi0,0.5,0.9):0.6,kp=DEPTH&&!breakup?0.7*clamp(1.5-0.25*psi0,0.3,1):0.7;
+  const n=clamp(1+(r()<0.5?1:0)+(A>=80&&r()<0.5?1:0)+Math.floor(A/250)+(breakup?2:0)+(DEPTH&&!breakup?Math.floor(Math.max(0,psi0-2)):0),1,6),top=cells.slice(0,Math.max(1,Math.round(cells.length*fr))),seeds=[];
   for(let t=0;t<60&&seeds.length<n;t++){const c=pick(r,top);if(c===o.capital)continue;if(seeds.every(q=>angDist(q,c)>0.07))seeds.push(c)}
   if(!seeds.length)return;
   const oldName=o.full,causes=topCauses(o.why||{}),why=breakup?'A confederation held together by one leader rarely outlives him.':causes.length?'Driven by '+causes.join(' and ')+'.':null;
   const lab=s.lab,q=s.q;let h=0,t=0;
   for(const i of cells)lab[i]=-2;
   lab[o.capital]=id;q[t++]=o.capital;
-  if(!breakup){const keep=cells.length-top.length;for(let k=cells.length-1;k>=0;k--){const c=cells[k];if(c===o.capital)continue;if(k>=top.length||s.integ[c]>0.8&&r()<0.7){lab[c]=id;q[t++]=c}}}
+  if(!breakup){const keep=cells.length-top.length;for(let k=cells.length-1;k>=0;k--){const c=cells[k];if(c===o.capital)continue;if(k>=top.length||s.integ[c]>0.8&&r()<kp){lab[c]=id;q[t++]=c}}}
   const sOK=seeds.filter(c=>lab[c]===-2);if(!sOK.length){for(const i of cells)lab[i]=0;return}
   const ids=sOK.map(c=>{const nid=newPolity(c,o,{kind:o.kind,origin:{type:'rebellion',from:id,why}});lab[c]=nid;q[t++]=c;return nid});
   while(h<t){const i=q[h++],l=lab[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&lab[j]===-2){lab[j]=l;q[t++]=j}}}
@@ -1206,6 +1249,11 @@ function civilWar(o,breakup){
       fellTo=best;s.cFallN=(s.cFallN||0)+1;s.cSplitN=(s.cSplitN||0)+1;
       if(A>=20)chron('fall',`The ${oldName} falls apart: its court is overthrown, but ${best.base} cannot hold the heartland, and its cities and lords go their own ways.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}}
   if(fellTo){remember(o,cells0);return}
+  // (norelease) a crisis that took a large share of the realm's people clears what built the stress: the old order's debts and the
+  // soldiers' back pay go with it, fewer of the surplus elite are left, and a dynasty that lost that much gives way to a new house
+  if(RELEASE&&o.kind==='state'&&o.alive){let p0=0,p1=0;for(const i of cells0){p0+=s.pop[i];if(s.pol[i]===id)p1+=s.pop[i]}const lost=p0>0?1-p1/p0:0;
+    if(lost>=0.3){o.treas=Math.max(o.treas||0,0);o.owed=0;o.E=etOf(o)*(0.7-0.4*Math.min(1,lost));s.releaseN=(s.releaseN||0)+1;
+      if(lost>=0.45){o._fu=1;succession(o);o._fu=0}}}
   const big=A>=40;
   const war=declareWar(rebels,[o],`the ${o.base} Civil War`,big,true);
   war.why=why;
@@ -1370,7 +1418,7 @@ function cmdPick(o,first){const cwt=o.cmdW,r=S.r;if(first){let b=0;for(let k=1;k
 function armiesOf(o){if(!o.cmdW){const E=S.eths[o.core],rl=o.rel>=0&&S.rels[o.rel]?S.rels[o.rel].cent||0:0;o.cmdW=E&&E.cmdW?E.cmdW.slice():[1,1,0.4+rl,0.3,1.5];o.arm=[]}
   const n=1+Math.min(3,Math.floor((o.cA||o.cells)/40));while(o.arm.length<n)o.arm.push({at:o.capital,cmd:cmdPick(o,o.arm.length===0),eta:0,w:0,l:0});
   if(o.arm.length>n)o.arm.length=n;return o.arm}
-function localForce(o,i){const A=o.arm;if(!A||!A.length)return 1;const y=S.year;let f=0.3;for(const a of A){const m=a.cmd===0?0.9+0.4*o.ruler.comp:CMD_M[a.cmd];f+=0.7/A.length*(a.eta>y?0.3:1)*m*Math.exp(-kmB(i,a.at)/600)}return f}
+function localForce(o,i){const A=o.arm;if(!A||!A.length)return 1;const y=S.year;let f=0.3;for(const a of A){const m=a.cmd===0?(GENL?Math.max(0.3,1.05+0.9*knob('gen')*(milOf(o.ruler)-0.5)):0.9+0.4*o.ruler.comp):CMD_M[a.cmd];f+=0.7/A.length*(a.eta>y?0.3:1)*m*Math.exp(-kmB(i,a.at)/600)}return f*(LEARN?1+0.25*(o.vet||0):1)*(MOM?1+0.3*(o.mom||0):1)}
 function armyCredit(o,i,win){const A=o.arm;if(!A)return;let b=null,bd=800;for(const a of A){const d=kmB(i,a.at);if(d<bd){bd=d;b=a}}if(!b)return;
   if(win)b.w++;else b.l++;o.cmdW[b.cmd]=clamp(o.cmdW[b.cmd]*(win?1.01:0.985),0.05,5);const E=S.eths[o.core];if(E){if(!E.cmdW)E.cmdW=o.cmdW.slice();else E.cmdW[b.cmd]+=(o.cmdW[b.cmd]-E.cmdW[b.cmd])*0.02}}
 // each year: armies go where the fighting is (the first to where land was last lost, the rest to the fronts), marching 500 km a year
@@ -1381,7 +1429,7 @@ function armyYear(){const s=S,y=s.year,r=s.r;
       if(t!==a.at){const d=kmB(a.at,t);if(d>150){a.eta=y+Math.ceil(d/500)*(a.cmd===4&&!o.enemies.size?2:1);a.at=t}}
       // a winning general far from a weak court
       if(k>0||a.cmd!==0){if(a.w-a.l>=6&&kmB(a.at,o.capital)>500&&(o.hold??0.5)<0.6&&r()<0.01*(1.3-(o.leg??1))*(1+3*(o.owed||0))){
-        const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
+        const old=o.ruler.name;succession(o);if(!o.alive)break;o.ruler.comp=Math.max(o.ruler.comp,0.7);if(GENL)o.ruler.mil=Math.max(milOf(o.ruler),0.75);o.shock=(o.shock||0)+0.3;o.cmdW[0]*=1.3;a.w=a.l=0;a.cmd=0;s.usurpN=(s.usurpN||0)+1;
         if((o.cA||o.cells)>=20)chron('fall',`A victorious general marches on the court of the ${o.full} and takes the throne from ${old}'s line as ${o.ruler.name}.`,o.capital,[R_(o)])}}}
     o.hot=null;o.hotN=0}}
 function strength(o){const rd=rideOf(o);if(o.kind!=='horde'&&armyOn()){const men=0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1)*(swOn('nogrants')?1:1-0.5*Math.max(0,(o.ineq||0.25)-0.45)*(1-0.7*(o.mon||0)))*(1-(o.slvS||0))*(1+0.8*(o.slvS||0))*(1+0.6*(o.mam||0))*(o.conqDyn&&wingsOn()?1+1.5*(o.hw||0)*(o.sH||0):1)*(1+0.3*craftOf(o.core));return((o.tax||0)*1.6*(moneyOn()?0.7+0.6*(o.mon||0):1)+Math.max(0.15*men,men-0.25*(o.garr||0)))*(o.arms??1)*stateMil(o)*(1+0.35*rd)}return o.kind==='horde'?((prestOn()&&o.nomP!=null?o.nomP+0.25*Math.max(0,o.pop-o.nomP):o.pop)*Math.min(1.3,o.mpR??1)+o.loot*3)*(1+0.6*craftOf(o.core))*(loreOn()?(1+0.5*clamp((o.hsM||1)-1,0,0.6))*(0.7+0.9*Math.min(1,rd+0.2*((S.eths[o.core]||{}).lore||0))):0.7+0.9*rd)*(0.8+0.4*(o.prep??0.6))*(1+0.5*clamp(o.prest||0,0,1)):((o.tax||0)*1.6+0.25*o.pop*(o.coord??1)*Math.min(1.3,o.mpR??1))*stateMil(o)*(1+0.35*rd)}
@@ -1475,6 +1523,7 @@ function attack(o,i,j,sea){
         if(j===d.capital&&o.kind==='state'&&war.goal==='break'&&war.aSet.has(o.id))breakRealm(o,d,war);
         else if(j===d.capital&&o.kind==='state'&&(d.cells<=2||d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
   }
+  if(RISE&&o.kind==='state'&&!evaded){const dq=q?s.pols[q]:null;if(FLD){learnWar(o,i,win,1-pw4);if(dq&&dq.kind==='state')learnWar(dq,j,!win,pw4)}if(dq)momWar(o,dq,j,win)}
   // cohort switch: every engagement costs men on both sides, more for the side that loses; a taken province loses many of
   // its young men (killed, fled or carried off), more in a punitive campaign
   const CO=cohArr();if(CO){const dq=q?s.pols[q]:null,a=cw(j);o.lossYM=(o.lossYM||0)+(o.army||0)*(win?0.005:0.012)*a;if(dq)dq.lossYM=(dq.lossYM||0)+(dq.army||0)*(win?0.012:0.005)*a;
@@ -1482,10 +1531,11 @@ function attack(o,i,j,sea){
 }
 // war goals (default since run 79): a show of force. The victor storms the capital and leaves the realm in pieces rather than annexing it
 function breakRealm(o,d,war){
-  const s=S,n=d.cells,old=d.full;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);
+  const s=S,n=d.cells,old=d.full;if(BANDW)war._bw=1;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);
   let bc=-1,bp=-1;for(const i of polCells(d.id))if(s.pop[i]>bp){bp=s.pop[i];bc=i}
   if(bc<0)return;d.capital=bc;d.shock+=0.8;d.mandate=0;
   if(n>=8)chron('war',`The ${o.full} storms the capital of the ${old} and breaks its power: the realm falls apart among its lords.`,o.capital,[R_(o),['pol',d.id,old],RW(war)],'A show of force: the victor wanted a weak neighbour, not more provinces.');
+  if(BANDW)bandwagon(o);
   if(polCells(d.id).length>=3)civilWar(d,true)}
 function raid(o,i,j,deep){
   const s=S,q=s.pol[j],t=s.pols[q];if(!t||t.over===o.id||t.paysTo===o.id)return;
@@ -1499,7 +1549,7 @@ function raid(o,i,j,deep){
   }
 }
 function decisive(o,d,war){
-  const s=S,r=s.r;review(d,'defeat');const kin=s.eths[d.core]&&s.eths[o.core]&&s.eths[d.core].fam===s.eths[o.core].fam;
+  const s=S,r=s.r;if(BANDW)war._bw=1;review(d,'defeat');const kin=s.eths[d.core]&&s.eths[o.core]&&s.eths[d.core].fam===s.eths[o.core].fam;
   const idn=s.uni[d.capital]>0.3&&s.eths[o.core]&&s.uniFam[d.capital]===s.eths[o.core].fam;
   // annex the whole realm only if the victor can hold it: its monopolies against the loser's own walls, scribes and cohesion;
   // otherwise the loser keeps its own ruler and pays tribute
@@ -1511,6 +1561,7 @@ function decisive(o,d,war){
     if(n>=8){chron('war',`The capital of the ${old} falls, and with it the whole realm: the ${o.full} annexes all ${Math.round(n)} provinces.`,o.capital,[['pol',d.id,old],R_(o),RW(war)]);if(n>=25)spot(`The ${o.full} swallows the ${old}`,o.capital,[R_(o)])}}
   else{d.over=o.id;o.tribs++;endWar(war);s.activeWars=s.activeWars.filter(k=>k!==war.id);
     if(n>=8)chron('war',`With its capital taken, the ${old} submits and becomes a vassal of the ${o.full}.`,d.capital,[R_(d),R_(o),RW(war)])}
+  if(BANDW)bandwagon(o);
 }
 function distBFS(){
   if(WD.hopK){distProv();return}
@@ -1582,6 +1633,7 @@ function endWar(war){
   if(war.notable||war.gA+war.gD>=25)chron('war',`${cap(war.name)} ends after ${yrs} year${yrs===1?'':'s'}; ${out}.`,A.alive?A.capital:D.capital,[RW(war),RB(A),RB(D)]);
   const win=war.gA>war.gD+2?A:war.gD>war.gA+2?D:null;
   if(win&&win.alive&&Math.abs(war.gA-war.gD)>=15){const f=figFor(win,win.ruler,'ruler');deed(f,`Victor in ${war.name}`,[RW(war)])}
+  if(BANDW&&win&&!war.civil&&!war._bw&&Math.abs(war.gA-war.gD)>=8)bandwagon(win);
 }
 function affinity(o,p){
   const s=S;let a=0,threat=null;
@@ -1915,6 +1967,7 @@ function* politicsG(){
     if(VIG&&o.kind==='state'){const cp=o.ruler&&o.ruler.comp!=null?o.ruler.comp:0.5,
         pr=clamp(vigWar(o)+(y-(o.raidY||-1e9)<10?vigRaid(o):0)+0.4*Math.min(1,o.shock||0)+Math.max(0,o.press-0.95),0,1),
         tg=clamp(0.2+0.5*cp+0.6*pr,0,1),v=o.vig??0.8;o.vig=v+(tg>v?0.08:0.006*(1.5-cp))*(tg-v)}
+    if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*0.85;if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;
     o.E=clamp(o.E+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
@@ -1923,8 +1976,12 @@ function* politicsG(){
     const pO=(bountyOn()&&o.kind==='horde'?0.8*Math.max(0,(o.owed||0)-0.6):0)+(portOn()&&o.kind==='horde'?1.5*Math.max(0,(o.griev||0)-0.3):0)+(prestOn()&&o.kind==='horde'?2.5*Math.max(0,Math.min(1,o.expect||0)-(o.prest||0)):0),pP=Math.max(0,o.press-0.85)*3*(khanOn()&&o.kind==='horde'?1-0.7*Math.min(1,(o.hunger||0)/0.3):1),pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
     const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,pO,sh:o.shock};o.psi=pO+pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
     const isl=o.island?0.4:1;
-    if(o.kind==='state'&&o.cells>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(o.cells>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
-    else if(o.cells>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl){if(o.kind==='horde')hordeBreakup(o);else civilWar(o)}
+    // (nodepth) a realm's crisis is counted in provinces, its lords and cities, not in acreage: a narrow, crowded valley like the
+    // Nile's held many nomes on little land, and could break apart like any other (before, a realm under three cells' area of land
+    // could not have a civil war at all, and one under forty could not shatter)
+    const nC=DEPTH&&o.kind==='state'&&szF?Math.max(o.cells,1.5*(o.nU||0)):o.cells;
+    if(o.kind==='state'&&nC>=40&&o.psi>2.2&&r()<P.crisis*0.008*(o.psi-2)*isl){o.shock+=0.4;if(nC>=80)chron('fall',`The ${o.full} shatters into rival kingdoms.`,o.capital,[R_(o)],'Driven by '+topCauses(o.why).join(' and ')+'.');civilWar(o,true)}
+    else if(nC>=3&&r()<P.crisis*0.0035*o.psi*o.psi*isl){if(o.kind==='horde')hordeBreakup(o);else if(RELEASE&&(o.nU||0)<3)strife(o);else civilWar(o)}
     else if(o.cells>=2&&o.S<(o.island?0.08:0.12)&&r()<0.02)collapse(o);
     if(o.kind==='horde'&&o.cells<=2&&y-o.born>30&&r()<0.03){for(const i of polCells(id)){pol[i]=0}continue}
     culture(o);
