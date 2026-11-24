@@ -6,6 +6,6 @@
  {"name":"  without war rate","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nowarrate KV=wbuild:0.5"},
  {"name":"  without judgment","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5"},
  {"name":"  without protection","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noprotect KV=wbuild:0.5"},
- {"name":"  without upkeep","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noupkeep KV=wbuild:0.5"},
+ {"name":"  without upkeep (walls, garrisons)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noupkeep KV=wbuild:0.5"},
  {"name":"  without holding back","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noholdback KV=wbuild:0.5"},
  {"name":"  without flight","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,noflight KV=wbuild:0.5"}]}

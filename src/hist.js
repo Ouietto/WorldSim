@@ -2252,6 +2252,8 @@ function* politicsG(){
       if(o.rel>=0&&ri!==o.rel&&pi>=1){const Rl=rels[o.rel];if(!(Rl.kind==='ethnic'&&ei>=0&&s_eths[ei].fam!==Rl.fam)&&r()<0.003*P.faith*o.S*(Rl.miss+0.3)*(0.7+0.6*Rl.cent))s_rel[i]=o.rel}
       // fortify threatened frontiers if the state is cohesive and can pay: walls are bought with treasure and labour gangs
       // (the Qin and Ming walls, Hadrian's; Waldron 1990), not with scribes
+      // (noupkeep) walls nobody pays for crumble: a fiftieth a year while the treasury is empty
+      if(UPKEEP&&!horde&&s_fort[i]>0&&(o.treas||0)<-0.3)s_fort[i]*=0.98;
       if(!horde&&gthrOn()){const TH=s.thr||(s.thr=new Float32Array(N));TH[i]=threat?Math.min(1,TH[i]+0.04):TH[i]*0.985}
       if(threat&&!horde&&o.S>0.45&&o.gate>0.7&&o.treas>0&&s_fort[i]<1){const pay=Math.min(1.5,o.treas+0.6*(o.levy||0));if(pay>0.3)s_fort[i]=Math.min(1,s_fort[i]+0.006*fz*pay*(1+s_roads[i]))}
       // (switch prest) a new khan rises where a state claims grass it does not hold: herding country of little loyalty, far from
