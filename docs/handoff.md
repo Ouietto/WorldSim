@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-147 scored, run 148
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-148 scored, no batch
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -626,6 +626,17 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 148 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence; all; all + rebels;
   all + reunification; all + both; that without cashing in, without drift, without fragile trust, without the decline in living,
   without claims after a partition, with the old rebel seeds.
+  **Result (f1e10c63, error; baseline 34.2% / 2.44; per millennium):** reference (best + corruption + intelligence) 2.23 ▲; all 2.35;
+  all + rebels 23.9 (▼) / 2.43; all + reunification 30.3 / 2.34; all + both 28.1 (▼) / 2.36; without cashing in 2.41, without drift
+  2.47 (drift helps), **without fragile trust 32.2 / 2.33, Egypt's intermediate periods median 0.08 (33% in band)**, without the decline
+  in living 2.42, without claims after a partition 2.41, **with the old rebel seeds 27.8 / 2.28 ▲, realms in turn Mesopotamia 5 (54%),
+  Egypt 5 (79%), Assyrian pattern 38% ▲, but intermediate periods 0.00**. Intermediate periods (median) now 0.02-0.08 with provinces
+  deciding (all + rebels 0.04, 29% in band; all + both 0.04, 33%), against 0.00 with the old seeds: provinces deciding breaks Egypt;
+  the old seeds give turnover. Per millennium (all + both): civil truces 11, cessions 1, gates to claimants 7, rebel provinces back
+  0.7, vacuum risings 40, court falls 65. **Still no variant beats the reference's error; the cost is late gathering throughout**
+  (Egypt's unification 1166-1941 BCE against the reference's 2211 and the real 3100; Akkad 481-1161 BCE against 1451 and 2300).
+  Proposed next (to Nein): probe the early gathering under all + both (3500-2000 BCE): whether the crisis machinery breaks the first
+  would-be unifiers before they consolidate.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
