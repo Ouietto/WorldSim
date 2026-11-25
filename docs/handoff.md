@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-146 scored, run 147
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-147 scored, run 148
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -601,6 +601,31 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 147 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence; all (fault + truce +
   elite cost k 1); all without the calculated truce; without provinces deciding (old seeds); risings at half and double (frise 0.5, 2);
   without vacuum risings; without defection; without weariness; without elite cost.
+  **Result (ff7443e1, error; baseline 34.2% / 2.44; per millennium):** best + corruption + intelligence 32.8 / 2.23 ▲; all (fault +
+  slog truce + elite cost k 1) 30.0 / 2.35; without the calculated truce 25.8 (▼) / 2.43 (with the slog rule the truce now helps);
+  **without provinces deciding (old seeds) 28.9 / 2.33, realms in turn Mesopotamia 5 (63% in band), Egypt 4 (83%)**; risings at half
+  2.36, at double 2.52 (worse); without vacuum 2.34; without defection 2.49 (defection helps); without weariness 2.41 (helps); without
+  elite cost 30.3 / 2.29. **Egypt's intermediate periods now median 0.01-0.03** (was 0.00), in band 8-25%. Costs as before: Egypt's
+  unification 1056-1771 BCE (reference 2211), Akkad 446-1271. Truces about 240 a millennium (11 civil), vacuum risings 50 (frise 0.5:
+  340; frise 2: 8, since more rise at the outbreak), split falls 20, court falls 69. None of the packages beats the reference's error;
+  they buy turnover and a first trace of intermediate periods at the cost of later gathering.
+- **Rebels and reunification (09a3d06c; opt-in `rebel` and `reunify`; Nein 2026-11-25).** `rebel`: `notrust` (a rebel starts at
+  mandate 0.35; victories +0.02 × province; −0.01 a year while a rebel at war, against +0.006 growth), `norebweary` (weariness gain × (1
+  + 1.5 × (1 − mandate)) for rebels, × 0.6 for the court), `nodrift` (knob drift: a rebel's provinces beside the court's land go back at
+  [0.05 × lost momentum + 0.03 × drift × weariness × (1 − mandate)] × (1.2 − integ) × min(1, 0.3 + cover) a year), `nocashin` (a rebel's
+  horizon thor × (5 + 25 × mandate) × (1 − 0.6 wy), no momentum; ahead (net gains > 0) it may make a truce without the slog when it
+  cannot take all in time and the court cannot win soon; × (0.4 + 0.6 give), give = clamp(0.3 + failOf + 0.4 (comp − 0.5) − 0.6 (aggr −
+  0.5)); border provinces next to the rebels up to min(5, 10 × lead × give), `ev.cede`), `nocourtclock` (the court's weariness × in every
+  province's discontent). `reunify`: `nopartclaim` (a civil truce calls `remember` on the court and its rebel pieces), `nonostalgia`
+  (knob nost: `qolNote` at a civil war's outbreak records food per head × works and caravans per province, once a century; `qolPass`
+  each decade: decline since, faded like the realm's memory; a failed attack by a claimant on such a province succeeds at 0.3 × nost ×
+  decline (`ev.nost`); the claimant's own dead count × (1 − 0.5 decline); the war choice weight on a fellow successor × (1 + nost ×
+  (own decline + target's decline [+ own lost trade]))), `nomerchant` (drops the lost-trade term). Probe (seeds 1, 2, 4, all + both):
+  cessions 0-3 a history, gates to claimants 7-10, provinces drifting back 1-20; after first unification the leader under a third in
+  16/50, 0/46, 0/52 fifty-year snapshots. Smoke test passed (10.7 min); fingerprint unchanged.
+- **Run 148 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence; all; all + rebels;
+  all + reunification; all + both; that without cashing in, without drift, without fragile trust, without the decline in living,
+  without claims after a partition, with the old rebel seeds.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
