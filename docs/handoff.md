@@ -468,6 +468,25 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   2.27, corrupt governors 35.6% / 2.18 (best score; the governors channel may hurt), bribed gates 2.28, local reform 2.34, reform
   from the top 2.35 (both reforms matter); baseline + corruption 32.8 / 2.47 (turnover unmoved without rise). Per millennium: reforms
   from the top 25, backlashes 6.8, local checks arising 0.4, bribed gates 4.6, court falls 74. Egypt still no intermediate periods.
+- **Run 143 re-read (2026-11-25):** same-seed likeness is about 0.27 between variants, so ablations within about ±0.1 error are
+  chaos, not mechanism. Without corrupt governors (2.18 vs 2.22) is noise, and it costs Egypt's unification (21 → 4% in band) and
+  Egypt turnover (4 → 3): channel kept. Local checks arose 0.4 a millennium (the mechanism was nearly dead).
+- **Local reform fixed (inside `noreflocal`; knob `refl`).** Probe `chk.js` (seeds 1-2 to 2000 BCE, best + corruption): 6-9 cities
+  in the region, records above 0.3 in 3-8 of them from 2750 BCE, but they sit by the court and are well bound (integration
+  0.5-1.0), so corAt there was 0.005-0.03 against the threshold 0.1; and only 1-2 had caravans > 0.2 or a coast. Now a town with
+  records sees g = max(corAt, half the realm's corruption), its stake is clamp(0.3 + caravans/0.2 + 0.5 coast, 0, 1), no threshold:
+  0.2 × refl × g × stake a decade.
+- **Peopled frontier (opt-in `frontpop`, knob `fpw`; proposed after probe `front2.js`).** `frontWeight()`: a province on a line with
+  another people or faith gets f = min(1, people across (riders × 3) / (0.5 × fpw × own people)), spread 0.75 inward as the band was;
+  asabiya += asR × f × s(1 − s) − decay × (1 − f) × s (the thrcoh form). With every edge peopled it is the old band.
+- **Intelligence, corruption phase 2 (opt-in `intel`; sub-switches `nosecret`, `noweakpt`; knobs `ibias`, `ifalse`, `iweak`).**
+  `intelOf(o)` yearly in `cwPass`: (0.45 records + 0.25 messenger speed + 0.3 min(1, cplx/0.8)) × (1 − 0.5 unpaid) × (1 − 0.5 cor).
+  Replaces the fog in the war choice: `seenPow` = power × wf^I, wf = (0.5 if in civil war) × (1 − 0.5 failOf) (a court that knows
+  little sees size, not failings; this takes over the vulture discount for states); `tempOf` = exp(0.8 × ibias × (1 − I) ×
+  (aggression − 0.5)) on the odds (bold overrates, cautious waits). Secrets: the court sees a rival with I + (1 − I) × 0.5 × the
+  rival's corruption (leaks); a rival with I > 0.3 plants false reports, believed at 0.5 × (1 − I): seen power × (1 + 0.5 × ifalse
+  × its I) (`ev.falseRep`). Weak points: the province to strike weighted × (1 + 1.5 × iweak × I × clamp(1.2 − integ − 0.7 walls)).
+  With judgment's lessons on (no `nojudge`), learning per war × (0.3 + 0.7 I). Probe `intel.js`.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:

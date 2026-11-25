@@ -640,7 +640,11 @@ function corYear(o,c){const s=S,R=o.ruler||{},eS=clamp(o.E/Math.max(1e-6,etOf(o)
 // spreads to neighbouring provinces along roads and caravans and within a realm, and is slowly captured where corruption runs high
 function checkPass(){const s=S,w=WD,r=s.r;if(!s.chk)s.chk=new Float32Array(N);const C=s.chk,nx=new Float32Array(N);
   for(const i of w.landIdx){const p=s.pol[i],o=p?s.pols[p]:null,ci=corAt(o,i);let v=C[i];
-    if(v<0.3&&s.city[i]>=0&&s.recK[i]>0.3&&(s.car[i]>0.2||w.coast[i])&&ci>0.1&&r()<0.2*ci){v=Math.max(v,0.5);s.refLocN=(s.refLocN||0)+1}
+    // (2026-11-25, probe chk.js: it arose 0.4 times a millennium) the towns with records sit near the court and are well bound, so the
+    // corruption felt there was 0.01-0.03, under the old threshold of 0.1, and few had caravans or a coast. A town sees the court's
+    // corruption too (half the realm's level), its stake grows with its trade, and there is no threshold (knob refl)
+    if(v<0.3&&s.city[i]>=0&&s.recK[i]>0.3){const g=Math.max(ci,0.5*corOf(o)),stk=clamp(0.3+s.car[i]/0.2+(w.coast[i]?0.5:0),0,1);
+      if(g>0.01&&r()<0.2*knob('refl')*g*stk){v=Math.max(v,0.5);s.refLocN=(s.refLocN||0)+1}}
     let m=v;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j])continue;const link=(s.pol[j]===p&&p?0.5:0.2)+0.5*Math.min(1,s.roads[i]+s.car[i]);m=Math.max(m,v+0.05*link*(C[j]-v))}
     nx[i]=Math.max(0,m*(1-0.03*ci))}
   C.set(nx)}
@@ -719,6 +723,22 @@ const unpaidOf=d=>UPKEEP&&d&&d.kind==='state'?clamp(Math.max((-(d.treas||0)-0.3)
 // how badly a realm is failing its people: losing, broke, in crisis
 const failOf=o=>clamp(0.5*Math.max(0,-(o.mom||0))+0.3*((o.treas||0)<0?1:0)+0.15*Math.max(0,(o.psi||0)-1.5)+0.3*unpaidOf(o)+(CORG?0.3*(o.cor||0):0),0,1);
 // a fog over the odds of war: thinner under a capable ruler and with written records and court memory
+// (intel, opt-in; corruption plan phase 2, Nein 2026-11-24) what a court can know of its neighbours, derived from its administration:
+// records, the speed of its messengers and how complex its court is, less where officials go unpaid and where corruption runs.
+// It replaces the fog. A court that knows little sees a neighbour's size, not its failings (a civil war, unpaid troops, crumbling
+// walls, a failing court), and its ruler's temper colours the odds (a bold king overrates his chances, a cautious one waits); one
+// that knows much sees the failings, aims at the weak provinces and learns more from its wars. Secrets (nosecret): a corrupt court
+// leaks to its rivals, and a court that knows little half believes the false reports a capable rival puts about. Weak points
+// (noweakpt): which province to strike
+const INTEL=swOn('intel'),SECRET=INTEL&&!swOn('nosecret'),WEAKP=INTEL&&!swOn('noweakpt');
+function intelOf(o){if(o.kind!=='state')return 0;const info=o.info||infoCap(o),uP=clamp(0.5*Math.max(0,(o.burden||0)-1)+0.5*Math.max(0,-(o.treas||0)),0,1);
+  return clamp((0.45*Math.min(1,info.rec)+0.25*Math.min(1,info.spd)+0.3*Math.min(1,(o.cplx||0.2)/0.8))*(1-0.5*uP)*(1-0.5*(o.cor||0)),0,1)}
+// the neighbour's power as the court sees it
+function seenPow(o,t){const pt=power(t);if(t.kind!=='state')return pt;const I=o.intel||0,cv=SECRET?Math.min(1,I+(1-I)*0.5*(t.cor||0)):I,
+    wf=(t.cwC?0.5:1)*(1-0.5*failOf(t));let v=pt*Math.pow(wf,cv);
+  if(SECRET&&(t.intel||0)>0.3&&S.r()<0.5*(1-cv)){v*=1+0.5*knob('ifalse')*t.intel;S.falseN=(S.falseN||0)+1}
+  return v}
+const tempOf=o=>Math.exp(0.8*knob('ibias')*(1-(o.intel||0))*(((o.ruler||{}).aggr??0.5)-0.5));
 function fogOf(o){const R=o.ruler||{},mem=o.info?Math.min(1,o.info.memo||0):0,sd=0.6*(1-0.5*(R.comp??0.5))*(1-0.6*mem);return Math.exp(sd*gauss(S.r))}
 // (noprotect, decade) provinces of a failing realm go over to a stronger neighbour that can protect them
 function protectPass(){const s=S,w=WD,r=s.r,pw=new Float64Array(s.pols.length);for(const id of s.alive)pw[id]=power(s.pols[id])+1;
@@ -732,7 +752,7 @@ function protectPass(){const s=S,w=WD,r=s.r,pw=new Float64Array(s.pols.length);f
 // the kinds of target a court keeps lessons about
 function tgtKinds(t){const s=S,c=t.capital;return [s.fort[c]>0.3||(t.fortN||0)>0.3*Math.max(1,t.nU||t.cells)?1:0,(t.trade||0)>0.25*((t.tax||0)+1)?1:0]}
 // each year: who is the court and who the rebels in a civil war, how much of the court's border faces other threats
-function cwPass(){const s=S;for(const id of s.alive){const o=s.pols[id];o.cwC=0;o.cwR=0}
+function cwPass(){const s=S;for(const id of s.alive){const o=s.pols[id];o.cwC=0;o.cwR=0;if(INTEL)o.intel=intelOf(o)}
   for(const wid of s.activeWars){const war=s.wars[wid];if(!war.civil)continue;const C=s.pols[war.d[0]];if(!C||!C.alive)continue;C.cwC=1;
     for(const a of war.a){const p=s.pols[a];if(p&&p.alive&&p.origin&&p.origin.from===C.id)p.cwR=C.id}}
   if(FLOAD)for(const id of s.alive){const o=s.pols[id];if(!o.cwC)continue;let t=0,x=0;for(const [q,b] of o.nb){t+=b;const p=s.pols[q];if(!p||!p.alive)continue;
@@ -1766,7 +1786,7 @@ function endWar(war){
   // (nojudge) the attacking court weighs how the war went against what it expected, by kind of target; a conquered trading city
   // whose trade did not follow teaches its own lesson
   if(JUDGE&&war.jx&&!war.civil&&A.alive&&A.kind==='state'){const J=war.jx,or=clamp((war.gA-war.gD)/(1+0.15*J.cA0),-1,1),td=clamp(((A.trade||0)-J.tr0)/(J.tax0+1),-0.5,0.5),
-      L=A.les||(A.les=[1,1,1]),up=x=>Math.exp(0.3*(or-0.1)+x);
+      L=A.les||(A.les=[1,1,1]),lk=INTEL?0.3+0.7*(A.intel||0):1,up=x=>Math.exp(lk*(0.3*(or-0.1)+x));
     if(J.k[0])L[0]=clamp(L[0]*up(0),0.3,2);if(J.k[1])L[1]=clamp(L[1]*up(or>0?1.5*Math.min(0,td):0),0.3,2);if(J.str)L[2]=clamp(L[2]*up(0),0.3,2);s.lessonN=(s.lessonN||0)+1}
   // (nowarrate) a victor over a much weaker enemy need not wait out the whole truce
   if(WRATE&&win&&!war.civil&&win.alive&&win.kind==='state'){const lo=win===A?D:A;if(lo&&lo.alive&&power(win)>2*power(lo)){const tr=war.treaty!=null?Math.round(10+30*war.treaty):25;win.truce.set(lo.id,s.year+Math.round(0.4*tr))}}
@@ -2170,12 +2190,12 @@ function* politicsG(){
     if((o.cells>=2||o.tier==='City-state'||(o.kind==='state'&&o.pop>=2*FLOOR.chief*P.floor))&&o.enemies.size<3&&r()<P.warRate*0.02*o.aggrM*o.gate*(WRATE&&o.kind==='state'?clamp((o.edge||1)/1.5,0.5,3)*(0.6+0.8*(Rn.aggr??0.5))*(1+1.5*Math.max(0,o.mom||0))*(0.8+0.4*milOf(Rn)):1)){
       let best=0,bw=0,holy=false;const CHO=!swOn('nochoice'),po=power(o),Rl=o.rel>=0?s_rels[o.rel]:null,hp=Rl?pol[Rl.holy]:0;
       for(const [q,b] of o.nb){const t=pols[q];if(!t||!t.alive||o.enemies.has(q)||o.allies.includes(q)||o.over===q||t.over===id||(o.truce.get(q)||-1e9)>y)continue;
-        const ptv=power(t)*(VULT&&t.cwC?0.5:1);let wt=b*Math.pow(po/(ptv+1),1.5);
+        const ptv=INTEL&&o.kind==='state'?seenPow(o,t):power(t)*(VULT&&t.cwC?0.5:1);let wt=b*Math.pow(po/(ptv+1),1.5);
         // (armies, part 3: wars are for something; Nein 2026-11-10, switch nochoice turns it off) the court weighs what each neighbour
         // is worth and the cheapest way to get it: take its land (half its taxes and trade if won, less the men to hold unwilling
         // land), make it pay tribute (a fifth, no garrisons; only against the clearly weaker), raid it (a little, at little risk;
         // for the poorer side), or punish a raider. A neighbour worth nothing by any road is left alone.
-        if(CHO&&o.kind==='state'){const pr=po/(ptv+1)*(JUDGE?fogOf(o):1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
+        if(CHO&&o.kind==='state'){const pr=po/(ptv+1)*(INTEL?tempOf(o):JUDGE?fogOf(o):1),x=Math.pow(pr,1.5),pw=x/(1+x),V=(t.tax||0)+(t.trade||0)+lackV(o,t),own=o.tax||0,tl3=3*(o.gp&&o.gp.get(q)||0),tA=t.cA||t.cells,
             gc=GAR*tA*0.72*1.5/(1+0.5*s.iron[c]+0.7*s_roads[c]+0.6*s_recK[c]+2*s_gun[c])*own/(o.pop+1)*0.25,
             rest=MEM&&t.kind==='state'?restOf(o,t):0,vC=pw*0.5*(V-gc)*(1+knob('claim')*rest)-(1-pw)*0.1*own-tl3,vT=pr>1.5?pw*0.2*V-(1-pw)*0.05*own:-1e18,vR=(own/(o.pop+1)<V/(t.pop+1)||o.cells<6)?0.04*V*Math.min(1,pr)*(slaveOn()&&!kinBan(o,t.rel)?1.5:1)-0.01*own-tl3:-1e18,
             vP=o.raidBy===q&&y-(o.raidY||-1e9)<15?0.15*own*pw:-1e18,
@@ -2250,7 +2270,7 @@ function* politicsG(){
   yield;
   // border pass
   rsd('pol.p');for(const id of s.alive)pols[id].nb=new Map();
-  const asR=P.asabR,asD=P.asabD,wr=P.warRate*0.03,rev=y&1,rels=s.rels,fz=P.fortify,LP=szF?localPopF():null,FB=szF?frontBand():null,FT=szF&&THRC?frontThreat():null;
+  const asR=P.asabR,asD=P.asabD,wr=P.warRate*0.03,rev=y&1,rels=s.rels,fz=P.fortify,LP=szF?localPopF():null,FB=szF?frontBand():null,FT=szF&&THRC?frontThreat():szF&&FPOP?frontWeight():null;
   for(let kk=0;kk<L.length;kk++){
     const i=L[rev?L.length-1-kk:kk],p=pol[i],pi=pop[i],ei=s_eth[i],ri=s_rel[i];rk(i);
     const o=p?pols[p]:null,horde=o&&o.kind==='horde';
@@ -2262,7 +2282,7 @@ function* politicsG(){
         else if(ri>=0&&s_rel[j]>=0&&s_rel[j]!==ri)fr=1;
         if(o){if(q){const t=pols[q];o.nb.set(q,(o.nb.get(q)||0)+(szF?wt:1));
             if(t.kind==='horde'||o.enemies.has(q))threat=1;
-            if(o.enemies.has(q)||(horde&&t.kind==='horde')){const lw=WKR&&s.lev&&o.enemies.has(q)&&s_wars[o.enemies.get(q)].goal==='punitive'?1+Math.min(3,s.lev[j]/(pop[j]+1e3)):1;nc+=3*wt*lw;if(r()*nc<3*wt*lw)cand=j}
+            if(o.enemies.has(q)||(horde&&t.kind==='horde')){const lw=WKR&&s.lev&&o.enemies.has(q)&&s_wars[o.enemies.get(q)].goal==='punitive'?1+Math.min(3,s.lev[j]/(pop[j]+1e3)):1;const wp=WEAKP&&o.kind==='state'?1+1.5*knob('iweak')*(o.intel||0)*clamp(1.2-s_integ[j]-0.7*Math.min(1,s.fort[j]),0,1):1;nc+=3*wt*lw*wp;if(r()*nc<3*wt*lw*wp)cand=j}
             else if(horde&&t.kind==='state'){rn+=wt;if(r()*rn<wt)rcand=j}}
           else if(!horde||w_nomad[j]||w_desert[j]||pop[j]>=1){nc+=wt;if(r()*nc<wt)cand=j}}}}
     if(FB)fr=FB[i];
@@ -2270,7 +2290,7 @@ function* politicsG(){
       if(q){o.nb.set(q,(o.nb.get(q)||0)+1);if(o.enemies.has(q)){nc+=1;if(r()*nc<1){cand=j;candSea=true}}}}}
     let sv=s_s[i];
     // (thrcoh) how far the frontier presses: the threat across it, or raids and war felt here
-    const fT=FT?Math.max(FT[i],s.thr?s.thr[i]:0):0;
+    const fT=FT?(THRC?Math.max(FT[i],s.thr?s.thr[i]:0):FT[i]):0;
     if(o){const decay=asD*(o.island?0.5:1)*(o.conqDyn?1.6:1);
       sv+=FT?asR*fT*sv*(1-sv)-decay*(1-fT)*sv:fr?asR*sv*(1-sv):-decay*sv;sv+=0.004*infl*(o.ruler.char-0.5);if(ri>=0&&ri===o.rel)sv+=0.0015*(0.5+rels[ri].cent);
       s_s[i]=clamp(sv,0.02,1);
@@ -2672,6 +2692,20 @@ function frontThreat(){const w=WD,s=S,L=w.landIdx,n=w.n,T=w._ft||(w._ft=new Floa
     for(let h=0;h<q.length;h++){const c=q[h];if(f>T[c])T[c]=f;for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||s.pol[j]!==p)continue;const x=D[c]+w.nbD[e];
       if(x<=0.75&&(St[j]!==stamp||x<D[j])){St[j]=stamp;D[j]=x;q.push(j)}}}}
   w._ftN=stamp;return T}
+// (frontpop, opt-in; Nein 2026-11-24, proposed after probe front2.js) a frontier builds solidarity as far as there are people across
+// it: the people of the other side's provinces (riders counting three times) against the province's own, full at half as many
+// (knob fpw), and as before 0.75 inward. An edge on empty desert binds little, so a realm walled in by desert is not held together
+// by it for ever. With every edge peopled it is the old band exactly
+const FPOP=swOn('frontpop');
+function frontWeight(){const w=WD,s=S,L=w.landIdx,n=w.n,T=w._fw||(w._fw=new Float32Array(n)),D=w._fwD||(w._fwD=new Float32Array(n)),St=w._fwS||(w._fwS=new Int32Array(n)),k=0.5*knob('fpw'),q=[];
+  T.fill(0);let stamp=w._fwN||0;
+  for(const i of L){const ei=s.eth[i],ri=s.rel[i],p=s.pol[i];let a=0,any=0;
+    for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0||!w.land[j]||s.pol[j]===p)continue;const ej=s.eth[j];
+      if(!((ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)||(ri>=0&&s.rel[j]>=0&&s.rel[j]!==ri)))continue;any=1;a+=s.pop[j]*(1+2*rideAtCell(j))}
+    if(!any)continue;const f=Math.min(1,a/(k*(s.pop[i]+1)));if(f<=0.005)continue;stamp++;St[i]=stamp;D[i]=0;q.length=0;q.push(i);
+    for(let h=0;h<q.length;h++){const c=q[h];if(f>T[c])T[c]=f;for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j<0||!w.land[j])continue;const x=D[c]+w.nbD[e];
+      if(x<=0.75&&(St[j]!==stamp||x<D[j])){St[j]=stamp;D[j]=x;q.push(j)}}}}
+  w._fwN=stamp;return T}
 function frontBand(){const w=WD,s=S,L=w.landIdx,n=w.n,d=w._fb||(w._fb=new Float32Array(n)),F=w._fbF||(w._fbF=new Uint8Array(n)),q=[];d.fill(9);F.fill(0);
   for(const i of L){const ei=s.eth[i],ri=s.rel[i],p=s.pol[i];let f=0;for(let e=w.nbS[i];e<w.nbS[i+1]&&!f;e++){const j=w.nbA[e];if(j<0||!w.land[j]||s.pol[j]===p)continue;const ej=s.eth[j];
       if(ej>=0&&ei>=0&&ej!==ei&&ethDist(ei,ej)>0.22)f=1;else if(ri>=0&&s.rel[j]>=0&&s.rel[j]!==ri)f=1}
