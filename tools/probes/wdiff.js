@@ -1,0 +1,10 @@
+const fs=require('fs'),zlib=require('zlib'),path=require('path'),v8=require('v8'),crypto=require('crypto');const SRC=process.env.SRC||path.join(__dirname,'..','..','src');
+const core=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','provinces.js'].map(f=>fs.readFileSync(path.join(SRC,f),'utf8')).join('\n');
+const B=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(path.join(SRC,f),'utf8'),'base64')));
+eval(core+`;(function(){const E=decodeEarth(B('earth_elev.b64'),B('koppen.b64'),B('earth_climate.b64'));
+WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
+useWorld(provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64'),lake:B('earth_lake.b64')}));
+newHistory('1');const H=()=>{const h={};for(const k of Object.keys(WD)){const v=WD[k];if(typeof v==='function')continue;try{h[k]=crypto.createHash('md5').update(v8.serialize(v)).digest('hex')}catch(e){h[k]='ERR '+e.message}}return h};
+const h0=H(),step=()=>{const g=stepG();while(!g.next().done){}};
+for(const Y of [-9000,-7000,-5000]){while(S.year<Y)step();const h=H();const ch=Object.keys(h).filter(k=>h[k]!==h0[k]);
+ let by=0;for(const k of ch)by+=v8.serialize(WD[k]).length;console.log(Y,'changed',ch.length,'bytes',by,ch.join(' '))}})();`);

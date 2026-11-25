@@ -1,0 +1,9 @@
+const fs=require('fs'),zlib=require('zlib'),path=require('path');const SRC=process.env.SRC||path.join(__dirname,'..','..','src');
+const core=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','provinces.js'].map(f=>fs.readFileSync(path.join(SRC,f),'utf8')).join('\n');
+const B=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(path.join(SRC,f),'utf8'),'base64')));
+eval(core+`;(function(){const E=decodeEarth(B('earth_elev.b64'),B('koppen.b64'),B('earth_climate.b64'));
+WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
+useWorld(provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64'),lake:B('earth_lake.b64')}));
+newHistory('1');const f=floodFit();const boxes={'Egypt (Upper)':[24,28,30.5,33.5],'Delta':[30,31.6,29.5,32.5],'Sumer':[30.5,32.5,44.5,47.5],'Akkad/Baghdad':[32.5,34,43.5,45.5],'Assyria':[35.5,37,42.5,44],'Indus (Sindh)':[24,28,67,70],'Punjab':[30,32,71,74.5],'Khorezm':[41,43,59,62],'lower Volga':[45,48,45,48],'Yellow River plain':[34,37,113,118],'Nubia':[18,22,30,34]};
+for(const [k,b] of Object.entries(boxes)){let n=0,sf=0,sr=0,ss=0;for(const i of WD.landIdx){const [la,lo]=latLonOf(WD,i);if(la<b[0]||la>b[1]||lo<b[2]||lo>b[3]||WD.rvF[i]<0.05)continue;n++;sf+=f[i]*WD.rvF[i];sr+=WD.rvF[i];ss+=WD.soilSalt[i]*WD.rvF[i]}
+ console.log(k.padEnd(20),'provinces',n,'flood fit',(sf/Math.max(1e-9,sr)).toFixed(2),'soil salt',(ss/Math.max(1e-9,sr)).toFixed(2));if(k==='Delta'||k==='Sumer')for(const i of WD.landIdx){const [la,lo]=latLonOf(WD,i);if(la<b[0]||la>b[1]||lo<b[2]||lo>b[3]||WD.rvF[i]<0.05)continue;console.log('   ',la.toFixed(1),lo.toFixed(1),'rvF',WD.rvF[i].toFixed(2),'acc',Math.round(WD.acc[i]),'fit',f[i].toFixed(2),'Pr',Math.round(WD.Pr[i]),'down',WD.down[i]>=0?latLonOf(WD,WD.down[i]).map(v=>v.toFixed(1)).join(','):'sea')}}})();`);

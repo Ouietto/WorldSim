@@ -1,0 +1,11 @@
+const fs=require('fs'),zlib=require('zlib'),path=require('path');const SRC=process.env.SRC||path.join(__dirname,'..','..','src');
+const core=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','provinces.js'].map(f=>fs.readFileSync(path.join(SRC,f),'utf8')).join('\n');
+const B=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(path.join(SRC,f),'utf8'),'base64')));
+eval(core+`;(function(){const E=decodeEarth(B('earth_elev.b64'),B('koppen.b64'),B('earth_climate.b64'));
+WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
+useWorld(provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64'),lake:B('earth_lake.b64')}));
+newHistory(process.argv[2]||'1');const step=()=>{const g=stepG();while(!g.next().done){}};
+while(S.year<-600){step();if(S.year%500===0&&S.year>=-3000){const st=S.alive.map(id=>S.pols[id]).filter(o=>o.kind==='state'&&o.cells>=15);
+  const nb=st.map(o=>o.nob||0).sort((a,b)=>a-b),vg=st.map(o=>o.vig??-1).sort((a,b)=>a-b),q=(a,f)=>a.length?a[Math.floor(f*(a.length-1))].toFixed(2):'-';
+  const big=st.sort((a,b)=>b.pop-a.pop).slice(0,3).map(o=>o.full.slice(0,22)+' nob '+(o.nob||0).toFixed(2)+' vig '+(o.vig??-1).toFixed(2)+' E/Et '+(o.E/etOf(o)).toFixed(2)+' comp '+(o.ruler.comp).toFixed(2));
+  console.log(S.year,'states>=15',st.length,'nob q25/50/90',q(nb,.25),q(nb,.5),q(nb,.9),'vig q10/50/90',q(vg,.1),q(vg,.5),q(vg,.9),'reforms',S.reforms.length,'| ',big.join(' | '))}}})();`);

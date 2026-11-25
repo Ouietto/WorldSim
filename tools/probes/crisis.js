@@ -1,0 +1,13 @@
+const fs=require('fs'),zlib=require('zlib'),path=require('path');const SRC=process.env.SRC||path.join(__dirname,'..','..','src');
+const core=['world.js','climate.js','lang.js','hist.js','crops.js','herds.js','tech.js','society.js','provinces.js'].map(f=>fs.readFileSync(path.join(SRC,f),'utf8')).join('\n');
+const B=f=>new Uint8Array(zlib.inflateSync(Buffer.from(fs.readFileSync(path.join(SRC,f),'utf8'),'base64')));
+eval(core+`;(function(){const E=decodeEarth(B('earth_elev.b64'),B('koppen.b64'),B('earth_climate.b64'));
+WD=genWorld({seed:'Earth',earth:true,height:E.height,kg:E.kg,fit:true});
+useWorld(provinceWorld(WD,decodePid(B('earth_pid.b64')),{fp:B('earth_fp.b64'),lake:B('earth_lake.b64')}));
+newHistory(process.argv[2]||'1');const step=()=>{const g=stepG();while(!g.next().done){}};
+const M=new Set(WD.regions.find(r=>r.k==='meso').cells);
+const share=id=>{let a=0,t=0;for(const i of M){t+=S.pop[i];if(S.pol[i]===id)a+=S.pop[i]}return t?a/t:0};
+const pend=[];const cw0=civilWar;civilWar=function(o,b){const sh=share(o.id),pp=o.pop;const r=cw0.apply(this,arguments);const after=share(o.id);
+  if(sh>0.2)pend.push({y:S.year,id:o.id,name:o.full,kind:'civil war'+(b?' (shatter)':''),sh,after,alive:o.alive&&polCells(o.id).length>0});return r};
+const pl0=partitionLands;partitionLands=function(o,cells,why){const sh=share(o.id);const r=pl0.apply(this,arguments);if(sh>0.2)pend.push({y:S.year,id:o.id,name:o.full,kind:why.slice(0,40),sh,after:share(o.id),alive:true});return r};
+while(S.year<-500){step();for(const e of pend){if(e.y===S.year-50){e.after50=share(e.id);console.log(e.y,e.name.slice(0,26),'|',e.kind,'| share of Mesopotamia before',e.sh.toFixed(2),'right after',e.after.toFixed(2),'50 yrs on',e.after50.toFixed(2))}}}})();`);
