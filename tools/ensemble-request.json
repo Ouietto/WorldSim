@@ -1,12 +1,12 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
  {"name":"best + corruption + intelligence","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
- {"name":"  + fault lines","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault KV=wbuild:0.5"},
- {"name":"  + truce","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,truce KV=wbuild:0.5"},
- {"name":"  + fault lines + truce","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce KV=wbuild:0.5"},
  {"name":"  + fault lines + truce + elite cost k 1 (all)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost KV=wbuild:0.5,ecost:2"},
+ {"name":"    all without the calculated truce","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,nocalc KV=wbuild:0.5,ecost:2"},
+ {"name":"    all without provinces deciding (old seeds)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,nofaultseed KV=wbuild:0.5,ecost:2"},
+ {"name":"    all with risings at half (frise 0.5)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost KV=wbuild:0.5,ecost:2,frise:0.5"},
+ {"name":"    all with risings at double (frise 2)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost KV=wbuild:0.5,ecost:2,frise:2"},
  {"name":"    all without vacuum risings","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,novacuum KV=wbuild:0.5,ecost:2"},
  {"name":"    all without defection","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,nodefect KV=wbuild:0.5,ecost:2"},
- {"name":"    all without the calculated truce","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,nocalc KV=wbuild:0.5,ecost:2"},
  {"name":"    all without weariness","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,noweary KV=wbuild:0.5,ecost:2"},
- {"name":"    all with vacuum at half","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost KV=wbuild:0.5,ecost:2,vac:0.5"}]}
+ {"name":"    all without elite cost","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce KV=wbuild:0.5"}]}

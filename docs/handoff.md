@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-146 scored, no batch
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-146 scored, run 147
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -582,6 +582,25 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   ordinary wars of conquest too, cutting short the gathering wars and the civil wars before the cascade builds: vacuum risings 1-3 a
   millennium with it, 19 without. Weariness helps (removing it +0.20 error). Fault seeds 45-56, split falls 3-6, rebel provinces back
   under 1.
+- **Probe after run 146 (seeds 1-4, all without the calculated truce):** the gaps it found all come before Egypt's first unification
+  (the scorer counts only after the first realm holds a third); afterwards each court fall passed Egypt whole: Mamiya → Shimusha 1894
+  BCE (0.61 → 0.60), Sariya 1227 BCE (0.70 → successor 0.69), Shimusha 874 BCE (0.72 → 0.71). The rebellion that topples the court has
+  one rebel inside Egypt (nearest the capital, joined by the surplus elite); the others rise in the outer provinces. Fiscal stress now
+  shows in those crises (pT, pF with elite cost).
+- **Calculated truce only in a slog (5a2af056):** weighed after six years without gains or with a side's weariness above 0.5.
+- **Provinces decide for themselves whether to rise (7db55b1d, inside `fault`; Nein 2026-11-25: no set number of rebels; discontented
+  areas spawn their own rebels if they have the supplies or think they can win).** `riseOdds(o,i,cover,mean people)` = discontent ×
+  x/(1 + x); discontent = (1.2 − integ) × (0.6 + 0.4 × another people or faith) × (1 + hunger + 2 × corAt); x = means / (0.3 + cover) ×
+  (1 + 2 × the court's lost momentum), means = (0.5 + lords' share) × (1 + water leverage) × min(2, sqrt(people / realm mean)) × (1 + 0.5
+  walls) × (0.5 + solidarity); cover = Σ court armies exp(−km/250) (`coverAt`). Outbreak (`nofaultseed`): each province rises at
+  clamp(1.5 × knob frise × max(0.3, deep) × odds, 0, 0.9); risen neighbours band together behind the most populous; the rest stay loyal,
+  connected or not; none risen: the old seeds. Yearly vacuum risings: 0.1 × knob vac × deep × odds (cover halved if cut off). Probe
+  (seeds 1, 2, 4; all with elite cost k 1 and the slog truce): vacuum risings 76-399 a history, split falls 45-63, civil truces 28-44;
+  Egypt's empire in seed 2 went 0.97 → 0.74-0.83 in civil wars at stress 2.8-4.2 and won it back within 20 years; after first
+  unification the leader was under a third in 2-6 of 35-59 fifty-year snapshots. Smoke test passed (10.6 min); fingerprint unchanged.
+- **Run 147 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence; all (fault + truce +
+  elite cost k 1); all without the calculated truce; without provinces deciding (old seeds); risings at half and double (frise 0.5, 2);
+  without vacuum risings; without defection; without weariness; without elite cost.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
