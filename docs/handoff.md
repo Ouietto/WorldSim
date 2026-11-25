@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-144 scored, run 145
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-145 scored, no batch
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -529,6 +529,14 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 145 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence (reference); + elite
   cost k 0.5 (knob 1), k 1 (knob 2), k 2 (knob 4); + elite cost k 0.5 + peopled frontier; best + corruption + elite cost; best + elite
   cost.
+  **Result (80129177, error; baseline 34.2% / 2.44):** best + corruption + intelligence 32.8 / 2.23 ▲ (reproduces run 144); + elite
+  cost k 0.5 29.7 / 2.28; k 1 30.3 / 2.32; k 2 30.8 / 2.33; k 0.5 + peopled frontier 28.6 / 2.29; best + corruption + elite cost 30.6
+  / 2.28; **best + elite cost (no corruption, no intelligence) 33.9 / 2.15 ▲ (lowest error yet, within noise of run 142's 2.16)**.
+  **Elite cost raises turnover:** realms in turn Mesopotamia 4 → 4 / 5 / 5 (k 0.5 / 1 / 2; 42-67% in band), Egypt 3 → 4 / 4 / 5 (k 2:
+  75% in band, error 0.8); court falls 76 → 86 a millennium at k 2, provinces going over to protectors 2.9 → 6.1. Costs: Egypt's
+  unification later at k 1-2 (2211 → 1231-1331 BCE), Akkad later. **Egypt's intermediate periods still 0.00-0.01** in every
+  variant: Egypt changes hands more often but still whole. Elite cost stays opt-in.
+  **Next (to Nein): (b) heartland fault lines**, since Egypt still passes whole.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
