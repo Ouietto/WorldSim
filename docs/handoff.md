@@ -637,6 +637,15 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   (Egypt's unification 1166-1941 BCE against the reference's 2211 and the real 3100; Akkad 481-1161 BCE against 1451 and 2300).
   Proposed next (to Nein): probe the early gathering under all + both (3500-2000 BCE): whether the crisis machinery breaks the first
   would-be unifiers before they consolidate.
+- **Probe `gather2.js` (seeds 1-3 to 2000 BCE; reference vs all + rebels + reunification):** the crisis machinery does not break the
+  first unifiers more: civil wars and collapses of realms holding a fifth of a box, 3500-2000 BCE, reference 7 (Mesopotamia) and 25
+  (Egypt), mean share lost 0.26 and 0.20; all + both 11 and 17, lost 0.07 and 0.20. Weariness stays under 0.1 and mandate at 1 in the
+  leading realms. But realms gather less: a realm holding a third in 13 (Mesopotamia) and 15 (Egypt) of 93 fifty-year snapshots,
+  against 25 and 28 in the reference. (Seed 1's all + both history had a herders' confederation overrun both boxes 2750-2650 BCE and
+  break up: chaos between histories, not the packages.) Batch evidence on what delays Egypt's unification (reference 2211 BCE): elite
+  cost alone k 0.5 2066, k 1 1331, k 2 1231 (run 145); fault alone 1376, truce alone (eager) 1201 (run 146); all without the slog truce
+  1546 vs all 1366, all without elite cost 1771 (run 147). So the delay is in the gathering, from elite cost at k ≥ 1, the truce and
+  some part of the fault lines.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
