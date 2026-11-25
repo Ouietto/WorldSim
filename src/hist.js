@@ -1311,6 +1311,33 @@ function etOf(o){const c=o.capital,s=S;return 0.02*(1+admOf()[c]+0.5*s.coin[c]+0
 const WHY_LABEL={pW:'taxes that took the peasants\' bread',pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pC:'more people than its chiefs and record-keepers could manage',pY:'a swollen generation of young men without land or office',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
 function topCauses(why){return Object.entries(why).filter(e=>e[1]>0.08).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>WHY_LABEL[e[0]])}
 function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===id)out.push(i);return out}
+// fault lines in the heartland (opt-in fault; Nein 2026-11-25, after probe egypt2.js: Egypt passed whole from one realm to the
+// next and never had an intermediate period). In a deep crisis (stress high, soldiers or officials unpaid) the realm breaks along
+// its own provinces' power, not only at its far edge, and the breaking feeds on itself:
+// - nofaultseed: rebels can rise anywhere, the more where a province's lords have a power base of their own (people, the lords'
+//   share, water that others downstream depend on, a loose bond to the court)
+// - novacuum: while the civil war lasts, a province with none of the court's armies near may rise too and join the rebels next to
+//   it, or rise on its own; each rising draws the armies after it and leaves other provinces bare (knob vac)
+// - nocutoff: loyal provinces the court can reach only through rebel land lose their hold on it, a fiftieth a year, and count
+//   as half as guarded: the court is left with scattered pockets
+// - nofaultreach: a court that falls passes to the rebels each by what lies nearest them, not whole to the strongest
+const FAULT=swOn('fault'),FSEED=FAULT&&!swOn('nofaultseed'),FVAC=FAULT&&!swOn('novacuum'),FCUT=FAULT&&!swOn('nocutoff'),FREACH=FAULT&&!swOn('nofaultreach');
+function deepOf(o){return clamp(Math.max(((o.psi||0)-1.5)/1.5,(-(o.treas||0)-0.3)/0.7,(o.owed||0)-0.3),0,1)}
+function faultBase(o,i){const s=S;return (0.5+(o.nob||0))*(1.3-s.integ[i])*(1+(s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0))}
+function vacuumPass(){const s=S,w=WD,r=s.r,y=s.year;
+  for(const wid of s.activeWars.slice()){const war=s.wars[wid];if(!war||!war.civil)continue;const o=s.pols[war.d[0]];if(!o||!o.alive||o.kind!=='state')continue;
+    const cells=polCells(o.id);if(cells.length<3)continue;let reach=null;
+    if(FCUT){reach=new Set([o.capital]);const q=[o.capital];for(let h=0;h<q.length;h++){const c=q[h];for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j>=0&&s.pol[j]===o.id&&!reach.has(j)){reach.add(j);q.push(j)}}}
+      for(const i of cells)if(!reach.has(i))s.integ[i]=Math.max(0,s.integ[i]-0.02)}
+    if(!FVAC)continue;const dp=deepOf(o);if(dp<=0)continue;const A=o.arm||[];
+    for(const i of cells){if(i===o.capital||s.pol[i]!==o.id)continue;rk(i);
+      let cv=0;for(const a of A)cv+=(a.eta>y?0.3:1)*Math.exp(-kmB(i,a.at)/600);if(reach&&!reach.has(i))cv*=0.5;
+      if(r()>=0.02*knob('vac')*dp*faultBase(o,i)*Math.exp(-2*cv))continue;
+      let jn=0;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0)continue;const q=s.pol[j];if(q&&q!==o.id&&war.aSet.has(q)&&s.pols[q].alive&&s.pols[q].kind==='state'){jn=q;break}}
+      if(jn)s.pol[i]=jn;
+      else{const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'With the court\'s armies away, its lords rose.'}}),n=s.pols[nid];n.rel=s.rel[i]>=0?s.rel[i]:o.rel;
+        war.a.push(nid);war.aSet.add(nid);n.enemies.set(o.id,war.id);o.enemies.set(nid,war.id);n.warsF.push(war.id);n.cwR=o.id}
+      s.s[i]=Math.min(1,s.s[i]+0.12);o.lostAt=i;o.lostY=y;s.vacN=(s.vacN||0)+1}}}
 function civilWar(o,breakup){
   const s=S,w=WD,r=s.r,id=o.id,cells=polCells(id);
   if(cells.length<3)return;
@@ -1327,6 +1354,10 @@ function civilWar(o,breakup){
   // (nodepth) the deeper the stress, the deeper the rising reaches: at a stress index of 2 the far six tenths of the realm, at 4 nearly all of it
   const psi0=o.psi||0,fr=DEPTH&&!breakup?clamp(0.35+0.125*psi0,0.5,0.9):0.6,kp=DEPTH&&!breakup?0.7*clamp(1.5-0.25*psi0,0.3,1):0.7;
   const n=clamp(1+(r()<0.5?1:0)+(A>=80&&r()<0.5?1:0)+Math.floor(A/250)+(breakup?2:0)+(DEPTH&&!breakup?Math.floor(Math.max(0,psi0-2)):0),1,6),top=cells.slice(0,Math.max(1,Math.round(cells.length*fr))),seeds=[];
+  const fdeep=FSEED&&!breakup&&o.kind==='state'?deepOf(o):0;
+  if(fdeep>0.3){const wt=cells.map(c=>c===o.capital?0:Math.sqrt(s.pop[c]+100)*faultBase(o,c));let tot=0;for(const x of wt)tot+=x;
+    for(let t=0;t<80&&seeds.length<n&&tot>0;t++){let u=r()*tot,k=0;while(k<cells.length-1&&u>wt[k]){u-=wt[k];k++}const c=cells[k];if(c===o.capital)continue;if(seeds.every(q=>angDist(q,c)>0.04))seeds.push(c)}
+    if(seeds.length)s.fseedN=(s.fseedN||0)+1}
   for(let t=0;t<60&&seeds.length<n;t++){const c=pick(r,top);if(c===o.capital)continue;if(seeds.every(q=>angDist(q,c)>0.07))seeds.push(c)}
   if(!seeds.length)return;
   const oldName=o.full,causes=topCauses(o.why||{}),why=breakup?'A confederation held together by one leader rarely outlives him.':causes.length?'Driven by '+causes.join(' and ')+'.':null;
@@ -1338,7 +1369,7 @@ function civilWar(o,breakup){
   // provinces the median civil war left the court 9 (probe cwout.js), whatever the stress
   const RH=DEPTH&&!breakup&&!swOn('norebhold'),cq=[],pushC=c=>{if(RH)cq.push(c);else q[t++]=c};
   lab[o.capital]=id;pushC(o.capital);
-  if(!breakup){const keep=cells.length-top.length;for(let k=cells.length-1;k>=0;k--){const c=cells[k];if(c===o.capital)continue;if(k>=top.length||s.integ[c]>0.8&&r()<kp){lab[c]=id;pushC(c)}}}
+  if(!breakup){const keep=cells.length-top.length;for(let k=cells.length-1;k>=0;k--){const c=cells[k];if(c===o.capital||(fdeep>0.3&&seeds.includes(c)))continue;if(k>=top.length||s.integ[c]>0.8&&r()<kp){lab[c]=id;pushC(c)}}}
   const sOK=seeds.filter(c=>lab[c]===-2);if(!sOK.length){for(const i of cells)lab[i]=0;return}
   const ids=sOK.map(c=>{const nid=newPolity(c,o,{kind:o.kind,origin:{type:'rebellion',from:id,why}});lab[c]=nid;q[t++]=c;return nid});
   while(h<t){const i=q[h++],l=lab[i];for(let d=w.nbS[i];d<w.nbS[i+1];d++){const j=w.nbA[d];if(j>=0&&lab[j]===-2){lab[j]=l;q[t++]=j}}}
@@ -1374,7 +1405,12 @@ function civilWar(o,breakup){
     if(EGONE&&gone>0&&heart){o.eGone=clamp(gone/(C+gone),0,0.6);s.pols[heart].eGain=Math.min(1,gone/Math.max(1,Rh))}
     // a decisive winner takes the court's lands whole; a narrow one cannot hold them, and the heartland falls apart among its own
     // lords and cities until someone is strong enough to gather them (the Isin-Larsa years after Ur III; Egypt's intermediate periods)
-    if(best&&bv>=1.5*C){for(const i of mine){s.pol[i]=best.id;s.integ[i]=Math.min(s.integ[i],0.5)}fellTo=best;s.cFallN=(s.cFallN||0)+1;
+    if(best&&bv>=1.5*C&&FREACH&&ids.length>1){const L=new Map(),q2=[];for(const i of cells)if(s.pol[i]!==id&&ids.includes(s.pol[i])){L.set(i,s.pol[i]);q2.push(i)}
+      for(let h2=0;h2<q2.length;h2++){const c=q2[h2];for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j>=0&&s.pol[j]===id&&!L.has(j)){L.set(j,L.get(c));q2.push(j)}}}
+      L.set(o.capital,best.id);const left=[];for(const i of mine){const k=L.get(i);if(k&&s.pols[k].alive){s.pol[i]=k;s.integ[i]=Math.min(s.integ[i],0.5)}else left.push(i)}
+      if(left.length)partitionLands(o,left,why);fellTo=best;s.cFallN=(s.cFallN||0)+1;s.fReachN=(s.fReachN||0)+1;
+      if(A>=20)chron('fall',`The rebels of ${best.base} take the capital of the ${oldName}, but the rebels of its other provinces keep what they hold; the ${oldName} is no more.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}
+    else if(best&&bv>=1.5*C){for(const i of mine){s.pol[i]=best.id;s.integ[i]=Math.min(s.integ[i],0.5)}fellTo=best;s.cFallN=(s.cFallN||0)+1;
       if(A>=20)chron('fall',`The rebels of ${best.base} take the capital of the ${oldName}; its lands pass to them, and the ${oldName} is no more.`,o.capital,[['pol',o.id,oldName],RB(best)],why)}
     else if(best){const res=partitionLands(o,mine,'Its court fell and no rival was strong enough to take its place; its lords and cities kept what they held.');
       fellTo=best;s.cFallN=(s.cFallN||0)+1;s.cSplitN=(s.cSplitN||0)+1;
@@ -2239,6 +2275,7 @@ function* politicsG(){
   // active wars
   const still=[],PEACE=!swOn('nopeace');
   if(RISE)cwPass();
+  if(FVAC||FCUT){rsd('vac');vacuumPass()}
   rsd('pol.w');for(const wid of s.activeWars){const war=s_wars[wid];rk(wid);
     const aAlive=war.a.some(k=>pols[k].alive),dAlive=war.d.some(k=>pols[k].alive),yrs=y-war.start;
     const fresh=y-(war.lastGain||war.start);

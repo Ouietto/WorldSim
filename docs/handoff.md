@@ -537,6 +537,17 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   unification later at k 1-2 (2211 → 1231-1331 BCE), Akkad later. **Egypt's intermediate periods still 0.00-0.01** in every
   variant: Egypt changes hands more often but still whole. Elite cost stays opt-in.
   **Next (to Nein): (b) heartland fault lines**, since Egypt still passes whole.
+- **Heartland fault lines (opt-in `fault`; Nein 2026-11-25 approved (b) and added: some regions stay loyal, so the court is left with
+  a patchwork of unconnected pockets, and in the confusion it must choose where its troops go, which opens vacuums for more to rise,
+  and on and on).** Deep crisis `deepOf` = clamp(max((psi − 1.5)/1.5, (−treasury − 0.3)/0.7, owed − 0.3)); a province's power base
+  `faultBase` = (0.5 + lords' share) × (1.3 − integ) × (1 + min(1, water leverage / people)). `nofaultseed`: with deep > 0.3, rebel
+  seeds drawn from the whole realm by sqrt(people) × base (spacing 0.04 rad), and not kept loyal (`ev.fseed`). `novacuum`
+  (`vacuumPass`, yearly in politics after cwPass, rsd 'vac'): each court province in a civil war rises at 0.02 × knob vac × deep ×
+  base × exp(−2 × army cover), cover = Σ over the court's armies exp(−km/600) (0.3 while marching), halved if cut off; it joins a
+  neighbouring rebel of that war or rises as a new rebel in it; the court's armies are drawn there (lostAt) (`ev.vac`). `nocutoff`:
+  provinces not connected to the capital through the court's own land lose 0.02 integration a year. `nofaultreach`: a decisive winner
+  of the court's fall with other rebels beside it takes the capital and what lies nearest it; each rebel takes what lies nearest
+  its own land (BFS), the rest to their lords (`ev.fReach`). Probe `egypt2.js` prints the counts.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
