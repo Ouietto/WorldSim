@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-145 scored, run 146
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-146 scored, no batch
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -573,6 +573,15 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 146 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence; + fault; + truce;
   + fault + truce; + fault + truce + elite cost k 1 ("all"); all without vacuum risings, without defection, without the calculated
   truce, without weariness; all with vacuum at half.
+  **Result (5269fd0f, error; baseline 34.2% / 2.44; per millennium):** best + corruption + intelligence 32.8 / 2.23 ▲; + fault 27.8
+  (▼) / 2.41; + truce 31.4 / 2.37; + fault + truce 25.0 (▼) / 2.45; all (+ elite cost k 1) 28.1 (▼) / 2.38; all without vacuum 2.40,
+  without defection 2.39, **without the calculated truce 32.5 / 2.19 ▲**, without weariness 23.9 (▼) / 2.58, vacuum at half 2.34.
+  Turnover: realms in turn Mesopotamia 4-5, Egypt 4-5 in "all" variants (all without the calculated truce: 5 and 5, 50% and 75% in
+  band); Egypt intermediate periods still median 0.00 everywhere (in band 8-25%). Costs: Egypt's unification 2211 → 1200-1870 BCE,
+  Akkad 1451 → 400-920 BCE. **The calculated truce is far too eager:** about 340-390 truces a millennium (12 in civil wars), in
+  ordinary wars of conquest too, cutting short the gathering wars and the civil wars before the cascade builds: vacuum risings 1-3 a
+  millennium with it, 19 without. Weariness helps (removing it +0.20 error). Fault seeds 45-56, split falls 3-6, rebel provinces back
+  under 1.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
