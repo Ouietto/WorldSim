@@ -1,13 +1,15 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
  {"name":"best + corruption + intelligence","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
- {"name":"  all (fault lines + truce + elite cost k 1)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost KV=wbuild:0.5,ecost:2"},
- {"name":"  all + rebels","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel KV=wbuild:0.5,ecost:2"},
- {"name":"  all + reunification","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,reunify KV=wbuild:0.5,ecost:2"},
- {"name":"  all + rebels + reunification","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify KV=wbuild:0.5,ecost:2"},
- {"name":"    without cashing in","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocashin KV=wbuild:0.5,ecost:2"},
- {"name":"    without drift back","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nodrift KV=wbuild:0.5,ecost:2"},
- {"name":"    without fragile trust","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,notrust KV=wbuild:0.5,ecost:2"},
- {"name":"    without the decline in living","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nonostalgia KV=wbuild:0.5,ecost:2"},
- {"name":"    without claims after a partition","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nopartclaim KV=wbuild:0.5,ecost:2"},
- {"name":"    with the old rebel seeds","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nofaultseed KV=wbuild:0.5,ecost:2"}]}
+ {"name":"  all + rebels + reunification, elite cost k 0.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify KV=wbuild:0.5"},
+ {"name":"  the same at elite cost k 1","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify KV=wbuild:0.5,ecost:2"},
+   {"name":"    k 0.5 without provinces deciding","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nofaultseed KV=wbuild:0.5"},
+   {"name":"    k 0.5 without vacuum risings","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,novacuum KV=wbuild:0.5"},
+   {"name":"    k 0.5 without cut-off pockets","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocutoff KV=wbuild:0.5"},
+   {"name":"    k 0.5 without split falls","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nofaultreach KV=wbuild:0.5"},
+   {"name":"    k 0.5 without the momentum swing","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,noswing KV=wbuild:0.5"},
+   {"name":"    k 0.5 without defection","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nodefect KV=wbuild:0.5"},
+   {"name":"    k 0.5 without looting","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocarcass KV=wbuild:0.5"},
+   {"name":"    k 0.5 without the calculated truce","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc KV=wbuild:0.5"},
+   {"name":"    k 0.5 without weariness","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,noweary KV=wbuild:0.5"}
+]}

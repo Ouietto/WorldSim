@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-148 scored, no batch
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-148 scored, run 149
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -646,6 +646,9 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   cost alone k 0.5 2066, k 1 1331, k 2 1231 (run 145); fault alone 1376, truce alone (eager) 1201 (run 146); all without the slog truce
   1546 vs all 1366, all without elite cost 1771 (run 147). So the delay is in the gathering, from elite cost at k ≥ 1, the truce and
   some part of the fault lines.
+- **Run 149 (launched 2026-11-25, region, 24 histories to 200 BCE; timing):** baseline; reference; all + rebels + reunification at
+  elite cost k 0.5 (knob 1) and k 1; at k 0.5 without each of: provinces deciding, vacuum risings, cut-off pockets, split falls, the
+  momentum swing, defection, looting, the calculated truce, weariness.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
