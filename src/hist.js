@@ -2615,12 +2615,13 @@ function statecraft(o,c,y){
   o.cplx+=tgt>o.cplx?0.01*(tgt-o.cplx):0.0015*(tgt-o.cplx);
   const ledger=s.tk[27][c]>0.5;
   // ruling costs grow with people AND with land: every province needs officials, garrisons and messengers, so thinly peopled realms cost more than they pay
+  const upkeep=(CORO?1+0.5*(o.cor||0):1)*0.28*Math.pow(o.cplx,ledger?1.6:1.8)*(o.pop+12000*real*(1-0.4*s.roads[c])),rev=(o.tax||0)*(1-0.45*(o.nob||0))*(ledger?1.1:1)+1;
   // (ecost, opt-in; Nein 2026-11-25 after probe egypt2.js) surplus elites cost the court: stipends, offices and estates for the
-  // great families beyond what the offices carry raise the upkeep by 0.5 x knob ecost for each multiple of the surplus (Turchin's
+  // great families beyond what the offices carry claim 0.5 x knob ecost of the revenue for each multiple of the surplus (Turchin's
   // fiscal link: elite overproduction drains the treasury). Before, a court with three times the elite its offices carry paid
-  // nothing for them, and Egypt's treasury sat at its cap for a thousand years
-  const upkeep=(ECOST?1+0.5*knob('ecost')*Math.max(0,o.E/Math.max(1e-6,etOf(o))-1):1)*(CORO?1+0.5*(o.cor||0):1)*0.28*Math.pow(o.cplx,ledger?1.6:1.8)*(o.pop+12000*real*(1-0.4*s.roads[c])),rev=(o.tax||0)*(1-0.45*(o.nob||0))*(ledger?1.1:1)+1;
-  o.burden=upkeep/rev;
+  // nothing for them, and Egypt's treasury sat at its cap for a thousand years. The claim is on revenue, not upkeep: Egypt's
+  // upkeep is a tenth to a third of its revenue, so a cost scaled to upkeep never strained it (first version, probe egypt2.js)
+  o.burden=upkeep/rev+(ECOST?0.5*knob('ecost')*Math.max(0,o.E/Math.max(1e-6,etOf(o))-1):0);
   o.pT=Math.max(0,o.burden-1)*1.2;
   const atWar=o.enemies.size>0;
   // extraction: how much of what the farmers grow above their needs the ruler takes. His own appetite and the realm's needs
