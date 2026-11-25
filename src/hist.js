@@ -626,7 +626,7 @@ const corOf=o=>CORR&&o&&o.kind==='state'?(o.cor||0):0;
 function corAt(o,i){if(!CORR||!o||o.kind!=='state')return 0;const s=S,far=s.dist[i]>=65534?1:Math.min(1,s.dist[i]/Math.max(1,o.h||6));
   return clamp((o.cor||0)*(0.6+0.4*far)*(1.2-s.integ[i])*(1-0.6*(s.chk?s.chk[i]:0)),0,1)}
 function corYear(o,c){const s=S,R=o.ruler||{},eS=clamp(o.E/Math.max(1e-6,etOf(o))-1,0,2)/2,uP=clamp(0.5*Math.max(0,(o.burden||0)-1)+0.5*Math.max(0,-(o.treas||0)),0,1),
-    vg=o.vig??0.6,rec=o.info?Math.min(1,o.info.rec||0):s.recK[c],D=0.3*eS+0.25*uP+0.15*(1-vg)+0.15*(R.greed??0.5)+0.1*(1-(o.mandate??1))+0.15*(o.nob||0)+0.15*Math.min(1,(o.md||0)/Math.max(1,o.h||6)),
+    vg=o.vig??0.6,rec=o.info?Math.min(1,o.info.rec||0):s.recK[c],D=0.3*eS+0.25*uP+0.15*(1-vg)+0.15*(R.greed??0.5)+0.1*(1-(o.mandate??1))+0.15*(o.nob||0)+0.15*Math.min(1,(o.md||0)/Math.max(1,o.h||6))+(CARC?0.3*Math.max(0,-(o.mom||0)):0),
     O=clamp(0.35*rec+0.2*(s.tk[27][c]>0.5?1:0)+0.2*s.law[c]+0.15*s.roads[c]+0.4*(s.chk?s.chk[c]:0),0,0.9),T=clamp(knob('corr')*D*(1-0.7*O),0,1);
   o.cor=(o.cor||0)+0.1*(T-(o.cor||0));
   // (noreftop) an able, watchful ruler moves against it
@@ -675,7 +675,8 @@ function learnWar(o,i,win,dif){if(!LEARN||o.kind!=='state'||!o.arm||!(dif>=0))re
   else if(b){const m=b.sk??0.5;b.sk=Math.min(1,m+k*(1-m)*(win?clamp(dif,0,1):0.6))}}
 // a realm's momentum after a battle won or lost against a state (gates opened to a winner by lords hedging on the loser's side)
 function momWar(o,d,j,win){if(!MOM||o.kind!=='state'||!d||d.kind!=='state')return;const s=S,a=win?1:0.4;   // a province taken counts fully, an assault beaten off less
-  const W=win?o:d,L=win?d:o;W.mom=Math.min(1,(W.mom||0)+0.06*a*(1-Math.max(0,W.mom||0)));L.mom=Math.max(-1,(L.mom||0)-0.06*a*(1+Math.min(0,L.mom||0)));
+  const W=win?o:d,L=win?d:o,cv=SWING&&o.enemies.has(d.id)&&s.wars[o.enemies.get(d.id)]&&s.wars[o.enemies.get(d.id)].civil?1+knob('swing'):1;
+  W.mom=Math.min(1,(W.mom||0)+0.06*cv*a*(1-Math.max(0,W.mom||0)));L.mom=Math.max(-1,(L.mom||0)-0.06*cv*a*(1+Math.min(0,L.mom||0)));
   if(win&&L.mom<-0.3&&L.alive){const w=WD,hand=courtHand(L,false);let n=0;
     for(let q=w.nbS[j];q<w.nbS[j+1]&&n<2;q++){const k2=w.nbA[q];if(k2<0||s.pol[k2]!==L.id||k2===L.capital)continue;
       s.integ[k2]=Math.max(0,s.integ[k2]-0.03*(-L.mom));
@@ -1321,7 +1322,13 @@ function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===i
 // - nocutoff: loyal provinces the court can reach only through rebel land lose their hold on it, a fiftieth a year, and count
 //   as half as guarded: the court is left with scattered pockets
 // - nofaultreach: a court that falls passes to the rebels each by what lies nearest them, not whole to the strongest
-const FAULT=swOn('fault'),FSEED=FAULT&&!swOn('nofaultseed'),FVAC=FAULT&&!swOn('novacuum'),FCUT=FAULT&&!swOn('nocutoff'),FREACH=FAULT&&!swOn('nofaultreach');
+// and both sides of a civil war feel how it goes (Nein 2026-11-25):
+// - noswing: a civil war is a run of battles everyone watches: momentum moves (1 + knob swing) times as far and fades more slowly
+// - nodefect: a court that is losing sees more provinces rise; a rebel that is losing sees its provinces go back to the court,
+//   the more where the court's armies are near (the brake on the cascade: a court that wins a few battles can roll a rising back)
+// - nocarcass: officials of a side that is losing take what they can while they can (corruption rises with lost momentum)
+const FAULT=swOn('fault'),FSEED=FAULT&&!swOn('nofaultseed'),FVAC=FAULT&&!swOn('novacuum'),FCUT=FAULT&&!swOn('nocutoff'),FREACH=FAULT&&!swOn('nofaultreach'),
+  SWING=FAULT&&!swOn('noswing'),DEFECT=FAULT&&!swOn('nodefect'),CARC=FAULT&&!swOn('nocarcass');
 function deepOf(o){return clamp(Math.max(((o.psi||0)-1.5)/1.5,(-(o.treas||0)-0.3)/0.7,(o.owed||0)-0.3),0,1)}
 function faultBase(o,i){const s=S;return (0.5+(o.nob||0))*(1.3-s.integ[i])*(1+(s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0))}
 function vacuumPass(){const s=S,w=WD,r=s.r,y=s.year;
@@ -1329,15 +1336,21 @@ function vacuumPass(){const s=S,w=WD,r=s.r,y=s.year;
     const cells=polCells(o.id);if(cells.length<3)continue;let reach=null;
     if(FCUT){reach=new Set([o.capital]);const q=[o.capital];for(let h=0;h<q.length;h++){const c=q[h];for(let e=w.nbS[c];e<w.nbS[c+1];e++){const j=w.nbA[e];if(j>=0&&s.pol[j]===o.id&&!reach.has(j)){reach.add(j);q.push(j)}}}
       for(const i of cells)if(!reach.has(i))s.integ[i]=Math.max(0,s.integ[i]-0.02)}
+    // (nodefect) rebels who keep losing lose heart: their provinces beside the court's land go back to it
+    if(DEFECT)for(const k of war.a.slice()){const p=s.pols[k];if(!p||!p.alive||p.kind!=='state'||(p.mom||0)>-0.15)continue;
+      for(const i of polCells(k)){if(i===p.capital)continue;let nb=false;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j>=0&&s.pol[j]===o.id){nb=true;break}}if(!nb)continue;rk(N+i);
+        let cv=0;for(const a of (o.arm||[]))cv+=(a.eta>y?0.3:1)*Math.exp(-kmB(i,a.at)/600);
+        if(r()<0.05*(-p.mom)*(1.2-s.integ[i])*Math.min(1,0.3+cv)){s.pol[i]=o.id;s.integ[i]=Math.min(s.integ[i],0.5);s.defBackN=(s.defBackN||0)+1}}}
     if(!FVAC)continue;const dp=deepOf(o);if(dp<=0)continue;const A=o.arm||[];
     for(const i of cells){if(i===o.capital||s.pol[i]!==o.id)continue;rk(i);
       let cv=0;for(const a of A)cv+=(a.eta>y?0.3:1)*Math.exp(-kmB(i,a.at)/600);if(reach&&!reach.has(i))cv*=0.5;
-      if(r()>=0.02*knob('vac')*dp*faultBase(o,i)*Math.exp(-2*cv))continue;
+      if(r()>=0.02*knob('vac')*dp*faultBase(o,i)*Math.exp(-2*cv)*(DEFECT?1+2*Math.max(0,-(o.mom||0)):1))continue;
       let jn=0;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0)continue;const q=s.pol[j];if(q&&q!==o.id&&war.aSet.has(q)&&s.pols[q].alive&&s.pols[q].kind==='state'){jn=q;break}}
       if(jn)s.pol[i]=jn;
       else{const nid=newPolity(i,o,{kind:'state',origin:{type:'rebellion',from:o.id,why:'With the court\'s armies away, its lords rose.'}}),n=s.pols[nid];n.rel=s.rel[i]>=0?s.rel[i]:o.rel;
         war.a.push(nid);war.aSet.add(nid);n.enemies.set(o.id,war.id);o.enemies.set(nid,war.id);n.warsF.push(war.id);n.cwR=o.id}
-      s.s[i]=Math.min(1,s.s[i]+0.12);o.lostAt=i;o.lostY=y;s.vacN=(s.vacN||0)+1}}}
+      s.s[i]=Math.min(1,s.s[i]+0.12);o.lostAt=i;o.lostY=y;s.vacN=(s.vacN||0)+1}
+}}
 function civilWar(o,breakup){
   const s=S,w=WD,r=s.r,id=o.id,cells=polCells(id);
   if(cells.length<3)return;
@@ -2162,7 +2175,7 @@ function* politicsG(){
     if(VIG&&o.kind==='state'){const cp=o.ruler&&o.ruler.comp!=null?o.ruler.comp:0.5,
         pr=clamp(vigWar(o)+(y-(o.raidY||-1e9)<10?vigRaid(o):0)+0.4*Math.min(1,o.shock||0)+Math.max(0,o.press-0.95),0,1),
         tg=clamp(0.2+0.5*cp+0.6*pr,0,1),v=o.vig??0.8;o.vig=v+(tg>v?0.08:0.006*(1.5-cp))*(tg-v)}
-    if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*0.85;if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;if(LEARN&&o.arm)for(const a of o.arm)if(a.sk!=null&&a.cmd!==0)a.sk+=0.04*(0.5-a.sk);
+    if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*(SWING&&(o.cwC||o.cwR)?0.93:0.85);if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;if(LEARN&&o.arm)for(const a of o.arm)if(a.sk!=null&&a.cmd!==0)a.sk+=0.04*(0.5-a.sk);
     o.E=clamp(o.E+(CORR?0.004*corOf(o)*o.E:0)+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
