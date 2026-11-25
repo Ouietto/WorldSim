@@ -548,6 +548,25 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   provinces not connected to the capital through the court's own land lose 0.02 integration a year. `nofaultreach`: a decisive winner
   of the court's fall with other rebels beside it takes the capital and what lies nearest it; each rebel takes what lies nearest
   its own land (BFS), the rest to their lords (`ev.fReach`). Probe `egypt2.js` prints the counts.
+  Probe (seeds 1, 4, best + corruption + intelligence + fault): fault seeds 110-119 a history, vacuum risings 2-11, split falls 7-9;
+  decades without a realm holding a third of the Nile 53 and 0 of 271 (seed 4's empire held Egypt 2600-1277 BCE; its civil wars
+  broke out elsewhere). Smoke test passed (7.9 min); fingerprint unchanged.
+- **Both sides feel the war (inside `fault`; Nein 2026-11-25: losing battles costs momentum on either side, making defection and
+  secession likelier, weakening troops and raising corruption as people loot the dying carcass).** `noswing` (knob `swing`):
+  momentum moves (1 + swing) times as far in civil wars and fades 7% a year instead of 15% while one lasts. `nodefect`: vacuum risings
+  × (1 + 2 × the court's lost momentum); a rebel with momentum below −0.15 loses provinces beside the court's land back to it at 0.05
+  × (−mom) × (1.2 − integ) × min(1, 0.3 + cover) a year (`ev.defBack`). `nocarcass`: corruption drivers + 0.3 × lost momentum.
+  An army now covers about 250 km (exp(−km/250); at 600 one camp covered all of Egypt). Probe with elite cost k 1 (seeds 1, 4):
+  vacuum risings 2-22, rebel provinces back 3-5, gaps 126 and 20 of 271 decades (before cover was narrowed).
+- **War weariness and the calculated truce (opt-in `truce`; Nein 2026-11-25: wars can become a slog; a reunifier dies, a weak heir
+  starts losing and offers a truce, the rebels accept if they cannot expect to take it all within their horizon; a weary,
+  war-torn people wants peace).** `noweary` (knob `weary`): each engagement kills 0.25 × 0.02 of the people of the province on the
+  losing side (0.4 of that on the winning side); o.wy = 0.92 o.wy + weary × (40 × dead / people + 0.01 at war), ≤ 1.5; stress part
+  pV = 0.6 wy ("a people worn out by years of war"); armies × (1 − 0.25 min(1, wy)) via cwForce. `nocalc` (knob `thor`): each year
+  of a war (2+ years, both sides states, civil wars included) the years each side needs at the war's pace (lands left / net gains a
+  year) against its horizon thor × (5 + 30 × ruler's aggression) × (1 + momentum) × (1 − 0.6 wy); when neither expects to win in
+  time, a truce at 0.15 × (1 + 2 × custom of treaties) a year, ×2 in a new ruler's first three years (`ev.truce`, `ev.truceC`); a
+  civil truce leaves each side what it holds, truce 10-40 years.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
