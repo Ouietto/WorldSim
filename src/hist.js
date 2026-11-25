@@ -1337,7 +1337,8 @@ const FAULT=swOn('fault'),FSEED=FAULT&&!swOn('nofaultseed'),FVAC=FAULT&&!swOn('n
 //   (o.wy, fading 8% a year; knob weary). Weariness adds to stress and takes up to a quarter off its armies' strength
 // - nocalc: each year of a war, each side reckons how many years it needs to take the other's lands at the pace the war has
 //   gone, and how long it is willing to wait: 5 + 30 x its ruler's appetite for war, longer with momentum, shorter as its people
-//   tire (knob thor). When neither expects to win within its horizon they make a truce (more readily with a custom of treaties,
+//   tire (knob thor). Only in a slog (six years without gains, or a side worn out: weariness above 0.5; run 146: weighed from the
+//   second year it ended about 370 wars a millennium, most of them ordinary conquests). When neither expects to win within its horizon they make a truce (more readily with a custom of treaties,
 //   and twice as readily in a new ruler's first years); in a civil war each side keeps what it holds
 const TRUCE=swOn('truce'),WEARY=TRUCE&&!swOn('noweary'),TCALC=TRUCE&&!swOn('nocalc');
 function wearyToll(o,d,i,j,win){if(!WEARY||o.kind!=='state')return;const s=S,lo=0.25*0.02,hi=0.4*lo,dA=s.pop[i]*(win?hi:lo),dD=s.pop[j]*(win?lo:hi);
@@ -2317,7 +2318,7 @@ function* politicsG(){
       if(A.alive&&D.alive&&A.kind==='state'&&D.kind==='state'){let nA=0;for(const k of war.a){const p=pols[k];if(p.alive)nA+=p.cA||p.cells}
         const nD=D.cA||D.cells,rate=((war.gA||0)-(war.gD||0))/yrs,tA=rate>0.02?nD/rate:1e9,tD=rate<-0.02?nA/(-rate):1e9,
           hz=X=>knob('thor')*(5+30*((X.ruler||{}).aggr??0.5))*(1+Math.max(0,X.mom||0))*(1-0.6*Math.min(1,X.wy||0));
-        if(tA>hz(A)&&tD>hz(D)){const nw=(A.ruler&&y-A.ruler.since<3)||(D.ruler&&y-D.ruler.since<3),dip=0.5*(dipOf(A)+dipOf(D));
+        if((y-(war.lastGain||war.start)>=6||Math.max(A.wy||0,D.wy||0)>0.5)&&tA>hz(A)&&tD>hz(D)){const nw=(A.ruler&&y-A.ruler.since<3)||(D.ruler&&y-D.ruler.since<3),dip=0.5*(dipOf(A)+dipOf(D));
           if(r()<0.15*(1+2*dip)*(nw?2:1)){war.treaty=dip;s.truceN=(s.truceN||0)+1;if(war.civil)s.truceCN=(s.truceCN||0)+1;
             if(war.civil&&(D.cA||D.cells)>=15)chron('diplomacy',`Neither the ${D.full} nor the rebels of ${A.base} can win: they make a truce, and each keeps what it holds.`,D.capital,[R_(D),RB(A),RW(war)],'Years of war had bled both sides, and no end was in sight.');
             endWar(war);continue}}}}
