@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-145 scored, no batch
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-145 scored, run 146
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -567,6 +567,12 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   year) against its horizon thor × (5 + 30 × ruler's aggression) × (1 + momentum) × (1 − 0.6 wy); when neither expects to win in
   time, a truce at 0.15 × (1 + 2 × custom of treaties) a year, ×2 in a new ruler's first three years (`ev.truce`, `ev.truceC`); a
   civil truce leaves each side what it holds, truce 10-40 years.
+  Probe (seeds 1, 4; best + corruption + intelligence + fault + truce + elite cost k 1): truces about 1,000 a history (34-39 civil),
+  vacuum risings 1-6, rebel provinces back 0-1, fault seeds about 150, split falls 12-15; gaps 110 and 7 of 271 decades. Smoke
+  test passed (7.9 min); fingerprint unchanged.
+- **Run 146 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence; + fault; + truce;
+  + fault + truce; + fault + truce + elite cost k 1 ("all"); all without vacuum risings, without defection, without the calculated
+  truce, without weariness; all with vacuum at half.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
