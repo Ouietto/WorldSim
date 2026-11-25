@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-143 scored, run 144
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-144 scored, no batch
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -493,6 +493,19 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 144 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption with the local-reform fix; + peopled
   frontier; + intelligence (no fog, no lessons); + intelligence with lessons; + intelligence + peopled frontier; that without
   secrets; without weak points; + peopled frontier at fpw 2; best (no corruption) + peopled frontier.
+  **Result (b65baa69, error; baseline 34.2% / 2.44):** best + corruption with the reform fix 32.5 / 2.26 (run 143 without the fix
+  2.22: same within noise); + peopled frontier 30.3 / 2.24; **+ intelligence 32.8 / 2.23 ▲**; + intelligence with lessons 32.2 / 2.23
+  ▲; + intelligence + peopled frontier 29.4 (▼) / 2.30; that without secrets 2.36, without weak points 2.35 (both pieces pull their
+  weight inside the combination); peopled frontier at fpw 2 25.6 (▼) / 2.52 (too strong); best (no corruption) + peopled frontier
+  32.5 / 2.24 ▲ (Assyrian pattern 38% ▲, Persian 17%). **Intelligence is the first change to bring Egypt's unification earlier:**
+  two thirds of the Nile under one realm 1786 → 2211 BCE (21 → 25% in band; with lessons 2156), a third lasting 2686 BCE; Akkad
+  later (1706 → 1451). Realms in turn: Mesopotamia 4 everywhere but fpw 2 (3); Egypt 3 (best + corruption, intelligence) or 4 (with
+  the peopled frontier, 54% in band). **Egypt's intermediate periods still median 0.00 in every variant** (in band 4-21%): the peopled
+  frontier did not deliver its purpose (probe: Egypt's frontier weight stays 0.7-0.9, cohesion 0.9+). Local checks now arise 1.1-1.8
+  a millennium in 23-24 of 24 histories (were 0.4); reform from the top 25, false reports believed about 55, lessons 430 (with
+  lessons), court falls 71-77. Egypt's people still low under works (2500 BCE 1.0-1.1M, 1250 BCE 1.3-1.6M).
+  **Proposed next (to Nein):** keep `intel` and `frontpop` opt-in; next a probe of Egypt's leading realm under best + corruption +
+  intelligence (cohesion, stress, civil wars and how deep they reach, what holds it) before any new rule for intermediate periods.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
