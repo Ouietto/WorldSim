@@ -2111,7 +2111,7 @@ function strife(o){const s=S,r=s.r;s.strifeN=(s.strifeN||0)+1;for(const i of pol
 const REBM=MOM&&!swOn('norebmom'),PAYW=RISE&&!swOn('nopay'),EGONE=ESPLIT&&!swOn('noegone'),OVH=RISE&&!swOn('noovh'),VULT=RISE&&!swOn('novulture'),FLOAD=RISE&&!swOn('nofrontload'),HUNG=RISE&&!swOn('nohungry');
 const ovhOf=o=>OVH&&o.kind==='state'?clamp(0.5*(o.E/etOf(o)-1),0,0.6):0;
 const hungAt=(i,o)=>HUNG?Math.min(1,clamp(2*(S.pop[i]/(S.K[i]+1)-0.9),0,1)+(o&&o.pW||0)):0;
-function cwForce(o,i){let f=1;if(PAYW&&o.kind==='state')f*=(1-0.4*Math.min(1,o.owed||0))*((o.treas||0)<-0.3?0.8:1);
+function cwForce(o,i){let f=WEARY&&o.kind==='state'?1-0.25*Math.min(1,o.wy||0):1;if(PAYW&&o.kind==='state')f*=(1-0.4*Math.min(1,o.owed||0))*((o.treas||0)<-0.3?0.8:1);
   if(o.cwC){if(EGONE)f*=1-(o.eGone||0);if(FLOAD)f*=1-0.5*(o.extL||0);if(HUNG)f*=1-0.3*hungAt(i,o)}
   else if(o.cwR){if(EGONE)f*=1+(o.eGain||0);if(HUNG){const C=S.pols[o.cwR];f*=1+0.5*hungAt(i,C&&C.alive?C:null)}}
   return f}
@@ -2718,7 +2718,7 @@ function succession(o){
   else o.gen++;
 }
 function etOf(o){const c=o.capital,s=S;return 0.02*(1+admOf()[c]+0.5*s.coin[c]+0.5*s.law[c])}
-const WHY_LABEL={pW:'taxes that took the peasants\' bread',pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pC:'more people than its chiefs and record-keepers could manage',pY:'a swollen generation of young men without land or office',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
+const WHY_LABEL={pV:'a people worn out by years of war',pW:'taxes that took the peasants\' bread',pD:'a court split between steppe lords and settled officials',pB:'great lords who answered to no one',pN:'rule stretched over lands unlike its own',pT:'a government that cost more than it returned',pF:'an empty treasury and mounting debts',pQ:'a widening gulf between the great and the poor',pZ:'an empire grown too large to govern',pC:'more people than its chiefs and record-keepers could manage',pY:'a swollen generation of young men without land or office',pI:'restless, poorly integrated provinces',pM:'a dynasty that had lost its mandate',pP:'population pressing on the land',pE:'too many elites competing for office',pS:'weak cohesion',pX:'an overextended realm',pR:'an inept ruler',sh:'recent famine, plague, invasion or succession strife'};
 function topCauses(why){return Object.entries(why).filter(e=>e[1]>0.08).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>WHY_LABEL[e[0]])}
 function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===id)out.push(i);return out}
 // fault lines in the heartland (opt-in fault; Nein 2026-11-25, after probe egypt2.js: Egypt passed whole from one realm to the
@@ -2726,6 +2726,7 @@ function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===i
 // its own provinces' power, not only at its far edge, and the breaking feeds on itself:
 // - nofaultseed: rebels can rise anywhere, the more where a province's lords have a power base of their own (people, the lords'
 //   share, water that others downstream depend on, a loose bond to the court)
+//   (an army covers about 250 km: at first 600, which covered all of Egypt from one camp, and almost nothing rose)
 // - novacuum: while the civil war lasts, a province with none of the court's armies near may rise too and join the rebels next to
 //   it, or rise on its own; each rising draws the armies after it and leaves other provinces bare (knob vac)
 // - nocutoff: loyal provinces the court can reach only through rebel land lose their hold on it, a fiftieth a year, and count
@@ -2738,6 +2739,18 @@ function polCells(id){const s=S,out=[];for(const i of WD.landIdx)if(s.pol[i]===i
 // - nocarcass: officials of a side that is losing take what they can while they can (corruption rises with lost momentum)
 const FAULT=swOn('fault'),FSEED=FAULT&&!swOn('nofaultseed'),FVAC=FAULT&&!swOn('novacuum'),FCUT=FAULT&&!swOn('nocutoff'),FREACH=FAULT&&!swOn('nofaultreach'),
   SWING=FAULT&&!swOn('noswing'),DEFECT=FAULT&&!swOn('nodefect'),CARC=FAULT&&!swOn('nocarcass');
+// war weariness and the calculated truce (opt-in truce; Nein 2026-11-25: wars can become a slog; a weary, war-torn people wants
+// peace, and leaders weigh whether they can win within the years they are willing to wait):
+// - noweary: each engagement kills men of the provinces fought from and over (a fiftieth of a quarter of their people on the
+//   losing side, two fifths of that on the winning side); the dead against the realm's people, and years at war, make it weary
+//   (o.wy, fading 8% a year; knob weary). Weariness adds to stress and takes up to a quarter off its armies' strength
+// - nocalc: each year of a war, each side reckons how many years it needs to take the other's lands at the pace the war has
+//   gone, and how long it is willing to wait: 5 + 30 x its ruler's appetite for war, longer with momentum, shorter as its people
+//   tire (knob thor). When neither expects to win within its horizon they make a truce (more readily with a custom of treaties,
+//   and twice as readily in a new ruler's first years); in a civil war each side keeps what it holds
+const TRUCE=swOn('truce'),WEARY=TRUCE&&!swOn('noweary'),TCALC=TRUCE&&!swOn('nocalc');
+function wearyToll(o,d,i,j,win){if(!WEARY||o.kind!=='state')return;const s=S,lo=0.25*0.02,hi=0.4*lo,dA=s.pop[i]*(win?hi:lo),dD=s.pop[j]*(win?lo:hi);
+  s.pop[i]-=dA;s.pop[j]-=dD;o.dead=(o.dead||0)+dA;if(d&&d.kind==='state')d.dead=(d.dead||0)+dD}
 function deepOf(o){return clamp(Math.max(((o.psi||0)-1.5)/1.5,(-(o.treas||0)-0.3)/0.7,(o.owed||0)-0.3),0,1)}
 function faultBase(o,i){const s=S;return (0.5+(o.nob||0))*(1.3-s.integ[i])*(1+(s.lev?Math.min(1,s.lev[i]/(s.pop[i]+1e3)):0))}
 function vacuumPass(){const s=S,w=WD,r=s.r,y=s.year;
@@ -2748,11 +2761,11 @@ function vacuumPass(){const s=S,w=WD,r=s.r,y=s.year;
     // (nodefect) rebels who keep losing lose heart: their provinces beside the court's land go back to it
     if(DEFECT)for(const k of war.a.slice()){const p=s.pols[k];if(!p||!p.alive||p.kind!=='state'||(p.mom||0)>-0.15)continue;
       for(const i of polCells(k)){if(i===p.capital)continue;let nb=false;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j>=0&&s.pol[j]===o.id){nb=true;break}}if(!nb)continue;rk(N+i);
-        let cv=0;for(const a of (o.arm||[]))cv+=(a.eta>y?0.3:1)*Math.exp(-kmB(i,a.at)/600);
+        let cv=0;for(const a of (o.arm||[]))cv+=(a.eta>y?0.3:1)*Math.exp(-kmB(i,a.at)/250);
         if(r()<0.05*(-p.mom)*(1.2-s.integ[i])*Math.min(1,0.3+cv)){s.pol[i]=o.id;s.integ[i]=Math.min(s.integ[i],0.5);s.defBackN=(s.defBackN||0)+1}}}
     if(!FVAC)continue;const dp=deepOf(o);if(dp<=0)continue;const A=o.arm||[];
     for(const i of cells){if(i===o.capital||s.pol[i]!==o.id)continue;rk(i);
-      let cv=0;for(const a of A)cv+=(a.eta>y?0.3:1)*Math.exp(-kmB(i,a.at)/600);if(reach&&!reach.has(i))cv*=0.5;
+      let cv=0;for(const a of A)cv+=(a.eta>y?0.3:1)*Math.exp(-kmB(i,a.at)/250);if(reach&&!reach.has(i))cv*=0.5;
       if(r()>=0.02*knob('vac')*dp*faultBase(o,i)*Math.exp(-2*cv)*(DEFECT?1+2*Math.max(0,-(o.mom||0)):1))continue;
       let jn=0;for(let e=w.nbS[i];e<w.nbS[i+1];e++){const j=w.nbA[e];if(j<0)continue;const q=s.pol[j];if(q&&q!==o.id&&war.aSet.has(q)&&s.pols[q].alive&&s.pols[q].kind==='state'){jn=q;break}}
       if(jn)s.pol[i]=jn;
@@ -3132,6 +3145,7 @@ function attack(o,i,j,sea){
         if(j===d.capital&&o.kind==='state'&&war.goal==='break'&&war.aSet.has(o.id))breakRealm(o,d,war);
         else if(j===d.capital&&o.kind==='state'&&(d.cells<=2||d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
   }
+  if(WEARY&&o.kind==='state'&&!evaded&&q)wearyToll(o,s.pols[q],i,j,win);
   if(RISE&&o.kind==='state'&&!evaded){const dq=q?s.pols[q]:null;if(FLD){learnWar(o,i,win,1-pw4);if(dq&&dq.kind==='state')learnWar(dq,j,!win,pw4)}if(dq)momWar(o,dq,j,win)}
   // cohort switch: every engagement costs men on both sides, more for the side that loses; a taken province loses many of
   // its young men (killed, fled or carried off), more in a punitive campaign
@@ -3584,14 +3598,14 @@ function* politicsG(){
     if(VIG&&o.kind==='state'){const cp=o.ruler&&o.ruler.comp!=null?o.ruler.comp:0.5,
         pr=clamp(vigWar(o)+(y-(o.raidY||-1e9)<10?vigRaid(o):0)+0.4*Math.min(1,o.shock||0)+Math.max(0,o.press-0.95),0,1),
         tg=clamp(0.2+0.5*cp+0.6*pr,0,1),v=o.vig??0.8;o.vig=v+(tg>v?0.08:0.006*(1.5-cp))*(tg-v)}
-    if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*(SWING&&(o.cwC||o.cwR)?0.93:0.85);if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;if(LEARN&&o.arm)for(const a of o.arm)if(a.sk!=null&&a.cmd!==0)a.sk+=0.04*(0.5-a.sk);
+    if(MOM&&o.mom)o.mom=Math.abs(o.mom)<0.01?0:o.mom*(SWING&&(o.cwC||o.cwR)?0.93:0.85);if(WEARY&&o.kind==='state'){o.wy=clamp((o.wy||0)*0.92+knob('weary')*(40*(o.dead||0)/(o.pop+1)+(o.enemies.size?0.01:0)),0,1.5);o.dead=0}if(LEARN&&o.vet)o.vet=o.vet<0.005?0:o.vet*0.96;if(LEARN&&o.arm)for(const a of o.arm)if(a.sk!=null&&a.cmd!==0)a.sk+=0.04*(0.5-a.sk);
     o.E=clamp(o.E+(CORR?0.004*corOf(o)*o.E:0)+0.012*o.E*(1-o.press)*(0.8+0.4*comp)*(0.5+(o.ineq==null?0.5:o.ineq))*(VIG&&o.kind==='state'?1.3-0.6*vigOf(o):1),0.004,0.12);
     o.shock*=0.92;
     o.mandate=Math.min(1,o.mandate+0.006);
     statecraft(o,c,y);if(CORR&&o.kind==='state'&&o.alive)corYear(o,c);militaryPass(o);elitePass(o);
     if(o.kind==='state'&&o.pop<FLOOR.chief*P.floor){o.lowY=o.lowY||y;if(y-o.lowY>25){if(o.maxCells>=8)chron('fall',`The ${o.full} dwindles below the numbers needed to sustain a ruler and his household; it dissolves back into villages and kin-groups.`,c,[R_(o)],'Too few people remained to feed a court, an army and their collectors.');for(const i of polCells(id))pol[i]=0;continue}}else o.lowY=0;
     const pO=(bountyOn()&&o.kind==='horde'?0.8*Math.max(0,(o.owed||0)-0.6):0)+(portOn()&&o.kind==='horde'?1.5*Math.max(0,(o.griev||0)-0.3):0)+(prestOn()&&o.kind==='horde'?2.5*Math.max(0,Math.min(1,o.expect||0)-(o.prest||0)):0),pP=Math.max(0,o.press-0.85)*3*(khanOn()&&o.kind==='horde'?1-0.7*Math.min(1,(o.hunger||0)/0.3):1),pE=Math.max(0,o.E/Et-1.15)*1.1,pS=Math.max(0,0.42-o.S)*2.2,pX=Math.max(0,o.md/o.h-0.85)*(s_recK[c]<0.5?2.2:1.0),pR=Math.max(0,0.5-comp)*0.8,pI=Math.max(0,0.45-(o.integ??1))*0.8,pM=Math.max(0,0.5-o.mandate)*1.2,pZ=o.kind==='state'?Math.max(0,o.cells/(170*(1+0.6*s_roads[c]+0.4*s_admin[c]+0.3*s_paper[c]))-1)*0.9:0;
-    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,pO,sh:o.shock};o.psi=pO+pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
+    const pT=o.pT||0,pF=o.pF||0,pQ=o.pQ||0,pC=SCK*0.8*(o.scl||0),pY=CO&&o.kind==='state'?Math.max(0,(o.mpR??1)-1.12)*1.5:0;const pN=o.kind==='state'?P.eco*0.8*Math.max(0,(o.forS||0)-0.35):0;const pB=o.kind==='state'?Math.max(0,(o.nob||0)-0.55)*(1.2-o.S):0;const pD=o.kind==='state'?0.8*(o.pD||0):0,pW=o.kind==='state'?o.pW||0:0,pV=WEARY&&o.kind==='state'?0.6*(o.wy||0):0;o.why={pP,pE,pS,pX,pR,pI,pM,pZ,pN,pT,pF,pQ,pB,pD,pW,pC,pY,pO,pV,sh:o.shock};o.psi=pV+pO+pP+pE+pS+pX+pR+pI+pM+pZ+pT+pF+pQ+pN+pB+pD+pW+pC+pY+o.shock;
     const isl=o.island?0.4:1;
     // (nodepth) a realm's crisis is counted in provinces, its lords and cities, not in acreage: a narrow, crowded valley like the
     // Nile's held many nomes on little land, and could break apart like any other (before, a realm under three cells' area of land
@@ -3708,6 +3722,14 @@ function* politicsG(){
     // peace; a stalemate is talked out. How readily, and how long the truce holds (10 to 40 years), goes with the custom of
     // treaties (dip, 0 to 1, kept by each people): it grows in long indecisive wars between peers, with law codes and records,
     // and passes to the other side of every treaty made
+    if(TCALC&&aAlive&&dAlive&&yrs>=2){const A=pols[war.a[0]],D=pols[war.d[0]];
+      if(A.alive&&D.alive&&A.kind==='state'&&D.kind==='state'){let nA=0;for(const k of war.a){const p=pols[k];if(p.alive)nA+=p.cA||p.cells}
+        const nD=D.cA||D.cells,rate=((war.gA||0)-(war.gD||0))/yrs,tA=rate>0.02?nD/rate:1e9,tD=rate<-0.02?nA/(-rate):1e9,
+          hz=X=>knob('thor')*(5+30*((X.ruler||{}).aggr??0.5))*(1+Math.max(0,X.mom||0))*(1-0.6*Math.min(1,X.wy||0));
+        if(tA>hz(A)&&tD>hz(D)){const nw=(A.ruler&&y-A.ruler.since<3)||(D.ruler&&y-D.ruler.since<3),dip=0.5*(dipOf(A)+dipOf(D));
+          if(r()<0.15*(1+2*dip)*(nw?2:1)){war.treaty=dip;s.truceN=(s.truceN||0)+1;if(war.civil)s.truceCN=(s.truceCN||0)+1;
+            if(war.civil&&(D.cA||D.cells)>=15)chron('diplomacy',`Neither the ${D.full} nor the rebels of ${A.base} can win: they make a truce, and each keeps what it holds.`,D.capital,[R_(D),RB(A),RW(war)],'Years of war had bled both sides, and no end was in sight.');
+            endWar(war);continue}}}}
     if(PEACE&&aAlive&&dAlive&&!war.civil&&yrs>=2){const A=pols[war.a[0]],D=pols[war.d[0]];
       if(A.alive&&D.alive&&A.kind==='state'&&D.kind==='state'){const g=(war.gA||0)-(war.gD||0),pr=power(A)/(power(D)+1),dA=dipOf(A),dD=dipOf(D),dip=0.5*(dA+dD),want=Math.max(2,0.15*(D.cA||D.cells));
         let pp=0,kind='';
