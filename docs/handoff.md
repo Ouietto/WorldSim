@@ -506,6 +506,21 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   lessons), court falls 71-77. Egypt's people still low under works (2500 BCE 1.0-1.1M, 1250 BCE 1.3-1.6M).
   **Proposed next (to Nein):** keep `intel` and `frontpop` opt-in; next a probe of Egypt's leading realm under best + corruption +
   intelligence (cohesion, stress, civil wars and how deep they reach, what holds it) before any new rule for intermediate periods.
+- **Probe `egypt2.js` (2026-11-25; seeds 1-4 to 300 BCE, best + corruption + intelligence): what holds Egypt together.**
+  (1) Once a realm holds most of the Nile it keeps it for 600-1,500 years (seed 1: 1200-300 BCE at 0.63-0.97; seed 4: 1800-300 BCE at
+  0.97-0.98; seed 2: two realms 2200-300 BCE). Successions pass Egypt whole from one realm to the next (the court falls and the
+  winner takes its lands), never through a gap. The one long gap (seed 3, 1700-1300 BCE) followed a conquest by herders' clans.
+  (2) Stress after unification is almost only elite overproduction (pE): E/Et climbs over centuries to its cap 3.0 (o.E ≤ 0.12),
+  psi about 2.3; otherwise psi under 1. **The treasury sits at its cap 1.0 throughout** (burden well under 1): `statecraft`'s upkeep
+  = 0.28 × cplx^1.6-1.8 × (people + 12000 × land) does not depend on the elite, so a court with three times the elite its offices
+  carry pays nothing for them, and the pay, corruption (unpaid officials), protection and holding-back channels never bite. Cohesion
+  0.9-1.0 (0.5-0.7 when Egypt is a part of a large empire). (3) Civil wars in the realm holding Egypt: 4-8 per 1,500 years at psi
+  1.5-2.7; most leave Egypt untouched (share 0.97 → 0.97: rebels rise far from the court, and Egypt is the integrated heartland);
+  when the court falls, one successor takes Egypt whole.
+  **Proposed to Nein:** (a) surplus elites cost the court (stipends, offices, estates): upkeep × (1 + k × (E/Et − 1)), the
+  fiscal-structural link of Turchin's model, routing elite overproduction through the treasury into channels already built;
+  (b) if Egypt still passes whole, fault lines inside the heartland in a crisis (provincial lords with their own people and
+  water, as the nomarchs of the First Intermediate Period).
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
