@@ -1,13 +1,11 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"best (everything but judgment)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5"},
- {"name":"best + corruption","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt KV=wbuild:0.5"},
- {"name":"  without tax skimming","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocortax KV=wbuild:0.5"},
- {"name":"  without padded levies","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorlevy KV=wbuild:0.5"},
- {"name":"  without lost pay","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorpay KV=wbuild:0.5"},
- {"name":"  without sold offices","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocoroff KV=wbuild:0.5"},
- {"name":"  without corrupt governors","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorgov KV=wbuild:0.5"},
- {"name":"  without bribed gates","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,nocorgate KV=wbuild:0.5"},
- {"name":"  without local reform","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,noreflocal KV=wbuild:0.5"},
- {"name":"  without reform from the top","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,noreftop KV=wbuild:0.5"},
- {"name":"baseline + corruption","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,corrupt"}]}
+ {"name":"best + corruption (local reform fixed)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt KV=wbuild:0.5"},
+ {"name":"  + peopled frontier","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,frontpop KV=wbuild:0.5"},
+ {"name":"  + intelligence","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
+ {"name":"  + intelligence with lessons","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,corrupt,intel KV=wbuild:0.5"},
+ {"name":"  + intelligence + peopled frontier","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,frontpop KV=wbuild:0.5"},
+ {"name":"    without secrets","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,frontpop,nosecret KV=wbuild:0.5"},
+ {"name":"    without weak points","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,frontpop,noweakpt KV=wbuild:0.5"},
+ {"name":"  + peopled frontier, full only at equal numbers","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,frontpop KV=wbuild:0.5,fpw:2"},
+ {"name":"best (no corruption) + peopled frontier","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,frontpop KV=wbuild:0.5"}]}

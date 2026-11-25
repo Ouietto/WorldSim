@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit f2ba92a1; runs 126-143 scored, no batch
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-143 scored, run 144
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -487,6 +487,12 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   rival's corruption (leaks); a rival with I > 0.3 plants false reports, believed at 0.5 × (1 − I): seen power × (1 + 0.5 × ifalse
   × its I) (`ev.falseRep`). Weak points: the province to strike weighted × (1 + 1.5 × iweak × I × clamp(1.2 − integ − 0.7 walls)).
   With judgment's lessons on (no `nojudge`), learning per war × (0.3 + 0.7 I). Probe `intel.js`.
+  Probe seed 1: intelligence 0.07-0.16 before writing; a Mesopotamian court with records 0.6-0.66 from 3000 BCE; Egypt's leader
+  0.17-0.24 until about 2250, then 0.65. Egypt's frontier weight stays 0.72-0.93 (its leader then holds 0.3-0.4 of the Nile, with
+  populous rivals across), cohesion 0.90-0.95. Smoke test on the combined set-up passed (8.9 min); default fingerprint unchanged.
+- **Run 144 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption with the local-reform fix; + peopled
+  frontier; + intelligence (no fog, no lessons); + intelligence with lessons; + intelligence + peopled frontier; that without
+  secrets; without weak points; + peopled frontier at fpw 2; best (no corruption) + peopled frontier.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
