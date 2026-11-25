@@ -730,6 +730,7 @@ const failOf=o=>clamp(0.5*Math.max(0,-(o.mom||0))+0.3*((o.treas||0)<0?1:0)+0.15*
 // that knows much sees the failings, aims at the weak provinces and learns more from its wars. Secrets (nosecret): a corrupt court
 // leaks to its rivals, and a court that knows little half believes the false reports a capable rival puts about. Weak points
 // (noweakpt): which province to strike
+const ECOST=swOn('ecost');
 const INTEL=swOn('intel'),SECRET=INTEL&&!swOn('nosecret'),WEAKP=INTEL&&!swOn('noweakpt');
 function intelOf(o){if(o.kind!=='state')return 0;const info=o.info||infoCap(o),uP=clamp(0.5*Math.max(0,(o.burden||0)-1)+0.5*Math.max(0,-(o.treas||0)),0,1);
   return clamp((0.45*Math.min(1,info.rec)+0.25*Math.min(1,info.spd)+0.3*Math.min(1,(o.cplx||0.2)/0.8))*(1-0.5*uP)*(1-0.5*(o.cor||0)),0,1)}
@@ -2614,7 +2615,11 @@ function statecraft(o,c,y){
   o.cplx+=tgt>o.cplx?0.01*(tgt-o.cplx):0.0015*(tgt-o.cplx);
   const ledger=s.tk[27][c]>0.5;
   // ruling costs grow with people AND with land: every province needs officials, garrisons and messengers, so thinly peopled realms cost more than they pay
-  const upkeep=(CORO?1+0.5*(o.cor||0):1)*0.28*Math.pow(o.cplx,ledger?1.6:1.8)*(o.pop+12000*real*(1-0.4*s.roads[c])),rev=(o.tax||0)*(1-0.45*(o.nob||0))*(ledger?1.1:1)+1;
+  // (ecost, opt-in; Nein 2026-11-25 after probe egypt2.js) surplus elites cost the court: stipends, offices and estates for the
+  // great families beyond what the offices carry raise the upkeep by 0.5 x knob ecost for each multiple of the surplus (Turchin's
+  // fiscal link: elite overproduction drains the treasury). Before, a court with three times the elite its offices carry paid
+  // nothing for them, and Egypt's treasury sat at its cap for a thousand years
+  const upkeep=(ECOST?1+0.5*knob('ecost')*Math.max(0,o.E/Math.max(1e-6,etOf(o))-1):1)*(CORO?1+0.5*(o.cor||0):1)*0.28*Math.pow(o.cplx,ledger?1.6:1.8)*(o.pop+12000*real*(1-0.4*s.roads[c])),rev=(o.tax||0)*(1-0.45*(o.nob||0))*(ledger?1.1:1)+1;
   o.burden=upkeep/rev;
   o.pT=Math.max(0,o.burden-1)*1.2;
   const atWar=o.enemies.size>0;
