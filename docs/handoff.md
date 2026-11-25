@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-144 scored, no batch
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-144 scored, run 145
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -521,6 +521,14 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   fiscal-structural link of Turchin's model, routing elite overproduction through the treasury into channels already built;
   (b) if Egypt still passes whole, fault lines inside the heartland in a crisis (provincial lords with their own people and
   water, as the nomarchs of the First Intermediate Period).
+- **Elite cost (opt-in `ecost`, knob `ecost`; Nein approved (a) 2026-11-25).** First form, upkeep × (1 + 0.5 × knob × (E/Et − 1)):
+  probe `egypt2.js` seeds 1, 4: Egypt's burden 0.04-0.48, treasury still at its cap (upkeep is a tenth to a third of revenue). Now
+  surplus elites claim revenue: burden += 0.5 × knob × max(0, E/Et − 1) (d9fd8fe1). Probe (seeds 1, 4): burden 1.07-1.10 when E/Et
+  reaches 2.5-2.7, treasury dips to 0.4-0.7, not below 0; Egypt still passes whole between realms (seed 4: one realm 2600-1139 BCE).
+  Smoke test passed (11.3 min); default fingerprint unchanged.
+- **Run 145 (launched 2026-11-25, region, 24 histories to 200 BCE):** baseline; best + corruption + intelligence (reference); + elite
+  cost k 0.5 (knob 1), k 1 (knob 2), k 2 (knob 4); + elite cost k 0.5 + peopled frontier; best + corruption + elite cost; best + elite
+  cost.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:

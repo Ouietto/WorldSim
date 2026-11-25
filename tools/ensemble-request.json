@@ -1,11 +1,9 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"best + corruption (local reform fixed)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt KV=wbuild:0.5"},
- {"name":"  + peopled frontier","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,frontpop KV=wbuild:0.5"},
- {"name":"  + intelligence","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
- {"name":"  + intelligence with lessons","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,corrupt,intel KV=wbuild:0.5"},
- {"name":"  + intelligence + peopled frontier","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,frontpop KV=wbuild:0.5"},
- {"name":"    without secrets","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,frontpop,nosecret KV=wbuild:0.5"},
- {"name":"    without weak points","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,frontpop,noweakpt KV=wbuild:0.5"},
- {"name":"  + peopled frontier, full only at equal numbers","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,frontpop KV=wbuild:0.5,fpw:2"},
- {"name":"best (no corruption) + peopled frontier","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,frontpop KV=wbuild:0.5"}]}
+ {"name":"best + corruption + intelligence","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
+ {"name":"  + elite cost (k 0.5)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,ecost KV=wbuild:0.5"},
+ {"name":"  + elite cost (k 2)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,ecost KV=wbuild:0.5,ecost:4"},
+ {"name":"  + elite cost (k 1)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,ecost KV=wbuild:0.5,ecost:2"},
+ {"name":"  + elite cost (k 0.5) + peopled frontier","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,ecost,frontpop KV=wbuild:0.5"},
+ {"name":"best + corruption + elite cost (k 0.5)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,ecost KV=wbuild:0.5"},
+ {"name":"best + elite cost (k 0.5)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,ecost KV=wbuild:0.5"}]}
