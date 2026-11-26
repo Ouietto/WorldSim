@@ -1,15 +1,14 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
- {"name":"best + corruption + intelligence","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
- {"name":"  all + rebels + reunification, elite cost k 0.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify KV=wbuild:0.5"},
- {"name":"  the same at elite cost k 1","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify KV=wbuild:0.5,ecost:2"},
-   {"name":"    k 0.5 without provinces deciding","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nofaultseed KV=wbuild:0.5"},
-   {"name":"    k 0.5 without vacuum risings","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,novacuum KV=wbuild:0.5"},
-   {"name":"    k 0.5 without cut-off pockets","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocutoff KV=wbuild:0.5"},
-   {"name":"    k 0.5 without split falls","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nofaultreach KV=wbuild:0.5"},
-   {"name":"    k 0.5 without the momentum swing","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,noswing KV=wbuild:0.5"},
-   {"name":"    k 0.5 without defection","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nodefect KV=wbuild:0.5"},
-   {"name":"    k 0.5 without looting","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocarcass KV=wbuild:0.5"},
-   {"name":"    k 0.5 without the calculated truce","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc KV=wbuild:0.5"},
-   {"name":"    k 0.5 without weariness","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,noweary KV=wbuild:0.5"}
-]}
+ {"name":"best + corruption + intelligence (reference)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
+ {"name":"  + river","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,river KV=wbuild:0.5"},
+ {"name":"  + river at 1.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,river KV=wbuild:0.5,river:1.5"},
+ {"name":"  + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,flood KV=wbuild:0.5"},
+ {"name":"  + flood, swing x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,flood KV=wbuild:0.5,flvar:2"},
+ {"name":"  + river + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,river,flood KV=wbuild:0.5"},
+ {"name":"packages (all + rebels + reunification, k 0.5, no calculated truce)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc KV=wbuild:0.5"},
+ {"name":"  + river","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river KV=wbuild:0.5"},
+ {"name":"  + river at 1.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river KV=wbuild:0.5,river:1.5"},
+ {"name":"  + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,flood KV=wbuild:0.5"},
+ {"name":"  + river + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river,flood KV=wbuild:0.5"},
+ {"name":"  + river + flood, swing x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river,flood KV=wbuild:0.5,flvar:2"}]}

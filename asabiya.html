@@ -1753,6 +1753,8 @@ function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=ne
 // Nile is a low Nile whatever the river's size. An irrigated floodplain's gain over dry farming follows the flood (floodH): a low
 // flood leaves fields beyond the water dry, a moderately high one waters more, a very high one breaks banks and drowns fields; the
 // works in place (basins, canals, dikes) soften both, so neglected or wrecked works leave the valley open to every bad year
+// (knob flvar widens the swing of the flood about its mean: probe flood.js found the lowest flood of 50 years at 0.71-0.84 of the
+// mean, milder than the Nile's yearly flow, which varies by about a fifth)
 const FLOOD=swOn('flood');
 function floodYear(){const s=S,w=WD;if(!s.accM)return;const L=w.landPhys||w.landIdx,ord=w.order,down=w.down,g=s.AG,wi=w.wi,wf=w.wf,cv=0.28*P.climVar,th0=w.rvTh,acc=s.accM,keep=s.keepM;
   const e=s.epoch&&s.epoch.k==='dry'?s.epoch:null;let ramp=0;if(e)ramp=Math.max(0,Math.min(1,(s.year-e.start)/20,(e.end-s.year)/20));
@@ -1761,7 +1763,7 @@ function floodYear(){const s=S,w=WD;if(!s.accM)return;const L=w.landPhys||w.land
     if(e){let dx=Math.abs(w.cxA[i]-e.cx);if(dx>W/2)dx=W-dx;const d2=(dx*dx+(w.cyA[i]-e.cy)**2)/(e.rad*e.rad);if(d2<1)a+=e.amp*ramp*(1-d2)}
     const T=w.T[i]+s.cdT[i],P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i])*Math.exp(cv*a);run[i]=Math.max(0,P-200)*w.area[i]*1e-4*(T<-9?0.2:1)}
   for(let k=ord.length-1;k>=0;k--){const i=ord[k],d=down[i];if(d<0||!w.land[d])continue;run[d]+=run[i]*(1-(1-keep[i])/(1+acc[i]/th0))}
-  for(const i of w.landIdx){if(!(w.rvF[i]>0.05)||!(acc[i]>th0)){s.fl[i]=1;continue}const x=run[i]/acc[i];s.flM[i]+=0.033*(x-s.flM[i]);s.fl[i]=clamp(x/Math.max(0.05,s.flM[i]),0.2,3)}}
+  for(const i of w.landIdx){if(!(w.rvF[i]>0.05)||!(acc[i]>th0)){s.fl[i]=1;continue}const x=run[i]/acc[i];s.flM[i]+=0.033*(x-s.flM[i]);s.fl[i]=clamp(1+knob('flvar')*(x/Math.max(0.05,s.flM[i])-1),0.2,3)}}
 function floodH(i,iw){const s=S,f=s.fl[i],k=knob('flood'),bw=WKS&&s.wk?s.wk[i]:0.5*iw;let h;
   if(f<1)h=1-1.2*k*(1-f)*(1-0.6*bw);else if(f<=1.3)h=1+0.15*(f-1);else h=1.045-0.8*k*(f-1.3)*(1-0.7*bw);return clamp(h,0.1,1.2)}
 function waterPass(){

@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-149 scored, no batch
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-149 scored, run 150
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -671,6 +671,23 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   boats = 0.5 + 0.5 × sailing known. Egypt box: 19 of 69 provinces have a downstream link with both ends rvF > 0.3; Mesopotamia 15 of
   194. Only the court's distance for now (taxes, hold, rebel odds, overextension); armies marching faster on the river and grain moved
   on it not built. Knob above 1.67 saturates (step cost floor 0.1).
+  Seed 2 to 3000 BCE with and without: different histories (f1481f1c2cdb / fdad56f4de01). Smoke test with everything + river passed.
+- **Weather and harvests, as they stand (for Nein 2026-11-26):** the yearly rain anomaly sets rain-fed fields' and pastures' capacity
+  (irrigated land feels a quarter of it); a realm losing a fifth of its people in five dry years loses 0.25 mandate and takes a 0.5
+  shock (famine rule, reading the capital's rain); hunger (people against capacity) strengthens rebels and enters each province's
+  decision to rise; a floodplain feeds only as far as irrigation know-how and works allow, flood timing sets salt. Missing: a flood that
+  varies (irrigated valleys were drought-proof), works that buffer bad years, granaries (cStore is only how well a crop stores).
+- **The yearly flood (196d6d7e, opt-in `flood`, knobs `flood`, `flvar`; Nein approved 2026-11-26; granaries to follow).**
+  `waterPass` keeps the mean flow (`s.accM`) and losses; `floodYear` (yearly, after waterPass) runs this year's rain over every
+  physics unit (the weather field interpolated, with dry epochs) down the rivers with the same losses; a river province's flood fl =
+  1 + flvar × (flow / running mean − 1) (mean at 3.3% a year), 0.2-3. `floodH`: fl < 1: 1 − 1.2 × flood × (1 − fl) × (1 − 0.6 works);
+  1-1.3: 1 + 0.15 (fl − 1); above: 1.045 − 0.8 × flood × (fl − 1.3) × (1 − 0.7 works), 0.1-1.2; it multiplies the floodplain's gain in
+  computeK (fp × (0.25 + 2.2 iw AQ)). A court whose capital is irrigated reads the flood as its drought (o.wet). Probe `flood.js` (seed 1,
+  3500-3050 BCE): Egypt's flood median 0.93-1.04, lowest of 50 years 0.71-0.84, rarely under 0.7; milder than the Nile (yearly flow
+  varies by about a fifth), hence `flvar`. Fingerprint unchanged.
+- **Run 150 (launched 2026-11-26, region, 24 histories to 200 BCE):** baseline; reference; + river; + river 1.5; + flood; + flood swing
+  ×2; + river + flood; packages (all + rebels + reunification, k 0.5, no calculated truce); + river; + river 1.5; + flood; + river +
+  flood; + river + flood swing ×2.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
