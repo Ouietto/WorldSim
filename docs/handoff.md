@@ -698,6 +698,17 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   3-5 years under 0.7 of the mean and 1-2 over 1.5 in 2,000 years, no famines recorded in Egypt or Mesopotamia (9 and 4 elsewhere in
   the region). Proposed: make the flood mean-neutral (divide by the running mean of floodH, so only the variance acts) and widen its
   swing toward the Nile's; and look again at why early unifiers do not snowball (the river alone is not it).
+- **The flood made mean-neutral (9f8846ce):** each province's flood harvest h (floodH) is taken against its own running mean (3.3% a
+  year): s.fh = h / mean, which computeK uses. Fingerprint unchanged.
+- **Probe `egwar.js` (seeds 1-3 reference, seed 1 packages; 3500-2500 BCE): why Egypt's would-be unifiers do not snowball.** States
+  holding 15% of the Nile start 1.1-1.6 wars a century; their wars of attack (11-16 per history) last a median 3-6 years, at a median
+  power edge of 1.3-2.6 ×, with **0.09-0.44 assaults a year** (one every 2-10 years) succeeding 31-67% of the time: a median 0-1
+  province taken per war, no war ended a province or more ahead, share of the Nile changed by 0.00-0.03 per war. The rule: in the border
+  pass each frontier province facing the enemy assaults at wr × 2 = 0.06 a year × (1 + 3 × circumscription) × aggression × command aim ×
+  gate, scaled by province size (`pF`), and not by the attacker's power, armies or goal. A state with two or three provinces on the front
+  assaults once every few years whatever its strength, and its war fades (2% a year, 10% after eight years without gains) before it
+  takes much. **Proposed to Nein: campaigns made by armies** (assaults a year from the court's field armies at the front, their
+  strength and pay, and the court's goal, rather than from the number of frontier provinces).
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
