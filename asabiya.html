@@ -1746,6 +1746,24 @@ function genCache(){const s=S,w=WD;if(!s.genByRow)return;if(!s.genC0){s.genC0=ne
 // evaporates (Lake Mega-Chad, the Tenere lakes at Gobero, Lake Ptolemy; Drake & Bristow 2006); land that dries sends the people
 // it can no longer feed downstream along its water and on to the nearest land that can take them (the Nile, the Niger bend,
 // Lake Chad, the Sahel: Kuper & Kropelin 2006; Brooks 2006)
+// the yearly flood (opt-in flood, knob flood; Nein 2026-11-26: weather should reach the river valleys too; years of drought and
+// failed floods bring hunger and revolt, and those without the works to tame the flood suffer it fully). Each year the rain over
+// every province upstream (this year's weather, everywhere, with its wet and dry runs and dry epochs) runs down the rivers with the
+// same losses as the mean; a river province's flood is this year's flow against its own running mean (about 30 years), so a low
+// Nile is a low Nile whatever the river's size. An irrigated floodplain's gain over dry farming follows the flood (floodH): a low
+// flood leaves fields beyond the water dry, a moderately high one waters more, a very high one breaks banks and drowns fields; the
+// works in place (basins, canals, dikes) soften both, so neglected or wrecked works leave the valley open to every bad year
+const FLOOD=swOn('flood');
+function floodYear(){const s=S,w=WD;if(!s.accM)return;const L=w.landPhys||w.landIdx,ord=w.order,down=w.down,g=s.AG,wi=w.wi,wf=w.wf,cv=0.28*P.climVar,th0=w.rvTh,acc=s.accM,keep=s.keepM;
+  const e=s.epoch&&s.epoch.k==='dry'?s.epoch:null;let ramp=0;if(e)ramp=Math.max(0,Math.min(1,(s.year-e.start)/20,(e.end-s.year)/20));
+  const run=s._flR||(s._flR=new Float32Array(N));if(!s.fl){s.fl=new Float32Array(N).fill(1);s.flM=new Float32Array(N).fill(1)}run.fill(0);
+  for(const i of L){const fx=wf[i*2],fy=wf[i*2+1];let a=(g[wi[i*4]]*(1-fx)+g[wi[i*4+1]]*fx)*(1-fy)+(g[wi[i*4+2]]*(1-fx)+g[wi[i*4+3]]*fx)*fy;
+    if(e){let dx=Math.abs(w.cxA[i]-e.cx);if(dx>W/2)dx=W-dx;const d2=(dx*dx+(w.cyA[i]-e.cy)**2)/(e.rad*e.rad);if(d2<1)a+=e.amp*ramp*(1-d2)}
+    const T=w.T[i]+s.cdT[i],P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i])*Math.exp(cv*a);run[i]=Math.max(0,P-200)*w.area[i]*1e-4*(T<-9?0.2:1)}
+  for(let k=ord.length-1;k>=0;k--){const i=ord[k],d=down[i];if(d<0||!w.land[d])continue;run[d]+=run[i]*(1-(1-keep[i])/(1+acc[i]/th0))}
+  for(const i of w.landIdx){if(!(w.rvF[i]>0.05)||!(acc[i]>th0)){s.fl[i]=1;continue}const x=run[i]/acc[i];s.flM[i]+=0.033*(x-s.flM[i]);s.fl[i]=clamp(x/Math.max(0.05,s.flM[i]),0.2,3)}}
+function floodH(i,iw){const s=S,f=s.fl[i],k=knob('flood'),bw=WKS&&s.wk?s.wk[i]:0.5*iw;let h;
+  if(f<1)h=1-1.2*k*(1-f)*(1-0.6*bw);else if(f<=1.3)h=1+0.15*(f-1);else h=1.045-0.8*k*(f-1.3)*(1-0.7*bw);return clamp(h,0.1,1.2)}
 function waterPass(){
   const s=S,w=WD,L=w.landPhys||w.landIdx,ord=w.order,down=w.down,fd=w.fillD,area=w.area,hsh=w.hsh||null;if(!ord||!fd)return;
   if(!w.rv0){w.rv0=w.rv.slice();w.rvF0=w.rvF.slice()}
@@ -1793,6 +1811,7 @@ function waterPass(){
     else if(was>=40000&&A0<0.2*was&&!s['lakeGone'+key]){s['lakeGone'+key]=1;chron('nature',`The great lake of the ${regionName(key)} has shrunk to marsh and salt pans.`,key,[])}}
   // then the water runs again, ending in the closed lakes
   if(any)flow(run,acc,shut);
+  if(FLOOD){s.accM=Float32Array.from(acc);s.keepM=keep}
   const th=w.rvTh,rv=w.rv,rvF=w.rvF,ffp=w.ffp;
   for(const i of L)rv[i]=acc[i]>th?clamp(Math.log(acc[i]/th)/Math.log(100)+0.2,0,1):0;
   // on provinces the bank across a river shares its size
@@ -1961,7 +1980,7 @@ function computeK(){
     // Tigris-Euphrates and the Indus, little in wet temperate Europe, where a floodplain is marsh and flood-prone forest; bunded
     // rice keeps it, since a paddy is about holding water, not lacking it. Flood silt enriches valley soil everywhere
     const AQ=ARI?(s_crop[i]===riceK?1:clamp((clamp(400+70*T,300,2600)-Pn/wm)/(0.6*clamp(400+70*T,300,2600)),0,1)):1;
-    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*iw*AQ));
+    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*iw*AQ)*(FLOOD&&s.fl?floodH(i,iw):1));
     {
       // cropping frequency (Boserup 1965): how often a field bears. Hoe farmers crop a plot a few years and leave it to bush for
       // many; oxen and the ard allow a fallow every other year (the Mediterranean two-field round); manure and rotations, or the
@@ -3617,7 +3636,7 @@ function* politicsG(){
     if(y-R.birth>=R.death){succession(o);if(!o.alive||o.cells===0)continue}
     const Rn=o.ruler,comp=0.5+infl*(Rn.comp-0.5);
     o.aggrM=Math.max(0.12,1+infl*(4*Rn.aggr-2)*0.6);
-    const a=s_anom[c];o.wet=o.wet*0.92+a*0.08;
+    const a=FLOOD&&s.fl&&w.rvF[c]>0.2?(1-Math.min(1,s_irrig[c]*w.rvF[c]))*s_anom[c]+Math.min(1,s_irrig[c]*w.rvF[c])*clamp((s.fl[c]-1)/0.25,-3,3):s_anom[c];o.wet=o.wet*0.92+a*0.08;
     o.loot*=0.9;
     o.gate=clamp(0.5+1.1*(1-o.press)+(o.nomF>0.5||o.kind==='horde'?0.5:0.22)*a+Math.min(0.5,o.tribs*0.15)-(o.over?0.15:0)+Math.min(0.5,o.loot/(o.pop+1)*4)-Math.min(0.3,o.fortN*0.004),0.15,1.9)*(CO?clamp((o.mpR??1)*(o.mpR??1),0.2,1.3):1);
     if(o.kind==='horde'){
@@ -4093,7 +4112,7 @@ function fastD(){const s=S;if(swOn('nofast')||s.fastOff)return 1;
    Rulers' choices are not on a clock: see review() (accession, raid, lost war, empty treasury). */
 function* stepG(){
   const s=S;s.year++;const FD=fastD(),hv=FD===1||ymod(s.year,FD)===0;s.dt=FD;
-  rsd('clim');climateStep();if(WD.isEarth){rsd('event');eventPass();rsd('origin');originsPass(1);if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}rsd('weather');weather();if(hv&&herdsOn()){rsd('herdY');herdYear()}if(s.year%50===0||!s.lake)waterPass();rsd('hearth');hearthCheck();
+  rsd('clim');climateStep();if(WD.isEarth){rsd('event');eventPass();rsd('origin');originsPass(1);if(s.year%50===0)humidStep();if(s.year%10===0)seaStep();if(s.year%250===0&&s.year<-6000)s.seaVer++}rsd('weather');weather();if(hv&&herdsOn()){rsd('herdY');herdYear()}if(s.year%50===0||!s.lake)waterPass();if(FLOOD)floodYear();rsd('hearth');hearthCheck();
   if(s.dTt>0){s.dTt--;if(!s.dTt)s.dT=0}
   else if((s.rN||s.r)()<0.0012*P.volcano){rsd('volc');volcano()}
   if(s.year-s.climY>=250||Math.abs(s.co2-s.climCo2)>4){yield;yield* climUpdateG();yield}
