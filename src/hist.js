@@ -354,7 +354,13 @@ function floodYear(){const s=S,w=WD;if(!s.accM)return;const L=w.landPhys||w.land
     if(e){let dx=Math.abs(w.cxA[i]-e.cx);if(dx>W/2)dx=W-dx;const d2=(dx*dx+(w.cyA[i]-e.cy)**2)/(e.rad*e.rad);if(d2<1)a+=e.amp*ramp*(1-d2)}
     const T=w.T[i]+s.cdT[i],P=Math.max(0.3*w.Pr[i],w.Pr[i]+s.cdP[i])*Math.exp(cv*a);run[i]=Math.max(0,P-200)*w.area[i]*1e-4*(T<-9?0.2:1)}
   for(let k=ord.length-1;k>=0;k--){const i=ord[k],d=down[i];if(d<0||!w.land[d])continue;run[d]+=run[i]*(1-(1-keep[i])/(1+acc[i]/th0))}
-  for(const i of w.landIdx){if(!(w.rvF[i]>0.05)||!(acc[i]>th0)){s.fl[i]=1;continue}const x=run[i]/acc[i];s.flM[i]+=0.033*(x-s.flM[i]);s.fl[i]=clamp(1+knob('flvar')*(x/Math.max(0.05,s.flM[i])-1),0.2,3)}}
+  if(!s.fh){s.fh=new Float32Array(N).fill(1);s.fhM=new Float32Array(N).fill(1)}
+  for(const i of w.landIdx){if(!(w.rvF[i]>0.05)||!(acc[i]>th0)){s.fl[i]=1;s.fh[i]=1;continue}const x=run[i]/acc[i];s.flM[i]+=0.033*(x-s.flM[i]);s.fl[i]=clamp(1+knob('flvar')*(x/Math.max(0.05,s.flM[i])-1),0.2,3);
+    // (run 150) the harvest rule is concave, so floods swinging about their mean lowered the mean harvest (Egypt 0.9-1.0M at 2500
+    // BCE): the valley lives by its long-run harvest, and only the swings about it act. Each province's flood harvest is taken
+    // against its own running mean (about 30 years); works damp the swings, and a valley whose works decay feels it until the
+    // mean catches up
+    const h=floodH(i,s.irrig[i]);s.fhM[i]+=0.033*(h-s.fhM[i]);s.fh[i]=clamp(h/Math.max(0.1,s.fhM[i]),0.1,1.5)}}
 function floodH(i,iw){const s=S,f=s.fl[i],k=knob('flood'),bw=WKS&&s.wk?s.wk[i]:0.5*iw;let h;
   if(f<1)h=1-1.2*k*(1-f)*(1-0.6*bw);else if(f<=1.3)h=1+0.15*(f-1);else h=1.045-0.8*k*(f-1.3)*(1-0.7*bw);return clamp(h,0.1,1.2)}
 function waterPass(){
@@ -573,7 +579,7 @@ function computeK(){
     // Tigris-Euphrates and the Indus, little in wet temperate Europe, where a floodplain is marsh and flood-prone forest; bunded
     // rice keeps it, since a paddy is about holding water, not lacking it. Flood silt enriches valley soil everywhere
     const AQ=ARI?(s_crop[i]===riceK?1:clamp((clamp(400+70*T,300,2600)-Pn/wm)/(0.6*clamp(400+70*T,300,2600)),0,1)):1;
-    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*iw*AQ)*(FLOOD&&s.fl?floodH(i,iw):1));
+    let Kfa=ar*4.2*s_sFc[i]*s_fert[i]*wf*intens(xY)*(1+fp*(0.25+2.2*iw*AQ)*(FLOOD&&s.fh?s.fh[i]:1));
     {
       // cropping frequency (Boserup 1965): how often a field bears. Hoe farmers crop a plot a few years and leave it to bush for
       // many; oxen and the ard allow a fallow every other year (the Mediterranean two-field round); manure and rotations, or the
