@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-148 scored, run 149
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-149 scored, no batch
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -649,6 +649,18 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 149 (launched 2026-11-25, region, 24 histories to 200 BCE; timing):** baseline; reference; all + rebels + reunification at
   elite cost k 0.5 (knob 1) and k 1; at k 0.5 without each of: provinces deciding, vacuum risings, cut-off pockets, split falls, the
   momentum swing, defection, looting, the calculated truce, weariness.
+  **Result (3448cef1, error; Egypt two thirds under one realm, median BCE; Akkad):** baseline 2.44 (2321; 1786); reference 2.23 ▲
+  (2211; 1451); all + both k 0.5 2.34 (1731; 986); k 1 2.36 (1466; 1001; intermediate periods 0.04, 33% in band); at k 0.5 without:
+  provinces deciding 2.43 (1401; 1031), vacuum 2.37 (1351; 1106), cut-off 2.38 (1246; 1011), split falls 2.34 (1721; 926), swing 2.41
+  (1691; 1231), defection 2.45 (1576; 856), looting 2.41 (1761; 931), **calculated truce 2.27 ▲ (1606; 1236)**, weariness 2.41 (1071;
+  851). **No single part causes the late gathering:** every variant with the packages unifies Egypt between 1071 and 1761 BCE and
+  Akkad between 851 and 1236, against the reference's 2211 and 1451; switching any one part off does not bring it back (the spread,
+  ±300 years, is within the noise of a median of 24 histories: same part, run 148 vs 149, differs as much). The gathering was already
+  late in the reference (real 3100 and 2300); the packages add breaking without adding gathering. Realms in turn 2-4 in both boxes
+  here (fewer than in run 147-148, noise and k 0.5).
+  **Proposed next (to Nein):** strengthen gathering by material means rather than weaken breaking; candidate: the river as a highway
+  (armies, messengers and grain move fast along a navigable river, so a valley's court reaches farther and binds faster: the Nile and
+  the Euphrates were the roads of their unifiers).
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
