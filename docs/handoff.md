@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-149 scored, run 150
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-150 scored, no batch
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -688,6 +688,16 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 150 (launched 2026-11-26, region, 24 histories to 200 BCE):** baseline; reference; + river; + river 1.5; + flood; + flood swing
   ×2; + river + flood; packages (all + rebels + reunification, k 0.5, no calculated truce); + river; + river 1.5; + flood; + river +
   flood; + river + flood swing ×2.
+  **Result (55d9e5f4, error; Egypt two thirds under one realm; Akkad; Egypt's people 2500 BCE):** reference 2.23 ▲ (2211; 1451; 1.1M);
+  + river 2.32 (1911; 1471), + river 1.5 2.30 (1831; 1296); + flood 2.47 (1691; 1231; 1.0M), flood swing ×2 2.45 (1701; 1006; 0.9M), +
+  river + flood 2.43; packages 2.27 ▲ (1606; 1236); + river 2.23 (1726; 1276), **+ river 1.5 2.23 ▲ (1966; 1226)**; + flood 2.50; +
+  river + flood 2.36; + river + flood ×2 2.47. Intermediate periods 0.00-0.02 throughout. **The river does not speed the gathering**
+  (Egypt's unification no earlier; neutral on error). **The flood costs error** (+0.2 to +0.25) through lower harvests on average: floodH
+  is concave (a low flood loses more than a high one gains), so with floods varying about their mean the mean harvest falls (Egypt
+  0.9-1.0M at 2500 BCE); and floods low enough to starve are rare. Probe `flood.js` (seeds 1-2, reference + flood, 3500-1500 BCE): Egypt
+  3-5 years under 0.7 of the mean and 1-2 over 1.5 in 2,000 years, no famines recorded in Egypt or Mesopotamia (9 and 4 elsewhere in
+  the region). Proposed: make the flood mean-neutral (divide by the running mean of floodH, so only the variance acts) and widen its
+  swing toward the Nile's; and look again at why early unifiers do not snowball (the river alone is not it).
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
