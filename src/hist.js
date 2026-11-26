@@ -1825,6 +1825,15 @@ function decisive(o,d,war){
     if(n>=8)chron('war',`With its capital taken, the ${old} submits and becomes a vassal of the ${o.full}.`,d.capital,[R_(d),R_(o),RW(war)])}
   if(BANDW)bandwagon(o);
 }
+// the river as a highway (opt-in river, knob river; Nein 2026-11-26, after run 149: the packages add breaking but nothing speeds the
+// gathering). A step between neighbours one of which lies downstream of the other, both on a large river, costs less: boats carry
+// men, grain and messages downstream on the current and upstream under sail. Up to 0.6 x knob off the step: by the smaller river's
+// size (rvF from 0.2 to 0.7; a drying climate shrinks rivers, recomputed every 50 years from the rain) and by boats, half with
+// paddles alone and the rest as sailing is known. The court's distance to river provinces falls: it taxes and holds them better,
+// they rise less readily, and a long valley strains it less
+const RIVER=swOn('river');
+function riverStep(i,j){const w=WD;if(w.down[i]!==j&&w.down[j]!==i)return 1;const nav=clamp((Math.min(w.rvF[i],w.rvF[j])-0.2)/0.5,0,1);if(nav<=0)return 1;
+  const s=S,b=0.5+0.5*Math.min(1,Math.max(s.sail[i],s.sail[j]));return 1-0.6*knob('river')*nav*b}
 function distBFS(){
   if(WD.hopK){distProv();return}
   const s=S,w=WD,pols=s.pols;s.dist.fill(65535);
@@ -1862,7 +1871,7 @@ function distProv(){
     let slack=0;if(SEAT&&d>0&&!horde&&(s.city[i]>=0||s.fort[i]>0.3)){const ly=clamp((s.integ[i]-0.4)/0.4,0,1);if(ly>0){d*=1-0.5*ly;slack=0.5}}
     for(let k=w.nbS[i];k<w.nbS[i+1];k++){const j=w.nbA[k];if(j<0||s.pol[j]!==p)continue;
       let c=2+(w.tcost[j]-2)*tf*(RD(j)?0.4:1)*(s.pkT?1-0.45*s.pkT[j]:1);if(RD(j))c*=0.8;if(w.desert[j]&&(s.camel[j]>0.5||horde))c*=0.5;if(horde&&w.nomad[j])c=Math.min(c,1.5);
-      c=Math.min(30,c)*w.nbD[k];if(CUT&&!horde&&s.year-CUT[j]<3)c*=4*knob('cut');const nd=d+Math.max(0.1,c);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}
+      c=Math.min(30,c)*w.nbD[k];if(RIVER&&!horde)c*=riverStep(i,j);if(CUT&&!horde&&s.year-CUT[j]<3)c*=4*knob('cut');const nd=d+Math.max(0.1,c);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}
     if(w.coast[i]&&s.sail[i]>0.5)for(let q=w.ls[i];q<w.ls[i+1];q++){const j=w.lt[q],dl=w.ld[q];if(dl>3&&s.nav[i]<0.5)continue;if(s.pol[j]!==p)continue;const nd=d+Math.min(30,2+2*dl);if(nd<df[j]-slack){df[j]=nd;H2.push(nd,j)}}}
 }
 /* wars and diplomacy */
