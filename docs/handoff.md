@@ -661,6 +661,16 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   **Proposed next (to Nein):** strengthen gathering by material means rather than weaken breaking; candidate: the river as a highway
   (armies, messengers and grain move fast along a navigable river, so a valley's court reaches farther and binds faster: the Nile and
   the Euphrates were the roads of their unifiers).
+- **Weather and rivers, as they stand (checked 2026-11-26 for Nein):** yearly rain anomalies with wet and dry runs (`weather`, climVar,
+  climPersist), regional dry epochs of decades (the 4.2 ka kind), slow climate drift and humid periods; river size (`w.rvF`) is
+  recomputed every 50 years from the half-century's rain (`waterPass`). A drying climate shrinks rivers; a single low-flood year is not
+  modelled (the Nile's flood comes from rain far upstream and yearly flow is not kept). Nein: yearly river flow and low-water years
+  for the far future.
+- **The river as a highway (05eeb3fa, opt-in `river`, knob `river`; Nein approved 2026-11-26).** In `distProv`, a step between
+  neighbours one of which is downstream of the other (`w.down`) costs × (1 − 0.6 × knob × nav × boats), nav = clamp((min rvF − 0.2)/0.5),
+  boats = 0.5 + 0.5 × sailing known. Egypt box: 19 of 69 provinces have a downstream link with both ends rvF > 0.3; Mesopotamia 15 of
+  194. Only the court's distance for now (taxes, hold, rebel odds, overextension); armies marching faster on the river and grain moved
+  on it not built. Knob above 1.67 saturates (step cost floor 0.1).
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
