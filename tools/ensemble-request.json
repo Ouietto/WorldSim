@@ -1,14 +1,13 @@
 {"seeds":"1-24","end":-200,"per":4,"ref":"","baseEnv":"","variants":[
  {"name":"baseline","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal"},
  {"name":"best + corruption + intelligence (reference)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel KV=wbuild:0.5"},
- {"name":"  + river","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,river KV=wbuild:0.5"},
- {"name":"  + river at 1.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,river KV=wbuild:0.5,river:1.5"},
- {"name":"  + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,flood KV=wbuild:0.5"},
+ {"name":"  + campaigns","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,campaign KV=wbuild:0.5"},
+ {"name":"  + campaigns at 0.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,campaign KV=wbuild:0.5,camp:0.5"},
+ {"name":"  + campaigns at 2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,campaign KV=wbuild:0.5,camp:2"},
+ {"name":"  + flood (mean-neutral)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,flood KV=wbuild:0.5"},
  {"name":"  + flood, swing x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,flood KV=wbuild:0.5,flvar:2"},
- {"name":"  + river + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,river,flood KV=wbuild:0.5"},
  {"name":"packages (all + rebels + reunification, k 0.5, no calculated truce)","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc KV=wbuild:0.5"},
- {"name":"  + river","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river KV=wbuild:0.5"},
- {"name":"  + river at 1.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river KV=wbuild:0.5,river:1.5"},
- {"name":"  + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,flood KV=wbuild:0.5"},
- {"name":"  + river + flood","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river,flood KV=wbuild:0.5"},
- {"name":"  + river + flood, swing x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,river,flood KV=wbuild:0.5,flvar:2"}]}
+ {"name":"  + campaigns","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,campaign KV=wbuild:0.5"},
+ {"name":"  + campaigns + river 1.5","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,campaign,river KV=wbuild:0.5,river:1.5"},
+ {"name":"  + campaigns + flood swing x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,campaign,flood KV=wbuild:0.5,flvar:2"},
+ {"name":"  + campaigns + river 1.5 + flood swing x2","env":"WORLD=prov REGION=neareast SW=nowinrain,noardfal,works,rise,nojudge,corrupt,intel,fault,truce,ecost,rebel,reunify,nocalc,campaign,river,flood KV=wbuild:0.5,river:1.5,flvar:2"}]}

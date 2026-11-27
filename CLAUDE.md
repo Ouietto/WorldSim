@@ -46,5 +46,5 @@ design work is in `docs/corruption-plan.md`. Probes are in `tools/probes/` (see 
   Best set-ups so far: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (error 2.16, run 142) and the same plus
   `corrupt` (error 2.22, realms in turn 4 in Mesopotamia and Egypt, run 143).
 - **Default fingerprint:** `WORLD=prov REGION=neareast SW=nowinrain,noardfal node tools/run1.js 1 -2500` must print
-  `"chk":"2e9870aeb792"` unless a change is meant to alter the defaults.
+  `"chk":"a1a55711e6ff"` unless a change is meant to alter the defaults (it was 2e9870aeb792 until the 2026-11-27 NaN fixes).
 - Single runs: `node tools/run1.js <seed> <endYear>` with the env; smoke test `node tools/smoke.js --seeds 1,2 --end -1000`.

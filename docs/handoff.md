@@ -7,12 +7,12 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-150 scored, no batch
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-150 scored, run 151
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
   rebels holding what rose done; next: what makes a successor snowball, then trade ties and dynastic kinship, with Nein;
-  default region fingerprint now 2e9870aeb792 (seed 1 at 2500 BCE) after the NaN and newborn-tax fixes). Clone at
+  default region fingerprint now a1a55711e6ff (seed 1 at 2500 BCE) after the 2026-11-27 NaN fixes). Clone at
   `/home/claude/worldsim` (attach with push access first). Build: `python3 src/build.py` (writes index.html; warns about code
   hidden behind end-of-line comments).
 - Test link: https://ouietto.github.io/WorldSim/try/current/ (build of 13 Nov, branch commit 69c7bf8: steppe, frontier
@@ -728,6 +728,11 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   3. A state born during the year had its unset tax scaled by coordination (`o.tax*=o.coord`), giving NaN, which the trade income then
      carried into tax and trade for the rest of the year (7fe4e72d); statecraft already treated it as untaxed.
   Capitals not held at the sweep are transient (the next tally moves the capital to the most populous province): not a bug.
+  **New regional default fingerprint a1a55711e6ff** (seed 1 at 2500 BCE; was 2e9870aeb792); full world 5c951f093dca at 7000 BCE,
+  unchanged. Sweeps after the fixes (defaults, and everything on) clean but for the transient capitals.
+- **Run 151 (launched 2026-11-27, region, 24 histories to 200 BCE; new baseline after the NaN fixes):** baseline; reference; +
+  campaigns at 1, 0.5, 2; + flood (mean-neutral), swing ×2; packages; + campaigns; + campaigns + river 1.5; + campaigns + flood ×2; +
+  campaigns + river 1.5 + flood ×2.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
