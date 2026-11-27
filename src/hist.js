@@ -2944,7 +2944,10 @@ function stxPass(){const s=S,w=WD,L=w.landIdx,x=s.stx,nbS=w.nbS,nbA=w.nbA,nD=w.h
     for(let d=nbS[i];d<nbS[i+1];d++){const j=nbA[d];if(j>=0&&w.land[j]){const v=(nD?nD[d]:0.8)*x[j];if(v>m)m=v}}x[i]=m}}}
 // the exit option (Herbst, Scott): open land nearby lets subjects walk away; crowding or barren surroundings trap them (Carneiro)
 function exitPass(a0,b0){if(a0==null){a0=0;b0=1}
-  const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of LL){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,exPd=w.exPd;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
+  // (2026-11-27, probe sanity.js) the quality of the land around is kept for every land unit, not only the region's: in regional
+  // mode the land sampled beyond the region's edge had a capacity of 0, so an empty unit there gave 0/0, and the province's
+  // circumscription (circE) and every realm holding it (tax, trade) turned NaN. The full world is unchanged (all its land is in landIdx)
+  const s=S,w=WD,LL=w.landIdx;if(!w.exQ){w.exQ=new Float64Array(N);w.exPd=new Float64Array(N);for(const j of (w.landPhys||LL)){const q=Math.max(w.sF[j],0.5*w.forest0[j]*(w.T[j]>10?1:0.3),0.4*w.sH[j]);w.exQ[j]=q;w.exPd[j]=Math.max(0.3,7*q)}}const exQ=w.exQ,exPd=w.exPd;const s_circE=s.circE,s_exit=s.exit,s_pol=s.pol,s_pop=s.pop,w_T=w.T,w_area=w.area,w_circ=w.circ,w_cxA=w.cxA,w_cyA=w.cyA,w_forest0=w.forest0,w_land=w.land,w_sF=w.sF,w_sH=w.sH;
   for(let kk=Math.floor(a0*LL.length),ke=Math.floor(b0*LL.length);kk<ke;kk++){const i=LL[kk];if(s_pop[i]<1||w_sF[i]<0.1){s_circE[i]=w_circ[i];continue}
     // the land around, sampled every 100 km out to 300 km (on provinces, the province at each point; its own ground aside)
     const cx=w.hx?w.hx[i]:w_cxA[i],cy=w.hy?w.hy[i]:w_cyA[i];let tot=0,n=0;
