@@ -709,6 +709,25 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
   assaults once every few years whatever its strength, and its war fades (2% a year, 10% after eight years without gains) before it
   takes much. **Proposed to Nein: campaigns made by armies** (assaults a year from the court's field armies at the front, their
   strength and pay, and the court's goal, rather than from the number of frontier provinces).
+- **Campaigns made by armies (2bf9456e, opt-in `campaign`, knob `camp`; Nein approved 2026-11-26).** `campaignPass` (yearly, after
+  armyYear, rsd 'camp'): for each state at war, every pair (own province, enemy province beside it); each army not marching, within 300
+  km of such a pair, makes n = camp × pay × will assaults a year (whole part plus a draw, at most 4), pay = (1 − 0.5 owed) × (0.6 if the
+  treasury is below −0.3) × (1 − 0.3 weariness), will = min(2.5, aggrM × aimM × gate × (1 + momentum)); target weight sqrt(people) ×
+  (1.3 − integ) / (1 + walls) × 1.5 at the enemy capital; raids for raid and captives goals, else `attack`. The border rule no longer
+  attacks states or hordes for states (stateless land and hordes keep it). Probe `egwar.js` with campaigns (seed 1, reference): assaults
+  0.5 a year in the leader's wars (was 0.09-0.44), all succeeding, share of the Nile +0.06 a war; fewer wars started (0.4 a century; one
+  history).
+- **Bugs found (2026-11-27, Nein asked for a hunt; probe `sanity.js` sweeps every 100 years for non-finite numbers in realms, rulers,
+  armies and province arrays, provinces held by dead realms, capitals not held, wars with dead or ended parties):**
+  1. `d.mandate||1` when a realm loses a province (and `o.mandate||1` when the lords rise against a failed land reform): a mandate of
+     exactly 0 (set when a capital is taken) was read as missing and restored to about 1 (5fbe898d). Region fingerprint unchanged by it.
+  2. `exitPass` in regional mode read land beyond the region's edge with capacity 0, so an empty unit gave 0/0: circE, and the tax and
+     trade of every realm holding such a province, NaN (95-161 sweeps a history, defaults included; hordes and confederations at the
+     edge). The land around is now valued for every land unit (4f09f635). **Changes the regional defaults**; the full world is
+     byte-identical (5c951f093dca at 7000 BCE before and after).
+  3. A state born during the year had its unset tax scaled by coordination (`o.tax*=o.coord`), giving NaN, which the trade income then
+     carried into tax and trade for the rest of the year (7fe4e72d); statecraft already treated it as untaxed.
+  Capitals not held at the sweep are transient (the next tally moves the capital to the most populous province): not a bug.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
