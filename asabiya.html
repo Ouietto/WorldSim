@@ -3238,7 +3238,7 @@ function attack(o,i,j,sea){
     // (noflight) a trading city taken by force loses part of its people and its caravans: merchants and craftsmen leave for kin
     // lands (the Phocaeans before Persia; Tyre's people to Carthage)
     if(FLIGHT&&q&&s.city[j]>=0){const d=s.pols[q],tsh=clamp((d.trade||0)/((d.tax||0)+1),0,1);if(tsh>0.1){displace(j,0.3*tsh,o.id);s.car[j]*=1-0.5*tsh;s.flightN=(s.flightN||0)+1}}
-    if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate||1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
+    if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate??1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
         if(j===d.capital&&o.kind==='state'&&war.goal==='break'&&war.aSet.has(o.id))breakRealm(o,d,war);
         else if(j===d.capital&&o.kind==='state'&&(d.cells<=2||d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
   }
@@ -5468,7 +5468,7 @@ function colonyPass(){
       const p=clamp(0.2+0.35*o.S+0.3*adm+0.2*(o.mandate||0)-0.3*o.nob,0.05,0.85),ok=r()<p;
       s.reforms.push({y:s.year,pol:id,ok});
       if(ok){o.nob*=0.55;o.treas=Math.min(1,o.treas+0.3);chron('state',`${cap(rulerName(o))} of the ${o.full} reclaims the estates of the great families and puts the provinces back under royal officials.`,c,[R_(o)],'Lands granted for service had become private domains; the crown took them back while it was strong enough.')}
-      else{o.shock+=0.35;o.mandate=Math.max(0,(o.mandate||1)-0.25);chron('fall',`The great lords of the ${o.full} rise against ${rulerName(o)}, who tried to take back their lands.`,c,[R_(o)],'The nobles held the provinces, the soldiers and the revenue; the crown overreached.')}}
+      else{o.shock+=0.35;o.mandate=Math.max(0,(o.mandate??1)-0.25);chron('fall',`The great lords of the ${o.full} rise against ${rulerName(o)}, who tried to take back their lands.`,c,[R_(o)],'The nobles held the provinces, the soldiers and the revenue; the crown overreached.')}}
   }
 }
 /* ================= CITY-STATES, LEAGUES AND DAUGHTER COLONIES =================

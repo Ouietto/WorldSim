@@ -1829,7 +1829,7 @@ function attack(o,i,j,sea){
     // (noflight) a trading city taken by force loses part of its people and its caravans: merchants and craftsmen leave for kin
     // lands (the Phocaeans before Persia; Tyre's people to Carthage)
     if(FLIGHT&&q&&s.city[j]>=0){const d=s.pols[q],tsh=clamp((d.trade||0)/((d.tax||0)+1),0,1);if(tsh>0.1){displace(j,0.3*tsh,o.id);s.car[j]*=1-0.5*tsh;s.flightN=(s.flightN||0)+1}}
-    if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate||1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
+    if(q){const d=s.pols[q];d.lastBy=o.id;d.shock+=0.004*a;d.mandate=Math.max(0,(d.mandate??1)-0.01*a);const wid=o.enemies.get(q);if(wid!=null){const war=s.wars[wid];if(war.aSet.has(o.id))war.gA+=a;else war.gD+=a;war.lastGain=s.year;
         if(j===d.capital&&o.kind==='state'&&war.goal==='break'&&war.aSet.has(o.id))breakRealm(o,d,war);
         else if(j===d.capital&&o.kind==='state'&&(d.cells<=2||d.cells<0.7*o.cells||d.S<0.35))decisive(o,d,war)}}
   }
