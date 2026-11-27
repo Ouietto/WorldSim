@@ -7,7 +7,7 @@ compressed version: where things are, how to work, what is done, what is next.
 
 ## Where things are
 
-- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-150 scored, run 151
+- Repo **Ouietto/WorldSim**, working branch **`claude/rebuild-from-v052`** (last commit see git log; runs 126-151 scored, no batch
   running; best region set-up by error: `SW=nowinrain,noardfal,works,rise,nojudge KV=wbuild:0.5` (run 142, error 2.16); with
   `corrupt` added, turnover 4 realms in Mesopotamia and Egypt at error 2.22 (run 143); next: corruption phase 2 (intelligence)
   per `claude/corruption-plan.md`; step 4d (six pieces), the NaN fix, threat cohesion (not adopted), old regime vs upstarts, the newborn-tax bug and
@@ -733,6 +733,16 @@ Libya, central Mediterranean (3,510 provinces, 1,052 in the core). **Principle: 
 - **Run 151 (launched 2026-11-27, region, 24 histories to 200 BCE; new baseline after the NaN fixes):** baseline; reference; +
   campaigns at 1, 0.5, 2; + flood (mean-neutral), swing ×2; packages; + campaigns; + campaigns + river 1.5; + campaigns + flood ×2; +
   campaigns + river 1.5 + flood ×2.
+  **Result (097027f7, error; baseline now 33.9% / 2.37 after the NaN fixes):** reference 33.6 / 2.23; **+ campaigns 2.57, at 0.5
+  2.72 (▼), at 2 2.41**; **+ flood (mean-neutral) 32.5 / 2.18 (lowest of the batch; Mesopotamia a third 71% in band, 2566 BCE; Assyrian
+  pattern 33%)**, flood swing ×2 22.2 (▼) / 2.50; packages 28.6 / 2.36; packages + campaigns 2.93 (▼), + river 2.94, + flood ×2 2.83,
+  + both 2.97. With campaigns Mesopotamia never gets a realm holding a third in most histories (packages + campaigns: never; Akkad
+  never), Egypt's unification later still (1426 BCE to never), realms in turn 0-2; intermediate periods 0.05-0.07 with packages +
+  campaigns + flood (38% in band), from fragmentation rather than turnover. Court falls 173 → 206-232 a millennium (reference).
+  **Reading:** campaigns replaced the border rule's pressure, which grew with the length of a realm's front; armies are 1 + area/40 (at
+  most 4), so a large realm now makes far fewer assaults than before and a small one more: nobody gathers. Weaker campaigns (0.5) are
+  worst. Proposed to Nein: armies' assaults on top of the border rule (frontier fighting stays; the court's armies add focused
+  campaigns), or the number of armies following the realm's men.
 - **Next, agreed with Nein 2026-11-24 (to design with him after run 139):** (1) trade ties: provinces whose trade runs mostly to a
   neighbour lean toward it (less threat on that border, likelier to go over in a crisis or invasion); merchant regimes (trade
   income, merchant command weight) spread by influence (trading posts, treaties, clients), shallow and route-dependent. Hook:
