@@ -2204,7 +2204,7 @@ function* politicsG(){
     if(sampleNow&&o.front&&o.front.length<8&&s.year-s_taken[i]<80&&s_pop[i]<0.6*s_K[i]&&s_K[i]*(szF?szF[i]:1)>200)o.front.push(i);
     if(sampleNow){if(o.sample.length<24)o.sample.push(i);else if((rk(i),r())<24*ci/(szF?o.cA:o.cells))o.sample[(r()*24)|0]=i}}
   // income from goods bought and sold (counted every ten years) joins the taxes
-  for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax!=null){const gi=Math.min(o.gInc,0.5*o.tax);o.tax+=gi;o.trade=(o.trade||0)+gi}}
+  for(const id of s.alive){const o=pols[id];if(o.gInc>0&&o.tax>=0){const gi=Math.min(o.gInc,0.5*o.tax);o.tax+=gi;o.trade=(o.trade||0)+gi}}
   // (the choice of war aims, below) a vassal pays a fifth of its taxes to its overlord
   if(!swOn('nochoice'))for(const id of s.alive){const o=pols[id];if(o.over&&o.tax>0){const ov=pols[o.over];if(ov&&ov.alive&&ov.tax!=null){const t=0.2*o.tax;o.tax-=t;ov.tax+=t;ov.tribIn=t+(ov.tribIn||0)*0.9}}}
   const next=[];
@@ -2278,7 +2278,9 @@ function* politicsG(){
     // (Johnson 1982; Feinman 2011). Past that it cannot count, tax or call up the rest, its chiefs pull apart, and it either
     // builds new layers of office and records or splits; growth stalls at this threshold until records arrive (Shin et al. 2020)
     if(SCK&&o.kind==='state'){const mo=o.mono||{},inf=o.info||{rec:0};o.cap=15000*Math.exp(2.5*(o.cplx||0.2)+3.6*Math.min(1.5,inf.rec||0)+0.6*(mo.sacred||0)+(mo.force||0));
-      o.scl=Math.max(0,Math.log(Math.max(1,o.pop)/o.cap));o.coord=Math.exp(-0.5*SCK*o.scl);o.tax*=o.coord}else{o.scl=0;o.coord=1}
+      o.scl=Math.max(0,Math.log(Math.max(1,o.pop)/o.cap));o.coord=Math.exp(-0.5*SCK*o.scl);if(o.tax>=0)o.tax*=o.coord}else{o.scl=0;o.coord=1}
+    // (2026-11-27, probe sanity.js) a state born this year has no tax yet: scaling it gave NaN, which the trade income below then
+    // carried into its tax and trade for the rest of the year (statecraft already treats it as untaxed)
     if(CORT&&o.kind==='state'&&o.cor&&o.tax>0)o.tax*=1-Math.min(0.6,0.4*o.cor*(0.7+0.6*(o.mon||0)));
     // manpower (cohort switch): the men of fighting age against a settled population's usual share (1 = normal, below = bled
     // white, above = a youth bulge). Armies draw a share of them: most herders ride; farmers send what the levy reaches.
